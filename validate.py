@@ -174,7 +174,7 @@ def targets(body, parms=None):
 
     knownFields = ["lat", "lon", "goto", "head", "depth", "finish", "dives", "exec", "radius",
                    "timeout", "timeout-exec", "timeout-goto", 
-                   "src", "src-timeout", "src-timeout-exec", "src-timeout-goto", 
+                   "src", "src-timeout", "src-timeout-exec", "src-timeout-goto", "escape",
                    "slow-progress", "slow-progress-goto", "slow-progress-exec",
                    "fence-lat", "fence-lon", "fence-radius", "fence-goto", "fence-exec"] 
 
