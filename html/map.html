@@ -2307,7 +2307,7 @@
                 map.addLayer(sst);
 
             // sea ice
-
+/*
             seaIce = L.tileLayer("https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.png",
                                     {
                                         layer: 'AMSRU2_Sea_Ice_Concentration_12km',
@@ -2317,6 +2317,14 @@
                                         maxNativeZoom: 5,
                                         maxZoom: 10,
                                         opacity: 1.0
+                                    });
+*/
+            seaIce = L.tileLayer.wms('https://geos.polarview.aq/geoserver/wms?', {
+                                        layers: 'polarview:antarctic_AMSR2.3031,polarview:arctic_AMSR2.3413',
+                                        opacity: 0.5,
+                                        format: 'image/png',
+                                        attribution: "Polar View (ESA)",
+                                        transparent: true
                                     });
 
             if (checkLayerState("sea ice", "on")) 
@@ -2450,7 +2458,7 @@
                 "satellite": {
                     "SSH": ssh,
                     "SST (MODIS 8-day day)": sst,
-                    "sea ice (AMSRU2 12km)": seaIce,
+                    "sea ice (AMSR2)": seaIce,
                     "Chlorophyll-A (Aqua MODIS L2)": chlA,
                 },
                 "chart": {
