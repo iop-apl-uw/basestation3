@@ -453,7 +453,7 @@ def load_ctd_vars(
     additional_arguments={
         "plot_ctd_raw": BaseOptsType.options_t(
             None,
-            ("Base", "BasePlot", "Reprocess"),
+            {"Base", "BasePlot", "Reprocess"},
             ("--plot_ctd_raw",),
             bool,
             {
@@ -471,7 +471,7 @@ def plot_CTD(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots CTD data and Optode Temp (if present)"""
 
     if "temperature" not in dive_nc_file.variables or not generate_plots:
@@ -958,7 +958,7 @@ def plot_CTD(
     additional_arguments={
         "ctd_series_divesback": BaseOptsType.options_t(
             10,
-            ("Base", "BasePlot", "Reprocess"),
+            {"Base", "BasePlot", "Reprocess"},
             ("--ctd_series_divesback",),
             int,
             {
@@ -969,7 +969,7 @@ def plot_CTD(
         ),
         "enable_ctd_series": BaseOptsType.options_t(
             False,
-            ("Base", "BasePlot", "Reprocess"),
+            {"Base", "BasePlot", "Reprocess"},
             ("--enable_ctd_series",),
             bool,
             {
@@ -987,7 +987,7 @@ def plot_CTD_series(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots CTD data and Optode Temp (if present) as a annimation"""
 
     if (

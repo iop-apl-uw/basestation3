@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -99,8 +99,8 @@ class SensorExtensions:
             self.__group_extension_directory = None
 
         if base_opts.mission_dir:
-            self.__mission_extension_file_name = os.path.join(
-                base_opts.mission_dir, sensor_extension_base_name
+            self.__mission_extension_file_name = (
+                base_opts.mission_dir / sensor_extension_base_name
             )
             self.__mission_extension_directory = base_opts.mission_dir
         else:

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -33,7 +33,6 @@ Rebuilds per-dive nc files from log and eng files (no comm.log or dat/asc proces
 """
 
 import cProfile
-import glob
 import os
 import pathlib
 import pdb
@@ -93,7 +92,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
         additional_arguments={
             "dive_specs": BaseOptsType.options_t(
                 "",
-                ("Reprocess",),
+                {
+                    "Reprocess",
+                },
                 ("dive_specs",),
                 str,
                 {
@@ -103,7 +104,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
             ),
             "called_from_fm": BaseOptsType.options_t(
                 False,
-                ("Reprocess",),
+                {
+                    "Reprocess",
+                },
                 ("--called_from_fm",),
                 bool,
                 {
@@ -136,9 +139,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
-    if base_opts.mission_dir:
-        base_path = os.path.expanduser(base_opts.mission_dir)
-    else:
+    if not base_opts.mission_dir:
         log_error('You must specify --mission_dir"')
         return 1
 
@@ -147,7 +148,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
     all_dive_nc_file_names = []  # all available nc files
     dive_nc_file_names = []  # those we actually MDPd
 
-    if os.path.isdir(base_path):
+    if base_opts.mission_dir.is_dir():
         # Include only valid dive files
         glob_expr = (
             "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].log",
@@ -157,7 +158,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
         )
         for g in glob_expr:
             nc_match = g.find(".nc") > 0
-            for match in glob.glob(os.path.join(base_path, g)):
+            for match in base_opts.mission_dir.glob(g):
                 log_debug(f"Found dive file {match}")
                 if nc_match:
                     all_dive_nc_file_names.append(match)
@@ -187,7 +188,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
                     # "p*%s.nc.gz" % dive_num,
                 )
                 for g in glob_expr:
-                    for match in glob.glob(os.path.join(base_path, g)):
+                    for match in base_opts.mission_dir.glob(g):
                         log_debug(f"Found dive file {match}")
                         # match = match.replace('.nc.gz', '.nc')
                         head, _ = os.path.splitext(os.path.abspath(match))
@@ -195,12 +196,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
                 dive_list = sorted(Utils.unique(dive_list))
             log_info(f"Reprocessing dives {dive_list}")
         else:
-            log_info(f"Making profiles for all dives in {base_path}")
+            log_info(f"Making profiles for all dives in {base_opts.mission_dir}")
             dive_list = full_dive_list
     else:
-        log_error(f"Directory {base_path} does not exist -- exiting")
+        log_error(f"Directory {base_opts.mission_dir} does not exist -- exiting")
 
-    sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
+    sg_calib_file_name = base_opts.mission_dir / "sg_calib_constants.m"
     calib_consts = getSGCalibrationConstants(
         sg_calib_file_name, ignore_fm_tags=not base_opts.ignore_flight_model
     )
@@ -248,11 +249,11 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
         and not base_opts.skip_flight_model
         and not base_opts.called_from_fm
     ):
-        flight_dir = os.path.join(base_opts.mission_dir, "flight")
-        flight_dir_backup = os.path.join(
-            base_opts.mission_dir, f"flight_{time.strftime('%Y%m%d_%H%M%S')}"
+        flight_dir = base_opts.mission_dir / "flight"
+        flight_dir_backup = (
+            base_opts.mission_dir / f"flight_{time.strftime('%Y%m%d_%H%M%S')}"
         )
-        if os.path.exists(flight_dir):
+        if flight_dir.exists():
             log_info(f"Backing up {flight_dir} to {flight_dir_backup}")
             try:
                 shutil.move(flight_dir, flight_dir_backup)
@@ -316,6 +317,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
         QC.qc_log_stop()
         # Even if the processing failed, we may get a netcdf files out
         if nc_file_created:
+            nc_file_created = pathlib.Path(nc_file_created)
             nc_files_created.append(nc_file_created)
         if temp_ret_val == 1:
             ret_val = 1
@@ -445,6 +447,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
                     "Started KML processing "
                     + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
                 )
+                # TODO PATHLIB
                 MakeKML.main(base_opts, calib_consts, [])
                 log_info(
                     "Finished KML processing "

@@ -522,7 +522,7 @@ global_options_dict: dict[str, options_t] = {
     ),
     #
     "mission_dir": options_t(
-        "",
+        None,
         {
             "Base",
             "BaseCtrlFiles",
@@ -556,10 +556,10 @@ global_options_dict: dict[str, options_t] = {
             "-m",
             "--mission_dir",
         ),
-        FullPathTrailingSlash,
+        FullPathlib,
         {
             "help": "glider mission directory",
-            "action": FullPathTrailingSlashAction,
+            "action": FullPathlibAction,
             "required": (
                 "Base",
                 "BaseCtrlFiles",
@@ -1231,7 +1231,7 @@ global_options_dict: dict[str, options_t] = {
         },
     ),
     "plot_directory": options_t(
-        "",
+        None,
         {
             "Base",
             "BaseDB",
@@ -1240,11 +1240,11 @@ global_options_dict: dict[str, options_t] = {
             "Reprocess",
         },
         ("--plot_directory",),
-        FullPath,
+        FullPathlib,
         {
             "help": "Override default plot directory location",
             "section": "plotting",
-            "action": FullPathAction,
+            "action": FullPathlibAction,
             "option_group": "plotting",
         },
     ),

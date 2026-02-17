@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2025  University of Washington.
+## Copyright (c) 2023, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import collections
 import contextlib
+import pathlib
 import typing
 
 import numpy as np
@@ -56,7 +57,7 @@ def plot_TMICL(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots TMICL data"""
 
     tmicl_present = False

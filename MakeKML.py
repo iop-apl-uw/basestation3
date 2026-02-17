@@ -33,10 +33,10 @@
 import collections
 import cProfile
 import functools
-import glob
 import io
 import math
 import os
+import pathlib
 import pdb
 import pstats
 import re
@@ -1304,10 +1304,10 @@ def get_df_var(pq_df, dive_num, var_n):
 
 # pylint: disable=unused-argument
 def main(
-    base_opts,
-    calib_consts,
-    processed_other_files,
-):
+    base_opts: BaseOpts.BaseOptions | None,
+    calib_consts: pathlib.Path | None,
+    processed_other_files: list[pathlib.Path],
+) -> int:
     """Command line app for creating kml/kmz files
 
     Returns:
@@ -1336,7 +1336,7 @@ def main(
 
     # Read sg_calib_constants file
     if not calib_consts:
-        sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
+        sg_calib_file_name = base_opts.mission_dir / "sg_calib_constants.m"
         calib_consts = getSGCalibrationConstants(sg_calib_file_name)
     if not calib_consts:
         log_error(
@@ -1368,7 +1368,7 @@ def main(
         pq_df_c = None
 
     (comm_log, _, _, _, _) = CommLog.process_comm_log(
-        os.path.join(base_opts.mission_dir, "comm.log"), base_opts
+        base_opts.mission_dir / "comm.log", base_opts
     )
     if comm_log is None:
         log_warning("Could not process comm.log - surface positions not plotted")
@@ -1413,7 +1413,7 @@ def main(
         #     mission_title,
         # )
 
-    mission_kml_name = os.path.join(base_opts.mission_dir, mission_kml_file_name_base)
+    mission_kml_name = base_opts.mission_dir / mission_kml_file_name_base
 
     try:
         if base_opts.use_inmemory:
@@ -1459,10 +1459,10 @@ def main(
                 ) - time.mktime(session.connect_ts)
 
     # If there is a sms_message.log, process that
-    sms_log_filename = os.path.join(base_opts.mission_dir, "sms_messages.log")
-    if os.path.exists(sms_log_filename):
+    sms_log_filename = base_opts.mission_dir / "sms_messages.log"
+    if sms_log_filename.exists():
         try:
-            with open(sms_log_filename, "r") as fi:
+            with sms_log_filename.open("r") as fi:
                 for ll in fi.readlines():
                     try:
                         connect_ts = time.strptime(
@@ -2087,7 +2087,7 @@ def main(
         # TODO - this needs to be replaced with processing the .nc files
         logfiles = []
         glob_expr = "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].log"
-        for match in glob.glob(os.path.join(base_opts.mission_dir, glob_expr)):
+        for match in (base_opts.mission_dir / glob_expr).glob(glob_expr):
             logfiles.append(match)
 
         tgt_name = None
@@ -2114,7 +2114,7 @@ def main(
             "targets.[0-9]*",
             "targets.[0-9]*.[0-9]*",
         ):
-            for match in glob.glob(os.path.join(base_opts.mission_dir, glob_expr)):
+            for match in (base_opts.mission_dir / glob_expr).glob(glob_expr):
                 targets.append(match)
 
         if targets and not base_opts.proposed_targets:
@@ -2133,8 +2133,8 @@ def main(
                 hide_non_active_targets=(base_opts.targets == "hide_non_active"),
             )
         else:
-            target_file_name = os.path.join(base_opts.mission_dir, "targets")
-            if os.path.exists(target_file_name):
+            target_file_name = base_opts.mission_dir / "targets"
+            if target_file_name.exists():
                 printTargets(
                     tgt_name,
                     base_opts.targets == "current",
@@ -2163,11 +2163,11 @@ def main(
     # Add in the SSH file in, if it exists
     add_files = {}
     if base_opts.merge_ssh:
-        ssh_file_name = os.path.join(
-            base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}_ssh.kmz"
+        ssh_file_name = (
+            base_opts.mission_dir / f"sg{base_opts.instrument_id:03d}_ssh.kmz"
         )
 
-        if os.path.exists(ssh_file_name) and zip_kml:
+        if ssh_file_name.exists() and zip_kml:
             try:
                 ssh_zip_file = zipfile.ZipFile(ssh_file_name, "r")
             except Exception:
@@ -2209,9 +2209,10 @@ def main(
                                         fo.write("<visibility>0</visibility>\n")
                                 fo.write("</Folder>\n")
                             else:
-                                add_files[ff.filename] = os.path.join(
-                                    base_opts.mission_dir, ff.filename
+                                add_files[ff.filename] = (
+                                    base_opts.mission_dir / ff.filename
                                 )
+
                                 ssh_zip_file.extract(ff, base_opts.mission_dir)
                         except Exception:
                             log_error(f"Failed to handle {ff.filename}", "exc")
@@ -2253,11 +2254,10 @@ def main(
 
     # Zip the output file
     if zip_kml:
-        head, _ = os.path.splitext(mission_kml_name)
-        mission_kml_zip_name = head + ".kmz"
+        mission_kml_zip_name = mission_kml_name.with_suffix(".kmz")
         try:
-            if os.path.exists(mission_kml_zip_name):
-                os.unlink(mission_kml_zip_name)
+            if mission_kml_zip_name.exists():
+                mission_kml_zip_name.unlink()
             mission_kml_zip_file = zipfile.ZipFile(
                 mission_kml_zip_name, "w", zipfile.ZIP_DEFLATED
             )

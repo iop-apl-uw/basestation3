@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022, 2023, 2024, 2025 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023, 2024, 2025, 2026 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -27,6 +27,7 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import pathlib
 import typing
 
 import numpy as np
@@ -82,7 +83,7 @@ def plot_pitch_roll(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots pitch and roll regressions"""
     log_info("Starting dive_pitch_roll")
 

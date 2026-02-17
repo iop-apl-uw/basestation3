@@ -29,6 +29,7 @@ SCICON basestation sensor extension
 import collections
 import contextlib
 import os
+import pathlib
 import re
 import shutil
 
@@ -151,8 +152,8 @@ def process_adcp_dat(
         return 1
 
     shutil.copy(matfile, scicon_eng_file)
-    processed_logger_eng_files.append(scicon_eng_file)
-    processed_logger_other_files.append(matfile)
+    processed_logger_eng_files.append(pathlib.path(scicon_eng_file))
+    processed_logger_other_files.append(pathlib.path(matfile))
     return 0
 
 
@@ -198,7 +199,7 @@ def process_camfb_dat(
             else:
                 fo.write("%.3f %s\n" % (tt, splits[1].rstrip()))
 
-    processed_logger_other_files.append(nemafile)
+    processed_logger_other_files.append(pathlib.Path(nemafile))
 
     return 0
 
@@ -244,7 +245,7 @@ def process_ctx3_dat(base_opts, scicon_file, output_file, processed_logger_other
         )
         return 1
 
-    processed_logger_other_files.append(output_file)
+    processed_logger_other_files.append(pathlib.Path(output_file))
     return 0
 
 
@@ -778,7 +779,7 @@ def process_tar_members(
                         "Error converting %s to %s" % (scicon_file, scicon_eng_file),
                         "exc",
                     )
-                processed_logger_eng_files.append(scicon_eng_file)
+                processed_logger_eng_files.append(pathlib.Path(scicon_eng_file))
 
     return ret_val
 
@@ -1059,7 +1060,7 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
     if auxname:
         aux_cols = df_meta.columns.split()
 
-        sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
+        sg_calib_file_name = base_opts.mission_dir / "sg_calib_constants.m"
         calib_consts = getSGCalibrationConstants(
             sg_calib_file_name, ignore_fm_tags=not base_opts.ignore_flight_model
         )

@@ -686,7 +686,7 @@ def convert_network_profile(in_file_name, out_file_name):
         return None
 
     if not os.path.isfile(in_file_name):
-        log_error(f"{in_file_name} does not exits")
+        log_error(f"{in_file_name} does not exists")
         return None
 
     if out_file_name is None:
@@ -885,7 +885,7 @@ def make_netcdf_network_file(network_logfile, network_profile, ts_outputfile=Fal
         Name of network netcdf file or None
     """
     if not os.path.isfile(network_logfile) and not os.path.isfile(network_profile):
-        log_error(f"Neither {network_logfile} nor {network_logfile} exits")
+        log_error(f"Neither {network_logfile} nor {network_logfile} exists")
         return None
 
     log_info(f"Processing {network_logfile} {network_profile}")

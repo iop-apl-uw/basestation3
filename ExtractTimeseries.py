@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -35,6 +35,7 @@
 
 import dataclasses
 import json
+import pathlib
 import sys
 import warnings
 from json import JSONEncoder
@@ -482,7 +483,7 @@ def extractVarTimeDepth_pd(pd_df_c, varname):
 
 @dataclasses.dataclass
 class BaseOptsSimple:
-    mission_dir: str
+    mission_dir: pathlib.Path
     parquet_directory: str
 
 
@@ -490,7 +491,7 @@ if __name__ == "__main__":
     if sys.argv[1] == "p":
         # Parquet
         base_opts = BaseOptsSimple
-        base_opts.mission_dir = sys.argv[2]
+        base_opts.mission_dir = pathlib.Path(sys.argv[2])
         base_opts.parquet_directory = None
         if Utils.setup_parquet_directory(base_opts):
             print("Error setting up parquet directory")

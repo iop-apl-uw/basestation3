@@ -351,9 +351,7 @@ def create_lock_file(base_opts: BaseOpts.BaseOptions, base_lockfile_name: str) -
     Raises:
         No exceptions are raised
     """
-    lock_file_name = os.path.expanduser(
-        os.path.join(base_opts.mission_dir, base_lockfile_name)
-    )
+    lock_file_name = base_opts.mission_dir / base_lockfile_name
     try:
         with open(lock_file_name, "w") as fo:
             fo.write("%d" % os.getpid())
@@ -374,9 +372,7 @@ def cleanup_lock_file(base_opts: BaseOpts.BaseOptions, base_lockfile_name: str) 
     Raises:
         No excpetions are raised
     """
-    lock_file_name = os.path.expanduser(
-        os.path.join(base_opts.mission_dir, base_lockfile_name)
-    )
+    lock_file_name = base_opts.mission_dir / base_lockfile_name
     if not os.path.exists(lock_file_name):
         log_info(f"lock_file {lock_file_name} does not exist - no removal needed")
         return 0
@@ -432,9 +428,7 @@ def check_lock_file(base_opts: BaseOpts.BaseOptions, base_lockfile_name: str) ->
         log_warning("Lock file check ignored due to user options")
         return 0
     else:
-        lock_file_name = os.path.expanduser(
-            os.path.join(base_opts.mission_dir, base_lockfile_name)
-        )
+        lock_file_name = base_opts.mission_dir / base_lockfile_name
         if os.path.exists(lock_file_name):
             try:
                 fi = open(lock_file_name, "r")  # noqa: SIM115
@@ -1636,7 +1630,7 @@ def mission_database_filename(base_opts: BaseOpts.BaseOptions):
         log_error("instrument_id is not set")
         return None
 
-    return os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
+    return base_opts.mission_dir / f"sg{base_opts.instrument_id:03d}.db"
 
 
 def open_mission_database(
@@ -2094,7 +2088,7 @@ class CopyInterp:
 
 
 def setup_parquet_directory(base_opts: BaseOpts.BaseOptions) -> int:
-    """Ensures plot_directory is set in base_opts and creates it if needed
+    """Ensures parquet is set in base_opts and creates it if needed
 
     Returns:
         0 for success
@@ -2102,9 +2096,7 @@ def setup_parquet_directory(base_opts: BaseOpts.BaseOptions) -> int:
 
     """
     if not base_opts.parquet_directory:
-        base_opts.parquet_directory = pathlib.Path(base_opts.mission_dir).joinpath(
-            "parquet"
-        )
+        base_opts.parquet_directory = base_opts.mission_dir / "parquet"
 
     if not base_opts.parquet_directory.exists():
         try:

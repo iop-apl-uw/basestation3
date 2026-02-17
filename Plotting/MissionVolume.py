@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,11 +28,12 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Plots volume estimates
-"""
+"""Plots volume estimates"""
+
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import pathlib
 import sqlite3
 import typing
 
@@ -57,7 +58,7 @@ def mission_volume(
     dive=None,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots various estimates for volmax"""
 
     if not generate_plots:

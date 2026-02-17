@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020, 2021, 2022, 2024, 2025 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020, 2021, 2022, 2024, 2025, 2026 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -33,6 +33,7 @@ import array as arr
 import collections
 import math
 import os
+import pathlib
 import re
 
 import numpy as np
@@ -784,7 +785,7 @@ def process_tar_members(
                             )
                         )
                 fo.close()
-                processed_logger_eng_files.append(output_file)
+                processed_logger_eng_files.append(pathlib.Path(output_file))
         except Exception:
             log_error("Failed to process %s" % tmicl_file, "exc")
             ret_val = 1

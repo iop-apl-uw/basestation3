@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -245,11 +245,11 @@ def load_additional_arguments():
         {
             "simplencf_bin_width": BaseOptsType.options_t(
                 0.0,
-                (
+                {
                     "Base",
                     "Reprocess",
                     "SimpleNetCDF",
-                ),
+                },
                 ("--simplencf_bin_width",),
                 float,
                 {
@@ -260,11 +260,11 @@ def load_additional_arguments():
             ),
             "simplencf_compress_output": BaseOptsType.options_t(
                 False,
-                (
+                {
                     "Base",
                     "Reprocess",
                     "SimpleNetCDF",
-                ),
+                },
                 ("--simplencf_compress_output",),
                 bool,
                 {

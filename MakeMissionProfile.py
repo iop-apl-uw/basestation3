@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -503,11 +503,11 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                 platform_var = globals_d["platform"]
 
                 mission_title = Utils.ensure_basename(calib_consts["mission_title"])
-                mission_profile_name = os.path.join(
-                    base_opts.mission_dir,
+                mission_profile_name = base_opts.mission_dir / (
                     "sg%03d_%s_%1.1fm_%s_profile.nc"
-                    % (instrument_id, mission_title, bin_width, wh_file),
+                    % (instrument_id, mission_title, bin_width, wh_file)
                 )
+
                 log_info(
                     "Making mission profile %s from files found in %s"
                     % (mission_profile_name, base_opts.mission_dir)
@@ -1335,7 +1335,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
     mission_profile_file.sync()
     mission_profile_file.close()
 
-    mission_profile_name_gz = mission_profile_name + ".gz"
+    mission_profile_name_gz = mission_profile_name.with_suffix(".gz")
     if base_opts.gzip_netcdf:
         log_info(
             "Compressing %s to %s" % (mission_profile_name, mission_profile_name_gz)

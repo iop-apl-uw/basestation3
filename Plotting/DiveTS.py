@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -34,6 +34,7 @@
 from __future__ import annotations
 
 import argparse
+import pathlib
 import typing
 
 import numpy as np
@@ -58,7 +59,7 @@ from Plotting import add_arguments, plotdivesingle
     additional_arguments={
         "plot_ts_raw": BaseOptsType.options_t(
             False,
-            ("Base", "BasePlot", "Reprocess"),
+            {"Base", "BasePlot", "Reprocess"},
             ("--plot_ts_raw",),
             bool,
             {
@@ -76,7 +77,7 @@ def plot_TS(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots TS Data"""
 
     if "temperature" not in dive_nc_file.variables or not generate_plots:

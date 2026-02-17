@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -34,6 +34,7 @@
 from __future__ import annotations
 
 import os
+import pathlib
 import typing
 
 import numpy as np
@@ -62,7 +63,7 @@ def plot_vert_vel_new(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots various measures of vetical velocity and estimates volmax and C_VBD"""
 
     calfile = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
@@ -452,20 +453,20 @@ def plot_vert_vel_new(
         }
     )
 
-    return (
-        [fig, fit_fig],
-        [
-            PlotUtilsPlotly.write_output_files(
-                base_opts,
-                "dv%04d_vert_vel_new" % (dive_nc_file.dive_number,),
-                fig,
-            ),
+    ret_figs: list[plotly.graph_objects.Figure] = [fig]
+    ret_list: list[pathlib.Path] = PlotUtilsPlotly.write_output_files(
+        base_opts,
+        "dv%04d_vert_vel_new" % (dive_nc_file.dive_number,),
+        fig,
+    )
+    if fit_fig:
+        ret_figs.append(fig)
+        ret_list.extend(
             PlotUtilsPlotly.write_output_files(
                 base_opts,
                 "dv%04d_vert_vel_regression" % (dive_nc_file.dive_number,),
                 fit_fig,
             )
-            if fit_fig
-            else None,
-        ],
-    )
+        )
+
+    return (ret_figs, ret_list)

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2025  University of Washington.
+## Copyright (c) 2023, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -32,6 +32,7 @@
 """Extension for creating a text file containing glider positions from the comm.log"""
 
 import os
+import pathlib
 import sys
 import time
 
@@ -43,15 +44,15 @@ from BaseLog import BaseLogger, log_critical, log_error, log_info
 
 # pylint: disable=unused-argument
 def main(
-    instrument_id=None,
-    base_opts=None,
-    sg_calib_file_name=None,
-    dive_nc_file_names=None,
-    nc_files_created=None,
-    processed_other_files=None,
-    known_mailer_tags=None,
-    known_ftp_tags=None,
-    processed_file_names=None,
+    instrument_id: int | None = None,
+    base_opts: BaseOpts.BaseOptions | None = None,
+    sg_calib_file_name: pathlib.Path | None = None,
+    dive_nc_file_names: list[pathlib.Path] | None = None,
+    nc_files_created: list[pathlib.Path] | None = None,
+    processed_other_files: list[pathlib.Path] | None = None,
+    known_mailer_tags: list[str] | None = None,
+    known_ftp_tags: list[str] | None = None,
+    processed_file_names: list[pathlib.Path] | None = None,
 ):
     """Extension for creating a text file containing glider positions from the comm.log
 
@@ -76,37 +77,37 @@ def main(
     )
 
     (comm_log, _, _, _, _) = CommLog.process_comm_log(
-        os.path.join(base_opts.mission_dir, "comm.log"), base_opts
+        base_opts.mission_dir / "comm.log", base_opts
     )
     if comm_log is None:
         log_critical("Could not process comm.log -- bailing out")
         return 1
 
-    txt_file_name = os.path.join(
-        base_opts.mission_dir, "SG_%s_positions.txt" % comm_log.get_instrument_id()
+    txt_file_name: pathlib.Path = (
+        base_opts.mission_dir / f"SG_{comm_log.get_instrument_id()}_positions.txt"
     )
 
     try:
-        fo = open(txt_file_name, "w")
+        fo = txt_file_name.open("w")
     except Exception:
         log_error("Could not open %s" % txt_file_name, "exc")
         return 1
 
     predictedLat = predictedLon = predictedTime = None
-    glider_predict_position_file = os.path.join(
-        base_opts.mission_dir, "predict_position.txt"
+    glider_predict_position_file: pathlib.Path | None = (
+        base_opts.mission_dir / "predict_position.txt"
     )
-    if os.path.isfile(glider_predict_position_file):
+    if glider_predict_position_file.is_file():
         try:
-            fi = open(glider_predict_position_file, "r")
-            # Expected - "gliderLat,glidertLon,predictedGliderTime\n"
-            # header_line = fi.readline()
-            splits = fi.readline().split(",")
-            predictedTime = float(splits[2])
-            predictedLat = float(splits[0])
-            predictedLon = float(splits[1])
-            fi.close()
-            del fi
+            with glider_predict_position_file.open(
+                glider_predict_position_file, "r"
+            ) as fi:
+                # Expected - "gliderLat,glidertLon,predictedGliderTime\n"
+                # header_line = fi.readline()
+                splits = fi.readline().split(",")
+                predictedTime = float(splits[2])
+                predictedLat = float(splits[0])
+                predictedLon = float(splits[1])
         except Exception:
             log_error("Unable to read %s" % glider_predict_position_file, "exc")
             glider_predict_position_file = None

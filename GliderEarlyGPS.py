@@ -32,6 +32,7 @@
 
 import inspect
 import os
+import pathlib
 import signal
 import sys
 import time
@@ -214,10 +215,10 @@ class GliderEarlyGPSClient:
                 return
 
         # If above fails, fall through to here and do what is possible
-        connected_file = os.path.join(self.__base_opts.mission_dir, ".connected")
-        if os.path.exists(connected_file):
+        connected_file = self.__base_opts.mission_dir / ".connected"
+        if connected_file.exixts():
             try:
-                os.remove(connected_file)
+                connected_file.unlink()
             except Exception:
                 log_error(f"Unable to remove {connected_file} -- permissions?", "exc")
 
@@ -233,7 +234,7 @@ class GliderEarlyGPSClient:
                 log_info(ts)
                 fo.close()
 
-            comm_log_filename = os.path.join(self.__base_opts.mission_dir, "comm.log")
+            comm_log_filename = self.__base_opts.mission_dir / "comm.log"
             try:
                 with open(comm_log_filename, "a") as fo:
                     fo.write(f"Disconnected at {ts} (shell_disappeared)\n\n\n")
@@ -462,11 +463,12 @@ def main():
 
     # Check for required "options"
     if base_opts.mission_dir:
-        comm_log_filename = os.path.join(base_opts.mission_dir, "comm.log")
+        comm_log_filename = base_opts.mission_dir / "comm.log"
         testing = False
     elif base_opts.comm_log:
+        # TODO - this code appears to be unreachable - setup an alternative for testing?
         comm_log_filename = base_opts.comm_log
-        base_opts.mission_dir, _ = os.path.split(base_opts.comm_log)
+        base_opts.mission_dir = pathlib.Path(os.path.split(base_opts.comm_log)[0])
         testing = True
     else:
         log_critical("Dive directory must be supplied or path to comm.log.")

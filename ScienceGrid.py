@@ -5,7 +5,6 @@ import asyncio
 import collections
 import contextlib
 import copy
-import dataclasses
 import functools
 import pathlib
 import pdb
@@ -30,11 +29,6 @@ def DEBUG_PDB_F() -> None:
         _, __, traceb = sys.exc_info()
         traceback.print_exc()
         pdb.post_mortem(traceb)
-
-
-@dataclasses.dataclass
-class BaseOptsSimple:
-    mission_dir: str
 
 
 def dive_counter(ff: pathlib.Path) -> tuple[int, int]:
@@ -219,15 +213,13 @@ def setup_science_grid(base_opts) -> None:
         return
 
     try:
-        mission_dir = pathlib.Path(base_opts.mission_dir)
-
         schemes: dict[pathlib.Path, dict] = {}
         science: dict[pathlib.Path, dict] = {}
         attach: dict[pathlib.Path, dict] = {}
         # ins: dict[pathlib.Path, dict] = {}
 
         # Captures
-        captures = sorted(mission_dir.glob("pt???????.cap"))
+        captures = sorted(base_opts.mission_dir.glob("pt???????.cap"))
         if captures:
             # TODO - add code to catch the case of a CTD that is configured to migrate from scicon to truck
             # Note - this change may require the plotting code to specify if origin is the truck or the scicon
@@ -269,19 +261,19 @@ def setup_science_grid(base_opts) -> None:
             # )
 
         # Scicon files
-        scicon_sch_files = find_command_files(mission_dir, "scicon.sch")
+        scicon_sch_files = find_command_files(base_opts.mission_dir, "scicon.sch")
 
         for t in scicon_sch_files:
             with t.open() as fi:
                 schemes[t] = scicon.parseBody(fi.read(), uniq=False)
 
-        scicon_att_files = find_command_files(mission_dir, "scicon.att")
+        scicon_att_files = find_command_files(base_opts.mission_dir, "scicon.att")
 
         for t in scicon_att_files:
             with t.open() as fi:
                 attach[t] = scicon.parseBody(fi.read(), uniq=True)
 
-        # scicon_ins_files = find_command_files(mission_dir, "scicon.ins")
+        # scicon_ins_files = find_command_files(base_opts.mission_dir, "scicon.ins")
 
         # for t in scicon_ins_files:
         #     with t.open() as fi:
@@ -338,7 +330,7 @@ def setup_science_grid(base_opts) -> None:
         schemes_dict[10000] = scheme_type("", {})
 
         # Science files
-        for science_file in find_command_files(mission_dir, "science"):
+        for science_file in find_command_files(base_opts.mission_dir, "science"):
             tmp_science_list = asyncio.run(Utils.readScienceFile(science_file))
             # This check is essentially for old column oriented (not supported) vs
             # new name/value paired files
@@ -408,9 +400,11 @@ def setup_science_grid(base_opts) -> None:
                                 continue
             else:
                 try:
-                    nc_file_name = pathlib.Path(base_opts.mission_dir).joinpath(
-                        f"p{base_opts.instrument_id:03d}{dive_num:04d}.nc"
+                    nc_file_name = (
+                        base_opts.mission_dir
+                        / f"p{base_opts.instrument_id:03d}{dive_num:04d}.nc"
                     )
+
                     dsi = Utils.open_netcdf_file(str(nc_file_name), "r")
                     sensors_line = (
                         dsi.variables["log_SENSORS"][:].tobytes().decode("utf-8")

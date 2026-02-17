@@ -36,7 +36,6 @@ with dive.
 
 import cProfile
 import functools
-import glob
 import math
 import os
 import pathlib
@@ -130,11 +129,11 @@ previous_conversion_time_out = 60  # Time to wait for previous conversion to com
 
 logger_eng_readers: dict[str, str]
 processed_logger_payload_files: dict[str, list[str]]  # TODO - pathlib
-processed_eng_and_log_files: list[str]  # TODO - pathlib
-processed_selftest_eng_and_log_files: list[str]  # TODO - pathlib
-processed_other_files: list[str]  # TODO - pathlib
-processed_logger_eng_files: list[str]  # TODO - pathlib
-processed_logger_other_files: list[str]  # TODO - pathlib
+processed_eng_and_log_files: list[pathlib.Path]
+processed_selftest_eng_and_log_files: list[pathlib.Path]
+processed_other_files: list[pathlib.Path]
+processed_logger_eng_files: list[pathlib.Path]
+processed_logger_other_files: list[pathlib.Path]
 
 
 # Utility functions
@@ -181,7 +180,9 @@ urllib.request.FancyURLopener.prompt_user_passwd = my_prompt_user_passwd
 # urllib.request.urlopen.prompt_user_passwd = my_prompt_user_passwd
 
 
-def read_processed_files(glider_dir, instrument_id):
+def read_processed_files(
+    glider_dir: pathlib.Path, instrument_id: int
+) -> tuple[dict[str, float], dict[str, float]]:
     """Reads the processed file cache
 
     Returns: list of processed dive files and a list of processed pdos logfiles
@@ -189,16 +190,14 @@ def read_processed_files(glider_dir, instrument_id):
 
     Raises: IOError for file errors
     """
-    log_debug("Enterting read_processed_files")
+    processed_dive_file_name = glider_dir / processed_files_cache
 
-    processed_dive_file_name = glider_dir + processed_files_cache
-
-    files_dict = {}
-    pdos_logfiles_dict = {}
-    if not os.path.exists(processed_dive_file_name):
+    files_dict: dict[str, float] = {}
+    pdos_logfiles_dict: dict[str, float] = {}
+    if not processed_dive_file_name.exists():
         return (files_dict, pdos_logfiles_dict)
 
-    with open(processed_dive_file_name, "r") as processed_dives_file:
+    with processed_dive_file_name.open() as processed_dives_file:
         for raw_line in processed_dives_file:
             raw_line = raw_line.rstrip()
             if raw_line == "":
@@ -232,10 +231,8 @@ def read_processed_files(glider_dir, instrument_id):
                     f"Unknown entry {raw_line} in {processed_files_cache} - skipping"
                 )
 
-    del processed_dives_file
     try:
-        os.chmod(
-            processed_dive_file_name,
+        processed_dive_file_name.chmod(
             stat.S_IRUSR
             | stat.S_IWUSR
             | stat.S_IRGRP
@@ -246,25 +243,27 @@ def read_processed_files(glider_dir, instrument_id):
     except Exception:
         log_error(f"Unable to change mode of {processed_dive_file_name}", "exc")
 
-    log_debug("Leaving read_processed_files")
-
     return (files_dict, pdos_logfiles_dict)
 
 
-def write_processed_dives(glider_dir, files_dict, pdos_logfiles_dict):
+def write_processed_dives(
+    glider_dir: pathlib.Path,
+    files_dict: dict[str, float],
+    pdos_logfiles_dict: dict[str, float],
+) -> int:
     """Writes out the processed dive file
 
     Returns: 0 for success, non-zero for failure
     Raises: IOError for fil
     """
-    processed_dive_file_name = glider_dir + processed_files_cache
+    processed_dive_file_name = glider_dir / processed_files_cache
 
     # processed_pdos_logfiles.sort()
     pdos_items = sorted(list(pdos_logfiles_dict.items()))
 
     items = sorted(files_dict.items())
 
-    with open(processed_dive_file_name, "w") as processed_dive_file:
+    with processed_dive_file_name.open("w") as processed_dive_file:
         processed_dive_file.write(
             "# This file contains the dives that have been"
             " processed and the times they were processed\n"
@@ -290,8 +289,6 @@ def write_processed_dives(glider_dir, files_dict, pdos_logfiles_dict):
             processed_dive_file.write(
                 f"{i}, {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(j))}\n"
             )
-
-    del processed_dive_file
 
     return 0
 
@@ -813,9 +810,9 @@ def process_file_group(
                             incomplete_files.append(defrag_file_name)
                             continue
 
-                        tarmember_fullpath = os.path.abspath(
-                            os.path.join(base_opts.mission_dir, tarmember.name)
-                        )
+                        tarmember_fullpath = (
+                            base_opts.mission_dir / tarmember.name
+                        ).resolve()
 
                         if fc.is_logger():
                             logger_file_list.append(tarmember_fullpath)
@@ -1446,9 +1443,11 @@ def run_extension_script(
         log_info(f"Extension script {script_name} not found")
 
 
-def remove_dive_from_dict(complete_files_dict, dive_num, instrument_id):
+def remove_dive_from_dict(
+    complete_files_dict: dict[str, float], dive_num: int, instrument_id: int
+) -> dict[str, float]:
     """Returns an updated complete_files_dict with all files from a dive_num removed"""
-    new_dict = {}
+    new_dict: dict[str, float] = {}
     for k, v in complete_files_dict.items():
         fc = FileMgr.FileCode(k, instrument_id)
         if fc.is_seaglider_selftest() or fc.dive_number() != dive_num:
@@ -1598,7 +1597,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         log_critical("Dive directory must be supplied. See Base.py -h")
         return 1
 
-    if not os.path.exists(base_opts.mission_dir):
+    if not base_opts.mission_dir.exists():
         log_critical(
             f"Dive directory {base_opts.mission_dir} does not exist - bailing out"
         )
@@ -1636,10 +1635,10 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     # log_info(f"Sleeping for {sleep_secs} secs")
     # time.sleep(sleep_secs)
 
-    sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
+    sg_calib_file_name = base_opts.mission_dir / "sg_calib_constants.m"
 
     # If present, this file indicates that FMS, MMT, MMP, MakeKML and WholeMission plots should be skipped
-    go_fast_file = pathlib.Path(base_opts.mission_dir).joinpath(".go_fast")
+    go_fast_file = base_opts.mission_dir / ".go_fast"
 
     calib_consts = CalibConst.getSGCalibrationConstants(
         sg_calib_file_name, ignore_fm_tags=not base_opts.ignore_flight_model
@@ -1703,7 +1702,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     # Parse comm log
     (comm_log, _, _, _, _) = CommLog.process_comm_log(
-        os.path.join(base_opts.mission_dir, "comm.log"),
+        base_opts.mission_dir / "comm.log",
         base_opts,
         known_commlog_files=known_files,
     )
@@ -1723,11 +1722,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     # Collect the things we'll need for later processing
     instrument_id = comm_log.get_instrument_id()
     if not instrument_id:
-        head, tail = os.path.split(
-            os.path.abspath(os.path.expanduser(base_opts.mission_dir))
-        )
         try:
-            instrument_id = int(tail[2:5])
+            instrument_id = int(base_opts.mission_dir.name[2:5])
         except ValueError:
             log_critical("Could not determine the glider's id")
 
@@ -1806,8 +1802,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         )
 
     log_info("Processing comm_merged.log")
-    history_logfile_name = os.path.join(base_opts.mission_dir, "history.log")
-    if os.path.exists(history_logfile_name):
+    history_logfile_name = base_opts.mission_dir / "history.log"
+    if history_logfile_name.exists():
         try:
             command_list_with_ts = CommLog.process_history_log(history_logfile_name)
         except Exception:
@@ -1819,9 +1815,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             new_list_with_ts = CommLog.merge_lists_with_ts(
                 comm_log.raw_lines_with_ts, command_list_with_ts
             )
-            comm_log_merged_name = os.path.join(
-                base_opts.mission_dir, "comm_merged.log"
-            )
+            comm_log_merged_name = base_opts.mission_dir / "comm_merged.log"
             try:
                 comm_log_merged = open(comm_log_merged_name, "w")
             except OSError as exception:
@@ -1846,7 +1840,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             Ver65.conv_ver_65_files(base_opts.mission_dir, file_names)
 
         # Handle the zipped FLASH file
-        flash_file_name = os.path.join(base_opts.mission_dir, "FLASH.gz")
+        flash_file_name = base_opts.mission_dir / "FLASH.gz"
         if os.path.exists(flash_file_name):
             (
                 rename_divenum,
@@ -1854,12 +1848,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             ) = comm_log.get_last_dive_num_and_call_counter()
             # pdos_log_name = "sg%04dpz.%03d" % (comm_log.last_surfacing().dive_num, comm_log.last_surfacing().calls_made)
             pdos_log_name = "sg%04dpz.%03d" % (rename_divenum, rename_call_counter)
-            pdos_log_name = os.path.join(base_opts.mission_dir, pdos_log_name)
+            pdos_log_name = base_opts.mission_dir / pdos_log_name
             log_info(f"Moving {flash_file_name} to {pdos_log_name}")
             shutil.move(flash_file_name, pdos_log_name)
 
         # Handle the FLASH file
-        flash_file_name = os.path.join(base_opts.mission_dir, "FLASH")
+        flash_file_name = base_opts.mission_dir / "FLASH"
         if os.path.exists(flash_file_name):
             (
                 rename_divenum,
@@ -1873,13 +1867,13 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 log_error("No CallCounter found in comm.log - useing 0 as default")
             # pdos_log_name = "sg%04dpu.%03d" % (comm_log.last_surfacing().dive_num, comm_log.last_surfacing().calls_made)
             pdos_log_name = "sg%04dpu.%03d" % (rename_divenum, rename_call_counter)
-            pdos_log_name = os.path.join(base_opts.mission_dir, pdos_log_name)
+            pdos_log_name = base_opts.mission_dir / pdos_log_name
             log_info(f"Moving {flash_file_name} to {pdos_log_name}")
             shutil.move(flash_file_name, pdos_log_name)
 
         # Unzip parm file
         # First - strip 1a
-        parms_zipped_file_name = os.path.join(base_opts.mission_dir, "parms.gz")
+        parms_zipped_file_name = base_opts.mission_dir / "parms.gz"
         if os.path.exists(parms_zipped_file_name):
             root, ext = os.path.splitext(parms_zipped_file_name)
             parms_zipped_file_name_1a = root + ".1a" + ext
@@ -1889,7 +1883,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 )
                 # Proceed anyway
             else:
-                parms_file_name = os.path.join(base_opts.mission_dir, "parms")
+                parms_file_name = base_opts.mission_dir / "parms"
                 if BaseGZip.decompress(parms_zipped_file_name_1a, parms_file_name) > 0:
                     log_error(
                         f"Problem decompressing {parms_zipped_file_name} - skipping"
@@ -1899,8 +1893,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                     os.remove(parms_zipped_file_name)
 
         # Handle the parms files
-        parms_file_name = os.path.join(base_opts.mission_dir, "parms")
-        if os.path.exists(parms_file_name):
+        parms_file_name = base_opts.mission_dir / "parms"
+        if parms_file_name.exists():
             (
                 rename_divenum,
                 rename_call_counter,
@@ -2003,7 +1997,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
         if (
             os.path.basename(i) not in processed_pdos_logfiles_dict
-            or os.path.getmtime(os.path.join(base_opts.mission_dir, i))
+            or os.path.getmtime(base_opts.mission_dir / i)
             > processed_pdos_logfiles_dict[os.path.basename(i)]
         ) and not process_pdoscmd_log(base_opts, i, instrument_id):
             new_pdos_logfiles_processed.append(os.path.basename(i))
@@ -2080,11 +2074,11 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         po.process_progress("per_dive_netcdfs", "start")
         if not base_opts.skip_flight_model and base_opts.backup_flight:
             # Start with a fresh flight directory
-            flight_dir = os.path.join(base_opts.mission_dir, "flight")
-            flight_dir_backup = os.path.join(
-                base_opts.mission_dir, f"flight_{time.strftime('%Y%m%d_%H%M%S')}"
+            flight_dir = base_opts.mission_dir / "flight"
+            flight_dir_backup = (
+                base_opts.mission_dir / f"flight_{time.strftime('%Y%m%d_%H%M%S')}"
             )
-            if os.path.exists(flight_dir):
+            if flight_dir.exists():
                 log_info(
                     f"Backing up {flight_dir} to {flight_dir_backup} due to --force option"
                 )
@@ -2109,7 +2103,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 network_files_to_process, processed_other_files
             )
             for ncf in processed_other_files:
-                if ".ncdf" in ncf:
+                if ncf.suffix == ".ncdf":
                     BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
 
         # Process regular files
@@ -2135,20 +2129,14 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         # 3) Walk dives to process - if the seaglider log and eng files exists, we can proceed
         #                            add in any logger eng files that might exists (regular file in home directory and any sub-directories)
         for d in dive_nums_to_process:
-            seaglider_eng_file_name = "%sp%03d%04d.eng" % (
-                base_opts.mission_dir,
-                instrument_id,
-                d,
+            seaglider_eng_file_name = (
+                base_opts.mission_dir / f"p{instrument_id:03d}{d:04d}.eng"
             )
-            seaglider_log_file_name = "%sp%03d%04d.log" % (
-                base_opts.mission_dir,
-                instrument_id,
-                d,
+            seaglider_log_file_name = (
+                base_opts.mission_dir / f"p{instrument_id:03d}{d:04d}.log"
             )
             # log_info("%s:%s" % ( seaglider_eng_file_name, seaglider_log_file_name))
-            if os.path.exists(seaglider_eng_file_name) and os.path.exists(
-                seaglider_log_file_name
-            ):
+            if seaglider_eng_file_name.exists() and seaglider_log_file_name.exists():
                 dives_to_profile.append(seaglider_log_file_name)
 
         # Find any associated logger eng files for each dive in dives_to_profile
@@ -2158,12 +2146,19 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
         # Now, walk the list and create the profiles
         for dive_to_profile in dives_to_profile:
-            head, tail = os.path.splitext(dive_to_profile)
-            log_info(f"Processing ({head}) for profiles")
-            log_file_name = head + ".log"
-            eng_file_name = head + ".eng"
+            log_info(
+                f"Processing ({dive_to_profile.parent / dive_to_profile.stem}) for profiles"
+            )
+            log_file_name = (dive_to_profile.parent / dive_to_profile.stem).with_suffix(
+                ".log"
+            )
+            eng_file_name = (dive_to_profile.parent / dive_to_profile.stem).with_suffix(
+                ".eng"
+            )
             if base_opts.make_dive_profiles:
-                nc_dive_file_name = head + ".nc"
+                nc_dive_file_name = (
+                    dive_to_profile.parent / dive_to_profile.stem
+                ).with_suffix(".nc")
             else:
                 nc_dive_file_name = None
 
@@ -2191,7 +2186,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 return 1
             except Exception:
                 log_error(
-                    f"MakeDiveProfiles raised an exception - dive profiles not created for {head}",
+                    f"MakeDiveProfiles raised an exception - dive profiles not created for {dive_to_profile.parent / dive_to_profile.stem}",
                     "exc",
                 )
                 log_info("Continuing processing...")
@@ -2212,10 +2207,14 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                     nc_files_created.append(nc_dive_file_name)
 
                 if retval == 1:
-                    log_error(f"Failed to create profiles for {head}")
+                    log_error(
+                        f"Failed to create profiles for {dive_to_profile.parent / dive_to_profile.stem}"
+                    )
                     failed_profiles.append(dive_num)
                 elif retval == 2:
-                    log_info(f"Skipped creating profiles for {head}")
+                    log_info(
+                        f"Skipped creating profiles for {dive_to_profile.parent / dive_to_profile.stem}"
+                    )
                 else:
                     # Add to list of data product files created/updated
                     if nc_dive_file_name:
@@ -2241,7 +2240,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     # Back up all files - using the dive # and call_cycle # from the comm log
     # Do this without regard to what dives got processed
     for known_file in known_files:
-        backup_filename = os.path.join(base_opts.mission_dir, known_file)
+        backup_filename = base_opts.mission_dir / known_file
         if os.path.exists(backup_filename):
             if backup_dive_num is not None:
                 backup_target_filename = "%s.%04d.%04d" % (
@@ -2270,7 +2269,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             f"cmdfile.{int(backup_dive_num):04d}.{int(backup_call_cycle):04d}"
         )
 
-        fullname = os.path.join(base_opts.mission_dir, cmdfile_name)
+        fullname = base_opts.mission_dir / cmdfile_name
         if os.path.exists(fullname):
             BaseDB.logParameterChanges(base_opts, backup_dive_num, cmdfile_name)
 
@@ -2278,18 +2277,16 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     delete_files = []
     preserve_files = []
     for kf in known_files:
-        delete_files.append(
-            os.path.join(base_opts.mission_dir, f".delete_{kf.replace('.', '_')}")
-        )
+        delete_files.append(base_opts.mission_dir / f".delete_{kf.replace('.', '_')}")
         preserve_files.append(
-            os.path.join(base_opts.mission_dir, f".preserve_{kf.replace('.', '_')}")
+            base_opts.mission_dir / f".preserve_{kf.replace('.', '_')}"
         )
 
     log_debug(delete_files)
 
     # Two different mechanisms for removing input files after successful upload
     for ii in range(len(known_files)):
-        known_file = os.path.join(base_opts.mission_dir, known_files[ii])
+        known_file = base_opts.mission_dir / known_files[ii]
 
         if os.path.exists(delete_files[ii]):
             # See if the glider (via x!) or some other process has touched .delete_{known_file}
@@ -2394,7 +2391,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 log_critical("FlightModel failed", "exc")
             else:
                 fm_nc_files_created = list(set(fm_nc_files_created))
-                log_info(f"FM files updated {fm_nc_files_created}")
+                log_info(f"FM files updated {[str(ff) for ff in fm_nc_files_created]}")
                 nc_files_created += fm_nc_files_created
                 nc_files_created = sorted(nc_files_created)
             po.process_progress("flight_model", "stop")
@@ -2410,14 +2407,14 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     for k in list(processed_logger_payload_files.keys()):
         if len(processed_logger_payload_files[k]) > 0:
             run_extension_script(
-                os.path.join(base_opts.mission_dir, f".{k}_ext"),
+                base_opts.mission_dir / f".{k}_ext",
                 processed_logger_payload_files[k],
                 base_opts.logger_script_timeout,
             )
 
     # Run the post dive processing script
     run_extension_script(
-        os.path.join(base_opts.mission_dir, ".post_dive"),
+        base_opts.mission_dir / ".post_dive",
         None,
         base_opts.post_dive_timeout,
     )
@@ -2464,13 +2461,13 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         po.process_progress("parquet_generation", "skip", reason="Per option")
 
     # Run and dive extensions
-    processed_file_names = []
-    processed_file_names.append(processed_eng_and_log_files)
-    processed_file_names.append(processed_selftest_eng_and_log_files)
+    processed_file_names: list[pathlib.Path] = []
+    processed_file_names.extend(processed_eng_and_log_files)
+    processed_file_names.extend(processed_selftest_eng_and_log_files)
     # processed_file_names.append(processed_other_files)
-    processed_file_names.append(data_product_file_names)
-    processed_file_names.append(processed_logger_eng_files)
-    processed_file_names.append(processed_logger_other_files)
+    processed_file_names.extend(data_product_file_names)
+    processed_file_names.extend(processed_logger_eng_files)
+    processed_file_names.extend(processed_logger_other_files)
     processed_file_names = Utils.flatten(processed_file_names)
 
     # Per-dive plotting
@@ -2626,12 +2623,13 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         po.process_progress("mission_timeseries", "stop")
 
     processed_file_names = []
-    processed_file_names.append(processed_eng_and_log_files)
-    processed_file_names.append(processed_selftest_eng_and_log_files)
-    # processed_file_names.append(processed_other_files)
-    processed_file_names.append(data_product_file_names)
-    processed_file_names.append(processed_logger_eng_files)
-    processed_file_names.append(processed_logger_other_files)
+    processed_file_names.extend(processed_eng_and_log_files)
+    processed_file_names.extend(processed_selftest_eng_and_log_files)
+    # processed_file_names.extend(processed_other_files)
+    processed_file_names.extend(data_product_file_names)
+    processed_file_names.extend(processed_logger_eng_files)
+    processed_file_names.extend(processed_logger_other_files)
+    # TODO - needed?
     processed_file_names = Utils.flatten(processed_file_names)
 
     # Any extensions that need to be run before the whole mission plots are generated
@@ -2772,7 +2770,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         )
         alert_message_file_name = alert_message_base_name
 
-    alert_msg_file_name = os.path.join(base_opts.mission_dir, alert_message_file_name)
+    alert_msg_file_name = base_opts.mission_dir / alert_message_file_name
 
     if base_opts.base_log is not None and base_opts.base_log != "":
         conversion_log = base_opts.base_log
@@ -2804,9 +2802,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         # TODO - Full feature - check for a logout. If seen, then append to or create the
         # new pdoscmds.bat file to issue the resends
         if conversion_alerts_d:
-            resend_file_name = os.path.join(
-                base_opts.mission_dir, "pdoscmds.bat.resend"
-            )
+            resend_file_name = base_opts.mission_dir / "pdoscmds.bat.resend"
+
             with open(resend_file_name, "w") as resend_file:
                 for _, alert_tuple in conversion_alerts_d.items():
                     for _, resend_cmd in alert_tuple:
@@ -2894,9 +2891,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 alert_msg_file.write("<ul>\n")
 
             for file_name in incomplete_files:
-                incomplete_file_name = os.path.abspath(
-                    os.path.join(base_opts.mission_dir, file_name)
-                )
+                incomplete_file_name = (base_opts.mission_dir / file_name).resolve()
                 pagers_convert_msg = (
                     pagers_convert_msg + f"    {incomplete_file_name}\n"
                 )
@@ -3026,16 +3021,16 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 log_error(f"Could not remove alert message file {alert_msg_file_name}")
 
     processed_file_names = []
-    processed_file_names.append(processed_eng_and_log_files)
-    processed_file_names.append(processed_selftest_eng_and_log_files)
-    processed_file_names.append(processed_other_files)
-    processed_file_names.append(data_product_file_names)
+    processed_file_names.extend(processed_eng_and_log_files)
+    processed_file_names.extend(processed_selftest_eng_and_log_files)
+    processed_file_names.extend(processed_other_files)
+    processed_file_names.extend(data_product_file_names)
     # Already added above
     # for k in processed_logger_payload_files.keys():
     #     if(len(processed_logger_payload_files[k]) > 0):
     #         processed_file_names.append(processed_logger_payload_files[k])
-    processed_file_names.append(processed_logger_eng_files)
-    processed_file_names.append(processed_logger_other_files)
+    processed_file_names.extend(processed_logger_eng_files)
+    processed_file_names.extend(processed_logger_other_files)
     processed_file_names = Utils.flatten(processed_file_names)
 
     # Remove anything that is None
@@ -3048,7 +3043,13 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             if processed_file_name is None:
                 continue
             if isinstance(processed_file_name, str):
-                p = processed_file_name.replace(base_opts.mission_dir, "")
+                if DEBUG_PDB:
+                    pdb.set_trace()
+                log_warning(
+                    f"Found string based file in processed_file_name {processed_file_name}"
+                )
+                p = pathlib.Path(processed_file_name).relative_to(base_opts.mission_dir)
+
             else:
                 # pathlib
                 p = processed_file_name.relative_to(pathlib.Path(base_opts.mission_dir))
@@ -3061,8 +3062,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     # Run the post mission processing script
     run_extension_script(
-        os.path.join(base_opts.mission_dir, ".post_mission"),
-        processed_file_names,
+        base_opts.mission_dir / ".post_mission",
+        [str(pp) for pp in processed_file_names],
         base_opts.post_mission_timeout,
     )
 
@@ -3072,7 +3073,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         dn = re.compile(r".*\/p.*\d\d\d(?P<divenum>\d\d\d\d).*")
         # Collect the dive numbers
         for pf in processed_file_names:
-            values = dn.search(pf)
+            values = dn.search(str(pf))
             if values and len(values.groupdict()) == 1:
                 dive_nums.append(int(values.groupdict()["divenum"]))
 
@@ -3084,23 +3085,30 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 tarfile_files = []
                 # Find all files that contribute and exist
                 for ext in (".eng", ".log", ".cap"):
-                    file_name = os.path.join(
-                        base_opts.mission_dir,
-                        "p%s%03d%04d%s" % (st, instrument_id, dive_num, ext),
+                    file_name = (
+                        base_opts.mission_dir
+                        / "p%s%03d%04d%s"
+                        % (st, instrument_id, dive_num, ext)
                     )
-                    if os.path.exists(file_name):
+
+                    if file_name.exists():
                         tarfile_files.append(file_name)
                     else:
                         log_info(f"{file_name} does not exists")
                 if st == "":
                     for logger in ("sc", "tm"):
                         for profile in ("a", "b", "c"):
-                            for file_name in glob.glob(
-                                os.path.join(
-                                    base_opts.mission_dir,
-                                    "%s%04d%s/*eng" % (logger, dive_num, profile),
-                                )
-                            ):
+                            # for file_name in glob.glob(
+                            # os.path.join(
+                            #     base_opts.mission_dir,
+                            #     "%s%04d%s/*eng" % (logger, dive_num, profile),
+                            # )
+                            # ):
+                            for file_name in (
+                                base_opts.mission_dir
+                                / "%s%04d%s/"
+                                % (logger, dive_num, profile)
+                            ).glob("*eng"):
                                 tarfile_files.append(file_name)
 
                 if len(tarfile_files) == 0:
@@ -3109,10 +3117,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                     "Tarfiles for %s %d: %s"
                     % ("selftest" if st == "t" else "dive", dive_num, tarfile_files)
                 )
-                tar_name = os.path.join(
-                    base_opts.mission_dir,
-                    "p%s%03d%04d.tar.bz2" % (st, instrument_id, dive_num),
+                tar_name = (
+                    base_opts.mission_dir
+                    / "p%s%03d%04d.tar.bz2"
+                    % (st, instrument_id, dive_num)
                 )
+
                 try:
                     tf = tarfile.open(tar_name, "w:bz2", compresslevel=9)
                 except Exception:
@@ -3138,10 +3148,10 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                     for ii in range(100):
                         if ii * base_opts.divetarballs > len(buff):
                             break
-                        tar_frag_name = os.path.join(
-                            base_opts.mission_dir,
-                            "p%s%03d%04d_%02d.tar.bz2"
-                            % (st, instrument_id, dive_num, ii),
+                        tar_frag_name = (
+                            base_opts.mission_dir
+                            / "p%s%03d%04d_%02d.tar.bz2"
+                            % (st, instrument_id, dive_num, ii)
                         )
 
                         try:
@@ -3360,9 +3370,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     # looked at processed_other_files list to decide if we should be more
     # granular about what is completed
-    base_completed_name_fullpath = os.path.join(
-        base_opts.mission_dir, base_completed_name
-    )
+    base_completed_name_fullpath = base_opts.mission_dir / base_completed_name
     try:
         with open(base_completed_name_fullpath, "w") as file:
             file.write(

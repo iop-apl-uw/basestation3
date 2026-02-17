@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2024, 2025  University of Washington.
+## Copyright (c) 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -36,12 +36,13 @@
 from __future__ import annotations
 
 import os
+import pathlib
 import time
 import typing
 
 import cmocean
 import numpy
-import plotly
+import plotly.graph_objects
 import yaml
 
 import ExtractTimeseries
@@ -94,7 +95,7 @@ def cmocean_to_plotly(cmapname, pl_entries):
 @plotmissionsingle
 def mission_profiles(
     base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
 
     if not generate_plots:
         return ([], [])

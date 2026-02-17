@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -352,7 +352,7 @@ def update_globals_from_nodc(base_opts, globals_d):
 
     for yaml_filename in (
         os.path.join(base_opts.basestation_etc, nodc_cnf_file),
-        os.path.join(base_opts.mission_dir, nodc_cnf_file),
+        base_opts.mission_dir / nodc_cnf_file,
     ):
         if os.path.exists(yaml_filename):
             try:

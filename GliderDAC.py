@@ -495,9 +495,7 @@ def main(
             # Collect up the possible files
             dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
         if not base_opts.gliderdac_directory:
-            base_opts.gliderdac_directory = os.path.join(
-                base_opts.mission_dir, "gliderdac"
-            )
+            base_opts.gliderdac_directory = base_opts.mission_dir / "gliderdac"
     else:
         log_error("Either mission_dir or netcdf_file must be specified")
         return 1

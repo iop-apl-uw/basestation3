@@ -1338,7 +1338,7 @@ def process_comm_log(
                         # In either of these cases, there are no transfer stats in the comm.log,
                         # so just use the file size for all (assumes best case of file
                         # actually transferring)
-                        statinfo = os.stat(os.path.join(base_opts.mission_dir, cmd_run))
+                        statinfo = (base_opts.mission_dir / cmd_run).stat()
                         file_transfer_method[cmd_run] = "raw"
                         session.transfer_method[cmd_run] = "raw"
                         session.transfered_size[cmd_run] = statinfo.st_size
@@ -2204,7 +2204,7 @@ def main():
     global DEBUG_PDB
     DEBUG_PDB = base_opts.debug_pdb
 
-    comm_log_path = os.path.join(base_opts.mission_dir, "comm.log")
+    comm_log_path = base_opts.mission_dir / "comm.log"
     if not os.path.exists(comm_log_path):
         log_error(f"{comm_log_path} does not exist")
         return 1

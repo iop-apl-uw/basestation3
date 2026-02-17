@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -36,10 +36,13 @@
 
 """An attempt to turn 'experimental' regress_vbd.m into a Maytag washer, an automatic reliable appliance"""
 
+from __future__ import annotations
+
 import contextlib
 import copy
 import cProfile
 import os
+import pathlib
 import pdb
 import pickle
 import pstats
@@ -2314,10 +2317,10 @@ glider_mission_string = None
 # the local variable dive_num MUST be maintained as the prevailing dive number
 # if you loop over other dives use d_n as the iterator variable
 def process_dive(
-    base_opts,
-    new_dive_num,
+    base_opts: BaseOpts.BaseOptions,
+    new_dive_num: int,
     updated_dives_d,
-    nc_files_created,
+    nc_files_created: list[pathlib.Path],
     alert_dive_num=None,
     exit_event=None,
 ):
@@ -3684,10 +3687,10 @@ def process_dive(
                 # update updated_dives_d with any new times for the next FM cycle
                 for d_n in reprocess_dives:
                     dd = flight_dive_data_d[d_n]
-                    dive_nc_file_name = nc_path_format % d_n
+                    dive_nc_file_name = pathlib.Path(nc_path_format % d_n)
                     reprocess_error = None
-                    if os.path.exists(dive_nc_file_name):
-                        nc_time = os.path.getmtime(dive_nc_file_name)
+                    if dive_nc_file_name.exists():
+                        nc_time = dive_nc_file_name.stat().st_mtime
                         if nc_time > dd.last_updated:
                             # what we expected....
                             # force both reprocessing and scanning of this dive again
@@ -3732,9 +3735,9 @@ def process_dive(
 
 # Called as an extension or via cmdline_main() below
 def main(
-    base_opts,
-    sg_calib_file_name,
-    nc_files_created,
+    base_opts: BaseOpts.BaseOptions,
+    sg_calib_file_name: pathlib.Path,
+    nc_files_created: list[pathlib.Path],
     exit_event=None,
 ):
     """Basestation support for evaluating flight model parameters from dive data

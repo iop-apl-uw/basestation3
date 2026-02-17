@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -40,6 +40,7 @@ import cProfile
 import glob
 import math
 import os
+import pathlib
 import pdb
 import pstats
 import re
@@ -1538,7 +1539,7 @@ def load_dive_profile_data(
     log_debug("Processing %s" % nc_dive_file_name)
 
     status = 0  # assume we have issues loading data
-    drv_file_name = os.path.join(base_opts.mission_dir, "sg_directives.txt")
+    drv_file_name = base_opts.mission_dir / "sg_directives.txt"
     # make these file entries look like they came from Sensors
     file_table = {
         "ncf": [[{"file_name": nc_dive_file_name}], True, 0, None, False],
@@ -7914,7 +7915,7 @@ def collect_nc_perdive_files(base_opts):
     dive_nc_file_names = []
 
     glob_expr = "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc"
-    for match in glob.glob(os.path.join(base_opts.mission_dir, glob_expr)):
+    for match in base_opts.mission_dir.glob(glob_expr):
         dive_nc_file_names.append(match)
         log_debug("Found dive nc file %s" % match)
 
@@ -7976,8 +7977,8 @@ def main():
     elif base_opts.basename:
         # they gave us a basename, e.g., p5400003 so expand it assuming current (code?) directory
         # make it look like it came via --mission_dir
-        base_path = base_opts.basename + "/"  # ensure trailing '/'
-        base_opts.mission_dir = base_path
+        base_path = base_opts.basename
+        base_opts.mission_dir = pathlib.Path(base_opts.basename)
     else:
         log_error("Neither mission_dir or basename provided")
         return 1
@@ -8003,19 +8004,20 @@ def main():
         # We were probably given <mission_dir>/pXXXDDDD to work on one dive
         # Set mission_dir properly. No need to expanduser here--already done by BaseOpts
         # Since there was a trailing / tacked onto the mission_dir, the split must remove that
-        if base_path[-1] == "/":
-            base_path = base_path[:-1]
-        mission_dir, base_name = os.path.split(base_path)
-        if not os.path.isdir(mission_dir):
+        # if base_path[-1] == "/":
+        #    base_path = base_path[:-1]
+        mission_dir = base_path.parent
+        base_name = base_path.name
+        if mission_dir.is_dir():
             log_error("Directory %s does not exist -- exiting" % mission_dir)
             return 1
-        base_opts.mission_dir = mission_dir + "/"  # ensure trailing '/'
+        # base_opts.mission_dir = mission_dir + "/"  # ensure trailing '/'
         # rebuild path
-        base_path = os.path.join(base_opts.mission_dir, base_name)
+        base_path = base_opts.mission_dir / base_name
         log_info("Making profile for: %s" % base_path)
         dive_list.append(base_path)
 
-    sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
+    sg_calib_file_name = base_opts.mission_dir / "sg_calib_constants.m"
     calib_consts = CalibConst.getSGCalibrationConstants(
         sg_calib_file_name, ignore_fm_tags=not base_opts.ignore_flight_model
     )

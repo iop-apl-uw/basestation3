@@ -34,6 +34,7 @@
 from __future__ import annotations
 
 import collections
+import pathlib
 import typing
 
 import numpy as np
@@ -56,7 +57,7 @@ def plot_tridente(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots calibrated output for RBR Tridente"""
 
     if not generate_plots:

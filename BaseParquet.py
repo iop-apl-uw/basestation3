@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -324,10 +324,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     # Collect up the possible files
     if base_opts.netcdf_files:
-        dive_nc_file_names = [
-            pathlib.Path(base_opts.mission_dir).joinpath(x)
-            for x in base_opts.netcdf_files
-        ]
+        dive_nc_file_names = [base_opts.mission_dir / x for x in base_opts.netcdf_files]
     else:
         dive_nc_file_names = [
             pathlib.Path(x)

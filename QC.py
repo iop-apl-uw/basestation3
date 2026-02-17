@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -31,7 +31,6 @@
 """Routines for creating and managing the QC vectors"""
 
 import collections
-import os
 import pickle
 import re
 
@@ -849,9 +848,7 @@ class ProfileDirectives:
         self.functions = []  # tokenized function lines w/o comments
         self.lines = []  # the valid lines with comments for this dive
         self.comments = []  # the comments preceding an applicable function
-        self.suggestions_filename = os.path.join(
-            mission_dir, "sg_directives_suggestions.txt"
-        )
+        self.suggestions_filename = mission_dir / "sg_directives_suggestions.txt"
         if filename:
             self.parse_file(filename)
 

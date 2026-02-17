@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -33,12 +33,15 @@ home directory (or other locations)
 
 """
 
+from __future__ import annotations
+
 import configparser
 import fnmatch
 import itertools
 import json
 import netrc
 import os
+import pathlib
 import pdb
 import smtplib
 import sys
@@ -51,6 +54,7 @@ from email.mime.nonmultipart import MIMENonMultipart
 from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
 from ftplib import FTP
+from typing import TYPE_CHECKING, Literal
 
 # from ftplib import FTP_TLS
 from urllib.parse import urlencode
@@ -78,6 +82,10 @@ from BaseLog import (
     log_info,
     log_warning,
 )
+
+if TYPE_CHECKING:
+    from BaseOpts import BaseOptions
+
 
 DEBUG_PDB = False
 
@@ -326,7 +334,7 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num, payload=No
     for urls_file_name in (
         os.path.join(base_opts.basestation_etc, ".urls"),
         os.path.join(base_opts.group_etc, ".urls") if base_opts.group_etc else None,
-        os.path.join(base_opts.mission_dir, ".urls"),
+        base_opts.mission_dir / ".urls",
     ):
         if urls_file_name is None:
             continue
@@ -667,7 +675,7 @@ def process_pagers(
     for pagers_file_name in (
         os.path.join(base_opts.basestation_etc, ".pagers"),
         os.path.join(base_opts.group_etc, ".pagers") if base_opts.group_etc else None,
-        os.path.join(base_opts.mission_dir, ".pagers"),
+        base_opts.mission_dir / ".pagers",
     ):
         if pagers_file_name is None:
             continue
@@ -724,9 +732,7 @@ def process_ftp_tags(
 
         elif ftp_tag in known_ftp_tags:
             if ftp_tag == "comm":
-                ftp_file_names_to_send.append(
-                    os.path.join(base_opts.mission_dir, "comm.log")
-                )
+                ftp_file_names_to_send.append(base_opts.mission_dir / "comm.log")
             else:
                 for processed_file_name in processed_file_names:
                     head, tail = os.path.splitext(processed_file_name)
@@ -1048,7 +1054,7 @@ def process_ftp(
     for ftp_file_name in (
         os.path.join(base_opts.basestation_etc, ftp_type),
         os.path.join(base_opts.group_etc, ftp_type) if base_opts.group_etc else None,
-        os.path.join(base_opts.mission_dir, ftp_type),
+        base_opts.mission_dir / ftp_type,
     ):
         if ftp_file_name is None:
             continue
@@ -1163,7 +1169,7 @@ def process_mailer(
                     else:
                         if mailer_tag == "comm":
                             mailer_file_names_to_send.append(
-                                os.path.join(base_opts.mission_dir, "comm.log")
+                                base_opts.mission_dir / "comm.log"
                             )
                         elif (
                             mailer_tag in ("nc", "mission_ts", "mission_pro")
@@ -1435,7 +1441,7 @@ def process_mailer(
     for mailer_file_name in (
         os.path.join(base_opts.basestation_etc, ".mailer"),
         os.path.join(base_opts.group_etc, ".mailer") if base_opts.group_etc else None,
-        os.path.join(base_opts.mission_dir, ".mailer"),
+        base_opts.mission_dir / ".mailer",
     ):
         if mailer_file_name is None:
             continue
@@ -1457,17 +1463,29 @@ def process_mailer(
 
 
 def process_extensions(
-    sections,
-    base_opts,
-    sg_calib_file_name=None,
-    dive_nc_file_names=None,
-    nc_files_created=None,
-    processed_other_files=None,
-    known_mailer_tags=None,
-    known_ftp_tags=None,
-    processed_file_names=None,
+    sections: tuple[
+        Literal[
+            "init_extension",
+            "dive",
+            "missionearly",
+            "global",
+            "mission",
+            "prelogin",
+            "commloggps",
+            "postnetcdf",
+        ],
+        ...,
+    ],
+    base_opts: BaseOptions,
+    sg_calib_file_name: pathlib.path | None = None,
+    dive_nc_file_names: list[pathlib.Path] | None = None,
+    nc_files_created: list[pathlib.Path] | None = None,
+    processed_other_files: list[pathlib.Path] | None = None,
+    known_mailer_tags: list[str] | None = None,
+    known_ftp_tags: list[str] | None = None,
+    processed_file_names: list[pathlib.Path] | None = None,
     **kwargs,
-):
+) -> int:
     """Processes the extensions file, running each extension
 
     Returns:
@@ -1603,7 +1621,7 @@ def process_extensions(
             else None,
             base_opts.group_etc,
         ),
-        (os.path.join(base_opts.mission_dir, ".extensions"), base_opts.mission_dir),
+        (base_opts.mission_dir / ".extensions", base_opts.mission_dir),
     ):
         if extensions_file_name is None:
             continue
@@ -1635,7 +1653,9 @@ def main():
         additional_arguments={
             "basedotfiles_action": BaseOptsType.options_t(
                 (),
-                ("BaseDotFiles",),
+                {
+                    "BaseDotFiles",
+                },
                 ("basedotfiles_action",),
                 str,
                 {
@@ -1645,7 +1665,9 @@ def main():
             ),
             "ftp_files": BaseOptsType.options_t(
                 [],
-                ("BaseDotFiles",),
+                {
+                    "BaseDotFiles",
+                },
                 ("ftp_files",),
                 str,
                 {
@@ -1655,7 +1677,9 @@ def main():
             ),
             "pass_num": BaseOptsType.options_t(
                 1,
-                ("BaseDotFiles",),
+                {
+                    "BaseDotFiles",
+                },
                 ("pass_num",),
                 int,
                 {
@@ -1678,7 +1702,7 @@ def main():
 
     if base_opts.basedotfiles_action in ("gps", "drift", "urls"):
         comm_log = CommLog.process_comm_log(
-            os.path.join(base_opts.mission_dir, "comm.log"), base_opts, scan_back=False
+            base_opts.mission_dir / "comm.log", base_opts, scan_back=False
         )[0]
 
         if comm_log is None:

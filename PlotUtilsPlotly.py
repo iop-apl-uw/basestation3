@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -30,18 +30,24 @@
 
 """Supporting routines for creating plots from netCDF data"""
 
+from __future__ import annotations
+
 import io
 import json
-import os
+import pathlib
 import warnings
+from typing import TYPE_CHECKING
 
 import brotli
-import PIL
+import PIL.Image
 import plotly
 import plotly.graph_objects
 import plotly.io
 
 from BaseLog import log_error, log_warning
+
+if TYPE_CHECKING:
+    from BaseOpts import BaseOptions
 
 # IOP Standard Figure size
 std_width = 1058
@@ -99,7 +105,9 @@ def plotlyfromjson(fpath):
     return fig
 
 
-def write_output_files(base_opts, base_file_name, fig):
+def write_output_files(
+    base_opts: BaseOptions, base_file_name: str, fig: plotly.graph_objects.Figure
+) -> list[pathlib.Path]:
     """
     Helper routine to output various file formats - .png and .div all the time
     and standalone .html and .svg based on conf file settings
@@ -121,13 +129,13 @@ def write_output_files(base_opts, base_file_name, fig):
         log_warning("plot_directory not specified - bailing out")
         return []
 
-    base_file_name = os.path.join(base_opts.plot_directory, base_file_name)
+    base_file_name: pathlib.Path = base_opts.plot_directory / base_file_name
 
-    ret_list = []
+    ret_list: list[pathlib.Path] = []
 
     if base_opts.full_html:
         # if plot_opts full_html
-        output_name = base_file_name + ".html"
+        output_name = base_file_name.with_suffix(".html")
         fig.write_html(
             file=output_name,
             include_plotlyjs="cdn",
@@ -141,7 +149,7 @@ def write_output_files(base_opts, base_file_name, fig):
         ret_list.append(output_name)
 
     # For IOP site - raw div
-    output_name = base_file_name + ".div"
+    output_name = base_file_name.with_suffix(".div")
     if base_opts.compress_div:
         fo_t = io.StringIO()
     else:
@@ -168,8 +176,8 @@ def write_output_files(base_opts, base_file_name, fig):
     except Exception:
         log_error(f"Failed to write out {output_name}", "exc")
 
-    def save_img_file(output_fmt):
-        output_name = base_file_name + "." + output_fmt
+    def save_img_file(output_fmt: str) -> pathlib.Path:
+        output_name = base_file_name.with_suffix(f".{output_fmt}")
         # No return code
         # TODO - for kelido 0.2.1 and python 3.10 (and later) we get this warning:
         #   File "/Users/gbs/.pyenv/versions/3.10.7/lib/python3.10/threading.py", line 1224, in setDaemon
@@ -227,7 +235,7 @@ def write_output_files(base_opts, base_file_name, fig):
 
     def isnotebook():
         try:
-            shell = get_ipython().__class__.__name__
+            shell = get_ipython().__class__.__name__  # ty: ignore[unresolved-reference]
             # print(shell)
             if shell == "ZMQInteractiveShell":
                 return True  # Jupyter notebook or qtconsole

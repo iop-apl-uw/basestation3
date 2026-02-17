@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -95,7 +95,9 @@ def main():
         additional_arguments={
             "python_version": BaseOptsType.options_t(
                 "/opt/basestation/bin/python",
-                ("BaseRunner",),
+                {
+                    "BaseRunner",
+                },
                 ("--python_version",),
                 str,
                 {
@@ -104,17 +106,21 @@ def main():
             ),
             "watch_dir": BaseOptsType.options_t(
                 None,
-                ("BaseRunner",),
+                {
+                    "BaseRunner",
+                },
                 ("watch_dir",),
-                str,
+                pathlib.Path,
                 {
                     "help": "Directory where run file are written",
-                    "action": BaseOpts.FullPathTrailingSlashAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
             "jail_root": BaseOptsType.options_t(
                 "",
-                ("BaseRunner",),
+                {
+                    "BaseRunner",
+                },
                 ("--jail_root",),
                 str,
                 {
@@ -124,7 +130,9 @@ def main():
             ),
             "archive": BaseOptsType.options_t(
                 False,
-                ("BaseRunner",),
+                {
+                    "BaseRunner",
+                },
                 ("--archive",),
                 bool,
                 {
@@ -134,7 +142,9 @@ def main():
             ),
             "docker_image": BaseOptsType.options_t(
                 "",
-                ("BaseRunner",),
+                {
+                    "BaseRunner",
+                },
                 ("--docker_image",),
                 str,
                 {
@@ -143,7 +153,9 @@ def main():
             ),
             "docker_uid": BaseOptsType.options_t(
                 -1,
-                ("BaseRunner",),
+                {
+                    "BaseRunner",
+                },
                 ("--docker_uid",),
                 int,
                 {
@@ -152,7 +164,9 @@ def main():
             ),
             "docker_gid": BaseOptsType.options_t(
                 -1,
-                ("BaseRunner",),
+                {
+                    "BaseRunner",
+                },
                 ("--docker_gid",),
                 int,
                 {
@@ -161,7 +175,9 @@ def main():
             ),
             "use_docker_basestation": BaseOptsType.options_t(
                 False,
-                ("BaseRunner",),
+                {
+                    "BaseRunner",
+                },
                 ("--use_docker_basestation",),
                 bool,
                 {
@@ -171,7 +187,9 @@ def main():
             ),
             "docker_mount": BaseOptsType.options_t(
                 [],
-                ("BaseRunner",),
+                {
+                    "BaseRunner",
+                },
                 ("--docker_mount",),
                 str,
                 {
@@ -182,7 +200,9 @@ def main():
             ),
             "queue_scripts": BaseOptsType.options_t(
                 True,
-                ("BaseRunner",),
+                {
+                    "BaseRunner",
+                },
                 ("--queue_scripts",),
                 bool,
                 {
@@ -243,7 +263,7 @@ def main():
             notifier.notify("WATCHDOG=1")
             next_stroke_time = time.time() + dog_stroke_interval
         for event in inotify.read(timeout=inotify_read_timeout):
-            run_file = os.path.join(base_opts.mission_dir, event.name)
+            run_file = base_opts.mission_dir / event.name
             # log_info(f"Received {event.name} {run_file}")
             if not (
                 os.path.exists(run_file)
@@ -414,8 +434,8 @@ def main():
                 if os.path.exists(run_file):
                     f_archive_failed = False
                     if base_opts.archive:
-                        archive_dir = os.path.join(base_opts.mission_dir, "archive")
-                        if not os.path.exists(archive_dir):
+                        archive_dir = base_opts.mission_dir / "archive"
+                        if not archive_dir.exists():
                             try:
                                 os.mkdir(archive_dir)
                             except Exception:

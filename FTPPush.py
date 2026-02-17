@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -49,8 +49,8 @@ def process_ftp(
     mission_profile_name=None,
 ):
     """Process the .ftp file and push the data to a ftp server"""
-    ftp_file_name = os.path.join(base_opts.mission_dir, ".ftp")
-    if not os.path.exists(ftp_file_name):
+    ftp_file_name = base_opts.mission_dir / ".ftp"
+    if not ftp_file_name.exixts():
         log_info("No .ftp file found - skipping .ftp processing")
         return
 

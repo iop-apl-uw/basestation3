@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -712,13 +712,13 @@ def main():
     global DEBUG_PDB
     DEBUG_PDB = base_opts.debug_pdb
 
-    datafile_name = os.path.join(base_opts.mission_dir, base_opts.data_file)
+    datafile_name = base_opts.mission_dir / base_opts.data_file
     if base_opts.log_file:
-        logfile_name = os.path.join(base_opts.mission_dir, base_opts.log_file)
+        logfile_name = base_opts.mission_dir / base_opts.log_file
     else:
         logfile_name = None
 
-    sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
+    sg_calib_file_name = base_opts.mission_dir / "sg_calib_constants.m"
 
     calib_consts = CalibConst.getSGCalibrationConstants(sg_calib_file_name)
     if not calib_consts:

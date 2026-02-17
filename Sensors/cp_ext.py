@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2025 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2025, 2026, 2026 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -27,6 +27,7 @@ Current Profiles (ADCP)  basestation sensor extension
 """
 
 import os
+import pathlib
 import shutil
 
 from scipy.io import loadmat
@@ -239,7 +240,7 @@ def process_data_files(
         # Copy to the correct extension
         ad2cpfile = fc.mk_base_engfile_name().replace(".eng", ".ad2cp")
         shutil.copy(fc.full_filename(), ad2cpfile)
-        processed_logger_other_files.append(ad2cpfile)
+        processed_logger_other_files.append(pathlib.Path(ad2cpfile))
 
         # Run the convertor to create a .mat file
         convertor = os.path.join(
@@ -268,7 +269,7 @@ def process_data_files(
 
         shutil.copy(matfile, fc.mk_base_engfile_name())
         processed_logger_eng_files.append(fc.mk_base_engfile_name())
-        processed_logger_other_files.append(matfile)
+        processed_logger_other_files.append(pathlib.Path(matfile))
     return 0
 
 

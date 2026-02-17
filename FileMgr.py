@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2025  University of Washington.
+## Copyright (c) 2023, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -30,14 +30,22 @@
 
 """FileMgr.py: contains classes for naming conventions & listing version 65/66 basestation files"""
 
+from __future__ import annotations
+
 import functools
 import glob
 import os
+import pathlib
 import re
 import string
+from typing import TYPE_CHECKING
 
 import Utils
 from BaseLog import log_debug, log_info
+
+if TYPE_CHECKING:
+    from BaseOpts import BaseOptions
+
 
 # pylint: disable=missing-function-docstring
 
@@ -149,7 +157,12 @@ def logger_init(init_dict):
             )
 
 
-def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
+def find_dive_logger_eng_files(
+    dive_list: list[pathlib.Path],
+    base_opts: BaseOptions,
+    instrument_id: int,
+    init_dict,
+):
     """Given a list of dive files (basenames, log or eng files) to be processed
     Returns a dict, keyed to each input dive file, with list of any associated logger files,
     by type and in their proper order, along with their appropriate reader function
@@ -182,11 +195,11 @@ def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
             # If so, add the pattern, which tells to the dive_list mapping below
             # that it should spend the time to glob and get the individual files in different locations
             g1 = glob.glob(
-                r"%sp%s%03d*%s[_\.]*eng"
+                r"%s/p%s%03d*%s[_\.]*eng"
                 % (base_opts.mission_dir, l_prefix, instrument_id, c)
             )  # any direct logger files for any dive?
             g2 = glob.glob(
-                f"{base_opts.mission_dir}{l_prefix}*{c}"
+                f"{base_opts.mission_dir}/{l_prefix}*{c}"
             )  # any logger subdirs for any dive?
             if len(g1) + len(g2) > 0:
                 logger_basename_pattern_d[l_prefix + c] = [
@@ -230,14 +243,14 @@ def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
                 # /home/seagliders/sg099/psc0990022a_depth_depth.eng
                 if ng1:
                     globs.append(
-                        r"%sp%s%03d%04d%s[_\.]*eng"
+                        r"%s/p%s%03d%04d%s[_\.]*eng"
                         % (base_opts.mission_dir, l_prefix, instrument_id, d, c)
                     )
                 # e.g., <mission_dir/>scDDDDa/pscGGGDDDDa[_.]*eng (for different sensors)
                 # /home/seagliders/sg099/sc0022a/psc0990022a_depth_depth.eng
                 if ng2:
                     globs.append(
-                        r"%s%s%04d%s/p%s%03d%04d%s[_\.]*eng"
+                        r"%s/%s%04d%s/p%s%03d%04d%s[_\.]*eng"
                         % (
                             base_opts.mission_dir,
                             l_prefix,
@@ -437,7 +450,10 @@ class FileCode:
 
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, filename, instrument_id):
+    def __init__(self, filename: pathlib.Path | str, instrument_id: int):
+        if isinstance(filename, pathlib.Path):
+            filename = str(filename)
+
         if len(os.path.basename(filename)) < 8:
             raise ValueError(
                 "File " + filename + " too short to be a valid file to process"
@@ -645,7 +661,7 @@ class FileCode:
         tail = tail[0:6] + "d" + tail[7:]
         return os.path.join(head, tail)
 
-    def mk_base_logfile_name(self):
+    def mk_base_logfile_name(self) -> pathlib.Path:
         """Returns: log file name of the form on the basestation
         - as opposed to the transmission name.
 
@@ -680,9 +696,9 @@ class FileCode:
             raise ValueError(
                 f"Don't know the logfile encoding for {self._full_filename}"
             )
-        return os.path.join(head, tail)
+        return pathlib.Path(head) / tail
 
-    def mk_base_capfile_name(self):
+    def mk_base_capfile_name(self) -> pathlib.Path:
         """Returns: capture file name of the form on the basestation
         - as opposed to the transmission name.
 
@@ -707,9 +723,9 @@ class FileCode:
             raise ValueError(
                 f"Don't know the capture file encoding for {self._full_filename}"
             )
-        return os.path.join(head, tail)
+        return pathlib.Path(head) / tail
 
-    def mk_base_datfile_name(self):
+    def mk_base_datfile_name(self) -> pathlib.Path:
         """Returns: data file name of the form on the basestation
         - as opposed to the transmission name
 
@@ -758,9 +774,9 @@ class FileCode:
             raise ValueError(
                 f"Don't know the capture file encoding for {self._full_filename}"
             )
-        return os.path.join(head, tail)
+        return pathlib.Path(head) / tail
 
-    def mk_base_ascfile_name(self):
+    def mk_base_ascfile_name(self) -> pathlib.Path:
         """Returns: acs file name of the form on the basestation
         - as opposed to the transmission name.
 
@@ -785,9 +801,9 @@ class FileCode:
             raise ValueError(
                 f"Don't know the capture file encoding for {self._full_filename}"
             )
-        return os.path.join(head, tail)
+        return pathlib.Path(head) / tail
 
-    def mk_base_engfile_name(self):
+    def mk_base_engfile_name(self) -> pathlib.Path:
         """Returns: eng file name of the form on the basestation
 
         Raises: ValueError if called for a non-seaglider file
@@ -818,9 +834,9 @@ class FileCode:
             raise ValueError(
                 f"Don't know the eng file encoding for {self._full_filename}"
             )
-        return os.path.join(head, tail)
+        return pathlib.Path(head) / tail
 
-    def mk_base_profile_name(self):
+    def mk_base_profile_name(self) -> pathlib.Path:
         """Returns: profile file name of the form on the basestation
 
         Raises: ValueError if called for a non-seaglider file
@@ -837,9 +853,9 @@ class FileCode:
             raise ValueError(
                 f"Don't know the eng file encoding for {self._full_filename}"
             )
-        return os.path.join(head, tail)
+        return pathlib.Path(head) / tail
 
-    def mk_base_binned_profile_name(self):
+    def mk_base_binned_profile_name(self) -> pathlib.Path:
         """Returns: binned profile file name of the form on the basestation
 
         Raises: ValueError if called for a non-seaglider file
@@ -856,9 +872,9 @@ class FileCode:
             raise ValueError(
                 f"Don't know the eng file encoding for {self._full_filename}"
             )
-        return os.path.join(head, tail)
+        return pathlib.Path(head) / tail
 
-    def mk_base_netCDF_name(self):
+    def mk_base_netCDF_name(self) -> pathlib.Path:
         """Returns: nc file name of the form on the basestation
         (Created during make_netCDF)
         Conforms to CF naming convention, see http://www.cgd.ucar.edu/cms/eaton/cf-metadata/CF-current.html
@@ -877,9 +893,9 @@ class FileCode:
             raise ValueError(
                 f"Don't know the netCDF file encoding for {self._full_filename}"
             )
-        return os.path.join(head, tail)
+        return pathlib.Path(head) / tail
 
-    def mk_base_parm_name(self):
+    def mk_base_parm_name(self) -> pathlib.Path:
         """Returns: parm file name of the form on the basestation
         (Created during the gliders first call in during the launch sequence)
 
@@ -897,9 +913,9 @@ class FileCode:
             raise ValueError(
                 f"Don't know the prm file encoding for {self._full_filename}"
             )
-        return os.path.join(head, tail)
+        return pathlib.Path(head) / tail
 
-    def mk_base_base_name(self):
+    def mk_base_base_name(self) -> pathlib.Path:
         """Returns: a base file name of the form on the basestation
         - used for interop with old basestation code
 
@@ -912,9 +928,9 @@ class FileCode:
             raise ValueError(
                 f"Don't know the capture file encoding for {self._full_filename}"
             )
-        return os.path.join(head, tail)
+        return pathlib.Path(head) / tail
 
-    def mk_base_pdos_logfile_name(self):
+    def mk_base_pdos_logfile_name(self) -> pathlib.Path:
         """Returns: pdos logfile name of the form on the basestation
 
         Raises: ValueError if called for a non-seaglider non-pdos file
@@ -937,7 +953,7 @@ class FileCode:
             raise ValueError(
                 f"Don't know the pdos logfile encoding for {self._full_filename}"
             )
-        return os.path.join(head, tail)
+        return pathlib.Path(head) / tail
 
 
 class FileCollector:
