@@ -33,6 +33,7 @@
 import bz2
 import collections
 import os
+import pathlib
 import pdb
 import sys
 import time
@@ -231,7 +232,7 @@ def cp_attrs(in_var, out_var):
             out_var.setncattr(a, in_var.getncattr(a))
 
 
-def load_additional_arguments():
+def load_additional_arguments() -> tuple[list[str], dict, dict]:
     """Defines and extends arguments related to this extension.
     Called by BaseOpts when the extension is set to be loaded
     """
@@ -279,15 +280,16 @@ def load_additional_arguments():
 
 
 def main(
-    instrument_id=None,
-    base_opts=None,
-    sg_calib_file_name=None,
-    dive_nc_file_names=None,
-    nc_files_created=None,
-    processed_other_files=None,
-    known_mailer_tags=None,
-    known_ftp_tags=None,
-    processed_file_names=None,
+    cmdline_args: list[str] = sys.argv[1:],
+    instrument_id: int | None = None,
+    base_opts: BaseOpts.BaseOptions | None = None,
+    sg_calib_file_name: pathlib.Path | None = None,
+    dive_nc_file_names: list[pathlib.Path] | None = None,
+    nc_files_created: list[pathlib.Path] | None = None,
+    processed_other_files: list[pathlib.Path] | None = None,
+    known_mailer_tags: list[str] | None = None,
+    known_ftp_tags: list[str] | None = None,
+    processed_file_names: list[pathlib.Path] | None = None,
 ):
     """Basestation extension for creating simplified netCDF files
 
@@ -311,6 +313,7 @@ def main(
             additional_arguments=additional_arguments,
             add_option_groups=add_option_groups,
             add_to_arguments=add_to_arguments,
+            cmdline_args=cmdline_args,
         )
 
     BaseLogger(base_opts)  # initializes BaseLog
@@ -354,11 +357,10 @@ def main(
             log_info("Processing %s" % dive_nc_file_name)
 
             netcdf_in_filename = dive_nc_file_name
-            head = os.path.splitext(netcdf_in_filename)[0]
             if simplencf_bin_width:
-                netcdf_out_filename = "%s.ncfb" % (head)
+                netcdf_out_filename = netcdf_in_filename.with_suffix(".ncfb")
             else:
-                netcdf_out_filename = "%s.ncf" % (head)
+                netcdf_out_filename = netcdf_in_filename.with_suffix(".ncf")
 
             log_info("Output file = %s" % netcdf_out_filename)
 
@@ -554,7 +556,9 @@ def main(
                 processed_other_files.append(netcdf_out_filename)
 
             if base_opts.simplencf_compress_output:
-                netcdf_out_filename_bzip = netcdf_out_filename + ".bz2"
+                netcdf_out_filename_bzip = netcdf_out_filename.with_suffix(
+                    netcdf_out_filename.suffix + ".bz2"
+                )
                 try:
                     with (
                         open(netcdf_out_filename, "rb") as fi,

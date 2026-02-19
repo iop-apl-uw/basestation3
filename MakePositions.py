@@ -94,9 +94,7 @@ def main(
         return 1
 
     predictedLat = predictedLon = predictedTime = None
-    glider_predict_position_file: pathlib.Path | None = (
-        base_opts.mission_dir / "predict_position.txt"
-    )
+    glider_predict_position_file = base_opts.mission_dir / "predict_position.txt"
     if glider_predict_position_file.is_file():
         try:
             with glider_predict_position_file.open(
