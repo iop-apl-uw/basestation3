@@ -2408,6 +2408,22 @@ def load_dive_profile_data(
 
                 status = 2  # reloaded some logger data; results need updating
 
+        # A very low level extension for ajusting data after log and eng files have been loaded, but prior to any processing.
+        # This is intended solely as a way to repair serious problems with the recoded data (i.e. drifing clocks) and not as
+        # a general purpose data processing hook.
+        # N.B. The status variable should be consulted to ensure to avoid apply fixes/corrections multiple times
+        BaseDotFiles.process_extensions(
+            ("postloadprofiledata",),
+            base_opts,
+            sg_calib_file_name=sg_calib_file_name,
+            nc_dive_file_name=nc_dive_file_name,
+            stats=status,
+            globals_d=globals_d,
+            log_f=log_f,
+            eng_f=eng_f,
+            results_d=results_d,
+        )
+
         return (
             status,
             globals_d,
