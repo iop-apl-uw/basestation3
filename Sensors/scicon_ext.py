@@ -465,6 +465,18 @@ def init_logger(module_name, init_dict=None):
             {"description": f"depth total number of timeouts on {descr}"},
             BaseNetCDF.nc_scalar,
         ]
+        scicon_metadata_adds[f"depth_starttime_{cast}"] = [
+            False,
+            "d",
+            {"description": f"depth epoch time for start of profile {cast}"},
+            BaseNetCDF.nc_scalar,
+        ]
+        scicon_metadata_adds[f"depth_stoptime_{cast}"] = [
+            False,
+            "d",
+            {"description": f"depth epoch time for end of profile {cast}"},
+            BaseNetCDF.nc_scalar,
+        ]
 
     # Aux compass/pressure sensor
     for auxname, aux_data_info in (
@@ -880,8 +892,32 @@ def extract_file_metadata(inp_file_name):
             elif raw_strs[0] == "%start" or raw_strs[0] == "%stop":
                 if raw_strs[0] == "%start":
                     start_time = Utils.parse_time(raw_strs[1], f_gps_rollover=True)
+                    time_val = start_time
+
                 else:
                     stop_time = Utils.parse_time(raw_strs[1], f_gps_rollover=True)
+                    time_val = stop_time
+                if container is not None and (container[-1] in ("a", "b", "c", "d")):
+                    instrument_name = [instrument.instr_class]
+                    Sensors.process_sensor_extensions(
+                        "remap_instrument_names", instrument_name
+                    )
+                    ret_list.append(
+                        (
+                            "%s_%s_%s"
+                            % (
+                                instrument_name[0],
+                                f"{raw_strs[0][1:]}time",
+                                container[-1],
+                            ),
+                            time_val,
+                        )
+                    )
+                else:
+                    log_warning(
+                        "Can't extract dive value from cotainer (%s)" % container
+                    )
+
             elif raw_strs[0] in ("%ontime", "%pumptime"):
                 if not Utils.is_float(raw_strs[1].strip()):
                     log_warning(
@@ -1322,6 +1358,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
         netcdf_dict - dictionary of optional netcdf variable additions
 
     """
+
     log_debug("%s" % eng_files)
 
     df_meta = {}

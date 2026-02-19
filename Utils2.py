@@ -312,5 +312,23 @@ def add_scicon_stats(instrument: str) -> dict:
             },
             BaseNetCDF.nc_scalar,
         ]
+        meta_data_adds["%s_starttime_%s" % (instrument, cast)] = [
+            False,
+            "d",
+            {
+                "description": "%s epoch time for start of profile %s"
+                % (instrument, tag),
+            },
+            BaseNetCDF.nc_scalar,
+        ]
+        meta_data_adds["%s_stoptime_%s" % (instrument, cast)] = [
+            False,
+            "d",
+            {
+                "description": "%s epoch time for end of profile %s"
+                % (instrument, tag),
+            },
+            BaseNetCDF.nc_scalar,
+        ]
 
     return meta_data_adds
