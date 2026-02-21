@@ -253,12 +253,16 @@ def load_templates(base_opts):
     """Load configuration template files and merge into one"""
 
     # Check for all variables being set
-    if (
-        not base_opts.gliderdac_base_config
-        or not base_opts.gliderdac_project_config
-        or not base_opts.gliderdac_deployment_config
-    ):
-        log_error("Needed config file not specified")
+    if not base_opts.gliderdac_base_config:
+        log_error("gliderdac_base_config file not specified")
+        return None
+
+    if not base_opts.gliderdac_project_config:
+        log_error("gliderdac_project_config file not specified")
+        return None
+
+    if not base_opts.gliderdac_deployment_config:
+        log_error("gliderdac_deployment_config file not specified")
         return None
 
     templates = [{}]
