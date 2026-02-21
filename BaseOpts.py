@@ -398,8 +398,8 @@ global_options_dict: dict[str, options_t] = {
         None,  # Okay to be None - this is never added to the options object, just used by the argparse
         None,
         ("--config", "-c"),
-        FullPath,
-        {"help": "script configuration file", "action": FullPathAction},
+        FullPathlib,
+        {"help": "script configuration file", "action": FullPathlibAction},
     ),
     "base_log": options_t(
         "",
@@ -1957,7 +1957,7 @@ class BaseOptions:
 
         # Process the config file, updating the object
         if self._opts.config_file_name is not None:
-            if not os.path.exists(self._opts.config_file_name):
+            if not self._opts.config_file_name.exists():
                 # setattr(self, "config_file_not_found", True)
                 self.config_file_not_found = True
                 # raise FileNotFoundError(
