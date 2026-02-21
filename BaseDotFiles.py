@@ -39,6 +39,7 @@ import itertools
 import json
 import netrc
 import os
+import pathlib
 import pdb
 import smtplib
 import sys
@@ -70,6 +71,7 @@ import BaseOptsType
 import CommLog
 import Globals
 import Utils
+import Utils2
 from BaseLog import (
     BaseLogger,
     log_critical,
@@ -720,7 +722,14 @@ def process_ftp_tags(
                 # Str conversion to handle pathlib objects in list
                 if fnmatch.fnmatchcase(str(processed_file_name).lower(), m):
                     ftp_file_names_to_send.append(processed_file_name)
-                    log_info(f"Matched {processed_file_name}")
+                    log_info(f"fnmatched {processed_file_name}")
+
+        elif ftp_tag.startswith("file_"):
+            _, file_name = ftp_tag.split("_", 1)
+            log_info(f"Filename ({file_name})")
+            for m in pathlib.Path(base_opts.mission_dir).glob(file_name):
+                ftp_file_names_to_send.append(m)
+                log_info(f"alwaysfile matched {m}")
 
         elif ftp_tag in known_ftp_tags:
             if ftp_tag == "comm":
@@ -928,7 +937,7 @@ def process_sftp_line(
         return 0
 
     log_debug(f"{processed_file_names}")
-    log_info(f"Processing ftp line ({sftp_line})")
+    log_info(f"Processing sftp line ({sftp_line})")
 
     # sftp specification of the form host, user,password,path_to_key,port,path,[files]
     sftp_tags = sftp_line.split(",")
@@ -972,7 +981,7 @@ def process_sftp_line(
         processed_file_names,
         mission_timeseries_name,
         mission_profile_name,
-        sftp_tags[6:],
+        sftp_tags[7:],
         known_ftp_tags,
         sftp_line,
     )
@@ -1693,12 +1702,18 @@ def main():
             comm_log=comm_log,
         )
     elif base_opts.basedotfiles_action == "ftp":
-        process_ftp(base_opts, base_opts.ftp_files, None, None, Globals.known_ftp_tags)
+        process_ftp(
+            base_opts,
+            [os.path.join(base_opts.mission_dir, ii) for ii in base_opts.ftp_files],
+            Utils2.get_mission_timeseries_name(base_opts),
+            None,
+            Globals.known_ftp_tags,
+        )
     elif base_opts.basedotfiles_action == "sftp":
         process_ftp(
             base_opts,
-            base_opts.ftp_files,
-            None,
+            [os.path.join(base_opts.mission_dir, ii) for ii in base_opts.ftp_files],
+            Utils2.get_mission_timeseries_name(base_opts),
             None,
             Globals.known_ftp_tags,
             ftp_type=".sftp",

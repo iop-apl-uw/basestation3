@@ -30,6 +30,8 @@
 # comm - send the comm.log file
 # mission_ts, mission_pro - send the mission timeseries or mission profile, if they have been updated on the processing
 # all - send all the newly created or updated files
+# fnmatch_**** - uses Unix shell-style wildcard **** to match any created/or updated file
+# file_**** - uses Unix shell-style wildcard to match any file in the mission directory, regardless of when it was created
 #
 ## Examples
 #
