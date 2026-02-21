@@ -2772,8 +2772,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     alert_msg_file_name = base_opts.mission_dir / alert_message_file_name
 
-    if base_opts.base_log is not None and base_opts.base_log != "":
-        conversion_log = base_opts.base_log
+    if base_opts.base_log is not None:
+        conversion_log = base_opts.base_log.name
     else:
         conversion_log = "the conversion log"
 
@@ -2979,25 +2979,24 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 del alerts_d[alert_topic]  # clean up
                 alert_msg_file.write("</ul></p></div>\n")
 
-            if "baselog" in os.path.basename(conversion_log):
+            if "baselog" in conversion_log:
                 try:
-                    _, date_str = os.path.basename(conversion_log).split("_", 1)
+                    _, date_str = conversion_log.split("_", 1)
                 except Exception:
-                    log_error(f"Error processing {os.path.basename(conversion_log)}")
+                    log_error(f"Error processing {conversion_log}")
                 else:
                     alert_msg_file.write(f"<!-- BASELOG={date_str} -->\n")
                     alert_msg_file.write(
-                        f'<p>INFO: Consult <a href="BASELOGREF">{os.path.basename(conversion_log)}</a> for details</p>\n'
+                        f'<p>INFO: Consult <a href="BASELOGREF">{conversion_log}</a> for details</p>\n'
                     )
             else:
                 alert_msg_file.write(
-                    f"<p>INFO: Consult {os.path.basename(conversion_log)} for details</p>\n"
+                    f"<p>INFO: Consult {conversion_log} for details</p>\n"
                 )
 
         if alert_warning_msg:
             alert_warning_msg = (
-                alert_warning_msg
-                + f"Consult {os.path.basename(conversion_log)} for details."
+                alert_warning_msg + f"Consult {conversion_log} for details."
             )
             log_warning(alert_warning_msg)
 

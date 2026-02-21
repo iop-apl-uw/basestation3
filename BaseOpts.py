@@ -402,13 +402,13 @@ global_options_dict: dict[str, options_t] = {
         {"help": "script configuration file", "action": FullPathlibAction},
     ),
     "base_log": options_t(
-        "",
+        None,
         None,
         ("--base_log",),
-        FullPath,
+        FullPathlib,
         {
             "help": "basestation log file, records all levels of notifications",
-            "action": FullPathAction,
+            "action": FullPathlibAction,
         },
     ),
     "debug": options_t(
@@ -1662,11 +1662,11 @@ global_options_dict: dict[str, options_t] = {
             "NetworkWatch",
         },
         ("--network_log_decompressor",),
-        FullPath,
+        FullPathlib,
         {
             "help": "Compressed logfile decompressor path",
             "section": "network",
-            "action": FullPathAction,
+            "action": FullPathlibAction,
         },
     ),
     # Hook script timeouts
