@@ -30,9 +30,14 @@
 
 """Routines to read and apply mag calibrations to compass headings"""
 
+import asyncio
+import io
+from typing import TextIO, Callable
 import numpy as np
+import numpy.typing as npt
 
-from BaseLog import log_error, log_info
+import Utils
+from BaseLog import log_error, log_info, log_warning
 
 
 # TODO - multiple calibrations not handled
@@ -67,6 +72,70 @@ def readMagCalFile(mag_cal_filename):
         return None
 
 
+def readNewTCM2Matfile(stream: TextIO, keys: list[str]) -> dict[str, str]:
+    ret_d = {}
+    for line in stream:
+        if line[0] == "/":
+            continue
+
+        split = [ii.strip() for ii in line.strip().split("=")]
+        if len(split) != 2:
+            continue
+
+        if split[0] in keys:
+            ret_d[split[0]] = split[1].strip('" ')
+
+    return ret_d
+
+
+def parseNewMagCalFile(
+    magcal_filename: str,
+) -> (
+    tuple[npt.ArrayLike, Callable[[npt.ArrayLike], npt.ArrayLike], str]
+    | tuple[None, None, None]
+):
+    try:
+        with open(magcal_filename, "r") as fi:
+            mag_d = readNewTCM2Matfile(
+                fi,
+                ["hard0", "soft0"],
+            )
+            fi.seek(0)
+            contents = fi.read()
+
+        if not any(ii in mag_d for ii in ["hard0", "soft0"]):
+            return (None, None, None)
+
+        abc = np.zeros(9)
+        abc[0] = abc[4] = abc[8] = 1.0
+        pqr = np.zeros(3)
+        if "soft0" in mag_d:
+            try:
+                abc_vals = mag_d["soft0"].split()
+                for ii in range(9):
+                    abc[ii] = float(abc_vals[ii])
+            except Exception as e:
+                log_error(f"Could not process soft0:{mag_d['soft0']} ({e})")
+                return (None, None, None)
+
+        if "hard0" in mag_d:
+            try:
+                pqr_vals = mag_d["hard0"].split()
+                for ii in range(3):
+                    pqr[ii] = float(pqr_vals[ii])
+            except Exception as e:
+                log_error(f"Could not process hard0:{mag_d['hard0']} ({e})")
+                return (None, None, None)
+    except Exception as e:
+        log_warning(f"Failed to process {magcal_filename} ({e})")
+        return (None, None, None)
+    else:
+        # SG closure.
+        pqrc = lambda p: pqr
+        log_info
+        return (abc, pqrc, contents)
+
+
 def parseMagCal(contents):
     """Parses a old style mag cal file string
     Input:
@@ -97,6 +166,7 @@ def parseMagCal(contents):
             abc[i] = float(abc_pqr[i])
         for i in range(3):
             pqr[i] = float(abc_pqr[i + 9])
+        return (abc, pqr)
         # Create the stock closure that ignores pitchAD values
         pqrc = lambda p: pqr  # noqa: E731
 

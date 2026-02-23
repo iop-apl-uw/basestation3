@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -1424,18 +1424,30 @@ def correct_heading(
                 "MagCalFile %s does not exist" % magcal_filename, alert="MAGCAL"
             )
         else:
-            new_contents = BaseMagCal.readMagCalFile(magcal_filename)
-            if new_contents is not None:
-                (new_abc, new_pqrc) = BaseMagCal.parseMagCal(new_contents)
-                if new_abc is None or new_pqrc is None:
-                    log_warning(
-                        "Ignoring contents of %s" % magcal_filename, alert="MAGCAL"
-                    )
-                    new_contents = None
-                else:
-                    globals_d[magcal_variable] = new_contents
-                    abc = new_abc
-                    pqrc = new_pqrc
+            (new_abc, new_pqrc, new_contents) = BaseMagCal.parseNewMagCalFile(
+                magcal_filename
+            )
+            if (
+                new_abc is not None
+                and new_pqrc is not None
+                and new_contents is not None
+            ):
+                globals_d[magcal_variable] = new_contents
+                abc = new_abc
+                pqrc = new_pqrc
+            else:
+                new_contents = BaseMagCal.readMagCalFile(magcal_filename)
+                if new_contents is not None:
+                    (new_abc, new_pqrc) = BaseMagCal.parseMagCal(new_contents)
+                    if new_abc is None or new_pqrc is None:
+                        log_warning(
+                            "Ignoring contents of %s" % magcal_filename, alert="MAGCAL"
+                        )
+                        new_contents = None
+                    else:
+                        globals_d[magcal_variable] = new_contents
+                        abc = new_abc
+                        pqrc = new_pqrc
 
     if new_contents is not None:
         log_info("Using contents of %s to correct heading" % magcal_filename)
@@ -1452,7 +1464,7 @@ def correct_heading(
 
     # In case this is a DG, get the pitchAD info
     new_head = np.zeros(np_pts)
-    for ii in range(np):
+    for ii in range(np_pts):
         new_head[ii] = BaseMagCal.compassTransform(
             abc,
             pqrc,
@@ -1461,7 +1473,6 @@ def correct_heading(
             pitch[ii],
             (Mx[ii], My[ii], Mz[ii]),
         )
-        # sys.stdout.write("%.2f %.2f\n" % (heading[i], new_head[i]))
     if new_contents is not None:
         # report RMS value only when the cal data changed
         delta_head_v = head - new_head
