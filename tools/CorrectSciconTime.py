@@ -58,7 +58,11 @@ def DEBUG_PDB_F() -> None:
 
 def find_gc_state(gc_state_data: dict, start_time: float, state: int) -> float | None:
     if state in gc_state_data["state"]:
-        return gc_state_data["secs"][gc_state_data["state"].index(state)]
+        if isinstance(gc_state_data["state"], list):
+            ii = gc_state_data["state"].index(state)
+        else:
+            ii = np.squeeze(np.where(gc_state_data["state"] == state))
+        return gc_state_data["secs"][ii]
     return None
 
 
