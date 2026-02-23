@@ -30,13 +30,12 @@
 
 """Routines to read and apply mag calibrations to compass headings"""
 
-import asyncio
-import io
-from typing import TextIO, Callable
+from collections.abc import Callable
+from typing import TextIO
+
 import numpy as np
 import numpy.typing as npt
 
-import Utils
 from BaseLog import log_error, log_info, log_warning
 
 
@@ -131,8 +130,7 @@ def parseNewMagCalFile(
         return (None, None, None)
     else:
         # SG closure.
-        pqrc = lambda p: pqr
-        log_info
+        pqrc = lambda p: pqr  # noqa: E731
         return (abc, pqrc, contents)
 
 
