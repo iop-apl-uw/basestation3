@@ -77,3 +77,9 @@
 [commloggps]
 # Extensions listed in this section are run after the counter/gps line has arrived in the comm.log
 # for the current glider callin
+#
+[postloadprofiledata]
+# A very low level extension for ajusting data after log and eng files have been loaded, but prior to any processing.
+# This is intended solely as a way to repair serious problems with the recoded data (i.e. drifing clocks) and not as
+# a general purpose data processing hook.  See the call site in MakeDiveProfiles.y:load_dive_profile_dat for non-standard
+# keyword arguments passed
