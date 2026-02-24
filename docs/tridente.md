@@ -1,6 +1,6 @@
-* RBR Tridente Proposed Naming convention
+# RBR Tridente Proposed Naming convention
 
-** Summary of offerings
+## Summary of offerings
 
 This table outlines all the advertised channels available for a Tridente.
 
@@ -24,21 +24,21 @@ Notes:
 - Abbreviation are as close to the RBR abbreviations, where available.
 - When there is no value in the Emission column, the Excitation column contains the channels wavelength
 
-** Assumptions
+## Assumptions
 1. The naming convention should support multiple Tridentes installed on a single glider (be they on truck or on the scicon)
 2. No single Tridente will have multiple channels of the exact same type (i.e. to backscatter channels both of wavelength 470nm).  *Note: This assumption is a core to the basestation operation and not specific to the Tridente.  It is placed here for clarity.*
 3. A single "master scicon.ins" file could be constructed that contains definitions for every version of the Tridente that could be purchased. 
 
-** Proposed naming
+## Proposed naming
 
-*** Channel names
+### Channel names
 
 A channel is name by combining the channel `Abbr` and the (Excitation) `Wavelength`.  For exmaple:
 
 - 470nm backscatter - `bb470`
 - Chlorophyll a 430 excitation - `chla470`
 
-*** Instrument name
+### Instrument name
 
 `tridente[instnum]chan1chan2chan3`
 
@@ -60,7 +60,7 @@ A second instrument of the exact same configuration on the glider would be:
 
 `tridente2bb700bb470chla470`
 
-** Scicon Files
+## Scicon Files
 
 A `scicon.ins` entry for this instrument would be:
 
@@ -99,7 +99,7 @@ tridente = {
 }
 ```
 
-** Truck files
+## Truck files
 
 A `.cnf` file would need to be generated that matched the channel output format. From the above example, 
 
@@ -117,17 +117,17 @@ column = bb470(100000,0)
 column = chla470(1000,0)
 ```
 
-** Basestation processing
+## Basestation processing
 
 A new basestation sensor extension will be written for the Tridente data, mainly to handle adding the needed netcdf metadata for each particular channel.  There should be no need to modify the `scicon_ext.py` extension. Names in the per-dive netcdf file will be of the normal form `instrument_channel` - so, from the above example `tridentebb700bb470chla470_bb470` would be the name of the backscatter 470 channel on instrument `tridentebb700bb470chla470`. 
 
 A new basestation plotting extension will be written for the Tridente data.  Given the regular nature of the above naming scheme, the channel specifications in the instrument name should be largely ignorable and the code data driven off the channel name - much the same was the current WetLabs plotting code works.
 
-** Alternative Approach - approach rejected.
+## Alternative Approach - approach rejected.
 
 If assumption 3 from above is dropped, then the `scicon.ins` (or glider truck `.cnf` file) would need to be customized on a per-glider basis.  The only requirement for the basestation code is a consistent approach to the instrument naming is adhered to - for example, the name starts with `tridente` and follows with a `1` or `2`.
 
-*** Scicon files
+### Scicon files
 
 A `scicon.ins` entry for two instruments would be:
 
@@ -190,7 +190,7 @@ tridente2 = {
 }
 ```
 
-** Truck files
+## Truck files
 
 A `.cnf` file would need to be generated that matched the channel output format, with the same naming scheme. From the above example, 
 

@@ -513,6 +513,8 @@ files located in the sg000 sub-directory
 - [Section plotting settings](sg000/sections.yml?raw=true)
 - [sg_calib_constants.m](sg000/sg_calib_constants.m?raw=true)
 
+Additional documentation can be found in [docs/Docs.md](docs/Docs.md) 
+
 # Additional hook scripts
 
 Hook scripts are executable files that if present in the seagliders mission 
