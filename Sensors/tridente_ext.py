@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2025 by University of Washington.  All rights reserved.
+## Copyright (c) 2025, 2026 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -48,6 +48,7 @@ def init_sensor(module_name, init_dict=None):
     scattering_units = "meter^-1 steradian^-1"
     chl_units = "micrograms/liter"
     ppb_units = "1e-9"  # a part per billion
+    turbidity_units = "FTU"  # Formazin Turbidity Units
 
     # See the Tridente instrument and column naming document in the docs directory for a
     # description of the namespace
@@ -58,39 +59,72 @@ def init_sensor(module_name, init_dict=None):
             "units": chl_units,
             "description": "chlorophyll-a concentration (470nm excitation/695nm emission) scaled to the fluorescence response from a monoculture of Thalassiosira weissflogii.",
         },
-        # "chla435" : {},
+        "chla435": {
+            "_FillValue": BaseNetCDF.nc_nan,
+            "units": chl_units,
+            "description": "chlorophyll-a concentration (435nm excitation/695nm emission) scaled to the fluorescence response from a monoculture of Thalassiosira weissflogii.",
+        },
         "fdom365": {
             "_FillValue": BaseNetCDF.nc_nan,
             "units": ppb_units,
             "description": "fDOM fluorescence (365nm excitation/450m emission)",
         },
-        # "pc590" : {},
-        # "pe525" : {},
-        # "rd550" : {},
-        # "fitc470" : {},
+        "pc590": {
+            "_FillValue": BaseNetCDF.nc_nan,
+            "units": chl_units,
+            "description": "Phycocyanin (590nm excitation/654nm emission)",
+        },
+        "pc525": {
+            "_FillValue": BaseNetCDF.nc_nan,
+            "units": chl_units,
+            "description": "Phycoerythrin (525nm excitation/600nm emission)",
+        },
+        "rd550": {
+            "_FillValue": BaseNetCDF.nc_nan,
+            "units": chl_units,
+            "description": "Rhodamine (550nm excitation/600nm emission)",
+        },
+        "fitc470": {
+            "_FillValue": BaseNetCDF.nc_nan,
+            "units": chl_units,
+            "description": "Fluorescein (470nm excitation/550nm emission)",
+        },
         "bb470": {
             "_FillValue": BaseNetCDF.nc_nan,
             "units": scattering_units,
             "description": "total volume 470nm scattering coefficient",
         },
-        # "bb525" : {},
-        # "bb650" : {},
+        "bb525": {
+            "_FillValue": BaseNetCDF.nc_nan,
+            "units": scattering_units,
+            "description": "total volume 525nm scattering coefficient",
+        },
+        "bb650": {
+            "_FillValue": BaseNetCDF.nc_nan,
+            "units": scattering_units,
+            "description": "total volume 650nm scattering coefficient",
+        },
         "bb700": {
             "_FillValue": BaseNetCDF.nc_nan,
             "units": scattering_units,
             "description": "total volume 700nm scattering coefficient",
         },
-        # "tu650" : {},
-        # "tu700" : {}
+        "tu650": {
+            "_FillValue": BaseNetCDF.nc_nan,
+            "units": turbidity_units,
+            "description": "Turbidity (650nm)",
+        },
+        "tu700": {
+            "_FillValue": BaseNetCDF.nc_nan,
+            "units": turbidity_units,
+            "description": "Turbidity (700nm)",
+        },
     }
 
     meta_data_adds = {}
 
-    # Note: The instrument can be auto generated from the valid channels list, but
-    # to conserve memory and runtime, the list is kept the those known variantes, and expanded
-    # with the possible instance number.
-    # If this list is updated, the matching code in DiveTridente.py in the Plotting directory should be updated
-    known_instruments = ("bb700bb470chla470", "bb700chla470fdom365")
+    # Centeralized list of known channel combinations
+    known_instruments = Utils2.known_tridente_channels()
     # We keep this list to 3 possible installed instruments, even though the name space allows for up to 9 installed instruments
     instances = ("tridente", "tridente1", "tridente2", "tridente3")
     instruments = []

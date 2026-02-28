@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -37,6 +37,7 @@ import traceback
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 
 import BaseOpts
+import Utils2
 from BaseLog import BaseLogger, log_error, log_info
 
 # Options
@@ -198,6 +199,11 @@ def main():
         if calib_comm:
             print("Add to sg_calib_constants.m")
             print(f"calibcomm_tridente{instrument_name}='{calib_comm.rstrip()}';")
+
+        if instrument_name not in Utils2.known_tridente_channels():
+            print(
+                f"WARNING!! {instrument_name} not in list of known tridente channel combinations - please contact the maintainers of https://github.com/iop-apl-uw/basestation3"
+            )
 
     except Exception:
         if DEBUG_PDB:

@@ -46,6 +46,7 @@ if typing.TYPE_CHECKING:
 import PlotUtils
 import PlotUtilsPlotly
 import Utils
+import Utils2
 from BaseLog import log_debug, log_error, log_warning
 from Plotting import plotdivesingle
 
@@ -65,10 +66,8 @@ def plot_tridente(
     tridente_types = []
     varlist = "".join(filter(lambda x: "sg_cal" not in x, dive_nc_file.variables))
 
-    # Note: The instrument can be auto generated from the valid channels list, but
-    # to conserve memory and runtime, the list is kept the those known variantes, and expanded
-    # with the possible instance number.  This list matches that in trident_ext.py.
-    known_instruments = ("bb700bb470chla470", "bb700chla470fdom365")
+    # Centeralized list of known channel combinations
+    known_instruments = Utils2.known_tridente_channels()
     # We keep this list to 3 possible installed instruments, even though the name space allows for up to 9 installed instruments
     instances = ("tridente", "tridente1", "tridente2", "tridente3")
     instruments = []
@@ -173,11 +172,20 @@ def plot_tridente(
         fc = collections.namedtuple("fluor_chan", ["name", "units"])
         fluor_chans = collections.OrderedDict(
             (
-                ("fdom365", fc("fDOM fluorescence", "1e-9")),
                 ("chla470", fc("Chlorophyll fluorescence", "ug/l")),
+                ("chla435", fc("Chlorophyll fluorescence", "ug/l")),
+                ("fdom365", fc("fDOM fluorescence", "1e-9")),
+                ("pc590", fc("Phycocyanin", "ug/l")),
+                ("pc525", fc("Phycoerythrin", "ug/l")),
+                ("pc550", fc("Rhodamine", "ug/l")),
+                ("fitc470", fc("Rhodamine", "ug/l")),
+                ("tu650", fc("Turbidity", "FTU")),
+                ("tu750", fc("Turbidity", "FTU")),
             )
         )
 
+        fluor_colors = (("Magenta", "Red"), ("Green", "Goldenrod"), ("Blue", "Cyan"))
+        fluor_color_index = 0
         for ff in list(fluor_chans.keys()):
             for vv in ("%s_%s", "eng_%s_%s"):
                 var_name = vv % (tridente_type, ff)
@@ -200,6 +208,9 @@ def plot_tridente(
 
                     fig = plotly.graph_objects.Figure()
 
+                    down_cast_color, up_cast_color = fluor_colors[fluor_color_index]
+                    fluor_color_index += 1
+
                     fig.add_trace(
                         {
                             "y": depth_dive,
@@ -212,7 +223,7 @@ def plot_tridente(
                             "mode": "markers",
                             "marker": {
                                 "symbol": "triangle-down",
-                                "color": "Magenta",
+                                "color": down_cast_color,
                             },
                             "hovertemplate": f"{chan_name}  Dive<br>"
                             + "%{x:.2f} "
@@ -232,7 +243,7 @@ def plot_tridente(
                             "mode": "markers",
                             "marker": {
                                 "symbol": "triangle-up",
-                                "color": "Red",
+                                "color": up_cast_color,
                             },
                             "hovertemplate": f"{chan_name}  Climb<br>"
                             + "%{x:.2f} "
@@ -361,9 +372,12 @@ def plot_tridente(
         bs_chans = collections.OrderedDict(
             (
                 ("bb470", bs("470nm scattering coefficient", "Blue", "DarkBlue")),
-                # ("sig532", bs("Green scattering", "GreenYellow", "DarkGreen")),
+                (
+                    "bb525",
+                    bs("525nm scattering coefficient", "GreenYellow", "DarkGreen"),
+                ),
+                ("bb650", bs("650nm scattering coefficient", "Red", "DarkRed")),
                 ("bb700", bs("700nm scattering coefficient", "Red", "DarkRed")),
-                # ("sig880", bs("Infrared scattering", "Yellow", "Gold")),
             )
         )
 

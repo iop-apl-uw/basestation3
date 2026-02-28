@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -332,3 +332,18 @@ def add_scicon_stats(instrument: str) -> dict:
         ]
 
     return meta_data_adds
+
+
+def known_tridente_channels() -> tuple:
+    """
+    The list of all possible tridente channels can be auto generated but
+    to conserve memory and runtime, the list is kept the those known variantes.
+
+    If it becomes to combersome to mantain a master list, the next approach is to
+    have GetTridenteChannels.py add locally found channel combinations to
+    local to the basestation cache (this doesn't help reprocessing on other machines)
+
+    See tridente.md in the docs directory for furhter details on the naming scheme
+
+    """
+    return ("bb700bb470chla470", "bb700chla470fdom365", "chla470fdom365tu700")
