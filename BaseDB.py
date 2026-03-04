@@ -1,7 +1,7 @@
 # /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -799,7 +799,11 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
         sm_gc_vbd_J = sm_gc[1] * sm_gc[4] * sm_gc[15]
         sm_gc_pitch_J = sm_gc[2] * sm_gc[5] * sm_gc[16]        
         sm_gc_roll_J = sm_gc[3] * sm_gc[6] * sm_gc[17]
-        
+    except KeyError:
+        # Sub-surface finish
+        sm_gc_vbd_J = 0
+        sm_gc_pitch_J = 0
+        sm_gc_roll_J = 0
     except Exception:
         log_error("Failed to process log_SM_GC", "exc")
         sm_gc_vbd_J = 0
