@@ -283,7 +283,7 @@ def mission_motors(
                 "symbol": "triangle-down",
                 "color": "Blue",
             },
-            "hovertemplate": "Dive %{x:.0f}<br>Current %{y:.2f}A<br>Depth %{meta[0]:.2f} m<extra></extra>",
+            "hovertemplate": "Dive %{x:.0f}<br>Current %{y:.2f}A<br>Depth %{meta:.2f} m<extra></extra>",
         },
         secondary_y=False,
     )
