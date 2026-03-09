@@ -2946,6 +2946,12 @@ def attachHandlers(app: sanic.Sanic):
 
         if hasattr(request.app.ctx, 'domains'):
             domain = request.headers.host.split('.')[0]
+            if domain == 'pilot' and len(request.headers.host.split('.')) == 4:
+                newHOST = request.headers.host.split('.')[1:].join('.') + ':4430'
+                newURL = getRequestURL(request).replace(request.headers.host, newHOST)
+                sanic.log.logger.info(f'redirecting {getRequestURL(request)} to {newURL}')
+                return sanic.response.redirect(newURL)
+
             if  domain in request.app.ctx.domains:
                 request.ctx.ctx = request.app.ctx.domains[domain]
                 return None
