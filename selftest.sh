@@ -132,6 +132,14 @@ if ( "$watchdog" != "7" ) then
     echo "WARNING: Watchdog "$watchdog" is not default value (7)"
 endif
 
+foreach fg ( "`grep instantaneous $fname`" )
+    set mamps = `echo $fg | cut -f5 -d' '`
+    if ( `echo "$mamps > 10" | bc` ) then
+        set fg = `echo $fg | cut -f4- -d,`
+        echo "WARNING: current > 10 mA ($fg)"
+    endif
+end
+
 echo ""
 echo "--------------------------------------------"
 echo "Summary of sensor values"
