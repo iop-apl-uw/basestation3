@@ -110,6 +110,7 @@ echo
 grep -i fail $fname | grep -v HPHONE | grep -v "error failed"
 grep -i error $fname | grep -v _MAXERRORS | grep -v "error failed"
 grep -i warning $fname
+grep ,C, $fname | grep -v -i error | grep -v -i warning | grep -v HCOMPASS,N,
 grep -i retr $fname | grep -v gc=
 echo ""
 echo "--------------------------------------------"
