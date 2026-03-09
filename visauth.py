@@ -366,7 +366,7 @@ if __name__ == "__main__":
     else:
         print("unrecognized command - valid options are add, reset, unlock, auth, password")
         print(f" {sys.argv[0]} add username email domain type(view|pilot) [initialPassword | auto] [send]")
-        print(f" {sys.argv[0]} reset username [newInitialPassword]")
+        print(f" {sys.argv[0]} reset username [newInitialPassword | auto] [send]")
         print(f" {sys.argv[0]} unlock username")
         print(f" {sys.argv[0]} auth username domain (test authentication on the command-line)")
         print(f" {sys.argv[0]} password username")
