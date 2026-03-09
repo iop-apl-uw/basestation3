@@ -2122,25 +2122,25 @@ def attachHandlers(app: sanic.Sanic):
         # the no save command line flag allows one more layer
         # of protection
         if request.app.config.NO_SAVE:
-            return sanic.response.text('not allowed')
+            return sanic.response.text('save not allowed (are you running in pilot mode?)')
 
         ok = ["cmdfile", "targets", "science", "scicon.sch", "tcm2mat.cal", "pdoscmds.bat", "sg_calib_constants.m"]
 
         logs = { "cmdfile": "cmdedit.log", "targets": "targedit.log", "science": "sciedit.log" }
 
         if which not in ok:
-            return sanic.response.text("not allowed")
+            return sanic.response.text("unrecognized file")
 
         message = request.json
         if 'file' not in message or message['file'] != which or 'contents' not in message:
-            return sanic.response.text('oops')
+            return sanic.response.text('ill-formed save request')
 
         if applyControls(request.ctx.ctx.controls, message['contents'], which):
-            return sanic.response.text('not allowed')
+            return sanic.response.text('not allowed per pilot controls')
 
         expiry = message['expiry']
         if time.time() > int(expiry):
-            return sanic.response.text('validation expired')
+            return sanic.response.text('validation expired (timed out)')
 
         salt = message['salt']
         sigProvided = message['signature']
@@ -2202,7 +2202,7 @@ def attachHandlers(app: sanic.Sanic):
               "scicon.sch", "tcm2mat.cal", "pdoscmds.bat", "sg_calib_constants.m"]
 
         if which not in ok:
-            return sanic.response.text("not allowed")
+            return sanic.response.text("unrecognized file")
 
         message = request.json
         if 'file' not in message or message['file'] != which or 'contents' not in message:
