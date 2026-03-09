@@ -635,7 +635,7 @@ Temperature margin (degrees C) to apply to the freezing point  calculation, weig
 
 
 <div class="med"></div>
-<p><span class="bold"><a name="LOGGERS">$LOGGERS</a></span><br>Which logger devices to enable or disable. [0]</p>
+<p><span class="bold"><a name="LOGGERS">$LOGGERS</a></span><br>Which logger devices to enable or disable. This is a bitmask, with four bits corresponding to the devices specified by <span class="bold"><a name="LOGGERDEVICE">$LOGGERDEVICE[1234]</a></span>. This is the primary control parameter for enabling/disabling loggers. The glider may also disable a logger under software control by changing this parameter if it detects a power anomaly. [0] (all loggers disabled)</p>
 
 <div class="med"></div>
  <p><span class="bold"><a name="LOGGERDEVICE">$LOGGERDEVICE</a></span>[<span class="bold">1</span>/<span class="bold">2</span>/<span class="bold">3</span>/<span class="bold">4</span>]<br>Configuration flags specifying logger device type and port for each of the found possible attached logger devices. Empty device slots are indicated with a parameter value of -1. Non-negative entries indicate that a device is attached.  The encoding is specific to the version of the Seaglider software.  These entries are set through the Seaglider menu system by the builder/assemblers. </p>
