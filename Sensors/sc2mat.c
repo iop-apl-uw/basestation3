@@ -470,7 +470,7 @@ main(int argc, char *argv[])
 
 
             if (sync == 0xa5a3) {
-                fread(&epoch, sizeof(int), 1, fp);
+                fread(&epoch, sizeof(time_t), 1, fp); // new!!!
                 fread(&pressureAvg, sizeof(unsigned int), 1, fp);
                 fread(&headingAvg, sizeof(unsigned short), 1, fp);
                 fread(&pitchAvg, sizeof(short), 1, fp);
@@ -550,7 +550,7 @@ main(int argc, char *argv[])
             }
 
             if (sync == 0xa5a5) {
-                fread(&epoch, sizeof(int), 1, fp);
+                fread(&epoch, sizeof(time_t), 1, fp); // new!!!!
                 fread(&pressureInstant, sizeof(unsigned int), 1, fp);
 
                 scale = pow(10.0, velocityScaling);
