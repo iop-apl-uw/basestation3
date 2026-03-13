@@ -131,7 +131,12 @@ function formatPos(ddmm) {
     var deg = Math.trunc(ddmm/100);
     var min = Math.abs(ddmm - deg*100);
     var zero = min < 10 ? '0' : '';
-    return (deg + '&deg;' + zero + min.toFixed(3) + '&prime;');
+    if (deg == 0 && ddmm < 0) {
+        return ('-0&deg;' + zero + min.toFixed(3) + '&prime;');
+    }
+    else {
+        return (deg + '&deg;' + zero + min.toFixed(3) + '&prime;');
+    }
 }
 
 function ddmm2dd(ddmm) {
