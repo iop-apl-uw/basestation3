@@ -160,6 +160,8 @@ ignore = [
   # Use a context manager for opening files
   # TODO - at some point, do the rewrite/targetting ignore for these
   "SIM115",
+  # yoda-conditions
+  "SIM300",
 ]
 [tool.coverage.html]
 directory = "coverage_html_report"
