@@ -3385,6 +3385,24 @@ def make_dive_profile(
         GPS2.ok = GPS2.ok and GPS2.isvalid and GPS2.error <= std_gps_error
         GPSE.ok = GPSE.ok and GPSE.isvalid and GPSE.error <= std_gps_error
 
+        if GPS1.isvalid and GPS1.HPE > std_gps_error:
+            log_warning(
+                f"GPS1 HPE is larger then {std_gps_error} - surface drift will not be calculated",
+                alert="GPS_HORIZONTAL_ERROR",
+            )
+
+        if GPS2.isvalid and GPS2.HPE > std_gps_error:
+            log_warning(
+                f"GPS2 HPE is larger then {std_gps_error} - surface drift and DAC will not be calculated",
+                alert="GPS_HORIZONTAL_ERROR",
+            )
+
+        if GPSE.isvalid and GPSE.HPE > std_gps_error:
+            log_warning(
+                f"GPSE HPE is larger then {std_gps_error} - DAC will not be calculated",
+                alert="GPS_HORIZONTAL_ERROR",
+            )
+
         GPS1.time_s = time.mktime(GPS1.datetime)
         GPS2.time_s = time.mktime(GPS2.datetime)
         GPSE.time_s = time.mktime(GPSE.datetime)
@@ -7186,14 +7204,16 @@ def make_dive_profile(
                 log_info("Computing %s depth-average current." % QC.qc_name_d[DAC_qc])
             # If we get here we are not computing DAC; how come?
             elif not GPS2E_gpsfix:
-                log_info(
+                log_warning(
                     "RAFOS or Iridium fix: Not computing %s depth-average current."
                     % QC.qc_name_d[DAC_qc]
                 )
             elif not GPS2E_ok:
-                log_info("Bad GPS2 or GPSE; unable to compute depth-average current.")
+                log_warning(
+                    "Bad GPS2 or GPSE; unable to compute depth-average current.",
+                )
             else:  # some other reason...
-                log_info(
+                log_warning(
                     "Not computing %s depth-average current." % QC.qc_name_d[DAC_qc]
                 )
         else:

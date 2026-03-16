@@ -29,7 +29,15 @@ mass = 52.173; % (kg) scale weight
 % --skip_flight_model is set, in which case processing will use these
 % variables. To suppress warnings about these variables, insert FM_ignore anywhere in a comment on the same
 % line as the variable
-% 
+%
+
+%
+% Parms affecting basestation processing
+%
+% The allowable horizontal position error (HPE) in GPS fixes.  GPS fixes with measured HPE values greater
+% then this value are not usable in surface dift and/or depth averaged current calculations
+%PARAM GPS_position_error = 100;
+%
 
 %
 % Seabird un-pumped CT
