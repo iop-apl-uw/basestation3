@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -633,7 +633,7 @@ def process_data_file(in_filename, file_type, calib_consts):
 
             if prev_len > -1 and len(row) != prev_len:
                 log_error(
-                    "line length problem line %d,%d,%d"
+                    "line length problem line:%d prev_len:%d curr_len:%d"
                     % (line_count, prev_len, len(row))
                 )
             prev_len = len(row)
@@ -658,11 +658,10 @@ def process_data_file(in_filename, file_type, calib_consts):
     raw_data_file.close()
     try:
         data_file.data = np.array(rows, float)
-    except Exception:
+    except Exception as exception:
         log_error(
-            "Not all data rows the same length in %s - skipping (%d)"
-            % (in_filename, line_count),
-            "exc",
+            f"Not all data rows the same length in {in_filename} ({exception}) - skipping",
+            alert="BAD_DATA_FILE",
         )
         return None
     else:
