@@ -890,11 +890,24 @@ def extract_file_metadata(inp_file_name):
                 )
             elif raw_strs[0] == "%start" or raw_strs[0] == "%stop":
                 if raw_strs[0] == "%start":
-                    start_time = Utils.parse_time(raw_strs[1], f_gps_rollover=True)
+                    try:
+                        start_time = Utils.parse_time(raw_strs[1], f_gps_rollover=True)
+                    except Exception as exception:
+                        log_warning(
+                            f"Problems parsing %start in {inp_file_name} ({exception}) - skipping file"
+                        )
+                        raise
                     time_val = start_time
 
                 else:
-                    stop_time = Utils.parse_time(raw_strs[1], f_gps_rollover=True)
+                    log_info(raw_strs[1])
+                    try:
+                        stop_time = Utils.parse_time(raw_strs[1], f_gps_rollover=True)
+                    except Exception as exception:
+                        log_warning(
+                            f"Problems parsing %stop in {inp_file_name} ({exception}) - skipping file"
+                        )
+                        raise
                     time_val = stop_time
                 if container is not None and (container[-1] in ("a", "b", "c", "d")):
                     instrument_name = [instrument.instr_class]

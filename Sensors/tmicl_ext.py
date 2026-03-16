@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020, 2021, 2022, 2024, 2025 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020, 2021, 2022, 2024, 2025, 2026 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -841,9 +841,23 @@ def extract_file_metadata(inp_file_name, channel):
                 ret_list.append(("tmicl_logmap_%s" % channel, eng_file_meta["logmap"]))
                 continue
             elif raw_strs[0] == "%start":
-                eng_file_meta["start"] = Utils.parse_time(raw_strs[1])
+                try:
+                    eng_file_meta["start"] = Utils.parse_time(raw_strs[1])
+                except Exception as exception:
+                    log_warning(
+                        f"Problems parsing %start in {inp_file_name} ({exception}) - skipping file"
+                    )
+                    raise
+
             elif raw_strs[0] == "%stop":
-                eng_file_meta["stop"] = Utils.parse_time(raw_strs[1])
+                try:
+                    eng_file_meta["stop"] = Utils.parse_time(raw_strs[1])
+                except Exception as exception:
+                    log_warning(
+                        f"Problems parsing %stop in {inp_file_name} ({exception}) - skipping file"
+                    )
+                    raise
+
                 continue
             elif raw_strs[0] == "%comment":
                 comment_list = []
