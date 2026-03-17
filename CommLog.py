@@ -2197,6 +2197,18 @@ def main():
                     "action": argparse.BooleanOptionalAction,
                 },
             ),
+            "has_glider_rebooted": BaseOptsType.options_t(
+                False,
+                {
+                    "CommLog",
+                },
+                ("--has_glider_rebooted",),
+                str,
+                {
+                    "help": "Has the glider rebooted since the last call",
+                    "action": argparse.BooleanOptionalAction,
+                },
+            ),
         },
     )
     BaseLogger(base_opts)
@@ -2221,6 +2233,12 @@ def main():
     if base_opts.predict_drift:
         drift_message = comm_log.predict_drift("ddmm")
         log_info(drift_message)
+
+    if base_opts.has_glider_rebooted:
+        pdb.set_trace()
+        log_info(
+            f"Glider has {'' if comm_log.has_glider_rebooted() else 'not '}rebooted since the previous call session"
+        )
 
     if base_opts.init_db or base_opts.rebuild_db:
         if base_opts.init_db:
