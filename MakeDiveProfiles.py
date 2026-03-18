@@ -2433,6 +2433,7 @@ def load_dive_profile_data(
             log_f=log_f,
             eng_f=eng_f,
             results_d=results_d,
+            log_output_info=False,
         )
 
         return (

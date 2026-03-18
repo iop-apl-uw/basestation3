@@ -1475,6 +1475,7 @@ def process_extensions(
     known_mailer_tags=None,
     known_ftp_tags=None,
     processed_file_names=None,
+    log_output_info=True,
     **kwargs,
 ):
     """Processes the extensions file, running each extension
@@ -1487,7 +1488,14 @@ def process_extensions(
     def process_one_extension_file(
         extensions_file_name, additional_search_path, sections
     ):
-        log_info(f"Starting processing on {extensions_file_name} section(s):{sections}")
+        if log_output_info:
+            log_info(
+                f"Starting processing on {extensions_file_name} section(s):{sections}"
+            )
+        else:
+            log_debug(
+                f"Starting processing on {extensions_file_name} section(s):{sections}"
+            )
         ret_val = 0
         cp = configparser.ConfigParser(allow_no_value=True, inline_comment_prefixes="#")
         cp.optionxform = str
@@ -1549,6 +1557,7 @@ def process_extensions(
                                 )
                                 continue
                             log_info(f"Running {extension_module_name}")
+
                             if f_init_extension:
                                 if not hasattr(extension_module, "init_extension"):
                                     continue
@@ -1600,7 +1609,10 @@ def process_extensions(
                                         % (extension_module_name, extension_ret_val)
                                     )
                                     ret_val |= extension_ret_val
-        log_info(f"Finished processing on {extensions_file_name}")
+            if log_output_info:
+                log_info(f"Finished processing on {extensions_file_name}")
+            else:
+                log_debug(f"Finished processing on {extensions_file_name}")
         return ret_val
 
     ret_val = 0
