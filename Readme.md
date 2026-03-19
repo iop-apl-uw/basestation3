@@ -520,12 +520,16 @@ Additional documentation can be found in [docs/Docs.md](docs/Docs.md)
 Hook scripts are executable files that if present in the seagliders mission 
 directory, will be executed by the basestation.  Here is a summary of those files:
 
-| Hook Name     | When exccuted                                  | Arguments                          | Notes                                            | Default timeout (secs) | Timeout Option          |
-|:--------------|:-----------------------------------------------|:-----------------------------------|:-------------------------------------------------|:-----------------------|-------------------------|
-| .pre_login    | During seaglider login                         | None                               | Needs to be fast - holds up login until complete | 5                      | --pre_login_timeout     |
-| .post_dive    | After all per-dive file processing is complete | None                               |                                                  | 120                    | --post_dive_timeout     |
-| .post_mission | After all file creation is complete            | List of all generated files        |                                                  | 360                    | --post_mission_timeout  |
-| .XX_ext.py    | After all logger processing is complete        | List of all processed logger files | XX is the two letter prefix for the logger       | 120  (per script)      | --logger_script_timeout |
+| Hook Name     | When exccuted                                  | Arguments                                                   | Notes                                            | Default timeout (secs) | Timeout Option          |
+|:--------------|:-----------------------------------------------|:------------------------------------------------------------|:-------------------------------------------------|:-----------------------|-------------------------|
+| .pre_login    | During seaglider login                         | <base_dir> <mission_dir>                                    | Needs to be fast - holds up login until complete | 3                      | --pre_login_timeout     |
+| .post_dive    | After all per-dive file processing is complete | <base_dir> <mission_dir>                                    |                                                  | 120                    | --post_dive_timeout     |
+| .post_mission | After all file creation is complete            | <base_dir> <mission_dir> List of all generated files        |                                                  | 360                    | --post_mission_timeout  |
+| .XX_ext       | After all logger processing is complete        | <base_dir> <mission_dir> List of all processed logger files | XX is the two letter prefix for the logger       | 120  (per script)      | --logger_script_timeout |
+	
+In the above table:
+- `<base_dir>` is the fully qualified path to the basestation source directory (usually `/usr/local/basestation3`) - no trailing slash
+- `<mission_dir>` is the fully qualified path to the mission directory - no trailing slash
 
 All hook scripts are executed with a timeout to complete.  The timeout may be adjusted or removed by setting the timeout option to a different number of seconds (or 0)
 
@@ -536,6 +540,7 @@ for arg in $*; do
  echo ${arg}
 done
 ```
+N.B. the hook script itself (such as `.post_mission`) must be marked as being executable.  
 
 # Misc dot files
 

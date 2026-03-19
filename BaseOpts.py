@@ -1671,7 +1671,7 @@ global_options_dict: dict[str, options_t] = {
     ),
     # Hook script timeouts
     "pre_login_timeout": options_t(
-        5,
+        3,
         {
             "BaseLogin",
         },

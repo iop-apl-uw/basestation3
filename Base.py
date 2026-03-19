@@ -1420,15 +1420,25 @@ def expunge_secrets_st(selftest_name):
 
 
 def run_extension_script(
-    script_name: str, script_args: list[str] | None, timeout: int = 0
+    base_opts: BaseOpts.BaseOptions,
+    script_name: str,
+    script_args: list[str] | None,
+    timeout: int = 0,
 ) -> None:
     """Attempts to execute a script named under a shell context
 
     Output is recorded to the log, error code is ignored, no timeout enforced
     """
-    if os.path.exists(script_name):
-        log_info(f"Processing {script_name}")
-        cmdline = f"{script_name} "
+    # TODO - after conversion of all paths to pathlib, remove conversions to the
+    # object below.  For now, they have the side effect of stripping the trailing
+    # / from the path before adding to the command line
+    full_script_name = pathlib.Path(base_opts.mission_dir) / script_name
+
+    if os.path.exists(full_script_name):
+        log_info(f"Processing {full_script_name}")
+        cmdline = f"{full_script_name} "
+        cmdline += f"{pathlib.Path(base_opts.basestation_directory)} "
+        cmdline += f"{pathlib.Path(base_opts.mission_dir)} "
         if script_args:
             for i in script_args:
                 cmdline = f"{cmdline} {i} "
@@ -1443,7 +1453,7 @@ def run_extension_script(
                     log_info(f)
                 fo.close()
     else:
-        log_info(f"Extension script {script_name} not found")
+        log_info(f"Extension script {full_script_name} not found")
 
 
 def remove_dive_from_dict(complete_files_dict, dive_num, instrument_id):
@@ -2410,14 +2420,16 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     for k in list(processed_logger_payload_files.keys()):
         if len(processed_logger_payload_files[k]) > 0:
             run_extension_script(
-                os.path.join(base_opts.mission_dir, f".{k}_ext"),
+                base_opts,
+                f".{k}_ext",
                 processed_logger_payload_files[k],
                 base_opts.logger_script_timeout,
             )
 
     # Run the post dive processing script
     run_extension_script(
-        os.path.join(base_opts.mission_dir, ".post_dive"),
+        base_opts,
+        ".post_dive",
         None,
         base_opts.post_dive_timeout,
     )
@@ -3061,7 +3073,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     # Run the post mission processing script
     run_extension_script(
-        os.path.join(base_opts.mission_dir, ".post_mission"),
+        base_opts,
+        ".post_mission",
         processed_file_names,
         base_opts.post_mission_timeout,
     )

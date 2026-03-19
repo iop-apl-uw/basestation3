@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -66,7 +66,7 @@ def main():
         log_warning("Sensor initialization failed")
 
     # Run early enough to get into the upload list
-    run_extension_script(os.path.join(base_opts.mission_dir, ".pre_login"), None)
+    run_extension_script(base_opts, ".pre_login", None, base_opts.pre_login_timeout)
 
     # Invoke extensions, if any
     process_extensions(
