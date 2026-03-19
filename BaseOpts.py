@@ -716,7 +716,7 @@ global_options_dict: dict[str, options_t] = {
     ),
     "bin_width": options_t(
         1.0,
-        {"Base", "MakeMissionProfile", "MakePlotMission"},
+        {"Base", "MakeMissionProfile", "MakePlotMission", "Reprocess"},
         ("--bin_width",),
         float,
         {
@@ -725,7 +725,7 @@ global_options_dict: dict[str, options_t] = {
     ),
     "which_half": options_t(
         WhichHalf(3),
-        {"Base", "MakeMissionProfile", "MakePlotMission"},
+        {"Base", "MakeMissionProfile", "MakePlotMission", "Reprocess"},
         ("--which_half",),
         WhichHalf,
         {
