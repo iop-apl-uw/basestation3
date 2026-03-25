@@ -1370,7 +1370,6 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
         netcdf_dict - dictionary of optional netcdf variable additions
 
     """
-
     log_debug("%s" % eng_files)
 
     df_meta = {}
@@ -1412,7 +1411,8 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
     ad2cp_multi_dim_actual = []
 
     if adcp_list:
-        adcp_list = sorted(adcp_list, key=lambda x: x["cast"])
+        # The files arrive in correct sorting order for profiles - 'a', 'c', 'b', 'd'
+        # adcp_list = sorted(adcp_list, key=lambda x: x["cast"])
         log_debug(adcp_list)
         for fn in adcp_list:
             try:
