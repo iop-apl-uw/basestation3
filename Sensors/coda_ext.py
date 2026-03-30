@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2019, 2021, 2022, 2023, 2024, 2025 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2019, 2021, 2022, 2023, 2024, 2025, 2026 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -481,6 +481,7 @@ def sensor_data_processing(
         BaseNetCDF.assign_dim_info_size(nc_info_d, results_info, coda_np)
 
         # Calculate compensated O2
+        # From 0006681revE RBRcoda3 T.ODO Equations.pdf (RBR#0006681revE)
 
         # Equation 3.a
         Fcp = 1.0 + (ctd_pressure_v * calib_consts[f"{instrument}_c0"])
