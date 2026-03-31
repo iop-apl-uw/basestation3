@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -164,13 +164,16 @@ def plot_ctd_corrections(
     except Exception:
         log_warning("Could not extract GC data - skipping", "exc")
 
-    ctd_raw_valid_i = np.logical_and.reduce(
-        (
-            np.logical_not(np.isnan(ctd_raw_temp)),
-            np.logical_not(np.isnan(ctd_raw_cond)),
-            np.logical_not(np.isnan(ctd_raw_time)),
-        )
-    )
+    # ctd_raw_valid_i = np.logical_and.reduce(
+    #     (
+    #         np.logical_not(np.isnan(ctd_raw_temp)),
+    #         np.logical_not(np.isnan(ctd_raw_cond)),
+    #         np.logical_not(np.isnan(ctd_raw_time)),
+    #     )
+    # )
+
+    # Display all points in plot - keep this mechanism in case we need to revert - keep in alignment with corr points
+    ctd_raw_valid_i = np.arange(0, ctd_raw_temp.size)
 
     point_num = np.arange(0, ctd_raw_temp.size)
     # These are split into salinity and temp.
@@ -207,12 +210,13 @@ def plot_ctd_corrections(
         corr_temperature = dive_nc_file.variables["temperature"][:]
         corr_temperature_qc = QC.decode_qc(dive_nc_file.variables["temperature_qc"][:])
         corr_temperature_qc_strs = QC.qc_to_str(corr_temperature_qc)
-        # Display all points in plot - keep this mechanism in case we need to revert
+        # Display all points in plot - keep this mechanism in case we need to revert - keep in alignment with raw points
         # temperature_good_i = QC.find_qc(corr_temperature_qc, QC.only_good_qc_values)
         temperature_good_i = np.arange(0, corr_temperature.size)
         corr_salinity = dive_nc_file.variables["salinity"][:]
         corr_salinity_qc = QC.decode_qc(dive_nc_file.variables["salinity_qc"][:])
         corr_salinity_qc_strs = QC.qc_to_str(corr_salinity_qc)
+        # Display all points in plot - keep this mechanism in case we need to revert - keep in alignment with raw points
         # salinity_good_i = QC.find_qc(corr_salinity_qc, QC.only_good_qc_values)
         salinity_good_i = np.arange(0, corr_salinity.size)
         # Use ctd_pressure since it has already been through the legato pressure despiker
