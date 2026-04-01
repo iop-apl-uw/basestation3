@@ -120,17 +120,6 @@ mass = 52.173; % (kg) scale weight
 %PARAM ignore_truck_legato = 1; 
 
 %
-% Aanderaa Optode
-%
-
-% The parameters needed to correct the aanderaa optode output can be obtained by running
-%    /opt/basestation/bin/python /usr/local/basestation3/tools/GetOptodeConstants.py <selftest>
-% where selftest is a selftest capture file that contains the aanderaa optode meta data.  
-
-%calibcomm_codaTODO='RBRcoda serialnum:237923 temp15:2025-03-15T13:54:16Z doxy24:2025-03-20T11:35:41Z opt_05:2025-03-03T14:18:09Z';
-%codaTODO_c0=32.000000e-006;
-
-%
 % RBR tridente
 %
 
@@ -154,6 +143,60 @@ mass = 52.173; % (kg) scale weight
 
 % This parameter is used to calculate an additional compensater O2 vector (in addtion to the one reported by the instrument) using corrected salinity from the CTD.  See /usr/local/basesation3/Sensors/coda_ext.py for further details.
 %PARAM codaTODO_c0=32.000000e-006;
+
+%
+% Aanderaa Optode
+%
+
+% The parameters needed to correct the aanderaa optode output can be obtained by running
+%    /opt/basestation/bin/python /usr/local/basestation3/tools/GetOptodeConstants.py <selftest>
+% where selftest is a selftest capture file that contains the aanderaa optode meta data.
+
+%PARAM calibcomm_optode = ''Optode 4831 SN: 940  Foil ID: 1824M calibrated 03-12-2020'';
+
+%PARAM optode_PhaseCoef0 = -2.734;
+%PARAM optode_PhaseCoef1 = 1;
+%PARAM optode_PhaseCoef2 = 0;
+%PARAM optode_PhaseCoef3 = 0;
+%PARAM optode_ConcCoef0 = 0;
+%PARAM optode_ConcCoef1 = 1;
+%PARAM optode_FoilCoefA0 = -2.67928e-06;
+%PARAM optode_FoilCoefA1 = -7.4836e-06;
+%PARAM optode_FoilCoefA2 = 0.00196001;
+%PARAM optode_FoilCoefA3 = -0.207285;
+%PARAM optode_FoilCoefA4 = 0.000601246;
+%PARAM optode_FoilCoefA5 = -6.60427e-07;
+%PARAM optode_FoilCoefA6 = 11.1802;
+%PARAM optode_FoilCoefA7 = -0.0514806;
+%PARAM optode_FoilCoefA8 = 6.8985e-05;
+%PARAM optode_FoilCoefA9 = 8.46501e-07;
+%PARAM optode_FoilCoefA10 = -314.351;
+%PARAM optode_FoilCoefA11 = 2.05112;
+%PARAM optode_FoilCoefA12 = -0.00298703;
+%PARAM optode_FoilCoefA13 = -4.44977e-06;
+%PARAM optode_FoilCoefB0 = -1.86135e-06;
+%PARAM optode_FoilCoefB1 = 3814.9;
+%PARAM optode_FoilCoefB2 = -32.2281;
+%PARAM optode_FoilCoefB3 = -0.1678;
+%PARAM optode_FoilCoefB4 = 0.0189482;
+%PARAM optode_FoilCoefB5 = -0.000690143;
+%PARAM optode_FoilCoefB6 = 1.04269e-05;
+%PARAM optode_FoilCoefB7 = 0;
+%PARAM optode_FoilCoefB8 = 0;
+%PARAM optode_FoilCoefB9 = 0;
+%PARAM optode_FoilCoefB10 = 0;
+%PARAM optode_FoilCoefB11 = 0;
+%PARAM optode_FoilCoefB12 = 0;
+%PARAM optode_FoilCoefB13 = 0;
+%PARAM optode_SVU_enabled = 1;
+%PARAM optode_SVUCoef0 = 0.00276388;
+%PARAM optode_SVUCoef1 = 0.00011389;
+%PARAM optode_SVUCoef2 = 2.47865e-06;
+%PARAM optode_SVUCoef3 = 166.347;
+%PARAM optode_SVUCoef4 = -0.263223;
+%PARAM optode_SVUCoef5 = -37.8607;
+%PARAM optode_SVUCoef6 = 3.37836;
+
 
 %
 % Wetlabs
