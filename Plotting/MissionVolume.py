@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,8 +28,8 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Plots volume estimates
-"""
+"""Plots volume estimates"""
+
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
@@ -77,6 +77,8 @@ def mission_volume(
     columns = [i[1] for i in res]
 
     fig = plotly.graph_objects.Figure()
+
+    # From vert_vel plot
     volmax_df = None
     if "implied_volmax" in columns:
         try:
@@ -86,7 +88,11 @@ def mission_volume(
             ).sort_values("dive")
         except (pd.io.sql.DatabaseError, sqlite3.OperationalError):
             log_warning("Could not load implied volmax", "exc")
+        else:
+            if volmax_df["implied_volmax"].isna().all():
+                volmax_df = None
 
+    # From vert_vel_new plot
     regressed_volmax_df = None
     if "vert_vel_regress_volmax" in columns:
         try:
@@ -96,6 +102,9 @@ def mission_volume(
             ).sort_values("dive")
         except (pd.io.sql.DatabaseError, sqlite3.OperationalError):
             log_warning("Could not load implied volmax", "exc")
+        else:
+            if regressed_volmax_df["vert_vel_regress_volmax"].isna().all():
+                regressed_volmax_df = None
 
     volmax_GSM_df = None
     if "implied_volmax_GSM" in columns:
@@ -106,6 +115,9 @@ def mission_volume(
             ).sort_values("dive")
         except (pd.io.sql.DatabaseError, sqlite3.OperationalError):
             log_warning("Could not load implied volmax GSM", "exc")
+        else:
+            if volmax_GSM_df["implied_volmax_GSM"].isna().all():
+                volmax_GSM_df = None
 
     glider_df = None
     if "implied_volmax_glider" in columns:
@@ -116,6 +128,9 @@ def mission_volume(
             ).sort_values("dive")
         except (sqlite3.OperationalError, pd.io.sql.DatabaseError):
             log_warning("Could not load implied volmax from the glider estimate", "exc")
+        else:
+            if glider_df["implied_volmax_glider"].isna().all():
+                glider_df = None
 
     flight_df = None
     if "implied_volmax_fm" in columns:
@@ -128,6 +143,9 @@ def mission_volume(
             log_warning(
                 "Could not load implied volmax from the flight model estimate", "exc"
             )
+        else:
+            if flight_df["implied_volmax_fm"].isna().all():
+                flight_df = None
 
     if dbcon is None:
         conn.close()
