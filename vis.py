@@ -1050,10 +1050,7 @@ def attachHandlers(app: sanic.Sanic):
     # returns: contents from requested URL
     @authorized(check=AUTH_ENDPOINT, requireLevel=0)
     async def postHandler(request):
-        allowed = [
-                   'https://realtime.sikuliaq.alaska.edu/realtime/map',
-                   'https://iopbase3.apl.washington.edu/pos/poll',
-                  ]
+        allowed = request.ctx.ctx.proxies
 
         url = request.json.get('url', None)
         found = False
@@ -1096,11 +1093,7 @@ def attachHandlers(app: sanic.Sanic):
     # returns: contents from requested URL
     @authorized(check=AUTH_ENDPOINT, requireLevel=0)
     async def proxyHandler(request, url):
-        allowed = ['https://api.opentopodata.org/v1/gebco2020',
-                   'https://marine.weather.gov/MapClick.php',
-                   'https://iop.apl.washington.edu/', 
-                   'https://usicecenter.gov/File/DownloadCurrent',
-                  ]
+        allowed = request.ctx.ctx.proxies
 
         found = False
         if url.startswith('http:/') and not url.startswith('http://'):
@@ -3057,6 +3050,8 @@ async def buildMissionTable(app, config=None):
         x['publicdefaults'] = {}
     if 'assets' not in x:
         x['assets'] = {}
+    if 'proxies' not in x:
+        x['proxies'] = [] 
     if 'routes' not in x:
         x['routes'] = []
     if 'sa' not in x: # toplevel sa for bare map
@@ -3133,6 +3128,7 @@ async def buildMissionTable(app, config=None):
                                                    endpoints=xx['endpoints'],
                                                    controls=xx['controls'],
                                                    assets=xx['assets'],
+                                                   proxies=xx['proxies'],
                                                    routes=xx['routes'],
                                                    users=xx['users'],
                                                    groups=xx['groups'],
@@ -3156,6 +3152,7 @@ async def buildMissionTable(app, config=None):
             app.ctx.endpoints    = x['endpoints']
             app.ctx.controls     = x['controls']
             app.ctx.assets       = x['assets']
+            app.ctx.proxies      = x['proxies']
             app.ctx.routes       = x['routes']
             app.ctx.admins      = x['admins']
             app.ctx.admingroups = x['admingroups']
@@ -3276,6 +3273,7 @@ async def buildMissionTable(app, config=None):
         app.ctx.controls = x['controls']
         app.ctx.assets = x['assets']
         app.ctx.routes = x['routes']
+        app.ctx.proxies = x['proxies']
         app.ctx.domain = x['authdomain']
         app.ctx.admins      = x['admins']
         app.ctx.admingroups = x['admingroups']
