@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -241,10 +241,12 @@ def plot_vert_vel_new(
         if dive1 < 1:
             dive1 = 1
 
+        regress_dives_list = [*range(dive1, dive_num + 1)]
+
         bias_mul, hd_mul, vels_mul, rms_mul, _, _, figs_mul = RegressVBD.regress(
             base_opts.mission_dir,
             base_opts.instrument_id,
-            [*range(dive1, dive_num + 1)],
+            regress_dives_list,
             [d0, d1],
             regress_init_bias,
             None,
@@ -410,7 +412,15 @@ def plot_vert_vel_new(
             }
         )
     if regress_dives > 1 and rms_mul[1] > 0:
-        tagline = f"<b>Buoyancy+HD corrected model, multi-dives</b><br>&#8594;C_VBD={implied_cvbd:.0f},A={best_hd[0]:.5f},B={best_hd[1]:.5f}<br>RMS={rms_mul[1]:.3f}cm/s, bias={bias_mul:.1f}cc<br>{implieds}"
+        # tagline = f"<b>Buoyancy+HD corrected model, multi-dives</b><br>&#8594;C_VBD={implied_cvbd:.0f},A={best_hd[0]:.5f},B={best_hd[1]:.5f}<br>RMS={rms_mul[1]:.3f}cm/s, bias={bias_mul:.1f}cc<br>{implieds}"
+        if regress_dives_list[0] != regress_dives_list[-1]:
+            regress_dive_tag = (
+                f"dives {regress_dives_list[0]} - {regress_dives_list[-1]}"
+            )
+        else:
+            regress_dive_tag = f"dive {regress_dives_list[0]}"
+
+        tagline = f"<b>Buoyancy+HD corrected model, {regress_dive_tag}</b><br>&#8594;C_VBD={implied_cvbd:.0f},A={best_hd[0]:.5f},B={best_hd[1]:.5f}<br>RMS={rms_mul[1]:.3f}cm/s, bias={bias_mul:.1f}cc<br>{implieds}"
 
         fig.add_trace(
             {
