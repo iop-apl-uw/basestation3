@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -35,8 +35,10 @@ from __future__ import annotations
 
 import contextlib
 import typing
+from dataclasses import dataclass
 
 import numpy as np
+import numpy.typing as npt
 import plotly.graph_objects
 import scipy.interpolate
 
@@ -139,6 +141,55 @@ def plot_diveplot(
         else:
             log_error("VBD position not available")
             eng_vbd_pos = eng_vbd_time = None
+
+        # Internal sensors in GC line
+        @dataclass
+        class gc_int_sensor_t:
+            """Class for returning CTD vars for plotting routines"""
+
+            data: npt.NDArray[np.float64] = np.empty([])
+            valid_i: npt.NDArray[np.float64] = np.empty([])
+            data_scl: float = 1.0
+            color: str = ""
+            name: str = ""
+            units: str = ""
+
+        # Colors match MissionIntSensors
+        gc_int_sensors = {
+            "gc_humid": gc_int_sensor_t(
+                color="DarkBlue", name="Internal Humidity", units="percent"
+            ),
+            "gc_intP": gc_int_sensor_t(
+                color="DarkMagenta", name="Intnernal Pressure", units="psia"
+            ),
+        }
+        try:
+            if any(
+                tuple(
+                    int_sensor in dive_nc_file.variables
+                    for int_sensor in gc_int_sensors
+                )
+            ):
+                gc_int_sensor_time = (
+                    dive_nc_file.variables["gc_st_secs"][:] - start_time
+                ) / 60.0
+                for gc_int_sensor in gc_int_sensors:
+                    if gc_int_sensor in dive_nc_file.variables:
+                        gc_int_sensor_data = dive_nc_file.variables[gc_int_sensor][:]
+                        valid_i = np.logical_not(np.isnan(gc_int_sensor_data))
+                        if max(gc_int_sensor_data[valid_i]) > 40.0:
+                            gc_int_sensors[gc_int_sensor].data_scl = 1.0
+                        elif max(gc_int_sensor_data[valid_i]) > 30.0:
+                            gc_int_sensors[gc_int_sensor].data_scl = 2.0
+                        elif max(gc_int_sensor_data[valid_i]) > 20.0:
+                            gc_int_sensors[gc_int_sensor].data_scl = 3.0
+                        else:
+                            gc_int_sensors[gc_int_sensor].data_scl = 4.0
+
+                        gc_int_sensors[gc_int_sensor].data = gc_int_sensor_data
+                        gc_int_sensors[gc_int_sensor].valid_i = valid_i
+        except Exception as exception:
+            log_warning(f"Failed to fetch gc internal sensors ({exception})")
 
         glider_id = dive_nc_file.glider
         mission_name = (
@@ -381,7 +432,7 @@ def plot_diveplot(
                 "y": (sigma_t[valid_i] - sigma_t_min) * sigma_t_scl,
                 "x": ctd_time[valid_i],
                 "meta": sigma_t[valid_i],
-                "name": f"sigma_t {sigma_t_scl:.0f} g/m^3 - {sigma_t_min:.1f}",
+                "name": f"sigma_t ({1.0 / sigma_t_scl:.2f} g/m^3 + {sigma_t_min:.1f})",
                 "type": "scatter",
                 "xaxis": "x1",
                 "yaxis": "y1",
@@ -411,7 +462,7 @@ def plot_diveplot(
                 "y": buoy_f[valid_i] * buoy_f_scl,
                 "x": ctd_time[valid_i],
                 "meta": buoy_f[valid_i],
-                "name": f"Buoyancy Frequency {buoy_f_scl:.0f} cycles/hr",
+                "name": f"Buoyancy Frequency ({1.0 / buoy_f_scl:.2f} cycles/hr)",
                 "type": "scatter",
                 "xaxis": "x1",
                 "yaxis": "y1",
@@ -422,6 +473,31 @@ def plot_diveplot(
                 "hovertemplate": "Buoyancy Frequency<br>%{meta:.1f} cycles/hr<br>%{x:.2f} mins<br><extra></extra>",
             }
         )
+
+    # GC internal sensors
+
+    for _, gc_int_sensor_info in gc_int_sensors.items():
+        if gc_int_sensor_info.data.size > 2:
+            fig.add_trace(
+                {
+                    "y": gc_int_sensor_info.data[gc_int_sensor_info.valid_i]
+                    * gc_int_sensor_info.data_scl,
+                    "x": gc_int_sensor_time[gc_int_sensor_info.valid_i],
+                    "meta": gc_int_sensor_info.data[gc_int_sensor_info.valid_i],
+                    "name": f"{gc_int_sensor_info.name} ({1.0 / gc_int_sensor_info.data_scl:.2f} {gc_int_sensor_info.units})",
+                    "type": "scatter",
+                    "xaxis": "x1",
+                    "yaxis": "y1",
+                    "visible": "legendonly",
+                    "mode": "markers",
+                    "marker": {
+                        "symbol": "star",
+                        "size": 5,
+                        "color": gc_int_sensor_info.color,
+                    },
+                    "hovertemplate": f"{gc_int_sensor_info.name}<br>%{{meta:.2f}} {gc_int_sensor_info.units}<br>%{{x:.2f}} mins<br><extra></extra>",
+                }
+            )
 
     # End Depth traces
 
