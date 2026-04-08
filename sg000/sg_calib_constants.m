@@ -197,6 +197,19 @@ mass = 52.173; % (kg) scale weight
 %PARAM optode_SVUCoef5 = -37.8607;
 %PARAM optode_SVUCoef6 = 3.37836;
 
+%
+% Johnson, Plant, Riser, Gilbert. 'Air oxygen calibration of oxygen optodes on a profiling float array'
+% submitted, Journal of Atmospheric and Oceanic Technology 2015
+% The optode apparently drifts from its calibration when exposed to air but then stops drifting in (sea)water.
+% Investigation shows this is captured by a gain rather
+% than additive drift, that is, the drift is proportional to the O2 signal. Johnson et al. compute the gain
+% by comparing the output of the sensor in air with the expected
+% O2 concentration given temperature and pressure.
+%
+% These parameter are not supplied by the above tool
+%PARAM optode_st_temp = 10.723; % From selftest capture
+%PARAM optode_st_calphase = 30.826; % From selftest capture
+%PARAM optode_st_slp = 1008.3; % From local observation
 
 %
 % Wetlabs
