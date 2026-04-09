@@ -162,6 +162,9 @@ def plot_diveplot(
             "gc_intP": gc_int_sensor_t(
                 color="DarkMagenta", name="Intnernal Pressure", units="psia"
             ),
+            "gc_intT": gc_int_sensor_t(
+                color="Red", name="Intnernal Temperature", units="C"
+            ),
         }
         try:
             if any(

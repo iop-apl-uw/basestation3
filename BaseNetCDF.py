@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -2471,6 +2471,12 @@ def set_globals() -> None:
             False,
             "d",
             {"description": "Internal pressure", "units": "psia"},
+            (nc_gc_event_info,),
+        ],
+        "gc_intT": [
+            False,
+            "d",
+            {"description": "Internal temperature", "units": "C"},
             (nc_gc_event_info,),
         ],
         "gc_humid": [
