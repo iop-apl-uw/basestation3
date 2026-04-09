@@ -36,20 +36,15 @@ import sys
 import time
 import traceback
 
+import numpy as np
+
 import BaseOpts
 import FlightModel
 import Utils
-
 from BaseLog import (
     BaseLogger,
     log_critical,
-    log_debug,
-    log_error,
-    log_info,
-    log_warning,
 )
-
-import numpy as np
 
 DEBUG_PDB = False
 
@@ -62,7 +57,7 @@ def DEBUG_PDB_F() -> None:
         pdb.post_mortem(traceb)
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]):
     """Command line driver for updateing flight model data
 
     Note:
@@ -72,14 +67,15 @@ def main():
         0 - success
         1 - failure
     """
+    FlightModel.set_globals()
+
     # global mission_directory
     base_opts = BaseOpts.BaseOptions(
-        "Command line driver for updateing flight model data"
+        "Command line driver for updateing flight model data",
+        cmdline_args=cmdline_args,
     )
 
     BaseLogger(base_opts, include_time=True)  # initializes BaseLog
-
-    FlightModel.set_globals()
 
     global DEBUG_PDB
     DEBUG_PDB = base_opts.debug_pdb

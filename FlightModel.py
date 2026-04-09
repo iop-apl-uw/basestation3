@@ -38,11 +38,9 @@
 
 import contextlib
 import copy
-import cProfile
 import os
 import pdb
 import pickle
-import pstats
 import shutil
 import stat
 import sys
@@ -62,7 +60,6 @@ import Utils
 import Utils2
 from BaseLog import (
     BaseLogger,
-    log_critical,
     log_debug,
     log_error,
     log_info,
