@@ -344,6 +344,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
         all_dive_nc_file_names.extend(dive_nc_file_names)
         all_dive_nc_file_names = sorted(Utils.unique(all_dive_nc_file_names))
 
+        fm_ret_val = 0
         if not base_opts.skip_flight_model:
             flight_t0 = time.time()
             log_info(
@@ -351,7 +352,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
             )
             fm_nc_files_created = []
             try:
-                FlightModel.main(base_opts, sg_calib_file_name, fm_nc_files_created)
+                fm_ret_val = FlightModel.main(
+                    base_opts, sg_calib_file_name, fm_nc_files_created
+                )
             except Exception:
                 log_error("Flight model failed", "exc")
                 if DEBUG_PDB:
@@ -503,6 +506,10 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
                     # known_ftp_tags=known_ftp_tags,
                     # processed_file_names=processed_file_names,
                 )
+            if ret_val:
+                log_error("Main reprocessing had an error - consult output for details")
+            if fm_ret_val:
+                log_error("Flight Model returned an error - consult output for details")
 
     log_info(
         "Finished processing "

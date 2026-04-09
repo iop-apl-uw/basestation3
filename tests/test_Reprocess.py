@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2024, 2025  University of Washington.
+## Copyright (c) 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -126,3 +126,41 @@ def test_mission_extension(caplog, reprocess_mission_extensions, report_divencf)
             break
 
     assert f_found_msg == report_divencf
+
+
+def test_reprocess_simw(caplog):
+    """Tests that the mission with a simw dive issues and error"""
+    data_dir = pathlib.Path("testdata/sg561_provolo_lofoten_may2016_simw")
+    mission_dir = data_dir.joinpath("mission_dir")
+
+    allowed_msgs = [
+        "SBECT temperature coefficient",
+        "SBECT conductivity coefficient",
+        "Deck dive CT saw air",
+        "CTD out of the water",
+        "Substantial unmodeled flight time",
+        "Estimated DAC magnitude",
+        "SBE43 O2 data found but calibration constant",
+        "Mass of vehicle in sg_calib_constants",
+        "Large mis-match between predicted",
+    ]
+    required_msgs = [
+        "Flight Model returned an error - consult output for details",
+        "Unable to run flight model on deck dives",
+    ]
+    cmd_line = [
+        "--verbose",
+        "--mission_dir",
+        str(mission_dir),
+        "--force",
+    ]
+
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        Reprocess.main,
+        cmd_line,
+        caplog,
+        allowed_msgs,
+        required_msgs=required_msgs,
+    )
