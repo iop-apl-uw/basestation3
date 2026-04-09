@@ -343,53 +343,49 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
         # Now update all composite files using all available nc files
         all_dive_nc_file_names.extend(dive_nc_file_names)
         all_dive_nc_file_names = sorted(Utils.unique(all_dive_nc_file_names))
-        if len(all_dive_nc_file_names):
-            if not base_opts.skip_flight_model:
-                flight_t0 = time.time()
-                log_info(
-                    f"Started FLIGHT processing {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(flight_t0))}"
-                )
-                fm_nc_files_created = []
-                try:
-                    FlightModel.main(base_opts, sg_calib_file_name, fm_nc_files_created)
-                except Exception:
-                    log_error("Flight model failed", "exc")
-                    if DEBUG_PDB:
-                        _, _, tb = sys.exc_info()
-                        traceback.print_exc()
-                        pdb.post_mortem(tb)
-                else:
-                    fm_nc_files_created = list(set(fm_nc_files_created))
-                    log_info(f"FM files updated {fm_nc_files_created}")
-                    nc_files_created = list(set(nc_files_created + fm_nc_files_created))
-                    del fm_nc_files_created
-                    if not base_opts.called_from_fm:
-                        for ncf in nc_files_created:
-                            BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
-                    all_dive_nc_file_names.extend(nc_files_created)
-                    all_dive_nc_file_names = sorted(
-                        Utils.unique(all_dive_nc_file_names)
-                    )
-                    dive_nc_file_names.extend(nc_files_created)
-                    dive_nc_file_names = sorted(Utils.unique(dive_nc_file_names))
-                flight_tend = time.time()
-                log_info(
-                    f"Finished FLIGHT processing {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(flight_tend))} took {flight_tend - flight_t0:.2f} secs"
-                )
-            else:
-                log_info(
-                    "Skipping FLIGHT processing "
-                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-                )
 
-                if (
-                    base_opts.generate_parquet
-                    and base_opts.parquet_directory is not None
-                ):
-                    log_info("Starting parquet from netcdf generation")
-                    BaseParquet.write_parquet_files(
-                        [pathlib.Path(x) for x in dive_nc_file_names], base_opts
-                    )
+        if not base_opts.skip_flight_model:
+            flight_t0 = time.time()
+            log_info(
+                f"Started FLIGHT processing {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(flight_t0))}"
+            )
+            fm_nc_files_created = []
+            try:
+                FlightModel.main(base_opts, sg_calib_file_name, fm_nc_files_created)
+            except Exception:
+                log_error("Flight model failed", "exc")
+                if DEBUG_PDB:
+                    _, _, tb = sys.exc_info()
+                    traceback.print_exc()
+                    pdb.post_mortem(tb)
+            else:
+                fm_nc_files_created = list(set(fm_nc_files_created))
+                log_info(f"FM files updated {fm_nc_files_created}")
+                nc_files_created = list(set(nc_files_created + fm_nc_files_created))
+                del fm_nc_files_created
+                if not base_opts.called_from_fm:
+                    for ncf in nc_files_created:
+                        BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
+                all_dive_nc_file_names.extend(nc_files_created)
+                all_dive_nc_file_names = sorted(Utils.unique(all_dive_nc_file_names))
+                dive_nc_file_names.extend(nc_files_created)
+                dive_nc_file_names = sorted(Utils.unique(dive_nc_file_names))
+            flight_tend = time.time()
+            log_info(
+                f"Finished FLIGHT processing {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(flight_tend))} took {flight_tend - flight_t0:.2f} secs"
+            )
+        else:
+            log_info(
+                "Skipping FLIGHT processing "
+                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+            )
+
+        if len(all_dive_nc_file_names):
+            if base_opts.generate_parquet and base_opts.parquet_directory is not None:
+                log_info("Starting parquet from netcdf generation")
+                BaseParquet.write_parquet_files(
+                    [pathlib.Path(x) for x in dive_nc_file_names], base_opts
+                )
 
             if base_opts.reprocess_dive_extensions:
                 BaseDotFiles.process_extensions(
