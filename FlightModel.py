@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -2459,6 +2459,7 @@ def process_dive(
     # with the dive, if any, just before the first updated dive
 
     while dives_reprocessed:
+        log_info(f"Starting on dives_reprocessed reprocess_count:{reprocess_count}")
         reprocess_count += 1
         if (
             reprocess_count > 6
@@ -3605,8 +3606,12 @@ def process_dive(
                 log_info("Exit requested")
                 compare = [False]
 
+            # log_info(f"d_n:{d_n} dd.dive_data_ok:{dd.dive_data_ok} compare:{compare}")
             if dd.dive_data_ok and any(compare):
                 log_info(" Reprocess dive %d: %s" % (d_n, compare))
+                log_info(
+                    f"    {dd.hd_a * predicted_hd_a_scale:.5f}!={dd.nc_hd_a:.5f}  {dd.hd_b * predicted_hd_b_scale:.5f}!={dd.nc_hd_b:.5f} {dd.volmax}!={dd.nc_volmax} {abs(dd_vbdbias - dd.nc_vbdbias):.1f}>{vbdbias_tolerance:.1f} {abs(1.0 - (abs_compress / dd.nc_abs_compress)):.2f}>{abs_compress_tolerance:.2f}"
+                )
                 log_info(
                     "  v: %.2f [%.2f %.2f] ac: %.3f [%g %g]"
                     % (
@@ -4195,6 +4200,7 @@ def main(
         except KeyError:
             new_dive_nums.append(dive_num)
             updated_dives_d[dive_num] = dive_nc_file_time
+    log_info(f"new_dive_nums:{new_dive_nums}")
 
     # Now, as a heuristic, if we are within a few days of the dive_num's START TIME assume we are during a live deployment
     # Avoid relying on the reprocess file modified time, which can be updated by reprocess and FM itself
@@ -4210,7 +4216,7 @@ def main(
 
     # simulate adding one dive at a time to the FDD as if this were a deployment
     ret_val = 0
-    log_debug("Starting main loop")
+    log_debug(f"Starting main loop new_dive_nums:{new_dive_nums}")
     for new_dive_num in new_dive_nums:
         if exit_event and exit_event.is_set():
             log_info("Exit requested")
@@ -4260,31 +4266,6 @@ def main(
     return ret_val
 
 
-def cmdline_main():
-    """Command line driver for updateing flight model data
-
-    Note:
-        sg_calib_constants must be in the same directory as the file(s) being processed
-
-    Returns:
-        0 - success
-        1 - failure
-    """
-    global mission_directory
-    base_opts = BaseOpts.BaseOptions(
-        "Command line driver for updateing flight model data"
-    )
-
-    BaseLogger(base_opts, include_time=True)  # initializes BaseLog
-
-    global DEBUG_PDB
-    DEBUG_PDB = base_opts.debug_pdb
-
-    mission_directory = base_opts.mission_dir
-
-    return process_directory(base_opts)
-
-
 def process_directory(base_opts):
     """Can be called from multiprocessing scheme"""
     nc_files_created = []
@@ -4320,43 +4301,3 @@ def process_directory(base_opts):
     except RuntimeError as exception:
         log_error(exception.args[0])
         return 1
-
-
-if __name__ == "__main__":
-    retval = 1
-
-    # Force to be in UTC
-    os.environ["TZ"] = "UTC"
-    time.tzset()
-
-    np.seterr(divide="raise", invalid="raise")
-
-    try:
-        if "--profile" in sys.argv:
-            sys.argv.remove("--profile")
-            profile_file_name = (
-                os.path.splitext(os.path.split(sys.argv[0])[1])[0]
-                + "_"
-                + Utils.ensure_basename(
-                    time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-                )
-                + ".cprof"
-            )
-            # Generate line timings
-            retval = cProfile.run("cmdline_main()", filename=profile_file_name)
-            stats = pstats.Stats(profile_file_name)
-            stats.sort_stats("time", "calls")
-            stats.print_stats()
-        else:
-            retval = cmdline_main()
-    except SystemExit:
-        pass
-    except Exception:
-        if DEBUG_PDB:
-            _, _, tracebb = sys.exc_info()
-            traceback.print_exc()
-            pdb.post_mortem(tracebb)
-
-        log_critical("Unhandled exception in main -- exiting")
-
-    sys.exit(retval)

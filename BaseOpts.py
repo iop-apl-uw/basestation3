@@ -535,7 +535,7 @@ global_options_dict: dict[str, options_t] = {
             "CommLog",
             "DataFiles",
             "FTPPush",
-            "FlightModel",
+            "FlightModelCLI",
             "GliderEarlyGPS",
             "GliderTrack",
             "MakeDiveProfiles",
@@ -572,7 +572,7 @@ global_options_dict: dict[str, options_t] = {
                 "CommLog",
                 "DataFiles",
                 "FTPPush",
-                "FlightModel",
+                "FlightModelCLI",
                 "GliderTrack",
                 "MakeKML",
                 "MakeMissionEngPlots",
@@ -669,7 +669,7 @@ global_options_dict: dict[str, options_t] = {
         {
             "Base",
             "BasePlot",
-            "FlightModel",
+            "FlightModelCLI",
             "MakeDiveProfiles",
             "MakeMissionProfile",
             "MakeMissionTimeSeries",
@@ -769,7 +769,7 @@ global_options_dict: dict[str, options_t] = {
     ),
     "use_gsw": options_t(
         True,
-        {"Base", "BasePlot", "FlightModel", "MakeDiveProfiles", "Reprocess"},
+        {"Base", "BasePlot", "FlightModelCLI", "MakeDiveProfiles", "Reprocess"},
         ("--use_gsw",),
         bool,
         {
@@ -960,7 +960,7 @@ global_options_dict: dict[str, options_t] = {
     # DOC netcdf files with already generated data in the flight directory
     "skip_flight_model": options_t(
         False,
-        {"Base", "FlightModel", "Reprocess"},
+        {"Base", "FlightModelCLI", "Reprocess"},
         ("--skip_flight_model",),
         bool,
         {
@@ -976,7 +976,7 @@ global_options_dict: dict[str, options_t] = {
         {
             "Base",
             "BasePlot",
-            "FlightModel",
+            "FlightModelCLI",
             "MakeDiveProfiles",
             "MakeMissionProfile",
             "MakeMissionTimeSeries",
@@ -994,7 +994,7 @@ global_options_dict: dict[str, options_t] = {
     # DOC regression scripts.
     "fm_isopycnal": options_t(
         False,
-        {"Base", "Reprocess", "FlightModel", "MakeDiveProfiles"},
+        {"Base", "Reprocess", "FlightModelCLI", "MakeDiveProfiles"},
         ("--fm_isopycnal",),
         bool,
         {
@@ -1015,7 +1015,7 @@ global_options_dict: dict[str, options_t] = {
     ),
     "fm_reprocess_dives": options_t(
         True,
-        {"Base", "FlightModel", "Reprocess"},
+        {"Base", "FlightModelCLI", "Reprocess"},
         ("--fm_reprocess_dives",),
         bool,
         {

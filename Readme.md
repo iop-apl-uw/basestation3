@@ -613,6 +613,19 @@ Regenerate the dive 100 through 102 netcdf files, not re-running Flight Model
  --mission_dir <seaglider_home_directory> --force --skip_flight_model 100:102
 ```
 
+## FlightModelCLI.py 
+
+```FlightModelCLI.py``` is a lower level script that just re-runs the Flight Model System (FMS) over a mission - no other re-processing is performed.  Typically, `Reprocess.py` should be used.
+
+```
+/opt/basestation/bin/python /usr/local/basestation3/FlightModelCLI.py \
+ --mission_dir <seaglider_home_directory>
+```
+
+N.B. If the desire is to cause the FMS system to start from scratch, first delete the `flight` sub-directory of the mission directory. 
+
+
+
 ## BaseDB.py
 
 The mission database is added to during the normal logout processing.  If there was ever 
