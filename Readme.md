@@ -599,11 +599,11 @@ supplying the `--help` argument.
 ```Reprocess.py``` starts with the `.log` and `.eng` files and can regenerate
 netcdf files, run Flight Model and generate plots. 
 
-Regenerate all netcdf files, run Flight Model and generate plots:
+Regenerate all netcdf files, run Flight Model with a clean slate and generate plots:
 
 ```
 /opt/basestation/bin/python /usr/local/basestation3/Reprocess.py \
- --mission_dir <seaglider_home_directory> --force --reprocess_plots
+ --mission_dir <seaglider_home_directory> --force --reprocess_plots --backup_flight
 ```
 
 Regenerate the dive 100 through 102 netcdf files, not re-running Flight Model
