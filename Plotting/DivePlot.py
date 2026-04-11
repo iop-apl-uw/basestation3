@@ -362,6 +362,7 @@ def plot_diveplot(
 
     fig = plotly.graph_objects.Figure()
 
+    # Start depth/ctrl axis
     PlotUtils.add_gc_moves(fig, gc_moves, (-100.0, 80.0), convert_to_mins=True)
 
     # Depth traces
@@ -423,84 +424,6 @@ def plot_diveplot(
                 "hovertemplate": "Legato Depth<br>%{meta:.1f} meters<br>%{x:.2f} mins<br><extra></extra>",
             }
         )
-
-    if sigma_t is not None:
-        valid_i = np.logical_not(np.isnan(sigma_t))
-        sigma_t_min = min(sigma_t[valid_i])
-        sigma_t_max = max(sigma_t[valid_i])
-        sigma_t_scl = -75.0 / (sigma_t_max - sigma_t_min)
-
-        fig.add_trace(
-            {
-                "y": (sigma_t[valid_i] - sigma_t_min) * sigma_t_scl,
-                "x": ctd_time[valid_i],
-                "meta": sigma_t[valid_i],
-                "name": f"sigma_t ({1.0 / sigma_t_scl:.2f} g/m^3 + {sigma_t_min:.1f})",
-                "type": "scatter",
-                "xaxis": "x1",
-                "yaxis": "y1",
-                # "mode": "lines",
-                "visible": "legendonly",
-                "mode": "lines",
-                # "marker": {"symbol": "cross", "size": 3},
-                "line": {"dash": "solid", "color": "Yellow"},
-                "hovertemplate": "sigma_t<br>%{meta:.1f} g/m^3<br>%{x:.2f} mins<br><extra></extra>",
-            }
-        )
-
-    if buoy_f is not None:
-        valid_i = np.logical_not(np.isnan(buoy_f))
-
-        if max(buoy_f[valid_i]) > 40.0:
-            buoy_f_scl = 1.0
-        elif max(buoy_f[valid_i]) > 30.0:
-            buoy_f_scl = 2.0
-        elif max(buoy_f[valid_i]) > 20.0:
-            buoy_f_scl = 3.0
-        else:
-            buoy_f_scl = 4.0
-
-        fig.add_trace(
-            {
-                "y": buoy_f[valid_i] * buoy_f_scl,
-                "x": ctd_time[valid_i],
-                "meta": buoy_f[valid_i],
-                "name": f"Buoyancy Frequency ({1.0 / buoy_f_scl:.2f} cycles/hr)",
-                "type": "scatter",
-                "xaxis": "x1",
-                "yaxis": "y1",
-                "visible": "legendonly",
-                "mode": "lines",
-                "marker": {"symbol": "cross", "size": 3},
-                "line": {"dash": "solid", "color": "darkolivegreen"},
-                "hovertemplate": "Buoyancy Frequency<br>%{meta:.1f} cycles/hr<br>%{x:.2f} mins<br><extra></extra>",
-            }
-        )
-
-    # GC internal sensors
-
-    for _, gc_int_sensor_info in gc_int_sensors.items():
-        if gc_int_sensor_info.data.size > 2:
-            fig.add_trace(
-                {
-                    "y": gc_int_sensor_info.data[gc_int_sensor_info.valid_i]
-                    * gc_int_sensor_info.data_scl,
-                    "x": gc_int_sensor_time[gc_int_sensor_info.valid_i],
-                    "meta": gc_int_sensor_info.data[gc_int_sensor_info.valid_i],
-                    "name": f"{gc_int_sensor_info.name} ({1.0 / gc_int_sensor_info.data_scl:.2f} {gc_int_sensor_info.units})",
-                    "type": "scatter",
-                    "xaxis": "x1",
-                    "yaxis": "y1",
-                    "visible": "legendonly",
-                    "mode": "markers",
-                    "marker": {
-                        "symbol": "star",
-                        "size": 5,
-                        "color": gc_int_sensor_info.color,
-                    },
-                    "hovertemplate": f"{gc_int_sensor_info.name}<br>%{{meta:.2f}} {gc_int_sensor_info.units}<br>%{{x:.2f}} mins<br><extra></extra>",
-                }
-            )
 
     # End Depth traces
 
@@ -832,6 +755,86 @@ def plot_diveplot(
             }
         )
 
+    if sigma_t is not None:
+        valid_i = np.logical_not(np.isnan(sigma_t))
+        sigma_t_min = min(sigma_t[valid_i])
+        sigma_t_max = max(sigma_t[valid_i])
+        sigma_t_scl = -75.0 / (sigma_t_max - sigma_t_min)
+
+        fig.add_trace(
+            {
+                "y": (sigma_t[valid_i] - sigma_t_min) * sigma_t_scl,
+                "x": ctd_time[valid_i],
+                "meta": sigma_t[valid_i],
+                "name": f"sigma_t ({1.0 / sigma_t_scl:.2f} g/m^3 + {sigma_t_min:.1f})",
+                "type": "scatter",
+                "xaxis": "x1",
+                "yaxis": "y1",
+                # "mode": "lines",
+                "visible": "legendonly",
+                "mode": "lines",
+                # "marker": {"symbol": "cross", "size": 3},
+                "line": {"dash": "solid", "color": "Yellow"},
+                "hovertemplate": "sigma_t<br>%{meta:.1f} g/m^3<br>%{x:.2f} mins<br><extra></extra>",
+            }
+        )
+
+    if buoy_f is not None:
+        valid_i = np.logical_not(np.isnan(buoy_f))
+
+        if max(buoy_f[valid_i]) > 40.0:
+            buoy_f_scl = 1.0
+        elif max(buoy_f[valid_i]) > 30.0:
+            buoy_f_scl = 2.0
+        elif max(buoy_f[valid_i]) > 20.0:
+            buoy_f_scl = 3.0
+        else:
+            buoy_f_scl = 4.0
+
+        fig.add_trace(
+            {
+                "y": buoy_f[valid_i] * buoy_f_scl,
+                "x": ctd_time[valid_i],
+                "meta": buoy_f[valid_i],
+                "name": f"Buoyancy Frequency ({1.0 / buoy_f_scl:.2f} cycles/hr)",
+                "type": "scatter",
+                "xaxis": "x1",
+                "yaxis": "y1",
+                "visible": "legendonly",
+                "mode": "lines",
+                "marker": {"symbol": "cross", "size": 3},
+                "line": {"dash": "solid", "color": "darkolivegreen"},
+                "hovertemplate": "Buoyancy Frequency<br>%{meta:.1f} cycles/hr<br>%{x:.2f} mins<br><extra></extra>",
+            }
+        )
+
+    # GC internal sensors
+    for _, gc_int_sensor_info in gc_int_sensors.items():
+        if gc_int_sensor_info.data.size > 2:
+            fig.add_trace(
+                {
+                    "y": gc_int_sensor_info.data[gc_int_sensor_info.valid_i]
+                    * gc_int_sensor_info.data_scl,
+                    "x": gc_int_sensor_time[gc_int_sensor_info.valid_i],
+                    "meta": gc_int_sensor_info.data[gc_int_sensor_info.valid_i],
+                    "name": f"{gc_int_sensor_info.name} ({1.0 / gc_int_sensor_info.data_scl:.2f} {gc_int_sensor_info.units})",
+                    "type": "scatter",
+                    "xaxis": "x1",
+                    "yaxis": "y1",
+                    "visible": "legendonly",
+                    "mode": "markers",
+                    "marker": {
+                        "symbol": "star",
+                        "size": 5,
+                        "color": gc_int_sensor_info.color,
+                    },
+                    "hovertemplate": f"{gc_int_sensor_info.name}<br>%{{meta:.2f}} {gc_int_sensor_info.units}<br>%{{x:.2f}} mins<br><extra></extra>",
+                }
+            )
+
+    # End depth/ctrl axis
+
+    # Start polar axis
     fig.add_trace(
         {
             "y": heading,
@@ -917,7 +920,9 @@ def plot_diveplot(
                 "hovertemplate": "NewHeading<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>",
             }
         )
+    # End polar axis
 
+    # Start buttons
     try:
         glider_id = int(glider_id)
         glider_id = "SG%03d" % glider_id
@@ -994,6 +999,7 @@ def plot_diveplot(
             ),
         ]
     )
+    # End buttons
 
     title_text = "%s %s dive %d started %s" % (
         glider_id,
