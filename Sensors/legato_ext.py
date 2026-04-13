@@ -86,6 +86,16 @@ def init_sensor(module_name, init_dict=None):
             },
             (BaseNetCDF.nc_sg_data_info,),
         ],
+        "eng_rbr_salnity": [
+            "f",
+            "d",
+            {
+                "standard_name": "sea_water_salinity",
+                "units": "PSU",
+                "description": "Salinity as reported by the instrument",
+            },
+            (BaseNetCDF.nc_sg_data_info,),
+        ],
         "eng_rbr_conducTemp": [
             False,
             "d",
@@ -105,6 +115,17 @@ def init_sensor(module_name, init_dict=None):
             },
             (BaseNetCDF.nc_sg_data_info,),
         ],
+        "eng_rbr_depth": [
+            "f",
+            "d",
+            {
+                "standard_name": "depth",
+                "positive": "down",
+                "units": "m",
+                "description": "Measured vertical distance below the surface",
+            },
+            (BaseNetCDF.nc_sg_data_info,),
+        ],
         # legato via scicon
         "legato_time": [
             True,
@@ -112,7 +133,7 @@ def init_sensor(module_name, init_dict=None):
             {
                 "standard_name": "time",
                 "units": "seconds since 1970-1-1 00:00:00",
-                "description": "sbe41 time in GMT epoch format",
+                "description": "legato time in GMT epoch format",
             },
             (BaseNetCDF.nc_legato_data_info,),
         ],
@@ -132,7 +153,17 @@ def init_sensor(module_name, init_dict=None):
             {
                 "standard_name": "sea_water_temperature",
                 "units": "degrees_Celsius",
-                "description": "Termperature (in situ) as reported by the instrument",
+                "description": "Temperature (in situ) as reported by the instrument",
+            },
+            (BaseNetCDF.nc_legato_data_info,),
+        ],
+        "legato_salinity": [
+            "f",
+            "d",
+            {
+                "standard_name": "sea_water_salinity",
+                "units": "PSU",
+                "description": "Salinity as reported by the instrument",
             },
             (BaseNetCDF.nc_legato_data_info,),
         ],
@@ -152,6 +183,17 @@ def init_sensor(module_name, init_dict=None):
                 "standard_name": "sea_water_pressure",
                 "units": "dbar",
                 "description": "CTD reported pressure",
+            },
+            (BaseNetCDF.nc_legato_data_info,),
+        ],
+        "legato_depth": [
+            "f",
+            "d",
+            {
+                "standard_name": "depth",
+                "positive": "down",
+                "units": "m",
+                "description": "Measured vertical distance below the surface",
             },
             (BaseNetCDF.nc_legato_data_info,),
         ],
@@ -176,12 +218,16 @@ def remap_engfile_columns_netcdf(base_opts, module, calib_constants, column_name
         "legatoPoll_time": "legato_time",
         "legatoPoll_conduc": "legato_conduc",
         "legatoPoll_temp": "legato_temp",
+        "legatoPoll_salinity": "legato_salinity",
         "legatoPoll_pressure": "legato_pressure",
+        "legatoPoll_depth": "legato_depth",
         "legatoPoll_conducTemp": "legato_conducTemp",
         "legatoFast_time": "legato_time",
         "legatoFast_conduc": "legato_conduc",
         "legatoFast_temp": "legato_temp",
+        "legatoFast_salinity": "legato_salnity",
         "legatoFast_pressure": "legato_pressure",
+        "legatoFast_depth": "legato_depth",
         "legatoFast_conducTemp": "legato_conducTemp",
         "rbr": "legato",
     }
@@ -258,7 +304,9 @@ def asc2eng(base_opts, module_name, datafile=None):
         ("rbr.conduc", "rbr_conduc", 10000.0, 0.0),
         ("rbr.conducTemp", "rbr_conducTemp", 10000.0, 0.0),
         ("rbr.temp", "rbr_temp", 10000.0, 0.0),
+        ("rbr.salinity", "rbr_salinity", 1000.0, 0.0),
         ("rbr.pressure", "rbr_pressure", 1000.0, sealevel),
+        ("rbr.depth", "rbr_depth", 1000.0, 0.0),
     ):
         column = datafile.remove_col(asc_col_name)
         if column is not None:
