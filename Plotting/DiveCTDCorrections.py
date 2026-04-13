@@ -37,6 +37,7 @@ import typing
 
 import gsw
 import numpy as np
+import numpy.typing as npt
 import plotly.graph_objects
 import scipy
 import seawater
@@ -178,13 +179,15 @@ def plot_ctd_corrections(
     point_num = np.arange(0, ctd_raw_temp.size)
     # These are split into salinity and temp.
     cust_hv_txt = ["", ""]
-    cust_data = [None, None]
-    qc_pts = [None, None]
+    cust_data: list[npt.ArrayLike] = [[], []]
+    qc_pts: list[list[int]] = [[], []]
+
     if qc_data:
         for jj in range(2):
-            qc_list, qc_pts[jj] = QC.qc_list_to_points_list(
+            qc_list, tmp_pts = QC.qc_list_to_points_list(
                 qc_data, ctd_raw_temp.size, bool(jj)
             )
+            qc_pts[jj] = sorted(list(tmp_pts))
             tmp_list = [
                 np.transpose(point_num),
                 np.transpose(raw_salinity_qc_strs if jj else raw_temperature_qc_strs),
@@ -271,8 +274,8 @@ def plot_ctd_corrections(
         fig.add_trace(
             {
                 "name": "QC Salin/Cond flagged",
-                "x": ctd_raw_time[list(qc_pts[0])],
-                "y": ctd_raw_salinity[list(qc_pts[0])],
+                "x": ctd_raw_time[qc_pts[0]],
+                "y": ctd_raw_salinity[qc_pts[0]],
                 "mode": "markers",
                 "yaxis": "y1",
                 "marker": {
@@ -303,12 +306,52 @@ def plot_ctd_corrections(
         }
     )
 
+    fig.add_trace(
+        {
+            "name": f"{ctd_type} Raw Salinity (not QC_GOOD)",
+            "x": ctd_raw_time[qc_pts[0]],
+            "y": ctd_raw_salinity[qc_pts[0]],
+            "customdata": np.squeeze(cust_data[0])[qc_pts[0]],
+            "yaxis": "y1",
+            "visible": "legendonly",
+            "mode": "markers",
+            # "line": {"width": 1},
+            "marker": {
+                "symbol": "cross",
+                "size": 5,
+                "color": "DarkBlue",
+            },
+            "hovertemplate": f"Raw Salin (not QC_GOOD)<br>%{{x:.2f}} min<br>%{{y:.2f}} PSU<br>%{{customdata[0]:d}} point_num<br>%{{customdata[1]}}{cust_hv_txt[1]}<extra></extra>",
+        }
+    )
+
+    fig.add_trace(
+        {
+            "name": f"{ctd_type} Corr Salinity",
+            "x": ctd_time[salinity_good_i],
+            "y": corr_salinity[salinity_good_i],
+            "customdata": np.squeeze(
+                np.dstack(
+                    (
+                        np.transpose(np.arange(0, ctd_raw_time.size)[salinity_good_i]),
+                        np.transpose(corr_salinity_qc_strs),
+                    )
+                )
+            ),
+            "yaxis": "y1",
+            "mode": "lines+markers",
+            "line": {"width": 1},
+            "marker": {"symbol": "cross", "size": 3, "color": "DarkGreen"},
+            "hovertemplate": "Corr Salin<br>%{x:.2f} min<br>%{y:.2f} PSU<br>%{customdata[0]:d} point_num<br>%{customdata[1]}<extra></extra>",
+        }
+    )
+
     if qc_pts[1]:
         fig.add_trace(
             {
                 "name": "QC Temp flagged",
-                "x": ctd_raw_time[list(qc_pts[1])],
-                "y": ctd_raw_temp[list(qc_pts[1])],
+                "x": ctd_raw_time[qc_pts[1]],
+                "y": ctd_raw_temp[qc_pts[1]],
                 "yaxis": "y2",
                 "mode": "markers",
                 "marker": {
@@ -337,24 +380,18 @@ def plot_ctd_corrections(
 
     fig.add_trace(
         {
-            "name": f"{ctd_type} Corr Salinity",
-            "x": ctd_time[salinity_good_i],
-            "y": corr_salinity[salinity_good_i],
-            "customdata": np.squeeze(
-                np.dstack(
-                    (
-                        np.transpose(np.arange(0, ctd_raw_time.size)[salinity_good_i]),
-                        np.transpose(corr_salinity_qc_strs),
-                    )
-                )
-            ),
-            "yaxis": "y1",
-            "mode": "lines+markers",
-            "line": {"width": 1},
-            "marker": {"symbol": "cross", "size": 3, "color": "DarkGreen"},
-            "hovertemplate": "Corr Salin<br>%{x:.2f} min<br>%{y:.2f} PSU<br>%{customdata[0]:d} point_num<br>%{customdata[1]}<extra></extra>",
+            "name": f"{ctd_type} Raw Temp (not QC_GOOD)",
+            "x": ctd_raw_time[qc_pts[1]],
+            "y": ctd_raw_temp[qc_pts[1]],
+            "customdata": np.squeeze(cust_data[1])[qc_pts[1]],
+            "yaxis": "y2",
+            "mode": "markers",
+            "visible": "legendonly",
+            "marker": {"symbol": "cross", "size": 5, "color": "DarkMagenta"},
+            "hovertemplate": f"Raw Temp (not QC_GOOD)<br>%{{x:.2f}} min<br>%{{y:.3f}} C<br>%{{customdata[0]:d}} point_num<br>%{{customdata[1]}}{cust_hv_txt[0]}<extra></extra>",
         }
     )
+
     fig.add_trace(
         {
             "name": f"{ctd_type} Corr Temp",
@@ -378,7 +415,7 @@ def plot_ctd_corrections(
         }
     )
 
-    # # Highlight differnces
+    # Highlight differnces
     # changed_points = np.squeeze(
     #     np.nonzero(
     #         np.abs(corr_salinity[salinity_good_i] - ctd_raw_salinity[salinity_good_i])
@@ -417,6 +454,78 @@ def plot_ctd_corrections(
     #         "hovertemplate": "Diff in temperature<br>%{x:.2f} mins<br>%{y:.3f} C<extra></extra>",
     #     }
     # )
+
+    # Start Buttons
+    traces = []
+    for d in fig.data:
+        traces.append(d["name"])
+
+    ctlTraces = {}
+    ctlTraces["All QC"] = [
+        "GC VBD",
+        "GC_Pitch",
+        "GC Roll",
+        "QC Temp flagged",
+        "QC Salin/Cond flagged",
+        f"{ctd_type} Raw Temp",
+        f"{ctd_type} Corr Temp",
+        f"{ctd_type} Raw Salinity",
+        f"{ctd_type} Corr Salinity",
+    ]
+    ctlTraces["Not QC_GOOD"] = [
+        "GC VBD",
+        "GC_Pitch",
+        "GC Roll",
+        f"{ctd_type} Raw Temp (not QC_GOOD)",
+        f"{ctd_type} Raw Salinity (not QC_GOOD)",
+    ]
+
+    buttons: list[dict] = [
+        dict(
+            args2=[{"visible": True}],
+            args=[{"visible": "legendonly"}],
+            label="All",
+            method="restyle",
+            visible=True,
+        )
+    ]
+
+    for c in ctlTraces:
+        buttons.append(
+            dict(
+                args2=[
+                    {"visible": True},
+                    [i for i, x in enumerate(traces) if x in ctlTraces[c]],
+                ],
+                args=[
+                    {"visible": "legendonly"},
+                    [i for i, x in enumerate(traces) if x in ctlTraces[c]],
+                ],
+                label=c,
+                method="restyle",
+                visible=True,
+            )
+        )
+
+    fig.update_layout(
+        updatemenus=[
+            dict(
+                type="buttons",
+                direction="left",
+                buttons=buttons,
+                # Matches legend x
+                x=1.05,
+                #
+                xanchor="left",
+                # Positioned above the legend
+                # y=1.07,
+                y=1.07,
+                visible=True,
+                showactive=False,
+            ),
+        ]
+    )
+    # End buttons
 
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     title_text = f"{mission_dive_str}<br>{ctd_type} Raw Temp/Salinity and Corrected Temp/Salinity vs Time{qc_line}"
