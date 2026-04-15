@@ -3783,7 +3783,7 @@ def main(
         )
     BaseLogger(base_opts)  # initializes BaseLog
 
-    Utils.check_versions()
+    Utils.check_versions(base_opts)
 
     if exit_event:
         log_info(f"Exit is {exit_event.is_set()}")

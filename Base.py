@@ -1593,7 +1593,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     # Initialize log
     BaseLogger(base_opts, include_time=True)
 
-    Utils.check_versions()
+    Utils.check_versions(base_opts)
 
     # Reset priority
     if base_opts.nice:

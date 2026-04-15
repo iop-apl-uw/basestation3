@@ -8003,7 +8003,7 @@ def main():
     global DEBUG_PDB
     DEBUG_PDB = base_opts.debug_pdb
 
-    Utils.check_versions()
+    Utils.check_versions(base_opts)
 
     # Reset priority
     if base_opts.nice:

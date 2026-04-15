@@ -306,7 +306,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
         log_critical(msg)
         raise RuntimeError(msg)
 
-    Utils.check_versions()
+    Utils.check_versions(base_opts)
 
     if PlotUtils.setup_plot_directory(base_opts):
         return 1

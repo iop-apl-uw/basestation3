@@ -972,13 +972,24 @@ def ensure_basename(basename):
     )
 
 
-def check_versions():
+def check_versions(base_opts: BaseOpts.BaseOptions) -> None:
     """Checks and reports versions of various libraries"""
-
     log_info(
         "Basestation version: %s; QC version: %s"
         % (Globals.basestation_version, Globals.quality_control_version)
     )
+    # Try for the commit id
+    cmd_line = f"git --git-dir {pathlib.Path(base_opts.basestation_directory) / '.git'} describe --always"
+
+    try:
+        sts, fo = run_cmd_shell(cmd_line)
+        if not sts and fo is not None:
+            log_info(f"Commit-ID: {fo.readline().decode().rstrip()}")
+            fo.close()
+        else:
+            log_info("Commit-ID: unknown")
+    except Exception:
+        log_info("Commit-ID: unknown")
 
     # Check python version
     log_info(

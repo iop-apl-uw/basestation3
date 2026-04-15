@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -447,7 +447,7 @@ def main(
     )
 
     log_debug(f"processed_other_files {processed_other_files}")
-    Utils.check_versions()
+    Utils.check_versions(base_opts)
 
     profile_file_names = []
     ncdf_file_names = []

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -120,7 +120,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
     global DEBUG_PDB
     DEBUG_PDB = base_opts.debug_pdb
 
-    Utils.check_versions()
+    Utils.check_versions(base_opts)
 
     # Reset priority
     if base_opts.nice:
