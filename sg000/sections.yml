@@ -7,13 +7,19 @@
 #   thermal, haline, solar, ice, gray, oxy, deep, dense, algae, 
 #   matter, turbid, speed, amp, tempo, phase, balance, delta, curl
 
-# basics for all section 0-990m, every dive (step=1) and 5m bins
+# basics for all section 0-990m, every dive (step=1) and 5m bins, average dive and climb
 
 defaults:
   top: 0
   bottom: 990
   bin: 5
   step: 1
+  which: 4
+
+# which=1 dive only
+#       2 climb only
+#       3 both dive and climb as separate profiles
+#       4 average dive and climb into single profile (default if otherwise unspecified)
 
 # specifying min and max will clamp the colorscale 
 # for easier comparison across sections
