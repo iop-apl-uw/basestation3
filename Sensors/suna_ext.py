@@ -59,9 +59,8 @@ def init_sensor(module_name, init_dict=None):
             False,
             "c",
             {
-                #"long_name": "underway thermosalinograph",
-                #"nodc_name": "thermosalinograph",
-                #"make_model": "unpumped RBR Legato",
+                "long_name": "Seabird Deep SUNA",
+                "make_model": "SUNA Nitrate Sensor",
             },
             BaseNetCDF.nc_scalar,
         ],  # always scalar
@@ -90,8 +89,7 @@ def init_sensor(module_name, init_dict=None):
             "d",
             {
                 "standard_name": "mole_concentration_of_nitrate_in_sea_water",
-                #"units": "degrees_Celsius",
-                # either mol m-3 or mmol m-3
+                "units": "mmol m-3",
                 "description": "Concnetration of nitrate (in situ) as reported by the instrument",
             },
             (data_info,),
@@ -101,5 +99,3 @@ def init_sensor(module_name, init_dict=None):
     init_dict[module_name] = {"netcdf_metadata_adds": meta_data_adds}
 
     return 0
-
-
