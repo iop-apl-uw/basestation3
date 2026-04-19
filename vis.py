@@ -1,5 +1,5 @@
 #!/usr/bin/env python3.10
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -551,6 +551,7 @@ def attachHandlers(app: sanic.Sanic):
     app.static('/robots.txt', f'{sys.path[0]}/html/robots.txt', name='robots')
     app.static('/script/images', f'{sys.path[0]}/scripts/images', name='script_images')
     app.static('/manifest.json', f'{sys.path[0]}/scripts/manifest.json', name='manifest')
+    app.static('/plothelp', f'{sys.path[0]}/html/plothelp', name='plothelp')
 
     if os.path.exists(app.config.STATIC_FILE):
         with open(app.config.STATIC_FILE) as f:

@@ -1,0 +1,95 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>CTD Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>CTD Plot Help</h1>
+       <p>There are two versions of this plots - <b>non-RAW</b> plots which show
+       the correct CTD data, and <b>RAW</b> plots which show the uncorrected CTD
+       data for Seabird CTDs.  RBR Legatos have a different <a
+       href="dv_legato.hml">plot</a> for <b>RAW</b> data (data as reported by the
+       instrument).</p> 
+       <p>All science traces on this plot report the data values, depth, time into the dive (in minutes) and the index of the
+       data value in the dive in the hovertips.  For scicon based instruments, the data index is 
+       for the combined profiles (dive, loiter, climb, surface loiter).</p>
+     <h2>Salinity</h2>
+     <ul>
+       <li>For <b>non-RAW</b> plots, <code>Salinty</code> traces are the
+       Basestation corrected salinity - they are taken from the
+      <code>salinity</code> netCDF variable</li> 
+      <li>For <b>RAW</b> plots <code>Salinity</code> traces are taken from the
+      <code>salinity_raw</code> netCDF variable and represent the uncorrect
+      salinity values</li> 
+    </ul>
+      <a href="/plothelp/images/dv_ctd_salinity.png">
+	<img src="/plothelp/images/dv_ctd_salinity.png" alt="Salinity" style="width: 300px;"/>
+      </a>
+    <br></br>      
+    <h2>Temperature</h2>
+    <ul>
+      <li>For <b>non-RAW</b> plots, <code>Temperature</code> traces are the
+      basestation corrected temperature - they are taken from the
+      <code>temperature</code> netCDF variable</li>
+      <li>For <b>RAW</b> plots <code>Temperature</code> traces are taken from
+      the <code>temperature_raw</code> netCDF variable and represent the
+      uncorrect temperature values</li> 
+    </ul>
+      <a href="/plothelp/images/dv_ctd_temperature.png">
+	<img src="/plothelp/images/dv_ctd_temperature.png" alt="Temperature" style="width: 300px;"/>
+      </a>
+
+     <br></br>
+    <h2>Conductivity</h2>
+    <ul>
+      <li>For <b>non-RAW</b> plots, <code>Conductivity</code> traces are the
+      basestation corrected conductivity - they are taken from the
+      <code>conductivity</code> netCDF variable</li> 
+      <li>For <b>RAW</b> plots <code>Conductivity</code> traces are taken from
+      the <code>conductivity_raw</code> netCDF variable and represent the
+      uncorrect conductivity values</li> 
+    </ul>
+      <a href="/plothelp/images/dv_ctd_conductivity.png">
+	<img src="/plothelp/images/dv_ctd_conductivity.png" alt="Conductivity" style="width: 300px;"/>
+      </a>
+     <br></br>    
+    <h2>Sigma-T</h2>
+      <p>For <b>non-RAW</b> plots, <code>sigma_t</code> are the
+      basestation calculated &sigma;<sub>&tau;</sub> and is taken from the
+      <code>sigma_t</code> netCDF variable.  This trace is not tied to a x-axis - use the hovertips to
+      interpret the values.</p>
+      <a href="/plothelp/images/dv_ctd_sigma_t.png">
+	<img src="/plothelp/images/dv_ctd_sigma_t.png" alt="sigma_t" style="width: 300px;"/>
+      </a>
+     <br></br>    
+    <h2>Buoyancy Frequency</h2>
+      <p>For <b>non-RAW</b> plots, <code>Buoyancy Frequency</code> are the
+      basestation calculated <code>Buoyancy Frequency</code> (<code>N</code>).
+      The value is calculated for the plot only and is not persisted into the netCDF file.
+      Unlike the traditional radians per second, this trace is in cycles per
+      hour. This trace is not tied to a x-axis - use the hovertips to 
+      interpret the values.</p>
+      <a href="/plothelp/images/dv_ctd_buoy_freq.png">
+	<img src="/plothelp/images/dv_ctd_buoy_freq.png" alt="Buouyancy Frequency" style="width: 300px;"/>
+      </a>
+      <br></br>
+    <h2>Oxygen Sensor Temperature</h2>
+      <p>For Seagliders with a oxygen sensor that returns a temperature that data
+      displayed in the <code>&lt;instrument&gt;_Temp_Dive</code> and
+      <code>&lt;instrument&gt;_Temp_Climb</code> traces, where
+      <code>&lt;instrument&gt;</code> is one of <code>aa3830</code>,
+      <code>aa4330</code>, <code>aa4831</code>, <code>codaTODO</code>.</p>
+
+      <a href="/plothelp/images/dv_ctd_coda_todo.png">
+	<img src="/plothelp/images/dv_ctd_coda_todo.png" alt="sigma_t" style="width: 300px;"/>
+      </a>
+     <br></br>    
+      
+    <h2>Sampling traces</h2>
+      <p>Help on <code>timeouts</code> overlays, <code>samples stats</code>
+      traces and <code>sample grid</code> traces can be found <a
+      href="samples.html">here</a>.</p> 
+  </body>
+</html>

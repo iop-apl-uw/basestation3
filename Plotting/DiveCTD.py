@@ -91,6 +91,7 @@ class CTDVars:
     max_salinity: float | None = None
     min_temperature: float | None = None
     max_temperature: float | None = None
+    is_raw: bool = False
     is_legato: bool = False
     is_gpctd: bool = False
     is_seabird: bool = False
@@ -306,6 +307,9 @@ def load_ctd_vars(
                         ),
                     )
 
+            if any((temp_raw_tag, salinity_raw_tag, conductivity_raw_tag)):
+                ctd_vars.is_raw = True
+
             valid_mask = [
                 x
                 for x in (
@@ -453,7 +457,7 @@ def load_ctd_vars(
     additional_arguments={
         "plot_ctd_raw": BaseOptsType.options_t(
             None,
-            ("Base", "BasePlot", "Reprocess"),
+            {"Base", "BasePlot", "Reprocess"},
             ("--plot_ctd_raw",),
             bool,
             {
@@ -543,7 +547,7 @@ def plot_CTD(
                 "x": ctd_vars.temp_dive,
                 "meta": ctd_vars.time_dive,
                 "customdata": ctd_vars.point_num_ctd_dive,
-                "name": "Temp Dive",
+                "name": "Temperature Dive",
                 "type": "scatter",
                 "xaxis": "x2",
                 "yaxis": "y2",
@@ -562,7 +566,7 @@ def plot_CTD(
                 "x": ctd_vars.temp_climb,
                 "meta": ctd_vars.time_climb,
                 "customdata": ctd_vars.point_num_ctd_climb,
-                "name": "Temp Climb",
+                "name": "Temperature Climb",
                 "type": "scatter",
                 "xaxis": "x2",
                 "yaxis": "y2",
@@ -619,93 +623,94 @@ def plot_CTD(
                 }
             )
 
-        if ctd_vars.sigma_t_dive is not None:
-            fig.add_trace(
-                {
-                    "y": ctd_vars.depth_dive,
-                    "x": ctd_vars.sigma_t_dive,
-                    "meta": ctd_vars.time_dive,
-                    "customdata": ctd_vars.point_num_ctd_dive,
-                    "name": "Sigma_T Dive",
-                    "type": "scatter",
-                    "xaxis": "x4",
-                    "yaxis": "y1",
-                    "mode": "markers",
-                    "marker": {
-                        "symbol": "triangle-down",
-                        "color": "orange",
-                    },
-                    "hovertemplate": "Sigma_T Dive<br>%{x:.2f} g/m^3<br>%{y:.2f}"
-                    + "meters<br>%{meta:.2f} mins<br>%{customdata:d} point_num<extra></extra>",
-                    "visible": "legendonly",
-                }
-            )
+        if not (ctd_vars.is_raw):
+            if ctd_vars.sigma_t_dive is not None:
+                fig.add_trace(
+                    {
+                        "y": ctd_vars.depth_dive,
+                        "x": ctd_vars.sigma_t_dive,
+                        "meta": ctd_vars.time_dive,
+                        "customdata": ctd_vars.point_num_ctd_dive,
+                        "name": "Sigma_T Dive",
+                        "type": "scatter",
+                        "xaxis": "x4",
+                        "yaxis": "y1",
+                        "mode": "markers",
+                        "marker": {
+                            "symbol": "triangle-down",
+                            "color": "orange",
+                        },
+                        "hovertemplate": "Sigma_T Dive<br>%{x:.2f} g/m^3<br>%{y:.2f}"
+                        + "meters<br>%{meta:.2f} mins<br>%{customdata:d} point_num<extra></extra>",
+                        "visible": "legendonly",
+                    }
+                )
 
-        if ctd_vars.sigma_t_climb is not None:
-            fig.add_trace(
-                {
-                    "y": ctd_vars.depth_climb,
-                    "x": ctd_vars.sigma_t_climb,
-                    "meta": ctd_vars.time_climb,
-                    "customdata": ctd_vars.point_num_ctd_climb,
-                    "name": "Sigma_T Climb",
-                    "type": "scatter",
-                    "xaxis": "x4",
-                    "yaxis": "y1",
-                    "mode": "markers",
-                    "marker": {
-                        "symbol": "triangle-up",
-                        "color": "darkgoldenrod",
-                    },
-                    "hovertemplate": "Sigma_T Climb<br>%{x:.2f} g/m^3<br>%{y:.2f}"
-                    + " meters<br>%{meta:.2f} mins<br>%{customdata:d} point_num<extra></extra>",
-                    "visible": "legendonly",
-                }
-            )
+            if ctd_vars.sigma_t_climb is not None:
+                fig.add_trace(
+                    {
+                        "y": ctd_vars.depth_climb,
+                        "x": ctd_vars.sigma_t_climb,
+                        "meta": ctd_vars.time_climb,
+                        "customdata": ctd_vars.point_num_ctd_climb,
+                        "name": "Sigma_T Climb",
+                        "type": "scatter",
+                        "xaxis": "x4",
+                        "yaxis": "y1",
+                        "mode": "markers",
+                        "marker": {
+                            "symbol": "triangle-up",
+                            "color": "darkgoldenrod",
+                        },
+                        "hovertemplate": "Sigma_T Climb<br>%{x:.2f} g/m^3<br>%{y:.2f}"
+                        + " meters<br>%{meta:.2f} mins<br>%{customdata:d} point_num<extra></extra>",
+                        "visible": "legendonly",
+                    }
+                )
 
-        if ctd_vars.buoy_f_dive is not None:
-            fig.add_trace(
-                {
-                    "y": ctd_vars.depth_dive,
-                    "x": ctd_vars.buoy_f_dive,
-                    "meta": ctd_vars.time_dive,
-                    "customdata": ctd_vars.point_num_ctd_dive,
-                    "name": "Buoyancy Frequency Dive",
-                    "type": "scatter",
-                    "xaxis": "x5",
-                    "yaxis": "y1",
-                    "mode": "markers",
-                    "marker": {
-                        "symbol": "triangle-down",
-                        "color": "lightgreen",
-                    },
-                    "hovertemplate": "Buoyancy Frequency Dive<br>%{x:.2f} cycles/hr<br>%{y:.2f}"
-                    + "meters<br>%{meta:.2f} mins<br>%{customdata:d} point_num<extra></extra>",
-                    "visible": "legendonly",
-                }
-            )
+            if ctd_vars.buoy_f_dive is not None:
+                fig.add_trace(
+                    {
+                        "y": ctd_vars.depth_dive,
+                        "x": ctd_vars.buoy_f_dive,
+                        "meta": ctd_vars.time_dive,
+                        "customdata": ctd_vars.point_num_ctd_dive,
+                        "name": "Buoyancy Frequency Dive",
+                        "type": "scatter",
+                        "xaxis": "x5",
+                        "yaxis": "y1",
+                        "mode": "markers",
+                        "marker": {
+                            "symbol": "triangle-down",
+                            "color": "lightgreen",
+                        },
+                        "hovertemplate": "Buoyancy Frequency Dive<br>%{x:.2f} cycles/hr<br>%{y:.2f}"
+                        + "meters<br>%{meta:.2f} mins<br>%{customdata:d} point_num<extra></extra>",
+                        "visible": "legendonly",
+                    }
+                )
 
-        if ctd_vars.buoy_f_climb is not None:
-            fig.add_trace(
-                {
-                    "y": ctd_vars.depth_climb,
-                    "x": ctd_vars.buoy_f_climb,
-                    "meta": ctd_vars.time_climb,
-                    "customdata": ctd_vars.point_num_ctd_climb,
-                    "name": "Buoyancy Frequency Climb",
-                    "type": "scatter",
-                    "xaxis": "x5",
-                    "yaxis": "y1",
-                    "mode": "markers",
-                    "marker": {
-                        "symbol": "triangle-up",
-                        "color": "darkolivegreen",
-                    },
-                    "hovertemplate": "Buoyancy Frequency Climb<br>%{x:.2f} cycles/hr<br>%{y:.2f}"
-                    + " meters<br>%{meta:.2f} mins<br>%{customdata:d} point_num<extra></extra>",
-                    "visible": "legendonly",
-                }
-            )
+            if ctd_vars.buoy_f_climb is not None:
+                fig.add_trace(
+                    {
+                        "y": ctd_vars.depth_climb,
+                        "x": ctd_vars.buoy_f_climb,
+                        "meta": ctd_vars.time_climb,
+                        "customdata": ctd_vars.point_num_ctd_climb,
+                        "name": "Buoyancy Frequency Climb",
+                        "type": "scatter",
+                        "xaxis": "x5",
+                        "yaxis": "y1",
+                        "mode": "markers",
+                        "marker": {
+                            "symbol": "triangle-up",
+                            "color": "darkolivegreen",
+                        },
+                        "hovertemplate": "Buoyancy Frequency Climb<br>%{x:.2f} cycles/hr<br>%{y:.2f}"
+                        + " meters<br>%{meta:.2f} mins<br>%{customdata:d} point_num<extra></extra>",
+                        "visible": "legendonly",
+                    }
+                )
 
         if ctd_vars.aa4831_temp_dive is not None:
             fig.add_trace(
@@ -896,6 +901,7 @@ def plot_CTD(
             }
         )
 
+        l_annotations = []
         # Instrument cal date
         if "sg_cal_calibcomm" in dive_nc_file.variables:
             sg_cal_calib_str = (
@@ -904,7 +910,7 @@ def plot_CTD(
             if timeouts:
                 sg_cal_calib_str += f" Timeouts:{timeouts:d}"
 
-            l_annotations = [
+            l_annotations.append(
                 {
                     "text": sg_cal_calib_str,
                     "showarrow": False,
@@ -913,7 +919,7 @@ def plot_CTD(
                     "x": 0.0,
                     "y": -0.08,
                 }
-            ]
+            )
 
             # CT Corrections
             if (
@@ -934,7 +940,8 @@ def plot_CTD(
                     }
                 )
 
-            fig.update_layout({"annotations": tuple(l_annotations)})
+        l_annotations.append(PlotUtilsPlotly.add_help_link("dv_ctd"))
+        fig.update_layout({"annotations": tuple(l_annotations)})
 
         fig.update_xaxes(automargin=True)
 
@@ -958,7 +965,7 @@ def plot_CTD(
     additional_arguments={
         "ctd_series_divesback": BaseOptsType.options_t(
             10,
-            ("Base", "BasePlot", "Reprocess"),
+            {"Base", "BasePlot", "Reprocess"},
             ("--ctd_series_divesback",),
             int,
             {
@@ -969,7 +976,7 @@ def plot_CTD(
         ),
         "enable_ctd_series": BaseOptsType.options_t(
             False,
-            ("Base", "BasePlot", "Reprocess"),
+            {"Base", "BasePlot", "Reprocess"},
             ("--enable_ctd_series",),
             bool,
             {

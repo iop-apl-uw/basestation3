@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Timeouts and Samples</title>
+    <meta name="viewport" content="width=device-width"></meta>
+    <link rel="stylesheet" href="style.css?v="></link>
+  </head>
+  <body>
+    <h1>Timeout overlays and sample grid traces help</h1>
+      <p>Science plots contain diagnostic traces relating the sampling and errors from the instruments.</p>
+    <h2>Timeouts</h2>
+      <p><code>Dive timeouts</code> and <code>Climb timeouts</code> overlays show
+      the samples that took longer then the instrument specified timeout. The
+      timesout times are taken from the
+      <code>&lt;instrument&gt;_timeouts_times</code> netCDF variable where
+      <code>&lt;instrument&gt;</code> is the insturment name.</p> 
+      <a href="/plothelp/images/samples_timeout.png">
+	<img src="/plothelp/images/samples_timeout.png" alt="Samples Stats" style="width: 300px;"/>
+      </a>
+    <h2>Sample stats</h2>
+      <p>The <code>Dive samples stats</code> and <code>Climb samples stats</code> traces show the samples per meter for 5 meter bins.
+      This trace is not tied to a axis - use the hovertips to find the actual values.</p>
+      <a href="/plothelp/images/samples_stats.png">
+	<img src="/plothelp/images/samples_stats.png" alt="Samples Stats" style="width: 300px;"/>
+      </a>
+    <h2>Sample grid</h2>
+      <p>The <code>Dive sample grid</code> and <code>Climb sample grid</code> traces  graphically show what the
+      commanded sampling grid is. This trace is not tied to a axis - use the hovertips to find the actual values.</p>
+      <a href="/plothelp/images/samples_grid.png">
+	<img src="/plothelp/images/samples_grid.png" alt="Samples Stats" style="width: 300px;"/>
+      </a>
+      <p>The calculation of these traces use the pre-mission selftest and the uploaded
+      <code>science</code> and <code>scicon.sch</code> to generate a history of the commanded sampling and will not work
+      without a pre-launch selftest.  Some very old Seaglider firmware versions
+      do not supply enough information in the selftest
+      to allow the sampling data to be calculated.
+      </p>
+  </body>
+</html>

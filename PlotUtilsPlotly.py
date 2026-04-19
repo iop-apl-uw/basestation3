@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -243,3 +243,21 @@ def write_output_files(base_opts, base_file_name, fig):
         fig.show()
 
     return ret_list
+
+
+def add_help_link(
+    plot_name: str,
+    x_pos: float = 0.0,
+    y_pos: float = -0.08,
+) -> dict:
+    root_dir_name = "/plothelp"
+
+    plot_help_location = f"{root_dir_name}/{plot_name}.html"
+    return {
+        "text": f'<a href="{plot_help_location}">Help for this plot</a>',
+        "showarrow": False,
+        "xref": "paper",
+        "yref": "paper",
+        "x": 1.0,
+        "y": -0.08,
+    }
