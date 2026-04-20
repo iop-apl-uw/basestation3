@@ -119,6 +119,29 @@ instrument_meta["fet"] = {
     },
 }
 
+instrument_meta["suna"] = {
+    "layout": {"xaxis_title": "mmol m<sup>-3</sup>", "xaxis2_title": "Temperature (C)"},
+    "vars": {
+        "nitrate": {
+            "xaxis": "x1",
+            "yaxis": "y1",
+            "color_down": "Green",
+            "color_up": "DarkGreen",
+            "units": "mmol m-3",
+            "hoverfmt": ".4f",
+        },
+        "Vrse": {
+            "xaxis": "x2",
+            "yaxis": "y1",
+            "color_down": "Red",
+            "color_up": "Magenta",
+            "units": "C",
+            "hoverfmt": ".4f",
+        },
+    }
+}
+
+
 
 @plotdivesingle
 def plot_science(
