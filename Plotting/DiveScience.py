@@ -130,7 +130,7 @@ instrument_meta["suna"] = {
             "units": "mmol m-3",
             "hoverfmt": ".4f",
         },
-        "Vrse": {
+        "temperature": {
             "xaxis": "x2",
             "yaxis": "y1",
             "color_down": "Red",
@@ -138,9 +138,8 @@ instrument_meta["suna"] = {
             "units": "C",
             "hoverfmt": ".4f",
         },
-    }
+    },
 }
-
 
 
 @plotdivesingle
