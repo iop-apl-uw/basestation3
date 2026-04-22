@@ -141,6 +141,30 @@ instrument_meta["suna"] = {
     },
 }
 
+instrument_meta["microriderg"] = {
+    "layout": {"xaxis_title": ""},
+    "vars": {
+        "CI_1": {
+            "xaxis": "x1",
+            "yaxis": "y1",
+            "color_down": "Green",
+            "color_up": "DarkGreen",
+            # Need units
+            "units": "",
+            "hoverfmt": ".4f",
+        },
+        "CI_2": {
+            "xaxis": "x1",
+            "yaxis": "y1",
+            "color_down": "Red",
+            "color_up": "Magenta",
+            # Need units
+            "units": "",
+            "hoverfmt": ".4f",
+        },
+    },
+}
+
 
 @plotdivesingle
 def plot_science(
@@ -169,9 +193,9 @@ def plot_science(
                 elif typ in varlist:
                     instruments.append((typ, False))
 
-        for instrument, is_scicon in instruments:
+        for instrument, is_logger in instruments:
             var_vals = {}
-            tag = "" if is_scicon else "eng_"
+            tag = "" if is_logger else "eng_"
             for var_n in meta["vars"]:
                 var_name = f"{tag}{instrument}_{var_n}"
                 if var_name in dive_nc_file.variables:
@@ -199,9 +223,20 @@ def plot_science(
                 # Interpolate around missing depth observations
                 sg_depth = PlotUtils.interp_missing_depth(sg_time, sg_depth)
 
-                # Check for scicon based time
-                if is_scicon:
-                    instrument_time = dive_nc_file.variables[f"{instrument}_time"][:]
+                # Check for logger based time (includes scicon)
+                if is_logger:
+                    instrument_time_name = f"{instrument}_time"
+                    instrument_time = dive_nc_file.variables[instrument_time_name][:]
+
+                    # Check for overlap of time grids
+                    min1, max1 = np.nanmin(sg_time), np.nanmax(sg_time)
+                    min2, max2 = np.nanmin(instrument_time), np.nanmax(instrument_time)
+
+                    if not (max(min1, min2) <= min(max1, max2)):
+                        log_warning(
+                            f'vaiables "time" and "{instrument_time_name}" do not overlap - skipping plot for {instrument}'
+                        )
+                        continue
 
                     # Interp ctd_depth to determine WL depth
                     f = scipy.interpolate.interp1d(
