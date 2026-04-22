@@ -65,6 +65,7 @@ dependencies = [
     "websockets==14.1",
     # To match the adcp requirements
     "h5py==3.12.1",
+    "q2netcdf", #Rockland Q file to netcdf convertor
 ]
 [project.optional-dependencies]
 ci = [

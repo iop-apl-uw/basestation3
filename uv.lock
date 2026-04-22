@@ -279,6 +279,7 @@ dependencies = [
     { name = "pyqrcode" },
     { name = "pyyaml" },
     { name = "pyzmq" },
+    { name = "q2netcdf" },
     { name = "requests" },
     { name = "sanic" },
     { name = "sanic-ext" },
@@ -357,6 +358,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'ci'", specifier = "==6.0.0" },
     { name = "pyyaml", specifier = "==6.0.2" },
     { name = "pyzmq", specifier = "==26.3.0" },
+    { name = "q2netcdf" },
     { name = "requests", specifier = ">=2.31.0" },
     { name = "ruff", marker = "extra == 'ci'", specifier = "==0.7.2" },
     { name = "sanic" },
@@ -2331,6 +2333,21 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/51/a5/5aead624f5f1033dab9bdaf3e2bc692a8042fcb59355c919a2c042061780/pyzmq-26.3.0-pp310-pypy310_pp73-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:356ec0e39c5a9cda872b65aca1fd8a5d296ffdadf8e2442b70ff32e73ef597b1", size = 799508, upload-time = "2025-03-12T08:03:55.841Z" },
     { url = "https://files.pythonhosted.org/packages/ca/8a/dcc0a24cfed80cc004abcba710077147ec9178a12865914e73a60a70cb62/pyzmq-26.3.0-pp310-pypy310_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:749d671b0eec8e738bbf0b361168369d8c682b94fcd458c20741dc4d69ef5278", size = 758001, upload-time = "2025-03-12T08:03:57.87Z" },
     { url = "https://files.pythonhosted.org/packages/1a/74/f18e63540340f5c740396eb6408d154a84e9f0e9e1ae931b192bf2aa7425/pyzmq-26.3.0-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:f950f17ae608e0786298340163cac25a4c5543ef25362dd5ddb6dcb10b547be9", size = 556425, upload-time = "2025-03-12T08:03:59.479Z" },
+]
+
+[[package]]
+name = "q2netcdf"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "netcdf4" },
+    { name = "numpy" },
+    { name = "pyyaml" },
+    { name = "xarray" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/62/78/318389f128acf20440bde761c9b6d83237b4f62e12b2d44b973e0096ffbe/q2netcdf-0.6.0.tar.gz", hash = "sha256:548d6a7ee41e7af7a36c0f0f7616ccce97ff7790cf4b1cc43e7dd02d06ba81a5", size = 116485, upload-time = "2026-03-25T22:53:33.159Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a2/c5/d439017cc211eb2ac256fba7ead42cabd99e8fef6c70ede62b95bad7f81a/q2netcdf-0.6.0-py3-none-any.whl", hash = "sha256:d245bee3085b1bf74b3730dbf3ab98df48b3c85edcb9ffc6cfb227705a32ea58", size = 55128, upload-time = "2026-03-25T22:53:31.37Z" },
 ]
 
 [[package]]

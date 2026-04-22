@@ -900,7 +900,7 @@ def extract_file_metadata(inp_file_name):
                     time_val = start_time
 
                 else:
-                    log_info(raw_strs[1])
+                    # log_info(raw_strs[1])
                     try:
                         stop_time = Utils.parse_time(raw_strs[1], f_gps_rollover=True)
                     except Exception as exception:

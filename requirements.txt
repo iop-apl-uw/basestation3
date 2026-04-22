@@ -58,3 +58,5 @@ json2html==1.3.0
 websockets==14.1
 # To match the adcp requirements
 h5py==3.12.1
+#Rockland Q file to netcdf convertor
+q2netcdf

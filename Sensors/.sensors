@@ -19,6 +19,7 @@ coda_ext.py,init_sensor,remap_engfile_columns_netcdf,sensor_data_processing
 fet_ext.py,init_sensor
 riot_ext.py,init_logger,process_data_files
 suna_ext.py,init_sensor
+microriderg_logdev_ext.py,init_logger,process_data_files,eng_file_reader
 # Place all cnf files at the end of this file!
 scct.cnf,init_sensor,asc2eng
 mag.cnf,init_sensor,asc2eng
