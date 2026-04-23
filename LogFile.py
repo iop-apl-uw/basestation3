@@ -195,9 +195,9 @@ class LogFile:
         self.glider = None
         self.mission = None
         self.dive = None
-        self.start_ts = None
+        self.start_ts = time.strptime("1 1 70 0 0 0", "%m %d %y %H %M %S")
         self.columns = []
-        self.data = None
+        self.data = {}
         self.gc_data = None
         self.gc_state_data = None
         self.gc = []
