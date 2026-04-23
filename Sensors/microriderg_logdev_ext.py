@@ -33,7 +33,6 @@ import numpy as np
 from q2netcdf.q2netcdf import loadQfile
 
 import BaseNetCDF
-
 import LogFile
 from BaseLog import log_debug, log_error, log_info
 
