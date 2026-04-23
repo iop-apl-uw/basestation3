@@ -24,7 +24,7 @@
 
 
 """
-RBR Legato logdev basestation sensor extension
+MicroRiderG basestation sensor extension
 """
 
 import shutil
@@ -33,7 +33,7 @@ import numpy as np
 from q2netcdf.q2netcdf import loadQfile
 
 import BaseNetCDF
-from BaseLog import log_error, log_info
+from BaseLog import log_debug, log_error, log_info
 
 
 def init_logger(module_name, init_dict=None):
@@ -51,6 +51,7 @@ def init_logger(module_name, init_dict=None):
     nc_microriderg_time_info = "microriderg_time_info"
     nc_microriderg_freq_info = "microriderg_freq_info"
     nc_microriderg_despike_info = "microriderg_despike_info"
+    nc_microriderg_ftime_info = "microriderg_ftime_info"
 
     BaseNetCDF.register_sensor_dim_info(
         nc_microriderg_time_info,
@@ -69,6 +70,13 @@ def init_logger(module_name, init_dict=None):
     BaseNetCDF.register_sensor_dim_info(
         nc_microriderg_despike_info,
         "microriderg_despike_point",
+        None,
+        True,
+        None,
+    )
+    BaseNetCDF.register_sensor_dim_info(
+        nc_microriderg_ftime_info,
+        "microriderg_ftime_point",
         None,
         True,
         None,
@@ -139,7 +147,7 @@ def init_logger(module_name, init_dict=None):
             ],
             #
             "microriderg_time": [
-                True,
+                False,
                 "d",
                 {
                     "standard_name": "time",
@@ -148,8 +156,31 @@ def init_logger(module_name, init_dict=None):
                 },
                 (nc_microriderg_time_info,),
             ],
+            "microriderg_ftime": [
+                False,
+                "d",
+                {
+                    "standard_name": "time",
+                    "units": "seconds since 1970-1-1 00:00:00",
+                    "description": "Sample time in GMT epoch format",
+                },
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_despike": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_despike_info,),
+            ],
+            "microriderg_freq": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_freq_info,),
+            ],
+            #
             "microriderg_t1": [
-                True,
+                False,
                 "d",
                 {
                     "standard_name": "time",
@@ -158,163 +189,163 @@ def init_logger(module_name, init_dict=None):
                 (nc_microriderg_time_info,),
             ],
             "microriderg_record": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_error": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_CI_2": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_T_1": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_MAD_2": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_diagnostic_2": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_K_max_2": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_FM_1": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_speed": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_T_2": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_e_2": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_sh_passes_2": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_var_res_1": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_CI_1": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_pressure": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_MAD_1": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_Incl_Y": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_e_1": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_var_res_2": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_K_max_1": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_Incl_X": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_diagnostic_1": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_sh_passes_1": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_visc": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_sh_fraction_1": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_sh_fraction_2": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
             ],
             "microriderg_FM_2": [
-                "f",
+                False,
                 "d",
                 {},
                 (nc_microriderg_time_info,),
@@ -342,6 +373,156 @@ def init_logger(module_name, init_dict=None):
                 "d",
                 {},
                 (nc_microriderg_time_info, nc_microriderg_freq_info),
+            ],
+            "microriderg_fileVersion": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_hp_cut": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_ucond_despiking": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info, nc_microriderg_despike_info),
+            ],
+            "microriderg_overlap": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_fit_order": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_band_averaging": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_q": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_tau": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_num_frequency": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_scalar_processing": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_order": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_file": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_fp07_response": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_inertial_sr": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_diss_length": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_algorithm": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_goodman_spectra": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_shear_despiking": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info, nc_microriderg_despike_info),
+            ],
+            "microriderg_aoa": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_f_aa": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_goodman_length": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_scalar_spectra_ref": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_Nv": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_instrument": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
+            ],
+            "microriderg_fft_length": [
+                False,
+                "d",
+                {},
+                (nc_microriderg_ftime_info,),
             ],
         },
     }
@@ -401,23 +582,44 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
             continue
         # variables is both vars and coords
         for var_name, da in ds.variables.items():
-            # For now, drop anything that is ftime dimensioned
-            if "ftime" in da.dims or var_name == "ftime":
+            # Drop these - not set up to handle arrays of strings
+            if var_name in (
+                "file",
+                "fp07",
+                "fp07_response",
+                "algorithm",
+                "scalar",
+                "instrument",
+                "response",
+                "scalar_spectra_ref",
+            ):
                 continue
             # Deal with time type
             if np.issubdtype(da.dtype, np.datetime64) or np.issubdtype(
                 da.dtype, np.timedelta64
             ):
-                log_info(f"{var_name} is time")
                 val = da.to_numpy().astype(float) / 1e9
             else:
                 val = da.to_numpy()
+
             if var_name not in accums:
                 accums[var_name] = val
             else:
-                accums[var_name] = np.hstack((accums[var_name], val))
+                if var_name in ("freq", "despike"):
+                    # These coord vectors do not accumulate over multiple profiles
+                    continue
+                if len(da.dims) == 1:
+                    # These are actually MxN over multiple profiles
+                    if var_name in ("ucond_despiking", "shear_despiking"):
+                        accums[var_name] = np.vstack((accums[var_name], val))
+                    else:
+                        accums[var_name] = np.hstack((accums[var_name], val))
+                else:
+                    # Multi-dim
+                    accums[var_name] = np.vstack((accums[var_name], val))
 
     for key, val in accums.items():
+        log_debug(f"{key}:{val.shape}")
         ret_list.append((f"microriderg_{key}", val))
 
     return (ret_list, {})
