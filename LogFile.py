@@ -264,6 +264,41 @@ class LogFile:
                 fo.write("\n")
 
 
+def parse_value(parm_name: str, str_value: str, log_file: LogFile) -> None:
+    # parse the value
+    nc_var_name = BaseNetCDF.nc_sg_log_prefix + parm_name.lstrip("$")
+    try:
+        md = BaseNetCDF.nc_var_metadata[nc_var_name]
+    except Exception:
+        log_warning("Missing metadata for log entry %s" % parm_name)
+        md = BaseNetCDF.form_nc_metadata(
+            nc_var_name, nc_data_type="c"
+        )  # default metadata: treat as scalar string
+    _, nc_data_type, _, _ = md
+    if nc_data_type == "d":
+        try:
+            value = float(str_value)
+        except ValueError:
+            log_error(
+                "Improperly formatted floating point log entry %s = %s"
+                % (parm_name, str_value)
+            )
+            value = None
+    elif nc_data_type == "i":
+        try:
+            value = int(round(float(str_value)))
+        except ValueError:
+            log_error(
+                "Improperly formatted integer log entry (%s = %s)"
+                % (parm_name, str_value)
+            )
+            value = None
+    else:
+        value = str_value
+
+    log_file.data[parm_name] = value
+
+
 def parse_log_file(in_filename, issue_warn=False):
     """Parses a Seaglider log file
 
@@ -474,37 +509,27 @@ def parse_log_file(in_filename, issue_warn=False):
             # Drop these
             elif parm_name in ("$EKF", "$INTR"):
                 pass
+            elif parm_name == "$HUMID":
+                humid_splits = value.split(",")
+                match len(humid_splits):
+                    case 1:
+                        parse_value(parm_name, value, log_file)
+                    case 4:
+                        humid_var_names = (
+                            "$HUMID",
+                            "$HUMID_LIMIT",
+                            "$HUMID_MIN",
+                            "$HUMID_MAX",
+                        )
+                        for humid_parm_name, value in zip(
+                            humid_var_names, humid_splits, strict=True
+                        ):
+                            parse_value(humid_parm_name, value, log_file)
+                    case _:
+                        log_warning(f"Unknown form of {parm_name} - {value} - skipping")
             else:
-                # parse the value
-                nc_var_name = BaseNetCDF.nc_sg_log_prefix + parm_name.lstrip("$")
-                try:
-                    md = BaseNetCDF.nc_var_metadata[nc_var_name]
-                except Exception:
-                    log_warning("Missing metadata for log entry %s" % parm_name)
-                    md = BaseNetCDF.form_nc_metadata(
-                        nc_var_name, nc_data_type="c"
-                    )  # default metadata: treat as scalar string
-                _, nc_data_type, _, _ = md
-                if nc_data_type == "d":
-                    try:
-                        value = float(value)
-                    except ValueError:
-                        log_error(
-                            "Improperly formatted floating point log entry %s = %s"
-                            % (parm_name, value)
-                        )
-                        value = None
-                elif nc_data_type == "i":
-                    try:
-                        value = int(round(float(value)))
-                    except ValueError:
-                        log_error(
-                            "Improperly formatted integer log entry (%s = %s)"
-                            % (parm_name, value)
-                        )
-                        value = None
-                # else: it is a string, fall through
-                log_file.data[parm_name] = value
+                # parse the value and update the object
+                parse_value(parm_name, value, log_file)
 
     # If GPS2 is earlier the GPS1, midnight happend between these times - correct GPS1
     if (

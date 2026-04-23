@@ -1742,6 +1742,9 @@ def set_globals() -> None:
         "log_HEAD_ERRBAND": [False, "d", {}, nc_scalar],
         "log_HEAPDBG": [False, "i", {}, nc_scalar],
         "log_HUMID": [False, "d", {}, nc_scalar],
+        "log_HUMID_LIMIT": [False, "d", {}, nc_scalar],
+        "log_HUMID_MIN": [False, "d", {}, nc_scalar],
+        "log_HUMID_MAX": [False, "d", {}, nc_scalar],
         "log_ICE_FREEZE_MARGIN": [False, "d", {}, nc_scalar],
         "log_ID": [False, "i", {}, nc_scalar],
         "log_IMPLIED_C_PITCH": [False, "c", {}, nc_scalar],  # Multi-valued string

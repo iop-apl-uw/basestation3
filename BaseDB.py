@@ -1045,7 +1045,8 @@ def createDivesTable(cur):
     cur.execute("CREATE TABLE dives(dive INT);")
     columns = [ 'log_glider', 'log_start','log_D_TGT','log_D_GRID','log__CALLS',
                 'log_T_DIVE',
-                'log__SM_DEPTHo','log__SM_ANGLEo','log_HUMID','log_TEMP',
+                'log__SM_DEPTHo','log__SM_ANGLEo','log_HUMID','log_HUMID_LIMIT', 'log_HUMID_MIN', 'log_HUMID_MAX', 
+                'log_TEMP',
                 'log_INTERNAL_PRESSURE', 'log_INTERNAL_PRESSURE_slope',
                 'log_HUMID_slope',
                 'log_IMPLIED_C_VBD',
@@ -1116,7 +1117,7 @@ def prepDivesOthers(base_opts):
 
     log_info("prepDivesOthers db closed")
 
-currentSchemaVersion = 3
+currentSchemaVersion = 4
 
 def checkSchema(base_opts, con):
     if con is None:
@@ -1161,12 +1162,17 @@ def checkSchema(base_opts, con):
                 cols = [ x[1] for x in mycon.cursor().execute('PRAGMA table_info(files)').fetchall() ]
                 if 'cycle' not in cols:
                     mycon.cursor().execute("ALTER TABLE files ADD COLUMN cycle INTEGER;")
-            elif i == 2:
+            elif i == 2: # Set from 3 to 4
                 cols = [ x[1] for x in mycon.cursor().execute('PRAGMA table_info(calls)').fetchall() ]
                 for new_c in ("density", "sss", "sst"):
                     if new_c not in cols:
                         mycon.cursor().execute(f"ALTER TABLE calls ADD COLUMN {new_c} FLOAT;")
-            # elif i == 3:
+            elif i == 3: # Set from 3 to 4
+                cols = [ x[1] for x in mycon.cursor().execute('PRAGMA table_info(dives)').fetchall() ]
+                for new_c in ("log_HUMID_LIMIT", "log_HUMID_MIN", "log_HUMID_MAX"):
+                    if new_c not in cols:
+                        mycon.cursor().execute(f"ALTER TABLE dives ADD COLUMN {new_c} FLOAT;")
+            # elif i == 4:
         
         mycon.cursor().execute(f'PRAGMA user_version = {currentSchemaVersion}')
     except Exception:

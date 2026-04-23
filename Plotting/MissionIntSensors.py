@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2025  University of Washington.
+## Copyright (c) 2023, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -33,10 +33,11 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import collections
 import typing
 
 import pandas as pd
-import plotly
+import plotly.graph_objects
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
@@ -45,8 +46,34 @@ if typing.TYPE_CHECKING:
 import BaseDB
 import PlotUtilsPlotly
 import Utils
-from BaseLog import log_error, log_info
+from BaseLog import log_error, log_info, log_warning
 from Plotting import plotmissionsingle
+
+additional_plot = collections.namedtuple(
+    "additional_plot",
+    ["df", "trace_name", "col_name", "color", "yaxis", "hovertemplate"],
+)
+
+
+def add_additional_trace(
+    fig: plotly.graph_objects.Figure, add_plot: additional_plot
+) -> None:
+    fig.add_trace(
+        {
+            "name": add_plot.trace_name,
+            "x": add_plot.df["dive"],
+            "y": add_plot.df[add_plot.col_name],
+            "yaxis": add_plot.yaxis,
+            "mode": "lines",
+            "line": {
+                "dash": "solid",
+                "color": add_plot.color,
+                "width": 1,
+            },
+            "visible": "legendonly",
+            "hovertemplate": add_plot.hovertemplate,
+        }
+    )
 
 
 @plotmissionsingle
@@ -102,12 +129,59 @@ def mission_int_sensors(
             log_error("Unexpected error fetching log_TEMP", "exc")
 
     for v in ["log_INTERNAL_PRESSURE", "log_HUMID"]:
-        if len(df["dive"].to_numpy()) > 0:
-            m, b = Utils.dive_var_trend(
-                base_opts, df["dive"].to_numpy(), df[v].to_numpy()
-            )
-            BaseDB.addValToDB(
-                base_opts, df["dive"].to_numpy()[-1], f"{v}_slope", m, con=conn
+        try:
+            if len(df["dive"].to_numpy()) > 0:
+                m, b = Utils.dive_var_trend(
+                    base_opts, df["dive"].to_numpy(), df[v].to_numpy()
+                )
+                BaseDB.addValToDB(
+                    base_opts, df["dive"].to_numpy()[-1], f"{v}_slope", m, con=conn
+                )
+        except Exception as exception:
+            log_warning(f"Failed slope calculation for {v} {exception} - skipping")
+
+    cols = [x[1] for x in conn.cursor().execute("PRAGMA table_info(dives)").fetchall()]
+    add_plots: list[additional_plot] = []
+    for col_name, plot_name, color, yaxis, hovertemplate in (
+        (
+            "log_HUMID_LIMIT",
+            "Relative Humidity Limit",
+            "black",
+            "y2",
+            "Relative Humidity Limit<br>Dive %{x:.0f}<br>RH %{y:.2f} percent<extra></extra>",
+        ),
+        (
+            "log_HUMID_MIN",
+            "Relative Humidity Min",
+            "Cyan",
+            "y2",
+            "Relative Humidity Min<br>Dive %{x:.0f}<br>RH %{y:.2f} percent<extra></extra>",
+        ),
+        (
+            "log_HUMID_MAX",
+            "Relative Humidity Max",
+            "DarkBlue",
+            "y2",
+            "Relative Humidity Max<br>Dive %{x:.0f}<br>RH %{y:.2f} percent<extra></extra>",
+        ),
+    ):
+        if col_name not in cols:
+            continue
+        try:
+            add_df = pd.read_sql_query(
+                f"SELECT dive,{col_name} from dives {clause} ORDER BY dive ASC",
+                conn,
+            ).sort_values("dive")
+        except pd.errors.DatabaseError as e:
+            if e.args[0].endswith(f"no such column: log_{col_name}"):
+                pass
+            else:
+                log_error(f"Unexpected error fetching {col_name}", "exc")
+        else:
+            add_plots.append(
+                additional_plot(
+                    add_df, plot_name, col_name, color, yaxis, hovertemplate
+                )
             )
 
     if dbcon is None:
@@ -126,7 +200,7 @@ def mission_int_sensors(
 
     fig.add_trace(
         {
-            "name": "Internl Pressure",
+            "name": "Internal Pressure",
             "x": df["dive"],
             "y": df["log_INTERNAL_PRESSURE"],
             "yaxis": "y1",
@@ -140,6 +214,11 @@ def mission_int_sensors(
         }
     )
 
+    for add_plot in add_plots:
+        if "Pressure" not in add_plot.trace_name:
+            continue
+        add_additional_trace(fig, add_plot)
+
     fig.add_trace(
         {
             "name": "Relative Humidity",
@@ -149,12 +228,19 @@ def mission_int_sensors(
             "mode": "lines",
             "line": {
                 "dash": "solid",
-                "color": "DarkBlue",
+                # "color": "DarkBlue",
+                "color": "blue",
                 "width": 1,
             },
             "hovertemplate": "Relative Humidity<br>Dive %{x:.0f}<br>RH %{y:.2f} percent<extra></extra>",
         }
     )
+
+    for add_plot in add_plots:
+        if "Humidity" not in add_plot.trace_name:
+            continue
+        add_additional_trace(fig, add_plot)
+
     if df_int_temperature is not None:
         fig.add_trace(
             {
