@@ -527,6 +527,36 @@ def parse_log_file(in_filename, issue_warn=False):
                             parse_value(humid_parm_name, value, log_file)
                     case _:
                         log_warning(f"Unknown form of {parm_name} - {value} - skipping")
+            elif parm_name == "$INTERNAL_PRESSURE":
+                # psia, nv_intp_latch, g_minInternalPressure, g_maxInternalPressure);
+                int_press_splits = value.split(",")
+                match len(int_press_splits):
+                    case 1:
+                        parse_value(parm_name, value, log_file)
+                    case 2:
+                        int_press_var_names = (
+                            "$INTERNAL_PRESSURE",
+                            "$INTERNAL_PRESSURE_LATCH",
+                        )
+                        for int_press_parm_name, value in zip(
+                            int_press_var_names, int_press_splits, strict=True
+                        ):
+                            parse_value(int_press_parm_name, value, log_file)
+
+                    case 4:
+                        int_press_var_names = (
+                            "$INTERNAL_PRESSURE",
+                            "$INTERNAL_PRESSURE_LATCH",
+                            "$INTERNAL_PRESSURE_MIN",
+                            "$INTERNAL_PRESSURE_MAX",
+                        )
+                        for int_press_parm_name, value in zip(
+                            int_press_var_names, int_press_splits, strict=True
+                        ):
+                            parse_value(int_press_parm_name, value, log_file)
+                    case _:
+                        log_warning(f"Unknown form of {parm_name} - {value} - skipping")
+
             else:
                 # parse the value and update the object
                 parse_value(parm_name, value, log_file)

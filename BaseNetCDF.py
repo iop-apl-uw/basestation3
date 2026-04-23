@@ -1751,10 +1751,28 @@ def set_globals() -> None:
         "log_IMPLIED_C_VBD": [False, "c", {}, nc_scalar],  # Multi-valued string
         "log_INTERNAL_PRESSURE": [
             False,
-            "c",
+            "d",
             {},
             nc_scalar,
-        ],  # multi-valued string starting r7263
+        ],
+        "log_INTERNAL_PRESSURE_LATCH": [
+            False,
+            "d",
+            {},
+            nc_scalar,
+        ],
+        "log_INTERNAL_PRESSURE_MIN": [
+            False,
+            "d",
+            {},
+            nc_scalar,
+        ],
+        "log_INTERNAL_PRESSURE_MAX": [
+            False,
+            "d",
+            {},
+            nc_scalar,
+        ],
         "log_INT_PRESSURE_SLOPE": [False, "d", {}, nc_scalar],
         "log_INT_PRESSURE_YINT": [False, "d", {}, nc_scalar],
         "log_IRIDIUM_FIX": [False, "c", {}, nc_scalar],  # Multi-valued string

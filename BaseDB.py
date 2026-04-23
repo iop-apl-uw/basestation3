@@ -359,7 +359,9 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
 
 
     # r7263 latched intP to $INTERNAL_PRESSURE so it won't process above as a scalar
-    if "log_INTERNAL_PRESSURE" in nci.variables:
+    # Later basestation processing breaks this up in LogFile.py, so this remains for catching netcdf file that contain the
+    # string representation
+    if "log_INTERNAL_PRESSURE" in nci.variables and nci.variables["log_INTERNAL_PRESSURE"].dtype == 'S1':
         int_pressure_line = extractStr(nci.variables["log_INTERNAL_PRESSURE"]).split(",")
         if len(int_pressure_line) <= 2:
             insertColumn(dive, cur, "log_INTERNAL_PRESSURE", float(int_pressure_line[0]), "FLOAT")
@@ -1047,7 +1049,8 @@ def createDivesTable(cur):
                 'log_T_DIVE',
                 'log__SM_DEPTHo','log__SM_ANGLEo','log_HUMID','log_HUMID_LIMIT', 'log_HUMID_MIN', 'log_HUMID_MAX', 
                 'log_TEMP',
-                'log_INTERNAL_PRESSURE', 'log_INTERNAL_PRESSURE_slope',
+                'log_INTERNAL_PRESSURE','log_INTERNAL_PRESSURE_LATCH','log_INTERNAL_PRESSURE_MIN','log_INTERNAL_PRESSURE_MAX',
+                'log_INTERNAL_PRESSURE_slope',
                 'log_HUMID_slope',
                 'log_IMPLIED_C_VBD',
                 'log_FG_AHR_10Vo', 'log_FG_AHR_24Vo',
@@ -1169,7 +1172,8 @@ def checkSchema(base_opts, con):
                         mycon.cursor().execute(f"ALTER TABLE calls ADD COLUMN {new_c} FLOAT;")
             elif i == 3: # Set from 3 to 4
                 cols = [ x[1] for x in mycon.cursor().execute('PRAGMA table_info(dives)').fetchall() ]
-                for new_c in ("log_HUMID_LIMIT", "log_HUMID_MIN", "log_HUMID_MAX"):
+                for new_c in ("log_HUMID_LIMIT", "log_HUMID_MIN", "log_HUMID_MAX",
+                              'log_INTERNAL_PRESSURE_LATCH','log_INTERNAL_PRESSURE_MIN','log_INTERNAL_PRESSURE_MAX'):
                     if new_c not in cols:
                         mycon.cursor().execute(f"ALTER TABLE dives ADD COLUMN {new_c} FLOAT;")
             # elif i == 4:

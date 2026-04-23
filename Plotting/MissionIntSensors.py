@@ -164,6 +164,27 @@ def mission_int_sensors(
             "y2",
             "Relative Humidity Max<br>Dive %{x:.0f}<br>RH %{y:.2f} percent<extra></extra>",
         ),
+        (
+            "log_INTERNAL_PRESSURE_LATCH",
+            "Internal Pressure Latch",
+            "DarkGrey",
+            "y1",
+            "InternalPressure Latch<br>Dive %{x:.0f}<br>pressure %{y:.2f} psia<extra></extra>",
+        ),
+        (
+            "log_INTERNAL_PRESSURE_MIN",
+            "Internal Pressure Min",
+            "#EE82EE",
+            "y1",
+            "InternalPressure Min<br>Dive %{x:.0f}<br>pressure %{y:.2f} psia<extra></extra>",
+        ),
+        (
+            "log_INTERNAL_PRESSURE_MAX",
+            "Internal Pressure Max",
+            "DarkMagenta",
+            "y1",
+            "InternalPressure Max<br>Dive %{x:.0f}<br>pressure %{y:.2f} psia<extra></extra>",
+        ),
     ):
         if col_name not in cols:
             continue
@@ -178,6 +199,9 @@ def mission_int_sensors(
             else:
                 log_error(f"Unexpected error fetching {col_name}", "exc")
         else:
+            # Skip empty columns
+            if add_df[col_name].isnull().all():
+                continue
             add_plots.append(
                 additional_plot(
                     add_df, plot_name, col_name, color, yaxis, hovertemplate
@@ -207,7 +231,7 @@ def mission_int_sensors(
             "mode": "lines",
             "line": {
                 "dash": "solid",
-                "color": "DarkMagenta",
+                "color": "magenta",
                 "width": 1,
             },
             "hovertemplate": "Internal Pressure<br>Dive %{x:.0f}<br>pressure %{y:.2f} psia<extra></extra>",
@@ -251,7 +275,7 @@ def mission_int_sensors(
                 "mode": "lines",
                 "line": {
                     "dash": "solid",
-                    "color": "Red",
+                    "color": "olive",
                     "width": 1,
                 },
                 "hovertemplate": "Temperature<br>Dive %{x:.0f}<br>T %{y:.2f}C<extra></extra>",
