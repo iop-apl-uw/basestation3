@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -47,6 +47,7 @@ import BaseOpts
 import BaseOptsType
 import FileMgr
 import GPS
+import Sensors
 import Utils
 from BaseLog import (
     BaseLogger,
@@ -99,10 +100,10 @@ def map_state_code(state_str):
     return -1
 
 
-def map_eop_code(eop_str):
+def map_eop_code(eop_str: str) -> int:
     """Converts an end of phase string to a code"""
     # Copied from glider constant.h - order is very important
-    eop_strs = [
+    eop_strs: list[str] = [
         "CONTROL_FINISHED_OK",
         "TARGET_DEPTH_EXCEEDED",
         "SURFACE_DEPTH_REACHED",
@@ -135,7 +136,7 @@ def map_eop_code(eop_str):
 
 
 # Mapping of params that need acculation and expected headers
-known_accums = {
+known_accums: dict[str, str] = {
     "$MODEM_NOISE": "$MODEM_NOISEHEAD",
     "$MODEM_MSG": "$MODEM_MSGHEAD",
     "$MODEM": "$MODEMHEAD",
@@ -145,14 +146,34 @@ known_accums = {
     "$EXED": "$EXEDHEAD",
 }
 
-known_accum_headers = tuple([v for k, v in known_accums.items()])
+# For those tables lacking a header, they are define here
+# A tuple flags that the param should not be parsed
+logfile_accum_heads: dict[str, str | tuple[str, ...]] = {
+    "$MODEM_NOISEHEAD": "t,noise",
+    "$MODEM_MSGHEAD": ("msg",),
+    "$NAVHEAD": "start_t,start_d,stop_t,stop_d,n_msgs",
+    "$EXEDHEAD": "exec_file,seq_num,why",
+}
 
-table_vars = tuple(
-    [
-        re.compile("^%s__" % f"{BaseNetCDF.nc_sg_log_prefix}{k[1:]}")
-        for k in known_accums
-    ]
-)
+
+def add_to_table_vars(
+    logfile_parm: str, logfile_header_prm: str, logfile_header_fmt: str | tuple[str]
+) -> None:
+    known_accums[logfile_parm] = logfile_header_prm
+    logfile_accum_heads[logfile_header_prm] = logfile_header_fmt
+
+
+def known_accum_headers() -> tuple[str, ...]:
+    return tuple([v for k, v in known_accums.items()])
+
+
+def table_vars() -> tuple[re.Pattern[str], ...]:
+    return tuple(
+        [
+            re.compile("^%s__" % f"{BaseNetCDF.nc_sg_log_prefix}{k[1:]}")
+            for k in known_accums
+        ]
+    )
 
 
 def register_table_dim_info():
@@ -195,11 +216,8 @@ class LogFile:
         # Used during processing of table based entries
         self.accums = collections.defaultdict(list)  # Accumulators
         self.accum_heads = {}
-        self.accum_heads["$MODEM_NOISEHEAD"] = "t,noise"
-        # Tuple flags that the param should not be parsed
-        self.accum_heads["$MODEM_MSGHEAD"] = ("msg",)
-        self.accum_heads["$NAVHEAD"] = "start_t,start_d,stop_t,stop_d,n_msgs"
-        self.accum_heads["$EXEDHEAD"] = "exec_file,seq_num,why"
+        for accum_head, value in logfile_accum_heads.items():
+            self.accum_heads[accum_head] = value
         # Final output of table based data
         self.tables = collections.defaultdict(lambda: collections.defaultdict(list))
 
@@ -437,7 +455,7 @@ def parse_log_file(in_filename, issue_warn=False):
 
             elif parm_name in known_accums:
                 log_file.accums[parm_name].append(value)
-            elif parm_name in known_accum_headers:
+            elif parm_name in known_accum_headers():
                 log_file.accum_heads[parm_name] = value
             elif parm_name == "$WARN":  # various warnings (PPS, flight parms, etc.)
                 if issue_warn:
@@ -928,17 +946,22 @@ def parse_log_file(in_filename, issue_warn=False):
 
 def main():
     """Test entry point for logfile processing"""
+    Sensors.set_globals()
+    BaseNetCDF.set_globals()
+
     base_opts = BaseOpts.BaseOptions(
         "Test entry point for logfile processing",
         additional_arguments={
             "log_file": BaseOptsType.options_t(
                 None,
-                ("LogFile",),
+                {
+                    "LogFile",
+                },
                 ("log_file",),
                 str,
                 {
                     "help": "Seaglider logfile to process",
-                    "action": BaseOpts.FullPathAction,
+                    # "action": BaseOpts.FullPathAction,
                 },
             ),
         },
@@ -948,9 +971,22 @@ def main():
     global DEBUG_PDB
     DEBUG_PDB = base_opts.debug_pdb
 
-    log_info("Processing file: %s" % base_opts.log_file)
+    # Sensor extensions
+    (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
+    if init_ret_val > 0:
+        log_warning("Sensor initialization failed")
 
-    log_file = parse_log_file(base_opts.log_file)
+    # Initialize the FileMgr with data on the installed loggers
+    FileMgr.logger_init(init_dict)
+
+    # Initialze the netCDF tables
+    BaseNetCDF.init_tables(init_dict)
+
+    log_filename = os.path.join(base_opts.mission_dir, base_opts.log_file)
+
+    log_info(f"Processing file: {log_filename}")
+
+    log_file = parse_log_file(log_filename)
     # You can dump the whole processed object using this method
 
     if log_file is not None:

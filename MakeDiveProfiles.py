@@ -2053,9 +2053,9 @@ def load_dive_profile_data(
                             continue
                         # Restore log_f.table
                         elif any(
-                            [ii.search(dive_nc_varname) for ii in LogFile.table_vars]
+                            [ii.search(dive_nc_varname) for ii in LogFile.table_vars()]
                         ):
-                            for ss in LogFile.table_vars:
+                            for ss in LogFile.table_vars():
                                 param_name = ss.pattern[1:]
                                 if dive_nc_varname.startswith(param_name):
                                     col_name_i = (

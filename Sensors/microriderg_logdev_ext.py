@@ -33,6 +33,8 @@ import numpy as np
 from q2netcdf.q2netcdf import loadQfile
 
 import BaseNetCDF
+
+import LogFile
 from BaseLog import log_debug, log_error, log_info
 
 
@@ -81,6 +83,7 @@ def init_logger(module_name, init_dict=None):
         True,
         None,
     )
+    LogFile.add_to_table_vars("$MR_0", "$MR_0_HEAD", ("msg",))
     # results are computed in MDP
     init_dict[module_name] = {
         "logger_prefix": "mr",
@@ -96,6 +99,12 @@ def init_logger(module_name, init_dict=None):
                 },
                 BaseNetCDF.nc_scalar,
             ],  # always scalar
+            "log_MR_0__msg": [
+                False,
+                "c",
+                {"description": "odas stats"},
+                ("log_MR_0_info",),
+            ],
             "log_MR_RECORDABOVE": [
                 False,
                 "d",
