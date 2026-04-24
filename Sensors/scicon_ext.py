@@ -827,8 +827,10 @@ def extract_file_metadata(inp_file_name):
 
     ret_list = []
     timeouts_times = ""
+    auxdata = []
 
     line_count = 0
+
     for raw_line in inp_file:
         line_count += 1
         try:
@@ -842,14 +844,24 @@ def extract_file_metadata(inp_file_name):
             # Test for timeouts - in eng: %11562368 T-O {}
             # Test for legato partial reads: %57402 scanned=0 queued=23 {66 65 74 63 68 20 73 6c 65 65 70 61 66 74 65 72 3d 74 72 75 65 } {fetch sleepafter=true}
             splits = raw_line.split()
-            if len(splits) >= 3 and (
-                splits[1] == "T-O" or splits[1].startswith("scanned=")
+            if (
+                len(splits[0]) > 1
+                and splits[0][1:].isdigit()
+                and len(splits) >= 3
+                and (splits[1] == "T-O" or splits[1].startswith("scanned="))
             ):
-                with contextlib.suppress(Exception):
-                    if start_time is not None:
+                if start_time is not None:
+                    with contextlib.suppress(Exception):
                         timeouts_times += (
                             f"{start_time + float(splits[0][1:])/1000.0:.3f},"
                         )
+            elif len(splits[0]) > 1 and splits[0][1:].isdigit() and len(splits) > 1:
+                # Locates any generic aux output
+                splits = raw_line.split(maxsplit=1)
+                if start_time is not None:
+                    with contextlib.suppress(Exception):
+                        e_time = f"{start_time + float(splits[0][1:])/1000.0:.3f}"
+                        auxdata.append((e_time, splits[1].strip()))
 
             raw_strs = raw_line.split(":", 1)
             raw_strs[0] = raw_strs[0].replace("% ", "%")
@@ -994,12 +1006,36 @@ def extract_file_metadata(inp_file_name):
         and timeouts_times
     ):
         instrument_name = [instrument.instr_class]
-        Sensors.process_sensor_extensions("remap_instrument_names", instrument_name)
         if instrument_name[0] != "depth":
+            Sensors.process_sensor_extensions("remap_instrument_names", instrument_name)
             ret_list.append(
                 (
                     "%s_%s_%s" % (instrument_name[0], "timeouts_times", container[-1]),
                     timeouts_times.rstrip(","),
+                )
+            )
+
+    if container is not None and (container[-1] in ("a", "b", "c", "d")) and auxdata:
+        instrument_name = [instrument.instr_class]
+        if instrument_name[0] != "depth":
+            auxdata_times = np.array([float(d[0]) for d in auxdata])
+            auxdata_data = [d[1] for d in auxdata]
+            # max_len = max([len(d[1]) for d in auxdata])
+            # auxdata_data = np.array(
+            #    [x.ljust(max_len) for x in [d[1] for d in auxdata]], dtype=f"S{max_len}"
+            # )
+            Sensors.process_sensor_extensions("remap_instrument_names", instrument_name)
+
+            ret_list.append(
+                (
+                    f"{instrument_name[0]}_auxdata_time_{container[-1]}",
+                    auxdata_times,
+                )
+            )
+            ret_list.append(
+                (
+                    f"{instrument_name[0]}_auxdata_data_{container[-1]}",
+                    auxdata_data,
                 )
             )
 
@@ -1380,6 +1416,8 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
 
     # Filter out adcp files, as they are not actually eng files at all
     adcp_list = []
+    auxdata_data = []
+    auxdata_time = []
 
     for fn in eng_files:
         if (
@@ -1403,7 +1441,41 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
 
             if ef_ret_list is not None:
                 for r in ef_ret_list:
-                    ret_list.append(r)
+                    if "auxdata_time" in r[0]:
+                        auxdata_time.append(r)
+                    elif "auxdata_data" in r[0]:
+                        auxdata_data.append(r)
+                    else:
+                        ret_list.append(r)
+
+    if auxdata_data and auxdata_time:
+        if len(auxdata_data) != len(auxdata_time):
+            log_warning(f"Problem processing auxdata from {eng_files}")
+        else:
+            auxdata_t = np.hstack([tt[1] for tt in auxdata_time])
+            ret_list.append(
+                (
+                    # Strip off the cast to get the name
+                    auxdata_time[0][0].rsplit("_", 1)[0],
+                    auxdata_t,
+                )
+            )
+            auxdata_combined = [
+                item for sublist in [d[1] for d in auxdata_data] for item in sublist
+            ]
+            max_len = max([len(d) for d in auxdata_combined])
+            auxdata_d = np.array(
+                [x.ljust(max_len) for x in [d for d in auxdata_combined]],
+                dtype=f"S{max_len}",
+            )
+
+            ret_list.append(
+                (
+                    # Strip off the cast to get the name
+                    auxdata_data[0][0].rsplit("_", 1)[0],
+                    auxdata_d,
+                )
+            )
 
     # Process adcp data if any
     data_cols = {}

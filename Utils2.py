@@ -252,6 +252,27 @@ def get_mission_timeseries_name(base_opts, direc=None, basename="timeseries"):
 def add_scicon_stats(instrument: str) -> dict:
     meta_data_adds = {}
 
+    nc_instrument_auxdata_info = f"{instrument}_auxdata_info"
+    BaseNetCDF.register_sensor_dim_info(
+        nc_instrument_auxdata_info,
+        f"{instrument}_auxdata_point",
+        None,
+        True,
+        None,
+    )
+    meta_data_adds[f"{instrument}_auxdata_time"] = [
+        False,
+        "d",
+        {"description": f"{instrument} epoch time for auxdat"},
+        (nc_instrument_auxdata_info,),
+    ]
+    meta_data_adds[f"{instrument}_auxdata_data"] = [
+        False,
+        "c",
+        {"description": f"{instrument} auxdata %s"},
+        (nc_instrument_auxdata_info,),
+    ]
+
     for cast, tag in (
         ("truck", "truck"),
         ("a", "dive"),
