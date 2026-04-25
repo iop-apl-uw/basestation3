@@ -49,10 +49,17 @@ from BaseLog import log_debug, log_error, log_warning
 from Plotting import plotdivesingle
 
 # TODO - hard coded for new - needs to move to a yml file
-instrument_meta = {}
+plot_meta = {}
 
-instrument_meta["fet"] = {
-    "layout": {"xaxis_title": "Volts", "xaxis2_title": "nano amps"},
+# Dict key is the plot name for on disk - should be kept very short
+plot_meta["fet"] = {
+    "instrument": "fet",
+    "layout": {
+        "xaxis_title": "Volts",
+        "xaxis2_title": "nano amps",
+        # "xaxis_type": "log",
+        # "xaxis2_type": "log",
+    },
     "vars": {
         "biasBatt": {
             "xaxis": "x1",
@@ -119,7 +126,8 @@ instrument_meta["fet"] = {
     },
 }
 
-instrument_meta["suna"] = {
+plot_meta["suna"] = {
+    "instrument": "suna",
     "layout": {"xaxis_title": "mmol m<sup>-3</sup>", "xaxis2_title": "Temperature (C)"},
     "vars": {
         "nitrate": {
@@ -141,7 +149,8 @@ instrument_meta["suna"] = {
     },
 }
 
-instrument_meta["microriderg"] = {
+plot_meta["microriderg"] = {
+    "instrument": "microriderg",
     "layout": {"xaxis_title": ""},
     "vars": {
         "CI_1": {
@@ -183,17 +192,19 @@ def plot_science(
 
     varlist = "".join(filter(lambda x: "sg_cal" not in x, dive_nc_file.variables))
 
-    for instrument_root, meta in instrument_meta.items():
-        instruments = []
+    for base_plot_name, meta in plot_meta.items():
+        if "instrument" not in meta:
+            continue
+        plots = []
         for inst in ("", "1", "2", "3"):
-            typ = f"{instrument_root}{inst}"
+            typ = f"{meta['instrument']}{inst}"
             if typ in varlist:
                 if "%s_time" % typ in dive_nc_file.variables:
-                    instruments.append((typ, True))
+                    plots.append((typ, True, f"{base_plot_name}{inst}"))
                 elif typ in varlist:
-                    instruments.append((typ, False))
+                    plots.append((typ, False, f"{base_plot_name}{inst}"))
 
-        for instrument, is_logger in instruments:
+        for instrument, is_logger, plot_name in plots:
             var_vals = {}
             tag = "" if is_logger else "eng_"
             for var_n in meta["vars"]:
@@ -286,16 +297,14 @@ def plot_science(
             fig = plotly.graph_objects.Figure()
 
             for var_n, var_val in var_vals.items():
-                log_debug(f"Found {var_n} in fluor")
-
                 var_dive = var_val[0:max_depth_sample_index]
                 var_climb = var_val[max_depth_sample_index:]
 
                 var_meta = meta["vars"][var_n]
 
                 chan_name = var_n
-                units = var_meta["units"]
-                hover_fmt = var_meta["hoverfmt"]
+                units = var_meta["units"] if "units" in var_meta else ""
+                hover_fmt = var_meta["hoverfmt"] if "hoverfmt" in var_meta else ""
 
                 dive_dict = {
                     "y": depth_dive,
@@ -372,18 +381,20 @@ def plot_science(
                 )
 
             mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
-            title_text = f"{mission_dive_str}<br>{instrument} vs Depth"
-            output_name = "dv%04d_%s_%s" % (
-                dive_nc_file.dive_number,
-                instrument,
-                Utils.ensure_basename(instrument),
-            )
+            title_text = meta["plot_title"] if "plot_title" in meta else {instrument}
+            title_text = f"{mission_dive_str}<br>{title_text} vs Depth"
+            output_name = "dv%04d_%s" % (dive_nc_file.dive_number, plot_name)
 
             output_name.lower()
 
             update_dict = {
                 "xaxis": {
-                    "title": meta["layout"]["xaxis_title"],
+                    "title": meta["layout"]["xaxis_title"]
+                    if "xaxis_title" in meta["layout"]
+                    else "",
+                    "type": meta["layout"]["xaxis_type"]
+                    if "xaxis_type" in meta["layout"]
+                    else "linear",
                     "showgrid": True,
                     "side": "bottom",
                 },
@@ -410,6 +421,9 @@ def plot_science(
                     "overlaying": "x1",
                     "side": "top",
                     "showgrid": False,
+                    "type": meta["layout"]["xaxis2_type"]
+                    if "xaxis2_type" in meta["layout"]
+                    else "linear",
                 }
 
             fig.update_layout(update_dict)
