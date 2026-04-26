@@ -534,6 +534,7 @@ def plot_optode(
             "overlaying": "x1",
             "side": "bottom",
             "range": [min_temp, max_temp],
+            "showgrid": False,
         }
 
     fig.update_layout(update_dict)
