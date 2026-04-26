@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2024, 2025  University of Washington.
+## Copyright (c) 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -38,7 +38,7 @@ test_dive_inputs = (
     (
         "p6860005.nc --plot_types dives --dive_plot plot_science",
         "sg686_Shilshole_28Oct25",
-        ["dv0005_fet_fet.webp", "dv0005_fet_fet.webp"],
+        ["dv0005_fet.webp", "dv0005_fet.webp"],
     ),
 )
 

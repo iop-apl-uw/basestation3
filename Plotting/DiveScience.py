@@ -44,8 +44,7 @@ if typing.TYPE_CHECKING:
 
 import PlotUtils
 import PlotUtilsPlotly
-import Utils
-from BaseLog import log_debug, log_error, log_warning
+from BaseLog import log_error, log_warning
 from Plotting import plotdivesingle
 
 # TODO - hard coded for new - needs to move to a yml file
@@ -303,8 +302,8 @@ def plot_science(
                 var_meta = meta["vars"][var_n]
 
                 chan_name = var_n
-                units = var_meta["units"] if "units" in var_meta else ""
-                hover_fmt = var_meta["hoverfmt"] if "hoverfmt" in var_meta else ""
+                units = var_meta.get("units", "")
+                hover_fmt = var_meta.get("hoverfmt", "")
 
                 dive_dict = {
                     "y": depth_dive,
@@ -381,7 +380,7 @@ def plot_science(
                 )
 
             mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
-            title_text = meta["plot_title"] if "plot_title" in meta else {instrument}
+            title_text = meta.get("plot_title", "")
             title_text = f"{mission_dive_str}<br>{title_text} vs Depth"
             output_name = "dv%04d_%s" % (dive_nc_file.dive_number, plot_name)
 
@@ -389,12 +388,8 @@ def plot_science(
 
             update_dict = {
                 "xaxis": {
-                    "title": meta["layout"]["xaxis_title"]
-                    if "xaxis_title" in meta["layout"]
-                    else "",
-                    "type": meta["layout"]["xaxis_type"]
-                    if "xaxis_type" in meta["layout"]
-                    else "linear",
+                    "title": meta["layout"].get("xaxis_title", ""),
+                    "type": meta["layout"].get("xaxis_type", "linear"),
                     "showgrid": True,
                     "side": "bottom",
                 },
@@ -421,9 +416,7 @@ def plot_science(
                     "overlaying": "x1",
                     "side": "top",
                     "showgrid": False,
-                    "type": meta["layout"]["xaxis2_type"]
-                    if "xaxis2_type" in meta["layout"]
-                    else "linear",
+                    "type": meta["layout"].get("xaxis2_type", "linear"),
                 }
 
             fig.update_layout(update_dict)
