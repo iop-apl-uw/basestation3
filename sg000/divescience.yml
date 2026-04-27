@@ -1,0 +1,46 @@
+# This is an example configuration file for the DiveScience.py generic science
+# plots.  This allows for plotting of variables that match the pattern of
+#   instrumentname_variablename
+# for scicon instruments or
+#    eng_instrumentname_variablename
+# for truck attached instruments
+
+---
+# The filename of the plot - keep this small and no whitespace.  It is used as
+# the root name for for the plot filename - i.e. dv0001_ctd.webp
+lg:
+  # This must match the name of the instrument as it appears in the netCDF file
+  # This example shows the raw output off a legato CTD
+  instrument: legato
+  layout:
+    # Optional - defaults to ""
+    xaxis_title: Temperature (C)
+    xaxis2_title: Conductivity (mS/cm)
+    # Optional - may be "linear" or "log" - defaults to "linear"
+    xaxis_type: linear
+    xaxis2_type: linear
+
+  vars:
+    # Name of the variable as it appears in the netCDF file.  
+    temp:
+      # Any valid ploty color or html encoded colors Defaults to Read
+      color_down: Red
+      # Any valid ploty color or html encoded colors Defaults to Magenta      '
+      color_up: Magenta
+      # Optional - defaults to ""
+      hoverfmt: .4f
+      # Optional - defaults to ""
+      units: C
+      # Required - Which axis the trace is associated with - must be "x1" or "x2"
+      xaxis: x1
+      # Optional - determines if the trace is seen at all (false), off, but can
+      # be toggle in the legend (legendonly), or visible as a trace (true) -
+      # defaults to true
+      visible: true
+    conduc:
+      color_down: Green
+      color_up: DarkGreen
+      hoverfmt: .4f
+      units: mS/cm
+      xaxis: x2
+      visible: true
