@@ -94,13 +94,13 @@ microriderg:
   layout:
     xaxis_title: ''
   vars:
-    CI_1:
+    e_1:
       color_down: Green
       color_up: DarkGreen
       hoverfmt: .4f
       units: ''
       xaxis: x1
-    CI_2:
+    e_2:
       color_down: Red
       color_up: Magenta
       hoverfmt: .4f
