@@ -234,6 +234,10 @@ def plot_diveplot(
             .split(",")[3]
         )
 
+        w_adj_dband = 0.0
+        if "log_W_ADJ_DBAND" in dive_nc_file.variables:
+            w_adj_dband = dive_nc_file.variables["log_W_ADJ_DBAND"].getValue()
+
         eng_pitch_ang = dive_nc_file.variables["eng_pitchAng"][:]
         eng_roll_ang = dive_nc_file.variables["eng_rollAng"][:]
 
@@ -460,9 +464,32 @@ def plot_diveplot(
             "yaxis": "y1",
             "mode": "lines",
             "line": {"dash": "dot", "color": "DarkBlue"},
-            "hovertemplate": "Vert Speed desired<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>",
+            "hovertemplate": "Vert Speed desired<br>%{y:.2f} cm/s<br>%{x:.2f} mins<br><extra></extra>",
         }
     )
+
+    if w_adj_dband:
+        for sign in (1.0, -1.0):
+            fig.add_trace(
+                {
+                    "y": [
+                        desired_vert_vel + (w_adj_dband * sign),
+                        desired_vert_vel + (w_adj_dband * sign),
+                        -desired_vert_vel + (w_adj_dband * sign),
+                        -desired_vert_vel + (w_adj_dband * sign),
+                    ],
+                    "x": [eng_time[0], apogee_time, apogee_time + 1, eng_time[-1]],
+                    "name": f"Vert Speed desired {'+' if sign > 0 else '-'}W_ADJ_DBAND (cm/s)",
+                    "type": "scatter",
+                    "xaxis": "x1",
+                    "yaxis": "y1",
+                    "mode": "lines",
+                    "legendgroup": "WAdjDBand",
+                    "visible": "legendonly",
+                    "line": {"dash": "dot", "color": "LightBlue"},
+                    "hovertemplate": f"Vert Speed desired {'+' if sign > 0 else '-'}W_ADJ_DBAND<br>%{{y:.2f}} cm/s<br>%{{x:.2f}} mins<br><extra></extra>",
+                }
+            )
 
     valid_i = np.logical_not(np.isnan(eng_pitch_ang))
     fig.add_trace(
