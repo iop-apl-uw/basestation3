@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Legato Plot Help</title>
+    <meta name="viewport" content="width=device-width"></meta>
+    <link rel="stylesheet" href="style.css?v="></link>
+  </head>
+  <body>
+    <h1>Legato Plot Help</h1>
+    <p>This plot displays Legato CTD data, as reported by the instrument - no
+    data corrections or quality control passes have been applied.</p>
+    <p>All science traces on this plot report the data values, depth, time into the dive (in minutes) and the index of the
+    data value in the dive in the hovertips.  For scicon based instruments, the data index is 
+    for the combined profiles (dive, loiter, climb, surface loiter).</p>
+
+    <br></br>
+    <h2>Legato Raw Salinity</h2>
+    <p>The <code>Legato Raw Salinity</code> traces are derived from the <code>eng_rbr_temp</code> and
+    <code>eng_rbr_conduc</code> netCDF varibles, if the legato is attached
+    to the truck, or the <code>legato_temp</code>.  
+    and <code>legato_conduc</code> netCDF variable, if the legato is attched to the scicon, along with the
+    <code>pressure</code> netCDF variable.</p>
+    <a href="/plothelp/images/dv_legato_raw_salinity.png">
+      <img src="/plothelp/images/dv_legato_raw_salinity.png" alt="Legato Raw Salinity" style="width: 300px;"/>
+    </a>
+    
+    <br></br>
+    <h2>Legato Raw Temperature</h2>
+    <p>The <code>Legato Raw Temp</code> traces are  taken from the
+    <code>eng_rbr_temp</code> netCDF variable, if the legato is attached
+    to the truck, or <code>legato_temp</code>, if the legato is attached to the scicon.</p>
+    <a href="/plothelp/images/dv_legato_raw_temp.png">
+      <img src="/plothelp/images/dv_legato_raw_temp.png" alt="Legato Raw Temp" style="width: 300px;"/>
+    </a>
+
+    <br></br>
+    <h2>Legato Raw Conductivity</h2>
+    <p>The <code>Legato Raw Conductvity</code> traces are  taken from the
+    <code>eng_rbr_conduc</code> netCDF variable, if the legato is attached
+    to the truck, or <code>legato_conduc</code>, if the legato is attached to the scicon.
+    This trace is not tied to a x-axis - use the hovertips to 
+    interpret the values.</p>
+    <a href="/plothelp/images/dv_legato_raw_conductivity.png">
+      <img src="/plothelp/images/dv_legato_raw_conductivity.png" alt="Legato Raw Conductivity" style="width: 300px;"/>
+    </a>
+    
+    <br></br>
+    <h2>Legato Raw Conduc Temp</h2>
+    <p>The <code>Legato Raw Conduc Temp</code> traces are  taken from the
+    <code>eng_rbr_conducTemp</code> netCDF variable, if the legato is attached
+    to the truck, or <code>legato_conducTemp</code>, if the legato is attached to the scicon.</p>
+    <a href="/plothelp/images/dv_legato_raw_conduc_temp.png">
+      <img src="/plothelp/images/dv_legato_raw_conduc_temp.png" alt="Legato Raw Conduc Temp" style="width: 300px;"/>
+    </a>
+    
+    <h2>Sampling traces</h2>
+    <p>Help on <code>timeouts</code> overlays, <code>samples stats</code>
+    traces and <code>sample grid</code> traces can be found <a
+    href="samples.html">here</a>.</p> 
+  </body>
+</html>

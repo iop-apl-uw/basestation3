@@ -432,6 +432,7 @@ def plot_legato_data(
                 "side": "bottom",
                 "anchor": "free",
                 "position": 0.05,
+                "visible": False,
             },
             "yaxis2": {
                 # Interfers with other legend items
@@ -461,30 +462,26 @@ def plot_legato_data(
         }
     )
 
+    l_annotations = []
+    l_annotations.append(PlotUtilsPlotly.add_help_link("dv_legato"))
+
     # Instrument cal date
     if "sg_cal_calibcomm" in dive_nc_file.variables:
         cal_text = (
             dive_nc_file.variables["sg_cal_calibcomm"][:].tobytes().decode("utf-8")
         )
-        # if timeouts:
-        #    cal_text += f" Timeouts:{timeouts:d}"
-
-        fig.update_layout(
+        l_annotations.append(
             {
-                "annotations": tuple(
-                    [
-                        {
-                            "text": cal_text,
-                            "showarrow": False,
-                            "xref": "paper",
-                            "yref": "paper",
-                            "x": 0.0,
-                            "y": -0.08,
-                        }
-                    ]
-                )
+                "text": cal_text,
+                "showarrow": False,
+                "xref": "paper",
+                "yref": "paper",
+                "x": 0.0,
+                "y": -0.08,
             }
         )
+
+    fig.update_layout({"annotations": tuple(l_annotations)})
 
     return (
         [fig],
