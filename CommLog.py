@@ -1615,6 +1615,12 @@ def process_comm_log(
 
                     session.sg_id = int(sg_id_tmp[0])
 
+                    # TODO - add support for raw receive errors:
+                    # 2025-08-21T11:05:48Z [sg527] Received 41 bytes of sg0013dz.x01 (2.0 Bps)
+                    # 2025-08-21T11:05:48Z [sg527] E0 8192 41
+                    # 2025-08-21T11:06:08Z [sg527] did not receive 52 header bytes
+
+
                     # RAW or YMODEM files uploaded to the glider
                     # Thu Aug  4 19:48:52 2016 [sg203] Sent 192 bytes of cmdfile
                     # or
