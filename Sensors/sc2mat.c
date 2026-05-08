@@ -33,6 +33,8 @@ static int      count;
 static int      countAtt;
 static int      countBurst;
 
+static int      coord = 0;
+
 unsigned short burstBeams;    
 unsigned short burstCells;
 unsigned short burst_cellSize;
@@ -267,16 +269,19 @@ array(int nr, int nc)
 static void 
 WriteMatlab(char *fname)
 {
+   double d_coord = (double) coord;
 //   fprintf (stderr,"%02d:%02d:%02d.%02d on %02d/%02d/%04d\n",
 //            tm.tm_hour, tm.tm_min, tm.tm_sec, hsec, 
 //            tm.tm_mon + 1, tm.tm_mday, tm.tm_year + 1900);
    fprintf(stderr, "%s: %d ensembles\n", fname, count);
    fprintf(stderr, "%s: %d burst pings\n", fname, countBurst);
    fprintf(stderr, "%s: %d attitude records\n", fname, countAtt);
+   fprintf(stderr, "%s: %d coord system\n", fname, coord);
 
    MatlabDoubleVector(g_blanking, 1, "blanking", out);
    MatlabDoubleVector(g_cellSize, 1, "cellSize", out);
    MatlabDoubleVector(g_soundspeed, 1, "soundspeed", out);
+   MatlabDoubleVector(&d_coord, 1, "coordinateSystem", out);
 
    MatlabDoubleMatrix(beamv[0], num_cells, count, "velX", out);   
    MatlabDoubleMatrix(beamv[1], num_cells, count, "velY", out);   
@@ -549,7 +554,8 @@ main(int argc, char *argv[])
                 continue;
             }
 
-            if (sync == 0xa5a5) {
+            if (sync == 0xa5a5 || sync == 0xa5a7 || sync == 0xa5a9) {
+                coord = (sync - 0xa5a5)/2;
                 fread(&epoch, sizeof(time_t), 1, fp); // new!!!!
                 fread(&pressureInstant, sizeof(unsigned int), 1, fp);
 

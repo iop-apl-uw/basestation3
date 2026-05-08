@@ -34,6 +34,7 @@ static FILE	*fp, *out;
 static int      num_beams;
 static int      num_cells;
 static int      count;
+static int      coord = 0;
 
 static double      cellSize;
 static double      blanking;
@@ -252,11 +253,14 @@ array(int nr, int nc)
 static void 
 WriteMatlab(char *fname, int ampIncluded, int corrIncluded )
 {
+    double d_coord = (double) coord;
+
 //   fprintf (stderr,"%02d:%02d:%02d.%02d on %02d/%02d/%04d\n",
 //            tm.tm_hour, tm.tm_min, tm.tm_sec, hsec, 
 //            tm.tm_mon + 1, tm.tm_mday, tm.tm_year + 1900);
     if(verbose) {
         fprintf(stdout, "%s: %d ensembles\n", fname, count);
+        fprintf(stdout, "%s: %d coord system\n", fname, coord);
         fprintf(stdout, "ampIncluded:%d corrIncluded:%d num_beams:%d\n",
                 ampIncluded, corrIncluded, num_beams);
     }
@@ -307,6 +311,9 @@ WriteMatlab(char *fname, int ampIncluded, int corrIncluded )
 
     MatlabDoubleVector(&cellSize, 1, "cellSize", out);
     MatlabDoubleVector(&blanking, 1, "blanking", out);
+
+    MatlabDoubleVector(&blanking, 1, "blanking", out);
+    MatlabDoubleVector(&d_coord, 1, "coordinateSystem", out);
 
     fclose(out);
 
@@ -566,7 +573,8 @@ main(int argc, char *argv[])
                 ptr = (OutputData3_t *) buff;
                 cellSize = ptr -> cellSize / 1000.; //mm - pg62 N3015-007-Integrators-Guild-AD2CP.pdf
                 blanking = ptr -> blanking / 100.;  //cm - pg62 N3015-007-Integrators-Guild-AD2CP.pdf
-                    
+                coord = ptr -> beams_cy_cells.coordSystem;
+    
                 scale = pow(10.0, ptr -> velocityScaling);
 
                 if (count == 0) {
