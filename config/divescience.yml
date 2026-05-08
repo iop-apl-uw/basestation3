@@ -113,14 +113,14 @@ suna:
     xaxis_title: mmol m<sup>-3</sup>
   vars:
     nitrate:
-      color_down: Green
+      color_down: LightGreen
       color_up: DarkGreen
       hoverfmt: .4f
       units: mmol m-3
       xaxis: x1
-    temperature:
-      color_down: Red
-      color_up: Magenta
-      hoverfmt: .4f
-      units: C
-      xaxis: x2
+#    temperature:
+#      color_down: Red
+#      color_up: Magenta
+#      hoverfmt: .4f
+#      units: C
+#      xaxis: x2
