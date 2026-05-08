@@ -1,6 +1,6 @@
 [project]
 name = "basestation3"
-version = "3.0.6"
+version = "3.0.8"
 description = "Seaglider shore side processing"
 readme = "Readme.md"
 requires-python = "==3.10.19"
