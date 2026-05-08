@@ -247,7 +247,7 @@ def write_output_files(base_opts, base_file_name, fig):
 
 def add_help_link(
     plot_name: str,
-    x_pos: float = 0.0,
+    x_pos: float = 1.0,
     y_pos: float = -0.08,
 ) -> dict:
     root_dir_name = "/plothelp"
@@ -258,6 +258,6 @@ def add_help_link(
         "showarrow": False,
         "xref": "paper",
         "yref": "paper",
-        "x": 1.0,
-        "y": -0.08,
+        "x": x_pos,
+        "y": y_pos,
     }

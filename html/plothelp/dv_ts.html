@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>TS Plot Help</title>
+    <meta name="viewport" content="width=device-width"></meta>
+    <link rel="stylesheet" href="style.css?v="></link>
+  </head>
+  <body>
+    <h1>TS Plot Help</h1>
+    <p>This plot displays Temperature vs Salinity, color coded by depth.  Additionally, density contour lines are plotted.
+    There is a non-RAW and RAW version of this plot, with the RAW version is plotted if the <code>--plot_ts_raw</code>
+    is set.  For gliders with <code>$USE_ICE</code> set to a non-zero value, the freezing point of seawater is plotted</p>
+    
+    <p>All science traces on this plot report the data values, depth, time into the dive (in minutes) and the index of the
+    data value in the dive in the hovertips.  For scicon based instruments, the data index is 
+    for the combined profiles (dive, loiter, climb, surface loiter).</p>
+
+    <br></br>
+    <h2>Dive Climb</h2>
+    <p>The <code>Dive</code> and <code>Climb</code> traces are plot the <code>temperature</code> vs. the
+    <code>salinity</code> netCDF variables.  If the plot is a RAW plot, then <code>temperature_raw</code> and
+    <code>salinity_raw</code> are used.</p>
+    <a href="/plothelp/images/dv_ts_dive_climb.png">
+      <img src="/plothelp/images/dv_ts_dive_climb.png" alt="TS Dive Climb" style="width: 300px;"/>
+    </a>
+    
+    <br></br>
+    <h2>Freeze Point</h2>
+    <p>The <code>Freeze Point</code> traces are calculated from <code>salinity</code> (or <code>salinity_raw</code>
+    for RAW plots), <code>ctd_pressure</code>, <code>avg_latitude</code> and <code>avg_longitude</code>  netCDF variables.
+    </p>
+    <a href="/plothelp/images/dv_ts_freeze_point.png">
+      <img src="/plothelp/images/dv_ts_freeze_point.png" alt="TS Freeze Point" style="width: 300px;"/>
+    </a>
+  </body>
+</html>

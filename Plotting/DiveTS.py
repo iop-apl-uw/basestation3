@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -58,7 +58,7 @@ from Plotting import add_arguments, plotdivesingle
     additional_arguments={
         "plot_ts_raw": BaseOptsType.options_t(
             False,
-            ("Base", "BasePlot", "Reprocess"),
+            {"Base", "BasePlot", "Reprocess"},
             ("--plot_ts_raw",),
             bool,
             {
@@ -475,7 +475,8 @@ def plot_TS(
 
             # CT Corrections
             if (
-                "raw" not in temp_name
+                not is_legato
+                and "raw" not in temp_name
                 and "sg_cal_sbect_modes" in dive_nc_file.variables
                 and "not installed" not in sg_cal_calib_str
             ):
@@ -486,11 +487,15 @@ def plot_TS(
                         "showarrow": False,
                         "xref": "paper",
                         "yref": "paper",
-                        "x": 1.0,
+                        "x": 0.85,
                         "y": -0.08,
                     }
                 )
-
+            l_annotations.append(
+                PlotUtilsPlotly.add_help_link(
+                    "dv_ts",
+                )
+            )
             fig.update_layout({"annotations": tuple(l_annotations)})
 
         ret_figs.append(fig)
