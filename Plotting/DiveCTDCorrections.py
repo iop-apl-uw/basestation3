@@ -33,6 +33,7 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import pathlib
 import typing
 
 import gsw
@@ -65,7 +66,7 @@ def plot_ctd_corrections(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plot showing results for ctd thermal-inertia corrections"""
     if not generate_plots:
         return ([], [])

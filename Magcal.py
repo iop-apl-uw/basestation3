@@ -827,23 +827,22 @@ def main():
 
     if not base_opts.instrument_id:
         (comm_log, _, _, _, _) = CommLog.process_comm_log(
-            os.path.join(base_opts.mission_dir, "comm.log"),
+            base_opts.mission_dir / "comm.log",
             base_opts,
         )
         if comm_log:
             base_opts.instrument_id = comm_log.get_instrument_id()
 
     if not base_opts.instrument_id:
-        _, tail = os.path.split(base_opts.mission_dir[:-1])
-        if tail[-5:-3] != "sg":
+        if len(base_opts.mission_dir.name) < 5 or base_opts.mission_dir.name[:2] != "sg":
             log_error("Can't figure out the instrument id - bailing out")
             return
         try:
-            base_opts.instrument_id = int(tail[-3:])
+            base_opts.instrument_id = int(base_opts.mission_dir.name[2:])
         except Exception:
             log_error("Can't figure out the instrument id - bailing out")
             return
-
+            
     dives = RegressVBD.parseRangeList(base_opts.dives)
     if not dives or len(dives) < 1:
         log_error("invalid dives list")

@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -39,6 +39,7 @@ Commission.py: Sets up a new glider account on a basestation.
 
 import grp
 import os
+import pathlib
 import pwd
 import shutil
 import subprocess
@@ -233,7 +234,7 @@ def main():
         syscall("chown %s %s" % (glider, full_dst_file_name))
 
     base_opts.instrument_id = glider_id
-    base_opts.mission_dir = glider_path
+    base_opts.mission_dir = pathlib.Path(glider_path).expanduser().absolute()
     BaseDB.createDB(base_opts)
     db_file_name = os.path.join(glider_path, "%s.db" % glider)
     syscall("chown %s.%s %s" % (glider, base_opts.home_dir_group, db_file_name))

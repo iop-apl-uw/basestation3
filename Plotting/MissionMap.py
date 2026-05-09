@@ -35,11 +35,13 @@
 from __future__ import annotations
 
 import os
+import pathlib
 import typing
 import warnings
 
 import cartopy
 import cartopy.crs as ccrs
+import cartopy.feature
 import matplotlib.colors as mcolors
 import matplotlib.patches as patches
 import matplotlib.path as mpath
@@ -55,6 +57,8 @@ from CalibConst import getSGCalibrationConstants
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
+    import plotly.graph_objects
+
     import BaseOpts
 
 from cartopy.mpl.ticker import LatitudeFormatter, LongitudeFormatter
@@ -118,7 +122,7 @@ def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=-1):
 @plotmissionsingle
 def mission_map(
         base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots mission map"""
 
     if not generate_plots:
@@ -332,12 +336,12 @@ def mission_map(
     plt.plot(df['lon'].to_numpy(), df['lat'].to_numpy(), color='lightsalmon', alpha=1, marker='.', markersize=4, transform=ccrs.PlateCarree(), linestyle='None')
     plt.plot(rdf['lon'].to_numpy(), rdf['lat'].to_numpy(), color='red', marker='+', transform=ccrs.PlateCarree(), linestyle='None')
 
-    output_name = "eng_mission_map.webp"
+    output_name = pathlib.Path("eng_mission_map.webp")
 
     if base_opts.plot_directory:
-        output_name = os.path.join(base_opts.plot_directory, output_name)
+        output_name: pathlib.Path = base_opts.plot_directory / output_name
 
-    ret_list = [output_name]
+    ret_list: list[pathlib.Path] = [output_name]
     plt.savefig(output_name, format="webp", bbox_inches='tight')
     
     return ([], ret_list)

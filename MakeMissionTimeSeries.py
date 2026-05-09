@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -82,7 +82,9 @@ def DEBUG_PDB_F() -> None:
 # but, at present, we don't add any qc variables here (see declarations in BaseNetCDF).
 # They could be added trivially since we do no interpretation, but see comment under MMP.
 # Again, ARGO uses PRESSURE as the primary axis (not time, which is aux for us, or depth, which is derived from pressure)
-def make_mission_timeseries(dive_nc_profile_names, base_opts):
+def make_mission_timeseries(
+    dive_nc_profile_names: list[pathlib.Path], base_opts: BaseOpts.BaseOptions
+) -> tuple[int, pathlib.Path | None]:
     """Creates a single time series from a list of dive netCDF files
 
     Input:
@@ -116,6 +118,8 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         log_warning(
             "Unable to determine timeseries file name from sg_calib_constants.m  - will use per-dive netcdf files",
         )
+    else:
+        mission_timeseries_name = pathlib.Path(mission_timeseries_name)
 
     if dive_nc_profile_names is None or dive_nc_profile_names == []:
         log_error(
@@ -286,9 +290,8 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
 
             if not mission_timeseries_name:
                 mission_title = Utils.ensure_basename(calib_consts["mission_title"])
-                mission_timeseries_name = os.path.join(
-                    base_opts.mission_dir,
-                    "sg%03d_%s_timeseries.nc" % (instrument_id, mission_title),
+                mission_timeseries_name = base_opts.mission_dir / (
+                    "sg%03d_%s_timeseries.nc" % (instrument_id, mission_title)
                 )
                 log_info(
                     "Making mission timeseries %s from files found in %s"
@@ -788,7 +791,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
     mission_timeseries_file.sync()
     mission_timeseries_file.close()
 
-    mission_timeseries_name_gz = mission_timeseries_name + ".gz"
+    mission_timeseries_name_gz = mission_timeseries_name.with_suffix(".gz")
     if base_opts.gzip_netcdf:
         log_info(
             "Compressing %s to %s"

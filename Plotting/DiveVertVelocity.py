@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -33,6 +33,7 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import pathlib
 import typing
 
 import numpy as np
@@ -229,7 +230,7 @@ def plot_vert_vel(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots various measures of vetical velocity and estimates volmax and C_VBD"""
     # There is a significant difference in what MDP is creating for vertical velocity and what is done below.
     # Some traced back to a difference in calculated volume of the vehicle.  Results are about 30-50 cc difference in

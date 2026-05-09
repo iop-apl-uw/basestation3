@@ -86,7 +86,7 @@ def main():
         "nav1.scr": "n",
     }
     for f in list(base_files.keys()):
-        if os.path.exists(os.path.join(base_opts.mission_dir, f)):
+        if (base_opts.mission_dir / f).exists():
             existing_files = "%s%s" % (existing_files, base_files[f])
 
     # Now, the loggers
@@ -94,14 +94,14 @@ def main():
         d = init_dict[key]
         if "known_files" in d:
             for b in d["known_files"]:
-                if os.path.exists(os.path.join(base_opts.mission_dir, b)):
+                if (base_opts.mission_dir / b).exists():
                     existing_files = "%s,%s" % (existing_files, b)
 
     existing_files = "%s}" % existing_files
 
     log_info("Existing files = %s" % existing_files)
 
-    upload_files_name = os.path.join(base_opts.mission_dir, "upload_files")
+    upload_files_name = base_opts.mission_dir / "upload_files"
 
     try:
         fo = open(upload_files_name, "w")

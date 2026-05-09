@@ -36,7 +36,6 @@ from __future__ import annotations
 import collections
 
 # import copy
-import os
 import stat
 import time
 import typing
@@ -134,14 +133,13 @@ def setup_plot_directory(base_opts: BaseOpts.BaseOptions) -> int:
 
     """
     if not base_opts.plot_directory:
-        base_opts.plot_directory = os.path.join(base_opts.mission_dir, "plots")
+        base_opts.plot_directory = base_opts.mission_dir / "plots"
 
-    if not os.path.exists(base_opts.plot_directory):
+    if not base_opts.plot_directory.exists():
         try:
-            os.mkdir(base_opts.plot_directory)
+            base_opts.plot_directory.mkdir()
             # Ensure that MoveData can move it as pilot if not run as the glider account
-            os.chmod(
-                base_opts.plot_directory,
+            base_opts.plot_directory.chmod(
                 stat.S_IRUSR
                 | stat.S_IWUSR
                 | stat.S_IXUSR

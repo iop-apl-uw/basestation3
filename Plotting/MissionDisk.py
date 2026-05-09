@@ -38,11 +38,14 @@ import typing
 import warnings
 
 import pandas as pd
-import plotly
+import plotly.graph_objects
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
+    import pathlib
+
     import BaseOpts
+
 
 import numpy as np
 
@@ -94,7 +97,7 @@ def mission_disk(
     dive=None,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots disk stats"""
 
     if not generate_plots:
@@ -294,7 +297,7 @@ def mission_pmar_disk(
     dive=None,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots disk stats"""
 
     if not generate_plots:

@@ -34,11 +34,12 @@
 from __future__ import annotations
 
 import collections
+import pathlib
 import typing
 
 import numpy as np
 import pandas as pd
-import plotly
+import plotly.graph_objects
 import scipy
 
 # pylint: disable=wrong-import-position
@@ -58,7 +59,7 @@ def mission_commlog(
     dive=None,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots disk stats"""
 
     if not generate_plots:

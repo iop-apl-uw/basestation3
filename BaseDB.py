@@ -35,7 +35,6 @@
 
 import asyncio
 import contextlib
-import glob
 import math
 import os
 import pdb
@@ -44,7 +43,6 @@ import sys
 import time
 import traceback
 import warnings
-from pathlib import Path
 
 import numpy
 import pandas as pd
@@ -943,9 +941,8 @@ def updateDBFromPlots(base_opts, ncfs, con, run_dive_plots=True):
         dive_plots_dict = BasePlot.get_dive_plots(base_opts)
         BasePlot.plot_dives(base_opts, dive_plots_dict, ncfs, generate_plots=False, dbcon=con)
 
-    sg_calib_file_name = os.path.join(
-        base_opts.mission_dir, "sg_calib_constants.m"
-    )
+    sg_calib_file_name =         base_opts.mission_dir/ "sg_calib_constants.m"
+
     calib_consts = getSGCalibrationConstants(sg_calib_file_name, ignore_fm_tags=not base_opts.ignore_flight_model)
     mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
 
@@ -986,8 +983,7 @@ def updateDBFromFileExistence(base_opts, ncfs, con):
 def updateDBFromFM(base_opts, ncfs, cur):
     """Update the database with the output of flight model"""
 
-    flight_dir = os.path.join(base_opts.mission_dir, "flight")
-
+    flight_dir = base_opts.mission_dir / "flight"
     for ncf in ncfs:
         try:
             with contextlib.closing(Utils.open_netcdf_file(ncf)) as nci:
@@ -1204,16 +1200,17 @@ def rebuildDivesGC(base_opts, ext):
     cur = con.cursor()
 
     # patt = path + "/p%03d????.nc" % sg
-    patt = os.path.join(
-        base_opts.mission_dir, f"p{base_opts.instrument_id:03d}????.{ext}"
-    )
+    #patt = os.path.join(
+    #    base_opts.mission_dir, f"p{base_opts.instrument_id:03d}????.{ext}"
+    #)
     ncfs = []
-    for filename in glob.glob(patt):
+    #for filename in glob.glob(patt):
+    for filename in base_opts.mission_dir.glob(f"p{base_opts.instrument_id:03d}????.{ext}"):
         ncfs.append(filename)
     ncfs = sorted(ncfs)
     for filename in ncfs:
         print(filename)
-        if "ncdf" in filename:
+        if filename.suffix == ".ncdf":
             loadNetworkFileToDB(base_opts, cur, filename, con)
         else:
             loadFileToDB(base_opts, cur, filename, con, run_dive_plots=True)
@@ -1240,7 +1237,7 @@ def loadDB(base_opts, filename, run_dive_plots=True):
 
     cur = con.cursor()
 
-    if "ncdf" in filename:
+    if filename.suffix == ".ncdf":
         loadNetworkFileToDB(base_opts, cur, filename, con)
     else:
         loadFileToDB(base_opts, cur, filename, con, run_dive_plots=run_dive_plots)
@@ -1413,9 +1410,9 @@ def logControlFile(base_opts, dive, cycle, filename, fullname, con=None):
 #        return
 
     cur = mycon.cursor()
+    pathed = base_opts.mission_dir/ fullname
 
-    pathed = os.path.join(base_opts.mission_dir, fullname)
-    if os.path.exists(pathed):
+    if pathed.exists():
 
         if 'tgz' in filename:
             contents = ''
@@ -1447,7 +1444,7 @@ def rebuildControlHistory(base_opts):
     con = Utils.open_mission_database(base_opts)
     log_info("rebuildControlHistory db opened")
 
-    path = Path(base_opts.mission_dir)
+    #path = Path(base_opts.mission_dir)
 
     cur = con.cursor()
     try:
@@ -1459,9 +1456,9 @@ def rebuildControlHistory(base_opts):
 
     for which in ['targets', 'science', 'scicon.sch', 'pdoscmds.bat', 'tcm2mat.cal', 'pdoslog']:
         if which == 'pdoslog':
-            r = sorted(path.glob(f'p{base_opts.instrument_id:03d}????.???.pdos'))
+            r = sorted(base_opts.mission_dir.glob(f'p{base_opts.instrument_id:03d}????.???.pdos'))
         else:
-            r = sorted(path.glob(f'{which}.????.????'))
+            r = sorted(base_opts.mission_dir.glob(f'{which}.????.????'))
 
         for f in r:
             if which == 'pdoslog':
@@ -1508,8 +1505,8 @@ def logParameterChanges(base_opts, dive_num, cmdname, con=None):
 #
 #        return
 
-    logfile = os.path.join(base_opts.mission_dir, f'p{base_opts.instrument_id:03d}{dive_num:04d}.log')
-    cmdfile = os.path.join(base_opts.mission_dir, cmdname) 
+    logfile = base_opts.mission_dir / f'p{base_opts.instrument_id:03d}{dive_num:04d}.log'
+    cmdfile = base_opts.mission_dir / cmdname
     changes = asyncio.run(parms.parameterChanges(dive_num, logfile, cmdfile))
 
     for d in changes:
@@ -1673,22 +1670,33 @@ def main():
 
     if not base_opts.instrument_id:
         (comm_log, _, _, _, _) = CommLog.process_comm_log(
-            os.path.join(base_opts.mission_dir, "comm.log"),
+            base_opts.mission_dir / "comm.log",
             base_opts,
         )
         if comm_log:
             base_opts.instrument_id = comm_log.get_instrument_id()
 
+    # if not base_opts.instrument_id:
+    #     #_, tail = os.path.split(base_opts.mission_dir[:-1])
+    #     if tail[-5:-3] != "sg":
+    #         log_error("Can't figure out the instrument id - bailing out")
+    #         return
+    #     try:
+    #         base_opts.instrument_id = int(tail[-3:])
+    #     except Exception:
+    #         log_error("Can't figure out the instrument id - bailing out")
+    #         return
+
     if not base_opts.instrument_id:
-        _, tail = os.path.split(base_opts.mission_dir[:-1])
-        if tail[-5:-3] != "sg":
+        if len(base_opts.mission_dir.name) < 5 or base_opts.mission_dir.name[:2] != "sg":
             log_error("Can't figure out the instrument id - bailing out")
             return
         try:
-            base_opts.instrument_id = int(tail[-3:])
+            base_opts.instrument_id = int(base_opts.mission_dir.name[2:])
         except Exception:
             log_error("Can't figure out the instrument id - bailing out")
             return
+
 
     if base_opts.init_db:
         createDB(base_opts)

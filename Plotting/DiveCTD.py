@@ -475,7 +475,7 @@ def plot_CTD(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots CTD data and Optode Temp (if present)"""
 
     if "temperature" not in dive_nc_file.variables or not generate_plots:
@@ -994,7 +994,7 @@ def plot_CTD_series(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots CTD data and Optode Temp (if present) as a annimation"""
 
     if (

@@ -34,6 +34,7 @@
 from __future__ import annotations
 
 import collections
+import pathlib
 import typing
 
 import pandas as pd
@@ -83,7 +84,7 @@ def mission_int_sensors(
     dive=None,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots internal pressure, RH, temp"""
     log_info("Starting mission_int_sensors")
 

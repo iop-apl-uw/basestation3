@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -35,10 +35,11 @@ from __future__ import annotations
 
 import collections
 import os
+import pathlib
 import typing
 
 import numpy as np
-import plotly
+import plotly.graph_objects
 import scipy
 
 # pylint: disable=wrong-import-position
@@ -75,7 +76,7 @@ def mission_callstats(
     dive=None,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots file transfer stats from comm.log"""
     if not generate_plots:
         return ([], [])
@@ -472,14 +473,11 @@ def mission_callstats(
         },
     )
 
-    out = (
+    return (
+        [fig],
         PlotUtilsPlotly.write_output_files(
             base_opts,
             "eng_download_stats",
             fig,
         ),
-    )
-    return (
-        [fig],
-        [out],
     )

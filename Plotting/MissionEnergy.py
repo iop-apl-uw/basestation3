@@ -35,6 +35,7 @@
 from __future__ import annotations
 
 import collections
+import pathlib
 import pdb
 import sys
 import time
@@ -45,7 +46,7 @@ from datetime import datetime
 import numpy as np
 import pandas
 import pandas as pd
-import plotly
+import plotly.graph_objects
 
 import BaseDB
 
@@ -90,7 +91,7 @@ line_lookup = {
 @plotmissionsingle
 def mission_energy(
         base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots mission energy consumption and projections"""
     log_info(f"Starting mission_energy {dive}")
 

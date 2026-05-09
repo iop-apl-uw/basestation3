@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import cProfile
 import os
+import pathlib
 import pdb
 import pstats
 import sys
@@ -82,7 +83,7 @@ def plot_dives(
     dive_nc_file_names: list,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list[plotly.graph_objects.Figure], list[str]]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """
     Create per-dive related plots
 
@@ -97,7 +98,7 @@ def plot_dives(
             list of filenames created
     """
     figs: list[plotly.graph_objects.Figure] = []
-    output_files: list[str] = []
+    output_files: list[pathlib.Path] = []
     if dbcon is None:
         con = Utils.open_mission_database(base_opts)
         log_info("plot_dives db opened")
@@ -158,7 +159,7 @@ def plot_mission(
     dive=None,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list[plotly.graph_objects.Figure], list[str]]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """
     Create per-dive related plots
 
@@ -177,7 +178,7 @@ def plot_mission(
         con = dbcon
 
     figs: list[plotly.graph_objects.Figure] = []
-    output_files: list[str] = []
+    output_files: list[pathlib.Path] = []
     for plot_name, plot_func in mission_plot_dict.items():
         try:
             if (
@@ -317,19 +318,22 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
 
     if not base_opts.instrument_id:
         (comm_log, _, _, _, _) = CommLog.process_comm_log(
-            os.path.join(base_opts.mission_dir, "comm.log"),
+            base_opts.mission_dir / "comm.log",
             base_opts,
         )
         if comm_log:
             base_opts.instrument_id = comm_log.get_instrument_id()
 
     if not base_opts.instrument_id:
-        _, tail = os.path.split(base_opts.mission_dir[:-1])
-        if tail[-5:-3] != "sg":
+        # _, tail = os.path.split(base_opts.mission_dir[:-1])
+        if (
+            len(base_opts.mission_dir.name) < 5
+            or base_opts.mission_dir.name[:2] != "sg"
+        ):
             log_error("Can't figure out the instrument id - bailing out")
             return 1
         try:
-            base_opts.instrument_id = int(tail[:-3])
+            base_opts.instrument_id = int(base_opts.mission_dir.name[2:])
         except Exception:
             log_error("Can't figure out the instrument id - bailing out")
             return 1
@@ -346,15 +350,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
             else:
                 dive_nc_file_names = []
                 for ncf_file_name in base_opts.netcdf_files:
-                    dive_nc_file_names.append(
-                        os.path.join(base_opts.mission_dir, ncf_file_name)
-                    )
+                    dive_nc_file_names.append(base_opts.mission_dir / ncf_file_name)
             plot_dict = get_dive_plots(base_opts)
             plot_dives(base_opts, plot_dict, dive_nc_file_names)
         elif plot_type == "mission":
-            sg_calib_file_name = os.path.join(
-                base_opts.mission_dir, "sg_calib_constants.m"
-            )
+            sg_calib_file_name = base_opts.mission_dir / "sg_calib_constants.m"
+
             calib_consts = getSGCalibrationConstants(sg_calib_file_name)
             mission_str = get_mission_str(base_opts, calib_consts)
             plot_dict = get_mission_plots(base_opts)

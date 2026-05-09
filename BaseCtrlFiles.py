@@ -434,7 +434,7 @@ def load_ctrl_yml(
         os.path.join(base_opts.group_etc, ctrl_file_name)
         if base_opts.group_etc
         else None,
-        os.path.join(base_opts.mission_dir, ctrl_file_name),
+        base_opts.mission_dir / ctrl_file_name,
     ):
         if yml_file_name is None:
             continue
@@ -905,11 +905,11 @@ def main():
 
     if base_opts.basectrlfiles_action in pagers_msgs:
         comm_log = CommLog.process_comm_log(
-            os.path.join(base_opts.mission_dir, "comm.log"), base_opts, scan_back=False
+            base_opts.mission_dir / "comm.log", base_opts, scan_back=False
         )[0]
 
     (comm_log, _, _, _, _) = CommLog.process_comm_log(
-        os.path.join(base_opts.mission_dir, "comm.log"),
+        base_opts.mission_dir/ "comm.log",
         base_opts,
         #known_commlog_files=known_files,
     )

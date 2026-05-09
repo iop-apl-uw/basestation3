@@ -99,8 +99,8 @@ class SensorExtensions:
             self.__group_extension_directory = None
 
         if base_opts.mission_dir:
-            self.__mission_extension_file_name = os.path.join(
-                base_opts.mission_dir, sensor_extension_base_name
+            self.__mission_extension_file_name = (
+                base_opts.mission_dir / sensor_extension_base_name
             )
             self.__mission_extension_directory = base_opts.mission_dir
         else:

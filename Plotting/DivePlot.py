@@ -34,6 +34,7 @@
 from __future__ import annotations
 
 import contextlib
+import pathlib
 import typing
 from dataclasses import dataclass
 
@@ -77,7 +78,7 @@ def plot_diveplot(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots most of the glider engineering data"""
     # pylint: disable=unused-argument
 

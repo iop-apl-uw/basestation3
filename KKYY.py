@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -31,7 +31,7 @@
 """Routines for creating Navy data products"""
 
 import math
-import os
+import pathlib
 import pdb
 import sys
 import time
@@ -158,7 +158,7 @@ def WMO_3333(lat, lon):
             return 5
 
 
-def load_additional_arguments():
+def load_additional_arguments()->tuple[list[str],dict,dict]:
     """Defines and extends arguments related to this extension.
     Called by BaseOpts when the extension is set to be loaded
     """
@@ -173,15 +173,16 @@ def load_additional_arguments():
 
 
 def main(
-    instrument_id=None,
-    base_opts=None,
-    sg_calib_file_name=None,
-    dive_nc_file_names=None,
-    nc_files_created=None,
-    processed_other_files=None,
-    known_mailer_tags=None,
-    known_ftp_tags=None,
-    processed_file_names=None,
+    cmdline_args: list[str] = sys.argv[1:],
+    instrument_id: int | None = None,
+    base_opts: BaseOpts.BaseOptions | None = None,
+    sg_calib_file_name: pathlib.Path | None = None,
+    dive_nc_file_names: list[pathlib.Path] | None = None,
+    nc_files_created: list[pathlib.Path] | None = None,
+    processed_other_files: list[pathlib.Path] | None = None,
+    known_mailer_tags: list[str] | None = None,
+    known_ftp_tags: list[str] | None = None,
+    processed_file_names: list[pathlib.Path] | None = None,
 ):
     """Basestation extension for creating KKYY file
 
@@ -204,6 +205,7 @@ def main(
             additional_arguments=additional_arguments,
             add_option_groups=add_option_groups,
             add_to_arguments=add_to_arguments,
+            cmdline_args=cmdline_args,
         )
 
         global DEBUG_PDB
@@ -261,8 +263,8 @@ def main(
             continue
 
         # Navy file formats
-        kkyy_up_file_name = os.path.splitext(dive_nc_file_name)[0] + ".up_kkyy"
-        kkyy_down_file_name = os.path.splitext(dive_nc_file_name)[0] + ".dn_kkyy"
+        kkyy_up_file_name = dive_nc_file_name.with_suffix(".up_kkyy")
+        kkyy_down_file_name = dive_nc_file_name.with_suffix(".dn_kkyy")
 
         try:
             kkyy_up_file = open(kkyy_up_file_name, "w")

@@ -33,6 +33,7 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import pathlib
 import sqlite3
 import typing
 
@@ -57,7 +58,7 @@ def mission_volume(
     dive=None,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots various estimates for volmax"""
 
     if not generate_plots:

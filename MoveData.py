@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2025  University of Washington.
+## Copyright (c) 2023, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -37,6 +37,7 @@ MoveData.py: Move all raw data and processed files from the dive directory
 import contextlib
 import glob
 import os
+import pathlib
 import shutil
 import sys
 import traceback
@@ -57,7 +58,7 @@ from BaseLog import (
 from Globals import known_files
 
 
-def moveFiles(file_re_str, src, dest, copy=False):
+def moveFiles(file_re_str, src: pathlib.Path, dest, copy=False):
     """
     Moves (or copies) all local files matching file_re_str to dest directory.
 
@@ -74,7 +75,7 @@ def moveFiles(file_re_str, src, dest, copy=False):
         op_gerund = "Moving"
         op_past = "Moved"
 
-    files = os.path.abspath(src + "/" + file_re_str)
+    files = (src / file_re_str).resolve()
     log_debug("%s %s" % (op_gerund, str(files)))
 
     myglob = glob.glob(files)
@@ -165,19 +166,21 @@ def main():
 
     if not base_opts.instrument_id:
         (comm_log, _, _, _, _) = CommLog.process_comm_log(
-            os.path.join(base_opts.mission_dir, "comm.log"),
+            base_opts.mission_dir / "comm.log",
             base_opts,
         )
         if comm_log:
             base_opts.instrument_id = comm_log.get_instrument_id()
 
     if not base_opts.instrument_id:
-        _, tail = os.path.split(base_opts.mission_dir[:-1])
-        if tail[-5:-3] != "sg":
+        if (
+            len(base_opts.mission_dir.name) < 5
+            or base_opts.mission_dir.name[:2] != "sg"
+        ):
             log_error("Can't figure out the instrument id - bailing out")
             return 1
         try:
-            base_opts.instrument_id = int(tail[-3:])
+            base_opts.instrument_id = int(base_opts.mission_dir.name[2:])
         except Exception:
             log_error("Can't figure out the instrument id - bailing out")
             return 1

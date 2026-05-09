@@ -33,6 +33,7 @@ import array as arr
 import collections
 import math
 import os
+import pathlib
 import re
 
 import numpy as np
@@ -784,7 +785,7 @@ def process_tar_members(
                             )
                         )
                 fo.close()
-                processed_logger_eng_files.append(output_file)
+                processed_logger_eng_files.append(pathlib.Path(output_file))
         except Exception:
             log_error("Failed to process %s" % tmicl_file, "exc")
             ret_val = 1

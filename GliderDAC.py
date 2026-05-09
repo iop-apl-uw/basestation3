@@ -53,7 +53,7 @@
 
 import argparse
 import collections
-import os
+import pathlib
 import pdb
 import stat
 import sys
@@ -274,7 +274,7 @@ def load_templates(base_opts):
         if not file_name:
             log_warning(f"GliderDAC option --{option_name} not specified")
             continue
-        if not os.path.exists(file_name):
+        if not file_name.exists():
             log_info(f"{file_name} does not exist - skipping")
             continue
         try:
@@ -306,7 +306,7 @@ def find_deepest_bin_i(depth, bin_centers, bin_width):
     return max_i
 
 
-def load_additional_arguments():
+def load_additional_arguments() -> tuple[list[str], dict, dict]:
     """Defines and extends arguments related to this extension.
     Called by BaseOpts when the extension is set to be loaded
     """
@@ -318,78 +318,78 @@ def load_additional_arguments():
         # Add these options that are local to this extension
         {
             "gliderdac_base_config": BaseOptsType.options_t(
-                "",
-                (
+                None,
+                {
                     "Base",
                     "Reprocess",
                     "GliderDAC",
-                ),
+                },
                 ("--gliderdac_base_config",),
-                BaseOpts.FullPath,
+                BaseOpts.FullPathlib,
                 {
                     "help": "GliderDAC base configuration YAML file - common for all Seagliders",
                     "section": "gliderdac",
                     "option_group": "gliderdac",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
             "gliderdac_project_config": BaseOptsType.options_t(
-                "",
-                (
+                None,
+                {
                     "Base",
                     "Reprocess",
                     "GliderDAC",
-                ),
+                },
                 ("--gliderdac_project_config",),
-                BaseOpts.FullPath,
+                BaseOpts.FullPathlib,
                 {
                     "help": "GliderDAC project configuration YAML file - common for single study area",
                     "section": "gliderdac",
                     "option_group": "gliderdac",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
             "gliderdac_deployment_config": BaseOptsType.options_t(
-                "",
-                (
+                None,
+                {
                     "Base",
                     "Reprocess",
                     "GliderDAC",
-                ),
+                },
                 ("--gliderdac_deployment_config",),
-                BaseOpts.FullPath,
+                BaseOpts.FullPathlib,
                 {
                     "help": "GliderDAC deployoment configuration YAML file - specific to the current glider deoployment",
                     "section": "gliderdac",
                     "option_group": "gliderdac",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
             "gliderdac_directory": BaseOptsType.options_t(
-                "",
-                (
+                None,
+                {
                     "Base",
                     "Reprocess",
                     "GliderDAC",
-                ),
+                },
                 ("--gliderdac_directory",),
-                BaseOpts.FullPath,
+                BaseOpts.FullPathlib,
                 {
                     "help": "Directory to place output files in",
                     "section": "gliderdac",
                     "option_group": "gliderdac",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
             "delayed_submission": BaseOptsType.options_t(
                 False,
-                (
+                {
                     "Base",
                     "Reprocess",
                     "GliderDAC",
-                ),
+                },
                 ("--delayed_submission",),
-                BaseOpts.FullPath,
+                bool,
                 {
                     "help": "Generated files for delayed submission",
                     "section": "gliderdac",
@@ -399,11 +399,11 @@ def load_additional_arguments():
             ),
             "gliderdac_bin_width": BaseOptsType.options_t(
                 0.0,
-                (
+                {
                     "Base",
                     "Reprocess",
                     "GliderDAC",
-                ),
+                },
                 ("--gliderdac_bin_width",),
                 float,
                 {
@@ -414,11 +414,11 @@ def load_additional_arguments():
             ),
             "gliderdac_reduce_output": BaseOptsType.options_t(
                 True,
-                (
+                {
                     "Base",
                     "Reprocess",
                     "GliderDAC",
-                ),
+                },
                 ("--gliderdac_reduce",),
                 bool,
                 {
@@ -433,15 +433,16 @@ def load_additional_arguments():
 
 
 def main(
-    instrument_id=None,
-    base_opts=None,
-    sg_calib_file_name=None,
-    dive_nc_file_names=None,
-    nc_files_created=None,
-    processed_other_files=None,
-    known_mailer_tags=None,
-    known_ftp_tags=None,
-    processed_file_names=None,
+    cmdline_args: list[str] = sys.argv[1:],
+    instrument_id: int | None = None,
+    base_opts: BaseOpts.BaseOptions | None = None,
+    sg_calib_file_name: pathlib.Path | None = None,
+    dive_nc_file_names: list[pathlib.Path] | None = None,
+    nc_files_created: list[pathlib.Path] | None = None,
+    processed_other_files: list[pathlib.Path] | None = None,
+    known_mailer_tags: list[str] | None = None,
+    known_ftp_tags: list[str] | None = None,
+    processed_file_names: list[pathlib.Path] | None = None,
 ):
     """Basestation extension for creating simplified netCDF files
 
@@ -464,6 +465,7 @@ def main(
             additional_arguments=additional_arguments,
             add_option_groups=add_option_groups,
             add_to_arguments=add_to_arguments,
+            cmdline_args=cmdline_args,
         )
 
         global DEBUG_PDB
@@ -489,9 +491,7 @@ def main(
     ):
         dive_nc_file_names = [base_opts.netcdf_filename]
         if not base_opts.gliderdac_directory:
-            base_opts.gliderdac_directory = os.path.join(
-                os.path.split(dive_nc_file_names[0])[0], "gliderdac"
-            )
+            base_opts.gliderdac_directory = dive_nc_file_names.parent / "gliderdac"
     elif base_opts.mission_dir:
         if nc_files_created is not None:
             dive_nc_file_names = nc_files_created
@@ -499,19 +499,16 @@ def main(
             # Collect up the possible files
             dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
         if not base_opts.gliderdac_directory:
-            base_opts.gliderdac_directory = os.path.join(
-                base_opts.mission_dir, "gliderdac"
-            )
+            base_opts.gliderdac_directory = base_opts.mission_dir / "gliderdac"
     else:
         log_error("Either mission_dir or netcdf_file must be specified")
         return 1
 
-    if not os.path.exists(base_opts.gliderdac_directory):
+    if not base_opts.gliderdac_directory.exists():
         try:
-            os.mkdir(base_opts.gliderdac_directory)
+            base_opts.gliderdac_directory.mkdir()
             # Ensure that MoveData can move it as pilot if not run as the glider account
-            os.chmod(
-                base_opts.gliderdac_directory,
+            base_opts.gliderdac_directory.chmod(
                 stat.S_IRUSR
                 | stat.S_IWUSR
                 | stat.S_IXUSR
@@ -890,9 +887,9 @@ def main(
         for k, v in template["global_attributes"].items():
             dso.attrs[k] = v
 
-        netcdf_out_filename = os.path.join(
-            base_opts.gliderdac_directory,
-            f"{trajectory_name}Z{delayed_str}.nc".replace("-", "_"),
+        netcdf_out_filename = (
+            base_opts.gliderdac_directory
+            / f"{trajectory_name}Z{delayed_str}.nc".replace("-", "_")
         )
         comp = dict(zlib=True, complevel=9)
         # encoding = {var: comp for var in dso.data_vars}

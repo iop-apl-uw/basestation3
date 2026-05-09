@@ -72,7 +72,9 @@ def main():
         additional_arguments={
             "initdb": BaseOptsType.options_t(
                 True,
-                ("NewMission",),
+                {
+                    "NewMission",
+                },
                 ("--initdb",),
                 bool,
                 {
@@ -82,7 +84,9 @@ def main():
             ),
             "glider_home": BaseOptsType.options_t(
                 None,
-                ("NewMission",),
+                {
+                    "NewMission",
+                },
                 ("glider_home",),
                 BaseOpts.FullPathTrailingSlash,
                 {
@@ -92,7 +96,9 @@ def main():
             ),
             "new_mission_dir": BaseOptsType.options_t(
                 None,
-                ("NewMission",),
+                {
+                    "NewMission",
+                },
                 ("new_mission_dir",),
                 str,
                 {

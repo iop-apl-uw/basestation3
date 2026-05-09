@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -31,6 +31,7 @@
 """Simple basestation extension - starting point for new extensions"""
 
 import io
+import pathlib
 import pdb
 import sys
 import time
@@ -42,7 +43,7 @@ from BaseLog import BaseLogger, log_info
 DEBUG_PDB = False
 
 
-def load_additional_arguments():
+def load_additional_arguments() -> tuple[list[str], dict, dict]:
     """Defines and extends arguments related to this extension.
     Called by BaseOpts when the extension is set to be loaded
     """
@@ -59,15 +60,16 @@ def load_additional_arguments():
 
 
 def main(
-    instrument_id=None,
-    base_opts=None,
-    sg_calib_file_name=None,
-    dive_nc_file_names=None,
-    nc_files_created=None,
-    processed_other_files=None,
-    known_mailer_tags=None,
-    known_ftp_tags=None,
-    processed_file_names=None,
+    cmdline_args: list[str] = sys.argv[1:],
+    instrument_id: int | None = None,
+    base_opts: BaseOpts.BaseOptions | None = None,
+    sg_calib_file_name: pathlib.Path | None = None,
+    dive_nc_file_names: list[pathlib.Path] | None = None,
+    nc_files_created: list[pathlib.Path] | None = None,
+    processed_other_files: list[pathlib.Path] | None = None,
+    known_mailer_tags: list[str] | None = None,
+    known_ftp_tags: list[str] | None = None,
+    processed_file_names: list[pathlib.Path] | None = None,
     session=None,
 ):
     """Basestation sample extension
@@ -91,6 +93,7 @@ def main(
             additional_arguments=additional_arguments,
             add_option_groups=add_option_groups,
             add_to_arguments=add_to_arguments,
+            cmdline_args=cmdline_args,
         )
 
     BaseLogger(base_opts)

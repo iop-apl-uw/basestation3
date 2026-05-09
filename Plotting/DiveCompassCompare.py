@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -34,6 +34,7 @@
 from __future__ import annotations
 
 import argparse
+import pathlib
 import typing
 
 import gsw
@@ -65,7 +66,7 @@ def plot_compass_compare(
     flip_roll=False,
     flip_pitch=False,
     flip_heading=False,
-):
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Compares roll/pitch/heading of the truck compass with a secondary compass"""
     log_debug(f"{flip_roll},{flip_pitch},{flip_heading}")
 
@@ -486,7 +487,7 @@ def plot_compare_aux(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots comparision of truc with with aux compass"""
 
     if "auxCompass_time" not in dive_nc_file.variables or not generate_plots:
@@ -509,7 +510,7 @@ def plot_compare_auxb(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots comparision of truc with with auxb compass"""
     if "auxB_time" not in dive_nc_file.variables or not generate_plots:
         return ([], [])
@@ -531,7 +532,7 @@ def plot_compare_cp(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots comparision of truck compass with with logdev adcp compass"""
     if "cp_time" not in dive_nc_file.variables or not generate_plots:
         return ([], [])
@@ -605,7 +606,7 @@ def plot_compare_ad2cp(
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots comparision of truck compass with with logdev adcp compass"""
     if "ad2cp_time" not in dive_nc_file.variables or not generate_plots:
         return ([], [])

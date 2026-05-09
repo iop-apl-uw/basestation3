@@ -29,6 +29,7 @@ PMAR basestation sensor extension
 import array as arr
 import collections
 import os
+import pathlib
 import traceback
 
 import numpy as np
@@ -602,7 +603,7 @@ def process_tar_members(
                             fo.write("\n")
                     write_file_footer(ef, fo)
                     fo.close()
-                    processed_logger_eng_files.append(output_file)
+                    processed_logger_eng_files.append(pathlib.Path(output_file))
                 if tail == "pm_logavg%s.eng" % ch_tag:
                     output_file = "%s_logavg%s.eng" % (base_name, ch_tag)
 
@@ -659,7 +660,7 @@ def process_tar_members(
                         fo.write("\n")
                     write_file_footer(ef, fo)
                     fo.close()
-                    processed_logger_eng_files.append(output_file)
+                    processed_logger_eng_files.append(pathlib.Path(output_file))
                 elif tail == "upload.eng":
                     output_file = "%s_upload.eng" % (base_name,)
 

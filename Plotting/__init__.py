@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -34,7 +34,7 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
-import importlib
+import importlib.util
 import inspect
 import pathlib
 import sys
@@ -42,6 +42,7 @@ import typing
 
 # Avoid circular input for type checking
 if typing.TYPE_CHECKING:
+    import plotly.graph_objects
     import scipy
 
     import BaseOpts
@@ -57,7 +58,7 @@ def plot_dive_single(
     dive_nc_file_name: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Signature for per-dive plotting routines"""
     return ([], [])
 
@@ -69,7 +70,7 @@ def plot_mission_single(
     dive=None,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list, list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Signature for whole mission plotting routines"""
     return ([], [])
 
@@ -178,6 +179,14 @@ if l_dir.exists() and l_dir.is_dir():
         if l_file.suffix == ".py":  # noqa: SIM102
             if l_file.stem not in sys.modules:
                 spec = importlib.util.spec_from_file_location(l_file.stem, l_file)
+                if spec is None or spec.loader is None:
+                    sys.error.write(
+                        f"Unable to generate spec from location {l_file.stem}, {l_file}"
+                    )
+                    continue
                 mod = importlib.util.module_from_spec(spec)
+                if mod is None:
+                    sys.error.write(f"Unable to generate mod from spec {spec}")
+                    continue
                 sys.modules[l_file.stem] = mod
                 spec.loader.exec_module(mod)

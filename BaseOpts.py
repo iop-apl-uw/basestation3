@@ -398,17 +398,17 @@ global_options_dict: dict[str, options_t] = {
         None,  # Okay to be None - this is never added to the options object, just used by the argparse
         None,
         ("--config", "-c"),
-        FullPath,
-        {"help": "script configuration file", "action": FullPathAction},
+        FullPathlib,
+        {"help": "script configuration file", "action": FullPathlibAction},
     ),
     "base_log": options_t(
-        "",
+        None,
         None,
         ("--base_log",),
-        FullPath,
+        FullPathlib,
         {
             "help": "basestation log file, records all levels of notifications",
-            "action": FullPathAction,
+            "action": FullPathlibAction,
         },
     ),
     "debug": options_t(
@@ -522,7 +522,7 @@ global_options_dict: dict[str, options_t] = {
     ),
     #
     "mission_dir": options_t(
-        "",
+        None,
         {
             "Base",
             "BaseCtrlFiles",
@@ -557,10 +557,10 @@ global_options_dict: dict[str, options_t] = {
             "-m",
             "--mission_dir",
         ),
-        FullPathTrailingSlash,
+        FullPathlib,
         {
             "help": "glider mission directory",
-            "action": FullPathTrailingSlashAction,
+            "action": FullPathlibAction,
             "required": (
                 "Base",
                 "BaseCtrlFiles",
@@ -1233,7 +1233,7 @@ global_options_dict: dict[str, options_t] = {
         },
     ),
     "plot_directory": options_t(
-        "",
+        None,
         {
             "Base",
             "BaseDB",
@@ -1242,11 +1242,11 @@ global_options_dict: dict[str, options_t] = {
             "Reprocess",
         },
         ("--plot_directory",),
-        FullPath,
+        FullPathlib,
         {
             "help": "Override default plot directory location",
             "section": "plotting",
-            "action": FullPathAction,
+            "action": FullPathlibAction,
             "option_group": "plotting",
         },
     ),
@@ -1664,11 +1664,11 @@ global_options_dict: dict[str, options_t] = {
             "NetworkWatch",
         },
         ("--network_log_decompressor",),
-        FullPath,
+        FullPathlib,
         {
             "help": "Compressed logfile decompressor path",
             "section": "network",
-            "action": FullPathAction,
+            "action": FullPathlibAction,
         },
     ),
     # Hook script timeouts
@@ -1959,7 +1959,7 @@ class BaseOptions:
 
         # Process the config file, updating the object
         if self._opts.config_file_name is not None:
-            if not os.path.exists(self._opts.config_file_name):
+            if not self._opts.config_file_name.exists():
                 # setattr(self, "config_file_not_found", True)
                 self.config_file_not_found = True
                 # raise FileNotFoundError(
