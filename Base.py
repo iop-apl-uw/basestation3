@@ -3075,7 +3075,6 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     run_extension_script(
         base_opts,
         ".post_mission",
-        processed_file_names,
         [str(pp) for pp in processed_file_names],
         base_opts.post_mission_timeout,
     )
