@@ -965,6 +965,21 @@ def ensure_basename(basename):
         basename.replace(" ", "_").replace(",", "_").replace("/", "_").replace("&", "_")
     )
 
+#TODO - when pythnon version is greater then 3.11, go to this approach to report the version
+# import tomllib
+# from pathlib import Path
+
+# # Adjust path to find your pyproject.toml relative to the script
+# path = Path(__file__).parent / "pyproject.toml"
+
+# with open(path, "rb") as f:
+#     data = tomllib.load(f)
+
+# # Structure depends on your build backend (Poetry vs. Standard PEP 621)
+# version = data.get("project", {}).get("version") or \
+#           data.get("tool", {}).get("poetry", {}).get("version")
+
+# print(f"Local version: {version}")
 
 def check_versions(base_opts: BaseOpts.BaseOptions) -> None:
     """Checks and reports versions of various libraries"""
