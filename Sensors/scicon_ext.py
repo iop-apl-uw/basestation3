@@ -67,7 +67,7 @@ ad2cp_single_dim = (
     "battery",
 )
 ad2cp_multi_dim = ("velX", "velY", "velZ")
-ad2cp_single_value = ("blanking", "cellSize", "soundspeed")
+ad2cp_single_value = ("blanking", "cellSize", "soundspeed", "coordinateSystem")
 
 # Tuples
 data_file_metadata = collections.namedtuple(
@@ -436,6 +436,12 @@ def init_logger(module_name, init_dict=None):
             False,
             "d",
             {"description": "Size of cells", "units": "mm"},
+            BaseNetCDF.nc_scalar,
+        ],
+        "ad2cp_coordinateSystem": [
+            False,
+            "d",
+            {"description": "Coordinate system for velocity"},
             BaseNetCDF.nc_scalar,
         ],
         "ad2cp_soundspeed": [
