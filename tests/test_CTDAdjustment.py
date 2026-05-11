@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2024, 2025  University of Washington.
+## Copyright (c) 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -55,6 +55,7 @@ def test_base(caplog):
         "--adjust_final_salinity",
         "0.1",
         "--make_mission_timeseries",
+        "--no-notify_vis",
     ]
 
     testutils.run_mission(

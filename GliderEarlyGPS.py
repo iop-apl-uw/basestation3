@@ -312,7 +312,9 @@ class GliderEarlyGPSClient:
                         "time": time.time(),
                     }
                     Utils.notifyVis(
-                        session.sg_id, "urls-status", orjson.dumps(msg).decode("utf-8")
+                        session.sg_id,
+                        "urls-status",
+                        orjson.dumps(msg).decode("utf-8"),
                     )
                 except Exception:
                     log_error("notifyVis failed", "exc")

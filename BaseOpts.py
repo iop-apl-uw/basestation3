@@ -865,6 +865,16 @@ global_options_dict: dict[str, options_t] = {
             "help": "Base URL of visualization server for building links in KML and notifications",
         },
     ),
+    "notify_vis": options_t(
+        True,
+        {"Base", "Reprocess", "MakeKML", "BaseCtrlFiles", "CommLog", "GliderEarlyGPS"},
+        ("--notify_vis",),
+        bool,
+        {
+            "help": "Send notifications to vis",
+            "action": argparse.BooleanOptionalAction,
+        },
+    ),
     #
     "force": options_t(
         False,

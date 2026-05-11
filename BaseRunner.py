@@ -369,11 +369,12 @@ def main():
                         }
                         payload = orjson.dumps(msg).decode("utf-8")
                         log_debug(payload)
-                        Utils.notifyVis(
-                            glider_id,
-                            "proc-queue",
-                            payload,
-                        )
+                        if base_opts.notify_vis:
+                            Utils.notifyVis(
+                                glider_id,
+                                "proc-queue",
+                                payload,
+                            )
 
                         continue
 
@@ -488,11 +489,12 @@ def main():
                     }
                     payload = orjson.dumps(msg).decode("utf-8")
                     log_debug(payload)
-                    Utils.notifyVis(
-                        glider_id,
-                        "proc-queue",
-                        payload,
-                    )
+                    if base_opts.notify_vis:
+                        Utils.notifyVis(
+                            glider_id,
+                            "proc-queue",
+                            payload,
+                        )
             except KeyboardInterrupt:
                 exit_event.set()
             except Exception:
@@ -542,11 +544,12 @@ def main():
                     }
                     payload = orjson.dumps(msg).decode("utf-8")
                     log_debug(payload)
-                    Utils.notifyVis(
-                        glider_id,
-                        "proc-queue",
-                        payload,
-                    )
+                    if base_opts.notify_vis:
+                        Utils.notifyVis(
+                            glider_id,
+                            "proc-queue",
+                            payload,
+                        )
 
             except KeyboardInterrupt:
                 exit_event.set()

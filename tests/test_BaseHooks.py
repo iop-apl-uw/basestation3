@@ -95,7 +95,7 @@ for (
         (
             main_func,
             test_data_dir,
-            f"--verbose  --local --skip_flight_model --plot_types none --ignore_flight_model {additional_args} --mission_dir {test_data_dir}/mission_dir".split(),
+            f"--verbose  --local --no-notify_vis --skip_flight_model --plot_types none --ignore_flight_model {additional_args} --mission_dir {test_data_dir}/mission_dir".split(),
             allowed_msgs,
             required_msgs,
         )

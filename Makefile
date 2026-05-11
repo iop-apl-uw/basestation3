@@ -17,6 +17,9 @@ typecheck:
 	-uv run ty check --output-format github 2>/dev/null
 
 test:
+	-uv run pytest -rsx tests/
+
+testcov:
 	-uv run pytest -rsx --cov --cov-report term-missing tests/
 
 testhtml:

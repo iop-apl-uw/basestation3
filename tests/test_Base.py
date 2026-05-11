@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2024, 2025  University of Washington.
+## Copyright (c) 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -127,7 +127,7 @@ for test_data_dir, glider, additional_args, allowed_msgs in test_cases:
     test_inputs.append(
         (
             test_data_dir,
-            f"--verbose --local {additional_args} --mission_dir {test_data_dir}/mission_dir --config {test_data_dir}/mission_dir/{glider}.conf".split(),
+            f"--verbose --local --no-notify_vis {additional_args} --mission_dir {test_data_dir}/mission_dir --config {test_data_dir}/mission_dir/{glider}.conf".split(),
             allowed_msgs,
         )
     )

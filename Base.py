@@ -1543,11 +1543,12 @@ class ProcessProgress:
                 msg["reason"] = reason
             payload = orjson.dumps(msg).decode("utf-8")
             # log_info(payload)
-            Utils.notifyVis(
-                self.glider_id,
-                "proc-progress",
-                payload,
-            )
+            if self.base_opts.notify_vis:
+                Utils.notifyVis(
+                    self.glider_id,
+                    "proc-progress",
+                    payload,
+                )
 
 
 def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
@@ -2527,9 +2528,10 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 "content": "files=perdive",
                 "time": time.time(),
             }
-            Utils.notifyVis(
-                instrument_id, "urls-files", orjson.dumps(msg).decode("utf-8")
-            )
+            if base_opts.notify_vis:
+                Utils.notifyVis(
+                    instrument_id, "urls-files", orjson.dumps(msg).decode("utf-8")
+                )
         except Exception:
             log_error("notifyVis failed", "exc")
 
@@ -3331,9 +3333,10 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                     "content": "files=all",
                     "time": time.time(),
                 }
-                Utils.notifyVis(
-                    instrument_id, "urls-files", orjson.dumps(msg).decode("utf-8")
-                )
+                if base_opts.notify_vis:
+                    Utils.notifyVis(
+                        instrument_id, "urls-files", orjson.dumps(msg).decode("utf-8")
+                    )
             except Exception:
                 log_error("notifyVis failed", "exc")
 
