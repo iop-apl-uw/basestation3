@@ -2261,7 +2261,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 log_info(f"Backing up {backup_filename} to {backup_target_filename}")
                 shutil.copyfile(backup_filename, backup_target_filename)
 
-                if "cmdfile" not in backup_filename:
+                if backup_filename.name != "cmdfile":
                     BaseDB.logControlFile(
                         base_opts,
                         backup_dive_num,
