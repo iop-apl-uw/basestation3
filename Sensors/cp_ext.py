@@ -206,6 +206,24 @@ def init_logger(module_name, init_dict=None):
                 {"units": "???", "description": "Velocity along Z-azis"},
                 (nc_cp_data_info, nc_cp_cell_info),
             ],
+            "cp_blanking": [
+                False,
+                "d",
+                {"description": "Blanking distance", "units": "cm"},
+                BaseNetCDF.nc_scalar,
+            ],
+            "cp_cellSize": [
+                False,
+                "d",
+                {"description": "Size of cells", "units": "mm"},
+                BaseNetCDF.nc_scalar,
+            ],
+            "cp_coordinateSystem": [
+                False,
+                "d",
+                {"description": "Coordinate system for velocity"},
+                BaseNetCDF.nc_scalar,
+            ],
         },
     }
 
@@ -238,7 +256,7 @@ def process_data_files(
     if fc.is_down_data() or fc.is_up_data():
         # The uploaded file in this case is an actual Nortek file.
         # Copy to the correct extension
-        ad2cpfile = fc.mk_base_engfile_name().replace(".eng", ".ad2cp")
+        ad2cpfile = fc.mk_base_engfile_name().with_suffix(".ad2cp")
         shutil.copy(fc.full_filename(), ad2cpfile)
         processed_logger_other_files.append(pathlib.Path(ad2cpfile))
 
@@ -257,7 +275,7 @@ def process_data_files(
             )
             return 1
 
-        matfile = fc.mk_base_engfile_name().replace(".eng", ".mat")
+        matfile = fc.mk_base_engfile_name().with_suffix(".mat")
 
         cmdline = f"{convertor} {fc.full_filename()} {matfile}"
         log_info(f"Running {cmdline}")
@@ -299,6 +317,15 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
         except Exception:
             log_error(f"Unable to load {filename}", "exc")
             continue
+
+        for sv_name in ("blanking", "cellSize", "coordinateSystem"):
+            nc_var_name = f"cp_{sv_name}"
+            if sv_name not in mf:
+                log_info(
+                    f"No variable named {sv_name} in {filename} - skipping add to netcdf"
+                )
+                continue
+            ret_list.append((nc_var_name, float(mf[sv_name][0][0])))
 
         for col_name in (
             "time",
