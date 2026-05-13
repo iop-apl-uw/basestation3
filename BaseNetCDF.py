@@ -2509,7 +2509,19 @@ def set_globals() -> None:
         # Turn controller
         "log_TS_HEAD": [False, "c", {}, nc_scalar],  # multi-valued string
         "log_TE_HEAD": [False, "c", {}, nc_scalar],  # multi-valued string
+        "log_TSHEAD": [False, "c", {}, nc_scalar],  # multi-valued string
+        "log_TEHEAD": [False, "c", {}, nc_scalar],  # multi-valued string
         f"{nc_tc_prefix}start_time": [
+            False,
+            "d",
+            {
+                "standard_name": "time",
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "Start of TC event in GMT epoch format",
+            },
+            (nc_tc_event_info,),
+        ],
+        f"{nc_tc_prefix}t": [
             False,
             "d",
             {
@@ -2564,6 +2576,12 @@ def set_globals() -> None:
             (nc_tc_event_info,),
         ],
         f"{nc_tc_prefix}rollAD": [
+            False,
+            "d",
+            {"description": "Starting AD position", "units": "AD counts"},
+            (nc_tc_event_info,),
+        ],
+        f"{nc_tc_prefix}startAD": [
             False,
             "d",
             {"description": "Starting AD position", "units": "AD counts"},
