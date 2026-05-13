@@ -25,3 +25,6 @@ The quality control system for data in basestation3 processing is described in [
 
 Details on the [RBR Tridente](https://rbr-global.com/products/sensors/rbrtridente/) naming convention used in the basestation are in [tridente.md](tridente.md)
 
+## Details on plotting
+
+A short guide to adding plots to the basestation may be found in [plotting.md](plotting.md)
