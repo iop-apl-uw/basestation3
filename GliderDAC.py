@@ -484,15 +484,16 @@ def main(
         + time.strftime("%H:%M:%S %d %b %Y %Z", processing_start_time)
     )
 
-    if (
-        not base_opts.mission_dir
-        and hasattr(base_opts, "netcdf_filename")
-        and base_opts.netcdf_filename
-    ):
-        dive_nc_file_names = [base_opts.netcdf_filename]
-        if not base_opts.gliderdac_directory:
-            base_opts.gliderdac_directory = dive_nc_file_names.parent / "gliderdac"
-    elif base_opts.mission_dir:
+    if not base_opts.mission_dir:
+        if hasattr(base_opts, "netcdf_filename") and base_opts.netcdf_filename:
+            # Called from CLI with a single argument
+            # TODO assert_type(base_opts.netcdf_filename, pathlib.Path)
+            dive_nc_file_names = [base_opts.netcdf_filename]
+            if not base_opts.gliderdac_directory:
+                base_opts.gliderdac_directory = (  # ty: ignore[invalid-assignment]
+                    base_opts.netcdf_filename.parent / "gliderdac"
+                )
+    else:
         if nc_files_created is not None:
             dive_nc_file_names = nc_files_created
         elif not dive_nc_file_names:
@@ -500,7 +501,8 @@ def main(
             dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
         if not base_opts.gliderdac_directory:
             base_opts.gliderdac_directory = base_opts.mission_dir / "gliderdac"
-    else:
+
+    if not dive_nc_file_names:
         log_error("Either mission_dir or netcdf_file must be specified")
         return 1
 
@@ -569,6 +571,7 @@ def main(
             timeseries_vars[var_name] = var_content
             dims = dsi[var_name].dims
             for vv in dsi.variables:
+                # TODO assert_type(vv, str)
                 if (
                     dsi[vv].dims == dims
                     and vv.endswith("_time")

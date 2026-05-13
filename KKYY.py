@@ -158,7 +158,7 @@ def WMO_3333(lat, lon):
             return 5
 
 
-def load_additional_arguments()->tuple[list[str],dict,dict]:
+def load_additional_arguments() -> tuple[list[str], dict, dict]:
     """Defines and extends arguments related to this extension.
     Called by BaseOpts when the extension is set to be loaded
     """
@@ -217,15 +217,17 @@ def main(
         f"Started processing {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(time.time()))}"
     )
 
-    if hasattr(base_opts, "netcdf_filename") and base_opts.netcdf_filename:
-        dive_nc_file_names = [base_opts.netcdf_filename]
-    elif base_opts.mission_dir:
+    if not base_opts.mission_dir:
+        if hasattr(base_opts, "netcdf_filename") and base_opts.netcdf_filename:
+            # TODO assert_type(base_opts.netcdf_filename, pathlib.Path)
+            dive_nc_file_names = [base_opts.netcdf_filename]
+    else:
         if nc_files_created is not None:
             dive_nc_file_names = nc_files_created
         elif not dive_nc_file_names:
             # Collect up the possible files
             dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
-    else:
+    if not dive_nc_file_names:
         log_error("Either mission_dir or netcdf_file must be specified")
         return 1
 

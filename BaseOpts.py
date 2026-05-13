@@ -1100,11 +1100,11 @@ global_options_dict: dict[str, options_t] = {
         "",
         set(),
         ("netcdf_filename",),
-        FullPath,
+        FullPathlib,
         {
             "help": "Name of netCDF file to process (only honored when --mission_dir is not specified)",
             "nargs": "?",
-            "action": FullPathAction,
+            "action": FullPathlibAction,
         },
     ),
     # Plotting related

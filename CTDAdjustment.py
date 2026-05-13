@@ -59,7 +59,7 @@ def DEBUG_PDB_F() -> None:
         pdb.post_mortem(traceb)
 
 
-def load_additional_arguments() -> tuple[list[str],dict,dict]:
+def load_additional_arguments() -> tuple[list[str], dict, dict]:
     """Defines and extends arguments related to this extension.
     Called by BaseOpts when the extension is set to be loaded
     """
@@ -232,14 +232,12 @@ def main(
         # No adjustment specified - nothing to do
         return 0
 
-    if (
-        not base_opts.mission_dir
-        and hasattr(base_opts, "netcdf_filename")
-        and base_opts.netcdf_filename
-    ):
-        # Called from CLI with a single argument
-        dive_nc_file_names = [base_opts.netcdf_filename]
-    elif base_opts.mission_dir:
+    if not base_opts.mission_dir:
+        if hasattr(base_opts, "netcdf_filename") and base_opts.netcdf_filename:
+            # Called from CLI with a single argument
+            # TODO assert_type(base_opts.netcdf_filename, pathlib.Path)
+            dive_nc_file_names = [base_opts.netcdf_filename]
+    else:
         if nc_files_created is not None:
             # Called from MakeDiveProfiles as extension
             dive_nc_file_names = nc_files_created
@@ -247,7 +245,7 @@ def main(
             # Called from CLI to process whole mission directory
             # Collect up the possible files
             dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
-    else:
+    if not dive_nc_file_names:
         log_error("Either mission_dir or netcdf_file must be specified")
         return 1
 

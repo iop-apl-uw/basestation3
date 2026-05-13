@@ -339,9 +339,11 @@ def main(
             f"bin_width:{simplencf_bin_width}, compress_output:{base_opts.simplencf_compress_output}"
         )
 
-        if hasattr(base_opts, "netcdf_filename") and base_opts.netcdf_filename:
-            dive_nc_file_names = [base_opts.netcdf_filename]
-        elif base_opts.mission_dir:
+        if not base_opts.mission_dir:
+            if hasattr(base_opts, "netcdf_filename") and base_opts.netcdf_filename:
+                # TODO assert_type(base_opts.netcdf_filename, pathlib.Path)
+                dive_nc_file_names = [base_opts.netcdf_filename]
+        else:
             if nc_files_created is not None:
                 dive_nc_file_names = nc_files_created
             elif not dive_nc_file_names:
@@ -349,7 +351,7 @@ def main(
                 dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(
                     base_opts
                 )
-        else:
+        if not dive_nc_file_names:
             log_error("Either mission_dir or netcdf_file must be specified")
             return 1
 

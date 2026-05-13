@@ -19,6 +19,9 @@ typecheck:
 test:
 	-uv run pytest -rsx tests/
 
+testpdb:
+	-uv run pytest --pdb -rsx tests/
+
 testcov:
 	-uv run pytest -rsx --cov --cov-report term-missing tests/
 
