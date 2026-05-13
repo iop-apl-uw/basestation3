@@ -52,7 +52,7 @@ Either of the above methods has a draw back that <code>vis</code> is not notifie
 
 Basestation extensions are a flexible way to extend the basestation's functionality.  They can be called from a number places in the seaglider processing code and generally have enough context to allow plots to be generated based on what files have been updated during the current processing run.  Generally, the best place to run a per-dive plotting extension is from the <code>[dive]</code> section of <code>.extensions</code>, and the <code>[mission]</code> section for whole-mission plots.
 
-[SimplePlotExtension.py](../SimplePlotExtension.py?raw=true) is an example of such an extension that may be used as a starting point for per-dive plots.  See [.extensions](../sg000/.extensions?raw=true) for more details and references to other extensions included in the basestation code base.
+[SimplePlotExtension.py](../SimplePlotExtension.py) is an example of such an extension that may be used as a starting point for per-dive plots.  See [.extensions](../sg000/.extensions) for more details and references to other extensions included in the basestation code base.
 
 ### Using a basestation plotting function
 
