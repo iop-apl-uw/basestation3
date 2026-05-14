@@ -44,7 +44,6 @@ import bz2
 import collections
 import errno
 import functools
-import glob
 import importlib.util
 import io
 import math
@@ -965,7 +964,8 @@ def ensure_basename(basename):
         basename.replace(" ", "_").replace(",", "_").replace("/", "_").replace("&", "_")
     )
 
-#TODO - when pythnon version is greater then 3.11, go to this approach to report the version
+
+# TODO - when pythnon version is greater then 3.11, go to this approach to report the version
 # import tomllib
 # from pathlib import Path
 
@@ -980,6 +980,7 @@ def ensure_basename(basename):
 #           data.get("tool", {}).get("poetry", {}).get("version")
 
 # print(f"Local version: {version}")
+
 
 def check_versions(base_opts: BaseOpts.BaseOptions) -> None:
     """Checks and reports versions of various libraries"""
@@ -1292,7 +1293,7 @@ def nan_helper(y):
     return np.isnan(y), lambda z: z.nonzero()[0]
 
 
-def basestation_cmp_function(a, b):
+def basestation_cmp_function(a: pathlib.Path, b: pathlib.Path) -> Literal[-1, 0, 1]:
     """Compares two archived targets files, sorting in reverse chronilogical order (most recent one first)
     based on standard basesation back command file naming convention
 
@@ -1306,7 +1307,7 @@ def basestation_cmp_function(a, b):
         1 if a < b
     """
 
-    def find_dive_counter(file_name):
+    def find_dive_counter(file_name: pathlib.Path) -> int:
         """
         Input:
             filename of the form base.XXX or base.XXX.YYY where XXX and YYY are digits
@@ -1314,7 +1315,7 @@ def basestation_cmp_function(a, b):
             key_value = dive_num * 1000 + counter
 
         """
-        _, base = os.path.split(file_name)
+        base = file_name.name
         splits = base.split(".")
         if len(splits) >= 2 and splits[-1].isdigit() and splits[-2].isdigit():
             return (int(splits[-2]) * 1000) + int(splits[-1])
@@ -1335,7 +1336,9 @@ def basestation_cmp_function(a, b):
         return 0
 
 
-def find_recent_basestation_file(mission_dir, root_name, root_first=False):
+def find_recent_basestation_file(
+    mission_dir: pathlib.Path, root_name: str, root_first=False
+) -> pathlib.Path | None:
     """
     Finds the most recent input file, using the basestations back file naming convention
 
@@ -1348,9 +1351,9 @@ def find_recent_basestation_file(mission_dir, root_name, root_first=False):
         Fully qualified file name, or None
     """
 
-    def find_root(mission_dir, root_name):
-        file_name = os.path.join(mission_dir, root_name)
-        if os.path.exists(file_name):
+    def find_root(mission_dir: pathlib.Path, root_name: str) -> pathlib.Path:
+        file_name = mission_dir / root_name
+        if file_name.exists():
             return file_name
         else:
             return None
@@ -1362,7 +1365,7 @@ def find_recent_basestation_file(mission_dir, root_name, root_first=False):
 
     files = []
     for glob_expr in ("%s.[0-9]*" % root_name, "%s.[0-9]*.[0-9]*" % root_name):
-        for match in glob.glob(os.path.join(mission_dir, glob_expr)):
+        for match in mission_dir.glob(glob_expr):
             files.append(match)
 
     if files:

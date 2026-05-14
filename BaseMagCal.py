@@ -36,7 +36,7 @@ from typing import TextIO
 import numpy as np
 import numpy.typing as npt
 
-from BaseLog import log_error, log_info, log_warning
+from BaseLog import log_error, log_warning
 
 
 # TODO - multiple calibrations not handled
@@ -88,19 +88,22 @@ def readNewTCM2Matfile(stream: TextIO, keys: list[str]) -> dict[str, str]:
 
 
 def parseNewMagCalFile(
-    magcal_filename: str,
+    magcal_stream: TextIO,
 ) -> (
-    tuple[npt.ArrayLike, Callable[[npt.ArrayLike], npt.ArrayLike], str]
+    tuple[
+        npt.NDArray[np.float64],
+        Callable[[npt.NDArray[np.float64]], npt.NDArray[np.float64]],
+        str,
+    ]
     | tuple[None, None, None]
 ):
     try:
-        with open(magcal_filename, "r") as fi:
-            mag_d = readNewTCM2Matfile(
-                fi,
-                ["hard0", "soft0"],
-            )
-            fi.seek(0)
-            contents = fi.read()
+        mag_d = readNewTCM2Matfile(
+            magcal_stream,
+            ["hard0", "soft0"],
+        )
+        magcal_stream.seek(0)
+        contents = magcal_stream.read()
 
         if not any(ii in mag_d for ii in ["hard0", "soft0"]):
             return (None, None, None)
@@ -126,7 +129,7 @@ def parseNewMagCalFile(
                 log_error(f"Could not process hard0:{mag_d['hard0']} ({e})")
                 return (None, None, None)
     except Exception as e:
-        log_warning(f"Failed to process {magcal_filename} ({e})")
+        log_warning(f"Failed to process magcal contents ({e})")
         return (None, None, None)
     else:
         # SG closure.
@@ -160,52 +163,54 @@ def parseMagCal(contents):
     abc = np.zeros(9)
     pqr = np.zeros(3)
     try:
+        if len(lines) == 5 and len(lines[4]) > 2 and lines[4] != "'":
+            log_warning("Old DG tcm2mat files not supported")
         for i in range(9):
             abc[i] = float(abc_pqr[i])
         for i in range(3):
             pqr[i] = float(abc_pqr[i + 9])
         return (abc, pqr)
         # Create the stock closure that ignores pitchAD values
-        pqrc = lambda p: pqr  # noqa: E731
+        # pqrc = lambda p: pqr  # noqa: E731
 
-        # DG correction has five lines exactly.  SG with second compass
-        # has a second compass definition right after the first
-        if len(lines) == 5 and len(lines[4]) > 2 and lines[4] != "'":
-            log_info("Assuming DG compass cal file")
-            try:
-                dg = lines[4].split()
-                if len(dg) != 10:
-                    log_error(
-                        "Could not parse hard-iron scale coefficients in '%s'"
-                        % lines[4]
-                    )
-                    # fall through and use default closure
-                else:
-                    pitch_ref = float(dg[0])
-                    Pc = np.zeros(3)
-                    for i in range(3):
-                        Pc[i] = float(dg[i + 1])
-                    Qc = np.zeros(3)
-                    for i in range(3):
-                        Qc[i] = float(dg[i + 1 + 3])
-                    Rc = np.zeros(3)
-                    for i in range(3):
-                        Rc[i] = float(dg[i + 1 + 3 + 3])
-                    cP = np.polyval(Pc, pitch_ref)
-                    cQ = np.polyval(Qc, pitch_ref)
-                    cR = np.polyval(Rc, pitch_ref)
-                    pqrc = lambda p: (  # noqa: E731
-                        np.polyval(Pc, p) - cP + pqr[0],
-                        np.polyval(Qc, p) - cQ + pqr[1],
-                        np.polyval(Rc, p) - cR + pqr[2],
-                    )
-            except Exception:
-                log_error(
-                    "Could not parse hard-iron scale coefficients in '%s'" % lines[4],
-                    "exc",
-                )
-                # fall through - use the default closure
-        return (abc, pqrc)
+        # # DG correction has five lines exactly.  SG with second compass
+        # # has a second compass definition right after the first
+        # if len(lines) == 5 and len(lines[4]) > 2 and lines[4] != "'":
+        #     log_info("Assuming DG compass cal file")
+        #     try:
+        #         dg = lines[4].split()
+        #         if len(dg) != 10:
+        #             log_error(
+        #                 "Could not parse hard-iron scale coefficients in '%s'"
+        #                 % lines[4]
+        #             )
+        #             # fall through and use default closure
+        #         else:
+        #             pitch_ref = float(dg[0])
+        #             Pc = np.zeros(3)
+        #             for i in range(3):
+        #                 Pc[i] = float(dg[i + 1])
+        #             Qc = np.zeros(3)
+        #             for i in range(3):
+        #                 Qc[i] = float(dg[i + 1 + 3])
+        #             Rc = np.zeros(3)
+        #             for i in range(3):
+        #                 Rc[i] = float(dg[i + 1 + 3 + 3])
+        #             cP = np.polyval(Pc, pitch_ref)
+        #             cQ = np.polyval(Qc, pitch_ref)
+        #             cR = np.polyval(Rc, pitch_ref)
+        #             pqrc = lambda p: (  # noqa: E731
+        #                 np.polyval(Pc, p) - cP + pqr[0],
+        #                 np.polyval(Qc, p) - cQ + pqr[1],
+        #                 np.polyval(Rc, p) - cR + pqr[2],
+        #             )
+        #     except Exception:
+        #         log_error(
+        #             "Could not parse hard-iron scale coefficients in '%s'" % lines[4],
+        #             "exc",
+        #         )
+        #         # fall through - use the default closure
+        # return (abc, pqrc)
     except Exception:
         log_error("Could not parse %s as abc/pqr line" % abc_pqr)
         return (None, None)

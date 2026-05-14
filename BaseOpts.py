@@ -612,20 +612,20 @@ global_options_dict: dict[str, options_t] = {
             "Reprocess",
         },
         ("--magcalfile",),
-        FullPath,
+        FullPathlib,
         {
             "help": "compass cal file or search to use most recent version of tcm2mat.cal",
-            "action": FullPathAction,
+            "action": FullPathlibAction,
         },
     ),
     "auxmagcalfile": options_t(
         "",
         {"Base", "MakeDiveProfiles", "Reprocess"},
         ("--auxmagcalfile",),
-        FullPath,
+        FullPathlib,
         {
             "help": "compass cal file or search to use most recent version of scicon.tcm",
-            "action": FullPathAction,
+            "action": FullPathlibAction,
         },
     ),
     "allow_insufficient_dives": options_t(

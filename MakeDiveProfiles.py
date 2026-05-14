@@ -38,6 +38,7 @@ import contextlib
 import copy
 import cProfile
 import glob
+import io
 import math
 import os
 import pathlib
@@ -51,6 +52,7 @@ import traceback
 import gsw
 import netCDF4
 import numpy as np
+import numpy.typing as npt
 import scipy.integrate
 import seawater
 
@@ -1363,20 +1365,20 @@ def compute_kistler_pressure(kistler_cnf, log_f, counts_v, temp_v):
 
 
 def correct_heading(
-    compass_name,
-    globals_d,
-    magcal_filename,
-    magcal_variable,
-    magcalfile_root_name,
-    mission_dir,
-    Mx,
-    My,
-    Mz,
-    head,
-    pitch,
-    roll,
-    pitchAD,
-):
+    compass_name: str,
+    globals_d: dict,
+    magcal_filename: pathlib.Path,
+    magcal_variable: str,
+    magcalfile_root_name: str,
+    mission_dir: pathlib.Path,
+    Mx: npt.NDArray[np.float64],
+    My: npt.NDArray[np.float64],
+    Mz: npt.NDArray[np.float64],
+    head: npt.NDArray[np.float64],
+    pitch: npt.NDArray[np.float64],
+    roll: npt.NDArray[np.float64],
+    pitchAD: npt.NDArray[np.float64] | None,
+) -> npt.NDArray[np.float64] | None:
     """corrects compass heading based on mag data
 
     Input:
@@ -1403,20 +1405,29 @@ def correct_heading(
     except KeyError:
         pass
     else:
-        (abc, pqrc) = BaseMagCal.parseMagCal(contents)
+        # Try for new contents
+        (abc, pqrc, _) = BaseMagCal.parseNewMagCalFile(io.StringIO(contents))
         if abc is None or pqrc is None:
-            log_warning(
-                "Previously stored contents not parseable - ignoring", alert="MAGCAL"
-            )  # parseMagCal already complained about parsing
-            globals_d[magcal_variable] = None
-            contents = abc = pqrc = None
+            (abc, pqrc) = BaseMagCal.parseMagCal(contents)
+            if abc is None or pqrc is None:
+                log_warning(
+                    "Previously stored contents not parseable - ignoring",
+                    alert="MAGCAL",
+                )  # parseMagCal already complained about parsing
+                globals_d[magcal_variable] = None
+                contents = abc = pqrc = None
 
     # Search for a recently uploaded version?
 
-    if magcal_filename and magcal_filename.lower() == "search":
-        magcal_filename = Utils.find_recent_basestation_file(
+    if magcal_filename and magcal_filename.name.lower() == "search":
+        tmp = Utils.find_recent_basestation_file(
             mission_dir, magcalfile_root_name, True
         )
+        if tmp is None:
+            log_warning("No cal file found - not correcting heading")
+            return None
+        else:
+            magcal_filename = tmp
 
     # correction requested - override
     if magcal_filename:  # they want to supply or override any contents
@@ -1425,9 +1436,16 @@ def correct_heading(
                 "MagCalFile %s does not exist" % magcal_filename, alert="MAGCAL"
             )
         else:
-            (new_abc, new_pqrc, new_contents) = BaseMagCal.parseNewMagCalFile(
-                magcal_filename
-            )
+            new_abc = new_pqrc = new_contents = None
+            try:
+                with open(magcal_filename, "r") as magcal_stream:
+                    (new_abc, new_pqrc, new_contents) = BaseMagCal.parseNewMagCalFile(
+                        magcal_stream
+                    )
+            except Exception as exception:
+                # Issue the error and try the old format
+                log_error(f"Problems processing {magcal_filename} ({exception})")
+
             if (
                 new_abc is not None
                 and new_pqrc is not None
@@ -1461,7 +1479,7 @@ def correct_heading(
         log_warning("Not correcting %s heading" % compass_name)
         return None
 
-    np_pts = len(Mx)
+    np_pts = Mx.size
 
     # In case this is a DG, get the pitchAD info
     new_head = np.zeros(np_pts)
@@ -7971,7 +7989,7 @@ def collect_nc_perdive_files(base_opts):
     return dive_nc_file_names
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     """Command line driver for creating per-dive netCDF files
 
     Returns:
@@ -7987,7 +8005,9 @@ def main():
         additional_arguments={
             "basename": BaseOptsType.options_t(
                 None,
-                ("MakeDiveProfiles",),
+                {
+                    "MakeDiveProfiles",
+                },
                 ("basename",),
                 str,
                 {
@@ -7997,6 +8017,7 @@ def main():
                 },
             ),
         },
+        cmdline_args=cmdline_args,
     )
 
     BaseLogger(base_opts)  # initializes BaseLog
@@ -8080,6 +8101,13 @@ def main():
         instrument_id = int(base_opts.instrument_id)
     if instrument_id == 0:
         log_warning("Unable to determine instrument id; assuming 0")
+
+    # These functions reset large blocks of global variables being used in other modules that
+    # assume an initial value on first load, then are updated throughout the run.  The call
+    # here sets back to the initial state to handle multiple runs under pytest
+    Sensors.set_globals()
+    BaseNetCDF.set_globals()
+    FlightModel.set_globals()
 
     # Sensor extensions
     (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
