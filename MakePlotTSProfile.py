@@ -33,7 +33,6 @@
 import os
 import pathlib
 import pdb
-import stat
 import sys
 import time
 import traceback
@@ -45,6 +44,7 @@ import xarray as xr
 
 import BaseOpts
 import BaseOptsType
+import PlotUtils
 import PlotUtilsPlotly
 import Utils
 from BaseLog import (
@@ -79,7 +79,7 @@ def plot_ts_profile(profile_file, dive_num, base_opts):
     )
 
 
-def plot_ncdf_profile(ncf_file, dive_num, base_opts):
+def plot_ncdf_profile(ncf_file, base_opts):
     """Plot a text version of a reduced TS profile"""
 
     ds = xr.open_dataset(ncf_file)
@@ -224,7 +224,8 @@ def plot_ts_profile_core(bin_width, depth, temperature, salinity, dive_num, base
 
     (Sg, Tg) = np.meshgrid(sgrid, tgrid)
     Pg = np.zeros((len(Sg), len(Tg)))
-    sigma_grid = seawater.dens(Sg, Tg, Pg) - 1000.0
+    with np.errstate(invalid="ignore"):
+        sigma_grid = seawater.dens(Sg, Tg, Pg) - 1000.0
 
     # What a hack - this intermediate step is needed for plot.ly
     tg = Tg[:, 0][:]
@@ -250,10 +251,13 @@ def plot_ts_profile_core(bin_width, depth, temperature, salinity, dive_num, base
     cmin = np.nanmin(depth)
     cmax = np.nanmax(depth)
 
-    sigma_dive = (
-        seawater.dens(salinity_dive, temperature_dive, np.zeros(len(temperature_dive)))
-        - 1000.0
-    )
+    with np.errstate(invalid="ignore"):
+        sigma_dive = (
+            seawater.dens(
+                salinity_dive, temperature_dive, np.zeros(len(temperature_dive))
+            )
+            - 1000.0
+        )
     # sigma_climb = (
     #     seawater.dens(
     #         salinity_climb, temperature_climb, np.zeros(len(temperature_climb))
@@ -380,6 +384,7 @@ def load_additional_arguments() -> tuple[list[str], dict, dict]:
             "save_png",
             "save_jpg",
             "save_webp",
+            "thumbnail_webp",
             "compress_div",
             "full_html",
             "plot_directory",
@@ -425,25 +430,30 @@ def main(
             add_to_arguments=add_to_arguments,
             additional_arguments={
                 "profile_filenames": BaseOptsType.options_t(
-                    None,
+                    [],
                     {
                         "MakePlotTSProfile",
                     },
                     ("profile_filenames",),
-                    BaseOpts.FullPath,
+                    BaseOpts.FullPathlib,
                     {
                         "help": "Name of TS profile file(s) or network cdf (.ncdf) files to plot",
-                        "nargs": "+",
-                        "action": BaseOpts.FullPathAction,
+                        "nargs": "*",
+                        "action": BaseOpts.FullPathlibAction,
                     },
                 ),
             },
+            cmdline_args=cmdline_args,
         )
 
     BaseLogger(base_opts)  # initializes BaseLog
 
     global DEBUG_PDB
     DEBUG_PDB = base_opts.debug_pdb
+
+    if not base_opts.mission_dir:
+        log_error("--mission_dir must be set")
+        return 1
 
     log_info(
         "Started processing "
@@ -456,97 +466,70 @@ def main(
     profile_file_names = []
     ncdf_file_names = []
 
-    if hasattr(base_opts, "profile_filenames") and base_opts.profile_filenames:
-        processed_other_files = base_opts.profile_filenames
-
-    if processed_other_files is not None:
-        for ff in processed_other_files:
-            if ff.endswith(".npro"):
-                # While the glider can produce reduced profile up or down,
-                # only plot the downcast.
-                if os.path.split(ff)[1][10:11] == "a":
-                    profile_file_names.append(ff)
-            elif ff.endswith(".ncdf"):
-                ncdf_file_names.append(ff)
-    else:
-        log_info("No profiles specified to plot")
-        return 0
-
-    if profile_file_names or ncdf_file_names:
-        if profile_file_names:
-            # These files come from the scicon profile sub-directory
-            pd = os.path.split(os.path.split(profile_file_names[0])[0])[0]
+    if processed_other_files is None:
+        if hasattr(base_opts, "profile_filenames") and base_opts.profile_filenames:
+            processed_other_files = base_opts.profile_filenames
         else:
-            pd = os.path.split(ncdf_file_names[0])[0]
-        pd = os.path.join(pd, "plots")
+            processed_other_files = []
+            for m in base_opts.mission_dir.glob("p???????.ncdf"):
+                processed_other_files.append(m)
+            for m in base_opts.mission_dir.glob("p???????.npro_ct.dat"):
+                processed_other_files.append(m)
 
-        if not base_opts.plot_directory:
-            base_opts.plot_directory = pd
-        if not os.path.exists(base_opts.plot_directory):
-            try:
-                os.mkdir(base_opts.plot_directory)
-            except Exception:
-                log_error(f"Could not create {base_opts.plot_directory}", "exc")
-                log_info("Bailing out")
-                return 1
+    if PlotUtils.setup_plot_directory(base_opts):
+        log_error("Setup of plot direectory failed")
+        return 1
 
-        if not os.path.exists(base_opts.plot_directory):
-            try:
-                os.mkdir(base_opts.plot_directory)
-                # Ensure that MoveData can move it as pilot if not run as the glider account
-                os.chmod(
-                    base_opts.plot_directory,
-                    stat.S_IRUSR
-                    | stat.S_IWUSR
-                    | stat.S_IXUSR
-                    | stat.S_IRGRP
-                    | stat.S_IXGRP
-                    | stat.S_IWGRP
-                    | stat.S_IROTH
-                    | stat.S_IXOTH,
-                )
-            except Exception:
-                log_error(f"Could not create {base_opts.plot_directory}", "exc")
-                log_info("Bailing out")
-                return 1
+    for ff in processed_other_files:
+        if ff.suffix == ".npro" or (
+            len(ff.suffixes) == 2 and ff.suffixes[0].startswith(".npro_ct")
+        ):
+            # While the glider can produce reduced profile up or down,
+            # only plot the downcast.
+            profile_file_names.append(ff)
+        elif ff.suffix == ".ncdf":
+            ncdf_file_names.append(ff)
 
-        for profile_file_name in profile_file_names:
-            log_info(f"Processing {profile_file_name}")
-            dive_num = int(os.path.split(profile_file_name)[1][6:10])
-            try:
-                plots = plot_ts_profile(profile_file_name, dive_num, base_opts)
-                if processed_other_files is not None and plots is not None:
-                    for p in plots:
-                        processed_other_files.append(p)
+    for profile_file_name in profile_file_names:
+        log_info(f"Processing {profile_file_name}")
+        try:
+            dive_num = int(profile_file_name.name[4:8])
+        except ValueError:
+            continue
+        try:
+            plots = plot_ts_profile(profile_file_name, dive_num, base_opts)
+            if processed_other_files is not None and plots is not None:
+                for p in plots:
+                    processed_other_files.append(p)
 
-            except KeyboardInterrupt:
-                log_error("Interupted by operator")
-                break
-            except Exception:
-                log_error(
-                    "Error in plotting vertical velocity for %s - skipping"
-                    % profile_file_name,
-                    "exc",
-                )
+        except KeyboardInterrupt:
+            log_error("Interupted by operator")
+            break
+        except Exception:
+            log_error(
+                "Error in plotting vertical velocity for %s - skipping"
+                % profile_file_name,
+                "exc",
+            )
 
-        for ncdf_file_name in ncdf_file_names:
-            log_info(f"Processing {ncdf_file_name}")
-            # dive_num = int(os.path.split(ncdf_file_name)[1][4:8])
-            try:
-                plots = plot_ncdf_profile(ncdf_file_name, None, base_opts)
-                if processed_other_files is not None and plots is not None:
-                    for p in plots:
-                        processed_other_files.append(p)
+    for ncdf_file_name in ncdf_file_names:
+        log_info(f"Processing {ncdf_file_name}")
+        # dive_num = int(os.path.split(ncdf_file_name)[1][4:8])
+        try:
+            plots = plot_ncdf_profile(ncdf_file_name, base_opts)
+            if processed_other_files is not None and plots is not None:
+                for p in plots:
+                    processed_other_files.append(p)
 
-            except KeyboardInterrupt:
-                log_error("Interupted by operator")
-                break
-            except Exception:
-                log_error(
-                    "Error in plotting vertical velocity for %s - skipping"
-                    % ncdf_file_name,
-                    "exc",
-                )
+        except KeyboardInterrupt:
+            log_error("Interupted by operator")
+            break
+        except Exception:
+            log_error(
+                "Error in plotting vertical velocity for %s - skipping"
+                % ncdf_file_name,
+                "exc",
+            )
 
     log_info(
         "Finished processing "
