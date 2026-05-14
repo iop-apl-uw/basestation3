@@ -48,3 +48,6 @@ act:
 actlinux:
 	-act -j check --container-daemon-socket -  push
 
+
+doc:
+	-uv run mkdocs build

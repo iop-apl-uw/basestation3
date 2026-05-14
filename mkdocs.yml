@@ -1,0 +1,15 @@
+site_name: Seaglider Basestation
+theme:
+  name: "material"
+
+plugins:
+  - mkdocstrings
+
+markdown_extensions:
+  - markdown_include.include:
+      base_path: mkdocs
+      
+nav:
+  - index.md
+  - reference.md
+  

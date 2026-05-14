@@ -82,8 +82,10 @@ ci = [
 dev = [
     ## Documentation (fill in)
     "mkdocs",
+    "markdown-include",
     "mkdocstrings[python]",
     "mkdocs-material",
+    ## Development
     "ipython",
     "flynt",
     "notebook==7.4.4",
