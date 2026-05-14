@@ -145,9 +145,7 @@ def decompress(input_file_name, output_file_or_file_name):
         log_error("Could not open %s (%s)" % (input_file_name, exception.args))
         return 1
 
-    if isinstance(output_file_or_file_name, str) or isinstance(
-        output_file_or_file_name, pathlib.Path
-    ):
+    if isinstance(output_file_or_file_name, (str, pathlib.Path)):
         try:
             output_file = open(output_file_or_file_name, "wb")
         except OSError as exception:

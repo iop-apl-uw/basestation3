@@ -133,7 +133,7 @@ def plotmissionsingle(func):
     return func
 
 
-from . import (  # noqa : E402, F401
+from . import (  # noqa : E402, F401, I001
     # Per-dive plotting routines
     DiveCoda,
     DiveCompassCompare,

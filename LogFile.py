@@ -658,7 +658,7 @@ def parse_log_file(in_filename, issue_warn=False):
         ##                   1       2          3       4    5        6        7        8          9         10       11    12      13      14     15       16      17
         # gc_header_parts = 'st_secs,pitch_ctl,vbd_ctl,depth,ob_vertv,data_pts,end_secs,pitch_secs,roll_secs,vbd_secs,vbd_i,gcphase' # subset pre v65
         # gc_header_parts = 'st_secs,pitch_ctl,vbd_ctl,depth,ob_vertv,data_pts,end_secs,pitch_secs,roll_secs,vbd_secs,vbd_i,gcphase,pitch_i,roll_i,pitch_ad,roll_ad,vbd_ad'.split(',');
-        gc_header_parts = "st_secs,pitch_ctl,vbd_ctl,ob_vertv,data_pts,end_secs,pitch_secs,roll_secs,vbd_secs,vbd_i,gcphase,pitch_i,roll_i,pitch_ad,roll_ad,vbd_ad".split(
+        gc_header_parts = "st_secs,pitch_ctl,vbd_ctl,ob_vertv,data_pts,end_secs,pitch_secs,roll_secs,vbd_secs,vbd_i,gcphase,pitch_i,roll_i,pitch_ad,roll_ad,vbd_ad".split(  # noqa: SIM905
             ","
         )
 

@@ -73,7 +73,8 @@ ci = [
    "pytest==8.3.3",
    "pytest-cov==6.0.0",
    ## Linting
-   "ruff==0.7.2",
+   #"ruff==0.7.2",
+   "ruff==0.15.13",
    ## Static Typing
    "mypy==1.13.0",
    "types-PyYAML",
