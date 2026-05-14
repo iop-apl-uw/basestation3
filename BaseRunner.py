@@ -268,7 +268,7 @@ def main():
             if not (
                 os.path.exists(run_file)
                 and stat.S_ISREG(os.stat(run_file).st_mode)
-                and run_file.endswith(".run")
+                and str(run_file).endswith(".run")
             ):
                 continue
             # Removal of the run file signals the runner it is okay to proceed
