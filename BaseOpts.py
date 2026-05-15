@@ -1088,10 +1088,10 @@ global_options_dict: dict[str, options_t] = {
         "",
         {"MoveData", "MakeDiveProfiles", "Reprocess"},
         ("--target_dir", "-t"),
-        FullPath,
+        FullPathlib,
         {
             "help": "target directory, used by MoveData.py",
-            "action": FullPathAction,
+            "action": FullPathlibAction,
             "required": ("MoveData",),
         },
     ),

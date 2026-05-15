@@ -58,7 +58,9 @@ from BaseLog import (
 from Globals import known_files
 
 
-def moveFiles(file_re_str, src: pathlib.Path, dest, copy=False):
+def moveFiles(
+    file_re_str: str, src: pathlib.Path, dest: pathlib.Path, copy=False
+) -> int:
     """
     Moves (or copies) all local files matching file_re_str to dest directory.
 

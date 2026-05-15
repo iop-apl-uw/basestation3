@@ -161,8 +161,8 @@ def find_dive_logger_eng_files(
     dive_list: list[pathlib.Path],
     base_opts: BaseOptions,
     instrument_id: int,
-    init_dict,
-):
+    init_dict: dict,
+) -> dict[pathlib.Path, dict]:
     """Given a list of dive files (basenames, log or eng files) to be processed
     Returns a dict, keyed to each input dive file, with list of any associated logger files,
     by type and in their proper order, along with their appropriate reader function
@@ -194,12 +194,20 @@ def find_dive_logger_eng_files(
             # look for hints that there may be *any* logger files present at all for this pair of l and c
             # If so, add the pattern, which tells to the dive_list mapping below
             # that it should spend the time to glob and get the individual files in different locations
-            g1 = glob.glob(
-                r"%s/p%s%03d*%s[_\.]*eng"
-                % (base_opts.mission_dir, l_prefix, instrument_id, c)
+            # g1 = glob.glob(
+            #     r"%s/p%s%03d*%s[_\.]*eng"
+            #     % (base_opts.mission_dir, l_prefix, instrument_id, c)
+            # )  # any direct logger files for any dive?
+            # g2 = glob.glob(
+            #     f"{base_opts.mission_dir}/{l_prefix}*{c}"
+            # )  # any logger subdirs for any dive?
+            g1 = list(
+                base_opts.mission_dir.glob(
+                    r"p%s%03d*%s[_\.]*eng" % (l_prefix, instrument_id, c)
+                )
             )  # any direct logger files for any dive?
-            g2 = glob.glob(
-                f"{base_opts.mission_dir}/{l_prefix}*{c}"
+            g2 = list(
+                base_opts.mission_dir.glob(f"{l_prefix}*{c}")
             )  # any logger subdirs for any dive?
             if len(g1) + len(g2) > 0:
                 logger_basename_pattern_d[l_prefix + c] = [
@@ -219,8 +227,9 @@ def find_dive_logger_eng_files(
     # A dictionary mapping dive base names to collections of logger eng files
     logger_eng_files = {}
     for dive_path in dive_list:
-        _, tail = os.path.split(dive_path)
-        d = int(tail[4:8])  # dive number
+        # _, tail = os.path.split(dive_path)
+        # d = int(tail[4:8])  # dive number
+        d = int(dive_path.name[4:8])
         # Now add on all possible contributions from loggers and add to the list
         # along with the eng file reader
         logger_eng_files[dive_path] = []
@@ -243,16 +252,14 @@ def find_dive_logger_eng_files(
                 # /home/seagliders/sg099/psc0990022a_depth_depth.eng
                 if ng1:
                     globs.append(
-                        r"%s/p%s%03d%04d%s[_\.]*eng"
-                        % (base_opts.mission_dir, l_prefix, instrument_id, d, c)
+                        r"p%s%03d%04d%s[_\.]*eng" % (l_prefix, instrument_id, d, c)
                     )
                 # e.g., <mission_dir/>scDDDDa/pscGGGDDDDa[_.]*eng (for different sensors)
                 # /home/seagliders/sg099/sc0022a/psc0990022a_depth_depth.eng
                 if ng2:
                     globs.append(
-                        r"%s/%s%04d%s/p%s%03d%04d%s[_\.]*eng"
+                        r"%s%04d%s/p%s%03d%04d%s[_\.]*eng"
                         % (
-                            base_opts.mission_dir,
                             l_prefix,
                             d,
                             c,
@@ -263,7 +270,7 @@ def find_dive_logger_eng_files(
                         )
                     )
                 for glob_expr in globs:
-                    for logger_eng_filename in glob.glob(glob_expr):
+                    for logger_eng_filename in base_opts.mission_dir.glob(glob_expr):
                         # log_info("Considering %s" % logger_eng_filename)
                         _, base = os.path.split(logger_eng_filename)
                         base, _ = os.path.splitext(base)  # remove extension

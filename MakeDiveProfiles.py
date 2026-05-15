@@ -37,7 +37,6 @@
 import contextlib
 import copy
 import cProfile
-import glob
 import io
 import math
 import os
@@ -5195,8 +5194,10 @@ def make_dive_profile(
 
         apogee_climb_pump_i_v = list(
             filter(
-                lambda i: ctd_elapsed_time_s_v[i] >= apogee_pump_start_time
-                and ctd_elapsed_time_s_v[i] <= apogee_climb_pump_end_time,
+                lambda i: (
+                    ctd_elapsed_time_s_v[i] >= apogee_pump_start_time
+                    and ctd_elapsed_time_s_v[i] <= apogee_climb_pump_end_time
+                ),
                 range(ctd_np),
             )
         )
@@ -5207,8 +5208,10 @@ def make_dive_profile(
         try:
             loiter_i_v = list(
                 filter(
-                    lambda i: ctd_elapsed_time_s_v[i] >= apogee_pump_vbd_end_time
-                    and ctd_elapsed_time_s_v[i] <= start_of_climb_time,
+                    lambda i: (
+                        ctd_elapsed_time_s_v[i] >= apogee_pump_vbd_end_time
+                        and ctd_elapsed_time_s_v[i] <= start_of_climb_time
+                    ),
                     range(ctd_np),
                 )
             )
@@ -6521,8 +6524,10 @@ def make_dive_profile(
             )  # epoch_secs
             ed_flare_i = list(
                 filter(
-                    lambda t_i: ctd_epoch_time_s_v[t_i] >= end_flare_s
-                    and speed_qc_v[t_i] == QC.QC_GOOD,
+                    lambda t_i: (
+                        ctd_epoch_time_s_v[t_i] >= end_flare_s
+                        and speed_qc_v[t_i] == QC.QC_GOOD
+                    ),
                     range(ctd_np),
                 )
             )
@@ -6541,8 +6546,10 @@ def make_dive_profile(
                 )
                 st_apo_i = list(
                     filter(
-                        lambda t_i: ctd_epoch_time_s_v[t_i] <= apo_pump_st_time
-                        and speed_qc_v[t_i] == QC.QC_GOOD,
+                        lambda t_i: (
+                            ctd_epoch_time_s_v[t_i] <= apo_pump_st_time
+                            and speed_qc_v[t_i] == QC.QC_GOOD
+                        ),
                         range(ctd_np),
                     )
                 )
@@ -6564,9 +6571,10 @@ def make_dive_profile(
                 # ed_climb_pump_i = np.where(ctd_epoch_time_s_v >= gc_end_secs[climb_gc_i] and speed_qc_v == QC.QC_GOOD)[0][0]
                 ed_climb_pump_i = list(
                     filter(
-                        lambda t_i: ctd_epoch_time_s_v[t_i]
-                        >= gc_end_secs[climb_pump_gc_i]
-                        and speed_qc_v[t_i] == QC.QC_GOOD,
+                        lambda t_i: (
+                            ctd_epoch_time_s_v[t_i] >= gc_end_secs[climb_pump_gc_i]
+                            and speed_qc_v[t_i] == QC.QC_GOOD
+                        ),
                         range(ctd_np),
                     )
                 )
@@ -8042,18 +8050,20 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     )
 
     if base_opts.mission_dir:
-        base_path = base_opts.mission_dir
+        base_path: pathlib.Path = base_opts.mission_dir
     elif base_opts.basename:
         # they gave us a basename, e.g., p5400003 so expand it assuming current (code?) directory
         # make it look like it came via --mission_dir
-        base_path = base_opts.basename
+
+        pdb.set_trace()  # Check that the mission_dir set is correct
+        base_path: pathlib.Path = base_opts.basename
         base_opts.mission_dir = pathlib.Path(base_opts.basename)
     else:
         log_error("Neither mission_dir or basename provided")
         return 1
 
-    dive_list = []
-    if os.path.isdir(base_path):
+    dive_list: list[pathlib.Path] = []
+    if base_path.is_dir():
         log_info("Making profiles for all dives in %s" % base_path)
         # Include only valid dive files
         glob_expr = (
@@ -8063,11 +8073,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             # "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc.gz"
         )
         for g in glob_expr:
-            for match in glob.glob(os.path.join(base_path, g)):
+            for match in base_path.glob(g):
                 log_debug("Found dive file %s" % match)
                 # match = match.replace('.nc.gz', '.nc')
-                head, _ = os.path.splitext(os.path.abspath(match))
-                dive_list.append(head)
+                # head, _ = os.path.splitext(os.path.abspath(match))
+                # dive_list.append(head)
+                dive_list.append(pathlib.Path(match.parent) / match.stem)
         dive_list = sorted(Utils.unique(dive_list))
     else:
         # We were probably given <mission_dir>/pXXXDDDD to work on one dive
@@ -8123,42 +8134,46 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     # Initialze the netCDF tables
     BaseNetCDF.init_tables(init_dict)
 
+    pdb.set_trace()
     # Find any associated logger eng files for each dive in dive_list
     logger_eng_files = FileMgr.find_dive_logger_eng_files(
         dive_list, base_opts, instrument_id, init_dict
     )
 
-    dives_processed = []
-    dives_not_processed = []
+    dives_processed: list[int] = []
+    dives_not_processed: list[int] = []
     # Now, create the profiles
     for dive_path in dive_list:
         log_debug("Processing %s" % dive_path)
-        head, _ = os.path.splitext(os.path.abspath(dive_path))
+        # head, _ = os.path.splitext(os.path.abspath(dive_path))
+        head = pathlib.Path(dive_path.parent) / dive_path.stem
         if base_opts.target_dir:
-            _, base = os.path.split(os.path.abspath(dive_path))
-            outhead = os.path.join(base_opts.target_dir, base)
+            # _, base = os.path.split(os.path.abspath(dive_path))
+            # outhead = os.path.join(base_opts.target_dir, base)
+            outhead = base_opts.target_dir / dive_path.name
         else:
             outhead = head
 
         log_info("Head = %s" % head)
 
-        eng_file_name = head + ".eng"
-        log_file_name = head + ".log"
+        eng_file_name = head.with_suffix(".eng")
+        log_file_name = head.with_suffix(".log")
 
         base_opts.make_dive_profiles = True
 
         if base_opts.make_dive_profiles:
-            nc_dive_file_name = outhead + ".nc"
+            nc_dive_file_name = outhead.with_suffix(".nc")
         else:
             nc_dive_file_name = None
 
-        sg_calib_file_name, _ = os.path.split(os.path.abspath(dive_path))
-        sg_calib_file_name = os.path.join(sg_calib_file_name, "sg_calib_constants.m")
+        sg_calib_file_name = dive_path.parent / "sg_calib_constants.m"
         dive_num = FileMgr.get_dive(eng_file_name)
 
         log_info("Dive number = %d" % dive_num)
 
         log_debug("logger_eng_files = %s" % logger_eng_files[dive_path])
+
+        pdb.set_trace()
 
         try:
             (temp_ret_val, _) = make_dive_profile(
