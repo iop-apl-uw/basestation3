@@ -28,50 +28,49 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import pathlib
+import time
 
 import pytest
 import testutils
 
-import MakePlotTSProfile
+import MakeDiveProfiles
 
-dive_90 = [
-    "dv0090_reduced_ts.webp",
-    "dv0090_reduced_ts.div",
-    "dv0090_reduced_ctd.webp",
-    "dv0090_reduced_ctd.div",
-]
-dive_81 = [
-    "dv0081_reduced_ts.webp",
-    "dv0081_reduced_ts.div",
-    "dv0081_reduced_ctd.webp",
-    "dv0081_reduced_ctd.div",
-]
-
-test_cases: list[tuple[str, list[str]]] = [
-    ("p2560090.ncdf", dive_90),
-    ("p2560081.npro_ct.dat", dive_81),
-    ("", dive_81 + dive_90),
-]
+test_cases = (
+    ("", ["Files up-to-date for dive:2; nothing to do"], [""]),
+    (
+        "p2720002.nc",
+        ["Could not parse p2720002.nc (invalid literal for int() with base 10"],
+        [""],
+    ),
+    ("--force", ["Dives processed = [2]", "Loading data from original files"], [""]),
+    ("2", ["Loading data from netCDF files"], [""]),
+)
 
 
 @pytest.mark.parametrize(
-    "filename,expected_files",
+    "additional_options,required_msgs,allowed_msgs",
     test_cases,
 )
-def test_makeplottsprofile(caplog, filename, expected_files):
-    data_dir = pathlib.Path("testdata/sg256_AMOS_Aug24_TSPlot")
+def test_simpleplotextensionbase(
+    caplog, additional_options, required_msgs, allowed_msgs
+):
+    data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_makediveprofiles")
     mission_dir = data_dir.joinpath("mission_dir")
-    allowed_msgs = [""]
-    filename = filename if filename else ""
+
+    def update_ncdf_timestamp(mission_dir: pathlib.Path) -> None:
+        time.sleep(1)
+        (mission_dir / "p2720002.nc").touch()
 
     testutils.run_mission(
         data_dir,
         mission_dir,
-        MakePlotTSProfile.main,
-        f"--verbose {filename}  --mission_dir {mission_dir} ".split(),
+        MakeDiveProfiles.main,
+        f"--verbose --mission_dir {mission_dir} {additional_options}".split(),
         caplog,
         allowed_msgs,
+        required_msgs=required_msgs,
+        pre_test_hook=update_ncdf_timestamp,
     )
+    # import pdb
 
-    for out_file in expected_files:
-        assert (mission_dir / "plots" / out_file).exists()
+    # pdb.set_trace()

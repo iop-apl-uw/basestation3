@@ -1671,6 +1671,7 @@ def load_dive_profile_data(
         )
         directives = QC.ProfileDirectives(base_opts.mission_dir, dive_num)
         if ncf_file_exists and load_from_nc:
+            log_info("Loading data from netCDF files")
             nc_file_parsable = True  # assume the best
             try:
                 dive_nc_file = Utils.open_netcdf_file(nc_dive_file_name, "r")
@@ -2811,6 +2812,7 @@ def make_dive_profile(
     base_opts,
     nc_dive_file_name=None,
     logger_eng_files=None,  # List of logger eng files for inclusion in netCDF output
+    f_reprocess=False,
 ):
     """Creates a dive profile from an eng and log file
 
@@ -2885,8 +2887,8 @@ def make_dive_profile(
     if status == 0:
         log_error("Unable to load data; nothing done")
         return (1, None)
-    elif status == 1 and not (base_opts.force or base_opts.reprocess):
-        log_info("Files up-to-date; nothing to do")
+    elif status == 1 and not (base_opts.force or f_reprocess):
+        log_info(f"Files up-to-date for dive:{dive_num}; nothing to do")
         return (0, None)
     else:  # status == 2 or we are forced
         if base_opts.force:
@@ -8048,55 +8050,28 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         "Started processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
-
-    if base_opts.mission_dir:
-        base_path: pathlib.Path = base_opts.mission_dir
-    elif base_opts.basename:
-        # they gave us a basename, e.g., p5400003 so expand it assuming current (code?) directory
-        # make it look like it came via --mission_dir
-
-        pdb.set_trace()  # Check that the mission_dir set is correct
-        base_path: pathlib.Path = base_opts.basename
-        base_opts.mission_dir = pathlib.Path(base_opts.basename)
-    else:
-        log_error("Neither mission_dir or basename provided")
-        return 1
+    reprocess_list = Utils.expand_dive_spec(base_opts)
 
     dive_list: list[pathlib.Path] = []
-    if base_path.is_dir():
-        log_info("Making profiles for all dives in %s" % base_path)
-        # Include only valid dive files
-        glob_expr = (
-            "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].log",
-            "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].eng",
-            "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc",
-            # "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc.gz"
-        )
-        for g in glob_expr:
-            for match in base_path.glob(g):
-                log_debug("Found dive file %s" % match)
-                # match = match.replace('.nc.gz', '.nc')
-                # head, _ = os.path.splitext(os.path.abspath(match))
-                # dive_list.append(head)
-                dive_list.append(pathlib.Path(match.parent) / match.stem)
-        dive_list = sorted(Utils.unique(dive_list))
-    else:
-        # We were probably given <mission_dir>/pXXXDDDD to work on one dive
-        # Set mission_dir properly. No need to expanduser here--already done by BaseOpts
-        # Since there was a trailing / tacked onto the mission_dir, the split must remove that
-        # if base_path[-1] == "/":
-        #    base_path = base_path[:-1]
-        mission_dir = base_path.parent
-        base_name = base_path.name
-        if mission_dir.is_dir():
-            log_error("Directory %s does not exist -- exiting" % mission_dir)
-            return 1
-        # base_opts.mission_dir = mission_dir + "/"  # ensure trailing '/'
-        # rebuild path
-        base_path = base_opts.mission_dir / base_name
-        log_info("Making profile for: %s" % base_path)
-        dive_list.append(base_path)
-
+    log_info(f"Making profiles for all dives in {base_opts.mission_dir}")
+    # Include only valid dive files
+    glob_expr = (
+        "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].log",
+        "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].eng",
+        "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc",
+        # "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc.gz"
+    )
+    for g in glob_expr:
+        for match in base_opts.mission_dir.glob(g):
+            dive_path = pathlib.Path(match.parent) / match.stem
+            if reprocess_list and dive_path not in reprocess_list:
+                continue
+            log_debug("Found dive file %s" % match)
+            # match = match.replace('.nc.gz', '.nc')
+            # head, _ = os.path.splitext(os.path.abspath(match))
+            # dive_list.append(head)
+            dive_list.append(dive_path)
+    dive_list = sorted(Utils.unique(dive_list))
     sg_calib_file_name = base_opts.mission_dir / "sg_calib_constants.m"
     calib_consts = CalibConst.getSGCalibrationConstants(
         sg_calib_file_name, ignore_fm_tags=not base_opts.ignore_flight_model
@@ -8134,7 +8109,6 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     # Initialze the netCDF tables
     BaseNetCDF.init_tables(init_dict)
 
-    pdb.set_trace()
     # Find any associated logger eng files for each dive in dive_list
     logger_eng_files = FileMgr.find_dive_logger_eng_files(
         dive_list, base_opts, instrument_id, init_dict
@@ -8145,35 +8119,16 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     # Now, create the profiles
     for dive_path in dive_list:
         log_debug("Processing %s" % dive_path)
-        # head, _ = os.path.splitext(os.path.abspath(dive_path))
-        head = pathlib.Path(dive_path.parent) / dive_path.stem
-        if base_opts.target_dir:
-            # _, base = os.path.split(os.path.abspath(dive_path))
-            # outhead = os.path.join(base_opts.target_dir, base)
-            outhead = base_opts.target_dir / dive_path.name
-        else:
-            outhead = head
 
-        log_info("Head = %s" % head)
+        eng_file_name = dive_path.with_suffix(".eng")
+        log_file_name = dive_path.with_suffix(".log")
+        nc_dive_file_name = dive_path.with_suffix(".nc")
 
-        eng_file_name = head.with_suffix(".eng")
-        log_file_name = head.with_suffix(".log")
-
-        base_opts.make_dive_profiles = True
-
-        if base_opts.make_dive_profiles:
-            nc_dive_file_name = outhead.with_suffix(".nc")
-        else:
-            nc_dive_file_name = None
-
-        sg_calib_file_name = dive_path.parent / "sg_calib_constants.m"
         dive_num = FileMgr.get_dive(eng_file_name)
 
         log_info("Dive number = %d" % dive_num)
 
         log_debug("logger_eng_files = %s" % logger_eng_files[dive_path])
-
-        pdb.set_trace()
 
         try:
             (temp_ret_val, _) = make_dive_profile(
@@ -8185,6 +8140,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 base_opts,
                 nc_dive_file_name,
                 logger_eng_files=logger_eng_files[dive_path],
+                f_reprocess=bool(reprocess_list),
             )
         except KeyboardInterrupt:
             log_info("Interrupted by user - bailing out")

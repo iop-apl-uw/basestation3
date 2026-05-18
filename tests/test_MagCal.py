@@ -35,12 +35,16 @@ import testutils
 import Base
 import MakeDiveProfiles
 
-test_cases = (("tcm2mat.cal.0001.0004",["tcm2mat.cal.0001.0004 to correct heading"],[""]),
-              ("search",["tcm2mat.cal.0001.0004 to correct heading"],[""]),
-              ("tcm2mat.cal",[""],["tcm2mat.cal does not exist"]))
+test_cases = (
+    ("tcm2mat.cal.0001.0004", ["tcm2mat.cal.0001.0004 to correct heading"], [""]),
+    ("search", ["tcm2mat.cal.0001.0004 to correct heading"], [""]),
+    ("tcm2mat.cal", [""], ["tcm2mat.cal does not exist"]),
+)
+
 
 @pytest.mark.parametrize(
-    "magcal_filename,required_msgs,allowed_msgs", test_cases,
+    "magcal_filename,required_msgs,allowed_msgs",
+    test_cases,
 )
 def test_simpleplotextensionbase(caplog, magcal_filename, required_msgs, allowed_msgs):
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_magcal")
@@ -54,12 +58,13 @@ def test_simpleplotextensionbase(caplog, magcal_filename, required_msgs, allowed
         f"--verbose  --local --no-notify_vis --skip_flight_model --plot_types none --ignore_flight_model --magcalfile {magcal_filename} --mission_dir {mission_dir}".split(),
         caplog,
         allowed_msgs,
-        required_msgs = required_msgs
+        required_msgs=required_msgs,
     )
 
 
 @pytest.mark.parametrize(
-    "magcal_filename,required_msgs,allowed_msgs", test_cases,
+    "magcal_filename,required_msgs,allowed_msgs",
+    test_cases,
 )
 def test_simpleplotextensionMDP(caplog, magcal_filename, required_msgs, allowed_msgs):
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_magcal_ncf")
@@ -70,9 +75,8 @@ def test_simpleplotextensionMDP(caplog, magcal_filename, required_msgs, allowed_
         data_dir,
         mission_dir,
         MakeDiveProfiles.main,
-        f"--verbose  --reprocess 2 --magcalfile {magcal_filename} --mission_dir {mission_dir}".split(),
+        f"--verbose  --magcalfile {magcal_filename} --mission_dir {mission_dir} 2".split(),
         caplog,
         allowed_msgs,
-        required_msgs = required_msgs
+        required_msgs=required_msgs,
     )
-    

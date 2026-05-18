@@ -564,8 +564,6 @@ def process_file_group(
 
     ret_val = 0
 
-    # pdb.set_trace()
-
     log_debug(f"process_file_group dictionary = {pprint.pformat(file_group)}")
     root, ext = os.path.splitext(FileMgr.get_non_partial_filename(file_group[0]))
     defrag_file_name = root + "." + file_trans_received
@@ -1511,7 +1509,7 @@ class ProcessProgress:
         # TODO - convert to write to a database - under option (off by default)
         log_info("Base.py::main() stats")
         for k, v in self.times.items():
-            log_info(f"{k}:{v['stop']-v['start']:.3f}")
+            log_info(f"{k}:{v['stop'] - v['start']:.3f}")
 
     def process_progress(
         self, section: str, action: str, send: bool = True, reason: str | None = None
@@ -2061,186 +2059,168 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     else:
         log_warning("No dives to process")
 
-    # When netcdf output is enabled, defer writing out processed files until after netcdf creation
-    if not (
-        base_opts.make_dive_profiles
-        or base_opts.make_mission_profile
-        or base_opts.make_mission_timeseries
-    ):
-        write_processed_dives(
-            base_opts.mission_dir, complete_files_dict, processed_pdos_logfiles_dict
-        )
     po.process_progress("dive_files", "stop")
 
     #
-    # Per dive profile, netcdf and KKYY file processing
+    # Per dive profile/netcdf processing
     #
     nc_dive_file_names = []
     nc_files_created = []
-    if (
-        base_opts.make_dive_profiles
-        or base_opts.make_mission_profile
-        or base_opts.make_mission_timeseries
-    ):
-        po.process_progress("per_dive_netcdfs", "start")
-        if not base_opts.skip_flight_model and base_opts.backup_flight:
-            # Start with a fresh flight directory
-            flight_dir = base_opts.mission_dir / "flight"
-            flight_dir_backup = (
-                base_opts.mission_dir / f"flight_{time.strftime('%Y%m%d_%H%M%S')}"
-            )
-            if flight_dir.exists():
-                log_info(
-                    f"Backing up {flight_dir} to {flight_dir_backup} due to --force option"
-                )
-                try:
-                    shutil.move(flight_dir, flight_dir_backup)
-                except Exception:
-                    log_error(
-                        "Failed to move %s to %s - profiles will use existing flight model data"
-                        % (flight_dir, flight_dir_backup),
-                        "exc",
-                    )
 
-        # Process network files to netcdf
-        network_files_to_process = []
-        for file_name in processed_other_files:
-            fc = FileMgr.FileCode(file_name, instrument_id)
-            if fc.is_processed_network_log() or fc.is_processed_network_profile():
-                network_files_to_process.append(file_name)
-
-        if network_files_to_process:
-            BaseNetwork.make_netcdf_network_files(
-                network_files_to_process, processed_other_files
-            )
-            for ncf in processed_other_files:
-                if ncf.suffix == ".ncdf":
-                    BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
-
-        # Process regular files
-        dives_to_profile = []  # A list of basenames to profile
-
-        # log_info("processed_eng_and_log_files (%s)" % processed_eng_and_log_files)
-        # log_info("processed_logger_eng_files (%s)" % processed_logger_eng_files)
-
-        dive_nums_to_process = []
-        # 1) Walk the seaglider log and eng files - add to dives to process, if both the
-        for log_eng_file_name in processed_eng_and_log_files:
-            _, tail = os.path.split(log_eng_file_name)
-            dive_nums_to_process.append(int(tail[4:8]))
-
-        # 2) Walk the logger eng files - add to dives to process
-        for eng_file_name in processed_logger_eng_files:
-            _, tail = os.path.split(eng_file_name)
-            dive_nums_to_process.append(int(tail[6:10]))
-
-        dive_nums_to_process = sorted(Utils.unique(dive_nums_to_process))
-        log_info(f"Dives to process = {dive_nums_to_process}")
-
-        # 3) Walk dives to process - if the seaglider log and eng files exists, we can proceed
-        #                            add in any logger eng files that might exists (regular file in home directory and any sub-directories)
-        for d in dive_nums_to_process:
-            seaglider_eng_file_name = (
-                base_opts.mission_dir / f"p{instrument_id:03d}{d:04d}.eng"
-            )
-            seaglider_log_file_name = (
-                base_opts.mission_dir / f"p{instrument_id:03d}{d:04d}.log"
-            )
-            # log_info("%s:%s" % ( seaglider_eng_file_name, seaglider_log_file_name))
-            if seaglider_eng_file_name.exists() and seaglider_log_file_name.exists():
-                dives_to_profile.append(seaglider_log_file_name)
-
-        # Find any associated logger eng files for each dive in dives_to_profile
-        logger_eng_files = FileMgr.find_dive_logger_eng_files(
-            dives_to_profile, base_opts, instrument_id, init_dict
+    po.process_progress("per_dive_netcdfs", "start")
+    if not base_opts.skip_flight_model and base_opts.backup_flight:
+        # Start with a fresh flight directory
+        flight_dir = base_opts.mission_dir / "flight"
+        flight_dir_backup = (
+            base_opts.mission_dir / f"flight_{time.strftime('%Y%m%d_%H%M%S')}"
         )
-
-        # Now, walk the list and create the profiles
-        for dive_to_profile in dives_to_profile:
+        if flight_dir.exists():
             log_info(
-                f"Processing ({dive_to_profile.parent / dive_to_profile.stem}) for profiles"
+                f"Backing up {flight_dir} to {flight_dir_backup} due to --force option"
             )
-            log_file_name = (dive_to_profile.parent / dive_to_profile.stem).with_suffix(
-                ".log"
-            )
-            eng_file_name = (dive_to_profile.parent / dive_to_profile.stem).with_suffix(
-                ".eng"
-            )
-            if base_opts.make_dive_profiles:
-                nc_dive_file_name = (
-                    dive_to_profile.parent / dive_to_profile.stem
-                ).with_suffix(".nc")
-            else:
-                nc_dive_file_name = None
-
-            retval = None
-            dive_num = FileMgr.get_dive(eng_file_name)
-
-            # log_info("logger_eng_files = %s" % logger_eng_files[dive_to_profile])
-
             try:
-                (retval, nc_dive_file_name) = MakeDiveProfiles.make_dive_profile(
-                    True,
-                    dive_num,
-                    eng_file_name,
-                    log_file_name,
-                    sg_calib_file_name,
-                    base_opts,
-                    nc_dive_file_name,
-                    # logger_ct_eng_files=logger_ct_eng_files[dive_to_profile],
-                    logger_eng_files=logger_eng_files[dive_to_profile],
-                )
-            except KeyboardInterrupt:
-                log_error(
-                    "MakeDiveProfiles caught a keyboard exception - bailing out", "exc"
-                )
-                return 1
+                shutil.move(flight_dir, flight_dir_backup)
             except Exception:
                 log_error(
-                    f"MakeDiveProfiles raised an exception - dive profiles not created for {dive_to_profile.parent / dive_to_profile.stem}",
+                    "Failed to move %s to %s - profiles will use existing flight model data"
+                    % (flight_dir, flight_dir_backup),
                     "exc",
                 )
-                log_info("Continuing processing...")
-                failed_profiles.append(dive_num)
-                # Edit complete files dictionary to remove any files associated with this dive
+
+    # Process network files to netcdf
+    network_files_to_process = []
+    for file_name in processed_other_files:
+        fc = FileMgr.FileCode(file_name, instrument_id)
+        if fc.is_processed_network_log() or fc.is_processed_network_profile():
+            network_files_to_process.append(file_name)
+
+    if network_files_to_process:
+        BaseNetwork.make_netcdf_network_files(
+            network_files_to_process, processed_other_files
+        )
+        for ncf in processed_other_files:
+            if ncf.suffix == ".ncdf":
+                BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
+
+    # Process regular files
+    dives_to_profile = []  # A list of basenames to profile
+
+    # log_info("processed_eng_and_log_files (%s)" % processed_eng_and_log_files)
+    # log_info("processed_logger_eng_files (%s)" % processed_logger_eng_files)
+
+    dive_nums_to_process = []
+    # 1) Walk the seaglider log and eng files - add to dives to process, if both the
+    for log_eng_file_name in processed_eng_and_log_files:
+        _, tail = os.path.split(log_eng_file_name)
+        dive_nums_to_process.append(int(tail[4:8]))
+
+    # 2) Walk the logger eng files - add to dives to process
+    for eng_file_name in processed_logger_eng_files:
+        _, tail = os.path.split(eng_file_name)
+        dive_nums_to_process.append(int(tail[6:10]))
+
+    dive_nums_to_process = sorted(Utils.unique(dive_nums_to_process))
+    log_info(f"Dives to process = {dive_nums_to_process}")
+
+    # 3) Walk dives to process - if the seaglider log and eng files exists, we can proceed
+    #                            add in any logger eng files that might exists (regular file in home directory and any sub-directories)
+    for d in dive_nums_to_process:
+        seaglider_eng_file_name = (
+            base_opts.mission_dir / f"p{instrument_id:03d}{d:04d}.eng"
+        )
+        seaglider_log_file_name = (
+            base_opts.mission_dir / f"p{instrument_id:03d}{d:04d}.log"
+        )
+        # log_info("%s:%s" % ( seaglider_eng_file_name, seaglider_log_file_name))
+        if seaglider_eng_file_name.exists() and seaglider_log_file_name.exists():
+            dives_to_profile.append(seaglider_log_file_name)
+
+    # Find any associated logger eng files for each dive in dives_to_profile
+    logger_eng_files = FileMgr.find_dive_logger_eng_files(
+        dives_to_profile, base_opts, instrument_id, init_dict
+    )
+
+    # Now, walk the list and create the profiles
+    for dive_to_profile in dives_to_profile:
+        log_info(
+            f"Processing ({dive_to_profile.parent / dive_to_profile.stem}) for profiles"
+        )
+        log_file_name = (dive_to_profile.parent / dive_to_profile.stem).with_suffix(
+            ".log"
+        )
+        eng_file_name = (dive_to_profile.parent / dive_to_profile.stem).with_suffix(
+            ".eng"
+        )
+        nc_dive_file_name = (dive_to_profile.parent / dive_to_profile.stem).with_suffix(
+            ".nc"
+        )
+
+        retval = None
+        dive_num = FileMgr.get_dive(eng_file_name)
+
+        # log_info("logger_eng_files = %s" % logger_eng_files[dive_to_profile])
+
+        try:
+            (retval, nc_dive_file_name) = MakeDiveProfiles.make_dive_profile(
+                True,
+                dive_num,
+                eng_file_name,
+                log_file_name,
+                sg_calib_file_name,
+                base_opts,
+                nc_dive_file_name,
+                # logger_ct_eng_files=logger_ct_eng_files[dive_to_profile],
+                logger_eng_files=logger_eng_files[dive_to_profile],
+            )
+        except KeyboardInterrupt:
+            log_error(
+                "MakeDiveProfiles caught a keyboard exception - bailing out", "exc"
+            )
+            return 1
+        except Exception:
+            log_error(
+                f"MakeDiveProfiles raised an exception - dive profiles not created for {dive_to_profile.parent / dive_to_profile.stem}",
+                "exc",
+            )
+            log_info("Continuing processing...")
+            failed_profiles.append(dive_num)
+            # Edit complete files dictionary to remove any files associated with this dive
+            complete_files_dict = remove_dive_from_dict(
+                complete_files_dict, dive_num, instrument_id
+            )
+        else:
+            # Edit complete files dictionary to remove any files associated with this dive
+            # if there is no ncf file generated and we didn't skip on purpose
+            if not nc_dive_file_name and retval != 2:
                 complete_files_dict = remove_dive_from_dict(
                     complete_files_dict, dive_num, instrument_id
                 )
+            # Even if the processing failed, we may get a netcdf files out
+            if nc_dive_file_name:
+                nc_files_created.append(nc_dive_file_name)
+
+            if retval == 1:
+                log_error(
+                    f"Failed to create profiles for {dive_to_profile.parent / dive_to_profile.stem}"
+                )
+                failed_profiles.append(dive_num)
+            elif retval == 2:
+                log_info(
+                    f"Skipped creating profiles for {dive_to_profile.parent / dive_to_profile.stem}"
+                )
             else:
-                # Edit complete files dictionary to remove any files associated with this dive
-                # if there is no ncf file generated and we didn't skip on purpose
-                if not nc_dive_file_name and retval != 2:
-                    complete_files_dict = remove_dive_from_dict(
-                        complete_files_dict, dive_num, instrument_id
-                    )
-                # Even if the processing failed, we may get a netcdf files out
+                # Add to list of data product files created/updated
                 if nc_dive_file_name:
-                    nc_files_created.append(nc_dive_file_name)
+                    data_product_file_names.append(nc_dive_file_name)
+                    nc_dive_file_names.append(nc_dive_file_name)
 
-                if retval == 1:
-                    log_error(
-                        f"Failed to create profiles for {dive_to_profile.parent / dive_to_profile.stem}"
-                    )
-                    failed_profiles.append(dive_num)
-                elif retval == 2:
-                    log_info(
-                        f"Skipped creating profiles for {dive_to_profile.parent / dive_to_profile.stem}"
-                    )
-                else:
-                    # Add to list of data product files created/updated
-                    if nc_dive_file_name:
-                        data_product_file_names.append(nc_dive_file_name)
-                        nc_dive_file_names.append(nc_dive_file_name)
+    write_processed_dives(
+        base_opts.mission_dir, complete_files_dict, processed_pdos_logfiles_dict
+    )
 
-        write_processed_dives(
-            base_opts.mission_dir, complete_files_dict, processed_pdos_logfiles_dict
-        )
-
-        if not dives_to_profile:
-            log_info("No dives found to profile")
-        po.process_progress("per_dive_netcdfs", "stop")
-    else:
-        po.process_progress("per_dive_netcdfs", "skip", reason="By option setting")
+    if not dives_to_profile:
+        log_info("No dives found to profile")
+    po.process_progress("per_dive_netcdfs", "stop")
     (
         backup_dive_num,
         backup_call_cycle,
@@ -2353,62 +2333,61 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     po.process_progress("backup_files", "stop", send=False)
 
-    if base_opts.make_dive_profiles:
-        last_session = comm_log.last_surfacing()
-        if go_fast_file.exists():
-            po.process_progress("flight_model", "skip", reason="Per .go_fast")
-            log_info("Skipping flight model processing per .go_fast")
-        elif base_opts.queue_length:
-            po.process_progress(
-                "flight_model",
-                "skip",
-                reason=f"Non-zero queue length {base_opts.queue_length}",
+    last_session = comm_log.last_surfacing()
+    if go_fast_file.exists():
+        po.process_progress("flight_model", "skip", reason="Per .go_fast")
+        log_info("Skipping flight model processing per .go_fast")
+    elif base_opts.queue_length:
+        po.process_progress(
+            "flight_model",
+            "skip",
+            reason=f"Non-zero queue length {base_opts.queue_length}",
+        )
+        log_info(
+            f"Skipping flight model processing per non-zero queue length {base_opts.queue_length}"
+        )
+    elif base_opts.skip_flight_model:
+        po.process_progress("flight_model", "skip", reason="Per directive")
+        log_info("Skipping flight model processing per directive")
+    elif last_session and last_session.recov_code and not base_opts.force:
+        po.process_progress("flight_model", "skip", reason="In recovery")
+        log_info(f"Skipping flight model due to recovery {last_session.recov_code}")
+    # This covers the case where the first call in has a QUIT in place, but the glider isn't in recovery yet
+    elif (
+        last_session
+        and last_session.cmd_directive
+        and "QUIT" in last_session.cmd_directive
+        and last_session.dive_num > FlightModel.early_volmax_adjust
+        and not base_opts.force
+    ):
+        po.process_progress("flight_model", "skip", reason="In QUIT")
+        log_info("Skipping flight model due to QUIT command")
+    elif stop_processing_event.is_set():
+        log_warning("Caught SIGUSR1 - bailing out")
+        return 1
+    else:
+        # Run FlightModel here and before mission processing so combined data reflects best flight model results
+        # Run before alert processing occurs so FM complaints are reported to the pilot
+        po.process_progress("flight_model", "start")
+        try:
+            fm_nc_files_created = []
+            FlightModel.main(
+                base_opts,
+                sg_calib_file_name,
+                fm_nc_files_created,
+                exit_event=stop_processing_event,
             )
-            log_info(
-                f"Skipping flight model processing per non-zero queue length {base_opts.queue_length}"
-            )
-        elif base_opts.skip_flight_model:
-            po.process_progress("flight_model", "skip", reason="Per directive")
-            log_info("Skipping flight model processing per directive")
-        elif last_session and last_session.recov_code and not base_opts.force:
-            po.process_progress("flight_model", "skip", reason="In recovery")
-            log_info(f"Skipping flight model due to recovery {last_session.recov_code}")
-        # This covers the case where the first call in has a QUIT in place, but the glider isn't in recovery yet
-        elif (
-            last_session
-            and last_session.cmd_directive
-            and "QUIT" in last_session.cmd_directive
-            and last_session.dive_num > FlightModel.early_volmax_adjust
-            and not base_opts.force
-        ):
-            po.process_progress("flight_model", "skip", reason="In QUIT")
-            log_info("Skipping flight model due to QUIT command")
-        elif stop_processing_event.is_set():
+        except Exception:
+            log_critical("FlightModel failed", "exc")
+        else:
+            fm_nc_files_created = list(set(fm_nc_files_created))
+            log_info(f"FM files updated {[str(ff) for ff in fm_nc_files_created]}")
+            nc_files_created += fm_nc_files_created
+            nc_files_created = sorted(nc_files_created)
+        po.process_progress("flight_model", "stop")
+        if stop_processing_event.is_set():
             log_warning("Caught SIGUSR1 - bailing out")
             return 1
-        else:
-            # Run FlightModel here and before mission processing so combined data reflects best flight model results
-            # Run before alert processing occurs so FM complaints are reported to the pilot
-            po.process_progress("flight_model", "start")
-            try:
-                fm_nc_files_created = []
-                FlightModel.main(
-                    base_opts,
-                    sg_calib_file_name,
-                    fm_nc_files_created,
-                    exit_event=stop_processing_event,
-                )
-            except Exception:
-                log_critical("FlightModel failed", "exc")
-            else:
-                fm_nc_files_created = list(set(fm_nc_files_created))
-                log_info(f"FM files updated {[str(ff) for ff in fm_nc_files_created]}")
-                nc_files_created += fm_nc_files_created
-                nc_files_created = sorted(nc_files_created)
-            po.process_progress("flight_model", "stop")
-            if stop_processing_event.is_set():
-                log_warning("Caught SIGUSR1 - bailing out")
-                return 1
 
     po.process_progress("per_dive_scripts", "start", send=False)
     # Run extension scripts for any new logger files

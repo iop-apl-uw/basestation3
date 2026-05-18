@@ -90,18 +90,6 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
     base_opts = BaseOpts.BaseOptions(
         "Command line driver for reprocessing per-dive and other nc files",
         additional_arguments={
-            "dive_specs": BaseOptsType.options_t(
-                "",
-                {
-                    "Reprocess",
-                },
-                ("dive_specs",),
-                str,
-                {
-                    "help": "dive numbers to reprocess - either single dive nums or a range in the form X:Y",
-                    "nargs": "*",
-                },
-            ),
             "called_from_fm": BaseOptsType.options_t(
                 False,
                 {
@@ -143,10 +131,11 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
         log_error('You must specify --mission_dir"')
         return 1
 
-    full_dive_list = []  # all available dives we have data files for
-    dive_list = []  # dives we want to MDP
-    all_dive_nc_file_names = []  # all available nc files
-    dive_nc_file_names = []  # those we actually MDPd
+    full_dive_list: list[
+        pathlib.Path
+    ] = []  # all available dives we have data files for
+    all_dive_nc_file_names: list[pathlib.Path] = []  # all available nc files
+    dive_nc_file_names: list[pathlib.Path] = []  # those we actually MDPd
 
     if base_opts.mission_dir.is_dir():
         # Include only valid dive files
@@ -162,44 +151,18 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
                 log_debug(f"Found dive file {match}")
                 if nc_match:
                     all_dive_nc_file_names.append(match)
-                # match = match.replace('.nc.gz', '.nc')
-                head, _ = os.path.splitext(os.path.abspath(match))
-                full_dive_list.append(head)
-
+                full_dive_list.append(pathlib.Path(match.parent) / match.stem)
             full_dive_list = sorted(Utils.unique(full_dive_list))
 
-        if len(base_opts.dive_specs):
-            expanded_dive_nums = []
-            for dive_num in base_opts.dive_specs:
-                strs = dive_num.split(":", 1)
-                if len(strs) == 2:
-                    expanded_dive_nums.extend(
-                        list(range(int(strs[0]), int(strs[1]) + 1))
-                    )
-                else:
-                    expanded_dive_nums.append(int(dive_num))
-
-            for dive_num in expanded_dive_nums:
-                # Include only valid dive files
-                glob_expr = (
-                    "p[0-9][0-9][0-9]%04d.log" % dive_num,
-                    "p[0-9][0-9][0-9]%04d.eng" % dive_num,
-                    "p[0-9][0-9][0-9]%04d.nc" % dive_num,
-                    # "p*%s.nc.gz" % dive_num,
-                )
-                for g in glob_expr:
-                    for match in base_opts.mission_dir.glob(g):
-                        log_debug(f"Found dive file {match}")
-                        # match = match.replace('.nc.gz', '.nc')
-                        head, _ = os.path.splitext(os.path.abspath(match))
-                        dive_list.append(head)
-                dive_list = sorted(Utils.unique(dive_list))
+        dive_list = Utils.expand_dive_spec(base_opts)
+        if dive_list:
             log_info(f"Reprocessing dives {dive_list}")
         else:
             log_info(f"Making profiles for all dives in {base_opts.mission_dir}")
             dive_list = full_dive_list
     else:
         log_error(f"Directory {base_opts.mission_dir} does not exist -- exiting")
+        return 1
 
     sg_calib_file_name = base_opts.mission_dir / "sg_calib_constants.m"
     calib_consts = getSGCalibrationConstants(
@@ -271,24 +234,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
 
     for dive_path in dive_list:
         log_debug(f"Processing {dive_path}")
-        head, _ = os.path.splitext(os.path.abspath(dive_path))
-        if base_opts.target_dir:
-            _, base = os.path.split(os.path.abspath(dive_path))
-            outhead = os.path.join(base_opts.target_dir, base)
-        else:
-            outhead = head
-
-        log_info(f"Head = {head}")
-
-        eng_file_name = head + ".eng"
-        log_file_name = head + ".log"
-        dive_num = FileMgr.get_dive(eng_file_name)
-
-        base_opts.make_dive_profiles = True
-        nc_dive_file_name = outhead + ".nc"
-
-        sg_calib_file_name, _ = os.path.split(os.path.abspath(dive_path))
-        sg_calib_file_name = os.path.join(sg_calib_file_name, "sg_calib_constants.m")
+        eng_file_name = dive_path.with_suffix(".eng")
+        log_file_name = dive_path.with_suffix(".log")
+        nc_dive_file_name = dive_path.with_suffix(".nc")
 
         dive_num = FileMgr.get_dive(eng_file_name)
         log_info("Dive number = %d" % dive_num)

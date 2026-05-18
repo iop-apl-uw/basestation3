@@ -126,9 +126,7 @@ def main(
     if not base_opts.mission_dir:
         if hasattr(base_opts, "netcdf_filename") and base_opts.netcdf_filename:
             # Called from CLI with a single argument
-            dive_nc_file_names = [
-                base_opts.netcdf_filename
-            ]  # ty: ignore[invalid-assignment]
+            dive_nc_file_names = [base_opts.netcdf_filename]  # ty: ignore[invalid-assignment]
     elif base_opts.mission_dir:
         if nc_files_created is not None:
             # Called from MakeDiveProfiles as extension

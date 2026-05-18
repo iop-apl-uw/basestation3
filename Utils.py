@@ -2272,3 +2272,40 @@ def read_parquet_pd(pq_dir, expected_schema=None):
     except Exception:
         log_error(f"Problem generation dataframe from parquet files in {pq_dir}", "exc")
         return None
+
+
+def expand_dive_spec(base_opts: BaseOpts.BaseOptions) -> list[pathlib.Path]:
+
+    dive_list: list[pathlib.Path] = []
+
+    if not hasattr(base_opts, "dive_specs") or not len(base_opts.dive_specs):
+        return dive_list
+
+    expanded_dive_nums = []
+    for dive_num in base_opts.dive_specs:
+        try:
+            strs = dive_num.split(":", 1)
+            if len(strs) == 2:
+                expanded_dive_nums.extend(list(range(int(strs[0]), int(strs[1]) + 1)))
+            else:
+                expanded_dive_nums.append(int(dive_num))
+        except ValueError as exception:
+            log_error(f"Could not parse {dive_num} ({exception}) - skipping")
+
+    for dive_num in expanded_dive_nums:
+        # Include only valid dive files
+        glob_expr = (
+            "p[0-9][0-9][0-9]%04d.log" % dive_num,
+            "p[0-9][0-9][0-9]%04d.eng" % dive_num,
+            "p[0-9][0-9][0-9]%04d.nc" % dive_num,
+            # "p*%s.nc.gz" % dive_num,
+        )
+        for g in glob_expr:
+            for match in base_opts.mission_dir.glob(g):
+                log_debug(f"Found dive file {match}")
+                # match = match.replace('.nc.gz', '.nc')
+                # head, _ = os.path.splitext(os.path.abspath(match))
+                # dive_list.append(head)
+                dive_list.append(pathlib.Path(match.parent) / match.stem)
+    dive_list = sorted(unique(dive_list))
+    return dive_list

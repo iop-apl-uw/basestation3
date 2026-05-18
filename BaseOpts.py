@@ -576,6 +576,7 @@ global_options_dict: dict[str, options_t] = {
                 "FlightModelCLI",
                 "GliderTrack",
                 "LogFile",
+                "MakeDiveProfiles",
                 "MakeKML",
                 "MakeMissionEngPlots",
                 "MakeMissionProfile",
@@ -601,6 +602,20 @@ global_options_dict: dict[str, options_t] = {
         {
             "action": "store_true",
             "help": "Delete any successfully uploaded input files",
+        },
+    ),
+    "dive_specs": options_t(
+        "",
+        {
+            "Base",
+            "MakeDiveProfiles",
+            "Reprocess",
+        },
+        ("dive_specs",),
+        str,
+        {
+            "help": "dive numbers to reprocess - either single dive nums or a range in the form X:Y",
+            "nargs": "*",
         },
     ),
     #
@@ -893,22 +908,10 @@ global_options_dict: dict[str, options_t] = {
     ),
     "reprocess": options_t(
         False,
-        {"Base", "MakeDiveProfiles", "Reprocess"},
+        {"Base"},
         ("--reprocess",),
         int,
         {"help": "Forces reprocessing of a specific dive number "},
-    ),
-    "make_dive_profiles": options_t(
-        True,
-        {
-            "Base",
-        },
-        ("--make_dive_profiles",),
-        bool,
-        {
-            "help": "Create the common profile data products",
-            "action": argparse.BooleanOptionalAction,
-        },
     ),
     "make_mission_profile": options_t(
         False,

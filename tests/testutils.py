@@ -73,10 +73,23 @@ def run_mission(
     mission_dir.mkdir()
     for p in data_dir.iterdir():
         if p.is_dir():
-            continue
-        shutil.copy(p, mission_dir)
+            if p.name == "mission_dir":
+                continue
+            else:
+                tgt_dir = mission_dir / p.name
+                if not tgt_dir.exists():
+                    tgt_dir.mkdir()
+                for q in p.iterdir():
+                    if q.is_dir():
+                        continue
+                    shutil.copy(q, tgt_dir / q.name)
+        else:
+            shutil.copy(p, mission_dir)
     if pre_test_hook:
         pre_test_hook(mission_dir)
+    #    import pdb
+
+    #   pdb.set_trace()
     result = main_func(cmd_line)
     assert result == 0
     bad_errors = ""

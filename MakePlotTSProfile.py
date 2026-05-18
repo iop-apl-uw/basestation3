@@ -389,7 +389,6 @@ def load_additional_arguments() -> tuple[list[str], dict, dict]:
             "full_html",
             "plot_directory",
             "mission_dir",
-            "netcdf_filename",
         ],
         # Option groups
         {},
@@ -430,16 +429,15 @@ def main(
             add_to_arguments=add_to_arguments,
             additional_arguments={
                 "profile_filenames": BaseOptsType.options_t(
-                    [],
+                    "",
                     {
                         "MakePlotTSProfile",
                     },
                     ("profile_filenames",),
-                    BaseOpts.FullPathlib,
+                    str,
                     {
                         "help": "Name of TS profile file(s) or network cdf (.ncdf) files to plot",
                         "nargs": "*",
-                        "action": BaseOpts.FullPathlibAction,
                     },
                 ),
             },
@@ -468,7 +466,9 @@ def main(
 
     if processed_other_files is None:
         if hasattr(base_opts, "profile_filenames") and base_opts.profile_filenames:
-            processed_other_files = base_opts.profile_filenames
+            processed_other_files = [
+                base_opts.mission_dir / x for x in base_opts.profile_filenames
+            ]
         else:
             processed_other_files = []
             for m in base_opts.mission_dir.glob("p???????.ncdf"):
