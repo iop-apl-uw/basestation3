@@ -8050,7 +8050,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         "Started processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
-    reprocess_list = Utils.expand_dive_spec(base_opts)
+    reprocess_list, _ = Utils.expand_dive_spec(base_opts)
 
     dive_list: list[pathlib.Path] = []
     log_info(f"Making profiles for all dives in {base_opts.mission_dir}")

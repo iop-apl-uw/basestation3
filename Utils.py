@@ -2274,14 +2274,16 @@ def read_parquet_pd(pq_dir, expected_schema=None):
         return None
 
 
-def expand_dive_spec(base_opts: BaseOpts.BaseOptions) -> list[pathlib.Path]:
+def expand_dive_spec(
+    base_opts: BaseOpts.BaseOptions,
+) -> tuple[list[pathlib.Path], list[int]]:
 
     dive_list: list[pathlib.Path] = []
+    expanded_dive_nums: list[int] = []
 
     if not hasattr(base_opts, "dive_specs") or not len(base_opts.dive_specs):
-        return dive_list
+        return (dive_list, expanded_dive_nums)
 
-    expanded_dive_nums = []
     for dive_num in base_opts.dive_specs:
         try:
             strs = dive_num.split(":", 1)
@@ -2308,4 +2310,4 @@ def expand_dive_spec(base_opts: BaseOpts.BaseOptions) -> list[pathlib.Path]:
                 # dive_list.append(head)
                 dive_list.append(pathlib.Path(match.parent) / match.stem)
     dive_list = sorted(unique(dive_list))
-    return dive_list
+    return (dive_list, expanded_dive_nums)

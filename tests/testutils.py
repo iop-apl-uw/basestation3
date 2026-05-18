@@ -87,9 +87,9 @@ def run_mission(
             shutil.copy(p, mission_dir)
     if pre_test_hook:
         pre_test_hook(mission_dir)
-    #    import pdb
+    # import pdb
 
-    #   pdb.set_trace()
+    # pdb.set_trace()
     result = main_func(cmd_line)
     assert result == 0
     bad_errors = ""

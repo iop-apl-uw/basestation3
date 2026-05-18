@@ -27,7 +27,9 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import os
 import pathlib
+from datetime import datetime
 
 import pytest
 import testutils
@@ -141,3 +143,40 @@ def test_conversion(caplog, test_data_dir, cmd_line, allowed_msgs):
     testutils.run_mission(
         data_dir, mission_dir, Base.main, cmd_line, caplog, allowed_msgs
     )
+
+
+reprocess_test_cases = (
+    ("", ["Dives to process = []"], [""]),
+    ("--force", ["Processed dive(s) [2]"], [""]),
+    ("2", ["Processed dive(s) [2]"], [""]),
+)
+
+
+@pytest.mark.parametrize(
+    "additional_options,required_msgs,allowed_msgs",
+    reprocess_test_cases,
+)
+def test_reprocess(caplog, additional_options, required_msgs, allowed_msgs):
+    data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_base")
+    mission_dir = data_dir.joinpath("mission_dir")
+
+    def update_timestamps(mission_dir: pathlib.Path) -> None:
+        for p in mission_dir.iterdir():
+            new_time = datetime(2026, 5, 10, 0, 0, 0).timestamp()
+            if p.is_dir():
+                continue
+            os.utime(p, (new_time, new_time))
+
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        Base.main,
+        f"--verbose --local --no-notify_vis --plot_types none --skip_flight_model --mission_dir {mission_dir} {additional_options}".split(),
+        caplog,
+        allowed_msgs,
+        required_msgs=required_msgs,
+        pre_test_hook=update_timestamps,
+    )
+    # import pdb
+
+    # pdb.set_trace()

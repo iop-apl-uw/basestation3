@@ -154,7 +154,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
                 full_dive_list.append(pathlib.Path(match.parent) / match.stem)
             full_dive_list = sorted(Utils.unique(full_dive_list))
 
-        dive_list = Utils.expand_dive_spec(base_opts)
+        dive_list, _ = Utils.expand_dive_spec(base_opts)
         if dive_list:
             log_info(f"Reprocessing dives {dive_list}")
         else:

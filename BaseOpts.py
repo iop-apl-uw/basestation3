@@ -906,13 +906,6 @@ global_options_dict: dict[str, options_t] = {
             "action": "store_true",
         },
     ),
-    "reprocess": options_t(
-        False,
-        {"Base"},
-        ("--reprocess",),
-        int,
-        {"help": "Forces reprocessing of a specific dive number "},
-    ),
     "make_mission_profile": options_t(
         False,
         {

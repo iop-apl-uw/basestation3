@@ -51,9 +51,7 @@ test_cases = (
     "additional_options,required_msgs,allowed_msgs",
     test_cases,
 )
-def test_simpleplotextensionbase(
-    caplog, additional_options, required_msgs, allowed_msgs
-):
+def test_reprocess(caplog, additional_options, required_msgs, allowed_msgs):
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_makediveprofiles")
     mission_dir = data_dir.joinpath("mission_dir")
 

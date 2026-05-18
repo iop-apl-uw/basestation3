@@ -1623,6 +1623,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     if base_opts.daemon and Daemon.createDaemon(base_opts.mission_dir, False):
         log_error("Could not launch as a daemon - continuing synchronously")
 
+    _, reprocess_dive_list = Utils.expand_dive_spec(base_opts)
+
     cmdline = ""
     for i in sys.argv:
         cmdline += f"{i} "
@@ -1948,12 +1950,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             )
             Utils.cleanup_lock_file(base_opts, base_lockfile_name)
             return 1
-        if base_opts.reprocess:
+        if reprocess_dive_list:
             for ff in list(complete_files_dict.keys()):
                 fc = FileMgr.FileCode(ff, instrument_id)
                 if (
                     fc.is_seaglider() or fc.is_logger()
-                ) and fc.dive_number() == base_opts.reprocess:
+                ) and fc.dive_number() in reprocess_dive_list:
                     del complete_files_dict[ff]
     po.process_progress("setup", "stop", send=False)
     po.process_progress("dive_files", "start")
