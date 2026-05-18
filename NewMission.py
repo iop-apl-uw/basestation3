@@ -31,6 +31,7 @@
 
 import argparse
 import os
+import pathlib
 import pdb
 import shutil
 import sys
@@ -152,10 +153,10 @@ def main():
 
     if current_mission_dir:
         stat_st = os.stat(current_mission_dir)
-        base_opts.mission_dir = current_mission_dir
+        base_opts.mission_dir = pathlib.Path(current_mission_dir)
     else:
         stat_st = os.stat(base_opts.glider_home)
-        base_opts.mission_dir = base_opts.glider_home
+        base_opts.mission_dir = pathlib.Path(base_opts.glider_home)
 
     # Sensor extensions
     (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
@@ -267,7 +268,7 @@ def main():
     # items.append(rel_current_symlink)
 
     if base_opts.initdb:
-        base_opts.mission_dir = new_mission_dir
+        base_opts.mission_dir = pathlib.Path(new_mission_dir)
         BaseDB.createDB(base_opts)
         items.append(
             os.path.join(new_mission_dir, f"sg{base_opts.instrument_id:03d}.db")
