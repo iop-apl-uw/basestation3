@@ -160,14 +160,14 @@ expected_schema = pa.schema(
 # - How to do playback/route tracing?  (Have dives and fixes show up as they occur)
 
 
-def cmp_function(a, b):
+def cmp_function(a:pathlib.Path, b:pathlib.Path) -> int:
     """Compares two archived targets files, sorting in reverse chronilogical order (most recent one first)"""
     a_dive = None
     b_dive = None
     a_counter = None
     b_counter = None
-    a_split = a.split(".")
-    b_split = b.split(".")
+    a_split = a.name.split(".")
+    b_split = b.name.split(".")
 
     a_dive = int(a_split[1])
     b_dive = int(b_split[1])
@@ -2114,7 +2114,7 @@ def main(
             "targets.[0-9]*",
             "targets.[0-9]*.[0-9]*",
         ):
-            for match in (base_opts.mission_dir / glob_expr).glob(glob_expr):
+            for match in base_opts.mission_dir.glob(glob_expr):
                 targets.append(match)
 
         if targets and not base_opts.proposed_targets:
