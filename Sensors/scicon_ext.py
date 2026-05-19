@@ -152,8 +152,8 @@ def process_adcp_dat(
         return 1
 
     shutil.copy(matfile, scicon_eng_file)
-    processed_logger_eng_files.append(pathlib.path(scicon_eng_file))
-    processed_logger_other_files.append(pathlib.path(matfile))
+    processed_logger_eng_files.append(pathlib.Path(scicon_eng_file))
+    processed_logger_other_files.append(pathlib.Path(matfile))
     return 0
 
 
@@ -860,14 +860,14 @@ def extract_file_metadata(inp_file_name):
                 if start_time is not None:
                     with contextlib.suppress(Exception):
                         timeouts_times += (
-                            f"{start_time + float(splits[0][1:])/1000.0:.3f},"
+                            f"{start_time + float(splits[0][1:]) / 1000.0:.3f},"
                         )
             elif len(splits[0]) > 1 and splits[0][1:].isdigit() and len(splits) > 1:
                 # Locates any generic aux output
                 splits = raw_line.split(maxsplit=1)
                 if start_time is not None:
                     with contextlib.suppress(Exception):
-                        e_time = f"{start_time + float(splits[0][1:])/1000.0:.3f}"
+                        e_time = f"{start_time + float(splits[0][1:]) / 1000.0:.3f}"
                         auxdata.append((e_time, splits[1].strip()))
 
             raw_strs = raw_line.split(":", 1)
