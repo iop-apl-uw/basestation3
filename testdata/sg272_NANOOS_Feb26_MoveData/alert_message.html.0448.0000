@@ -1,0 +1,11 @@
+<div class="LOGFILE_WARN">
+<p><a href="alerthelp#LOGFILE_WARN">Alert: LOGFILE_WARN</a>
+<ul>
+<li>WARNING: WARN:(pressure timeout) in /Users/gbs/work/git/basestation3/testdata/sg272_NANOOS_Feb26_magcal/mission_dir/p2720002.log</li>
+</ul></p></div>
+<div class="MAGCAL">
+<p><a href="alerthelp#MAGCAL">Alert: MAGCAL</a>
+<ul>
+<li>WARNING: MagCalFile /Users/gbs/work/git/basestation3/testdata/sg272_NANOOS_Feb26_magcal/mission_dir/tcm2mat.cal does not exist</li>
+</ul></p></div>
+<p>INFO: Consult the conversion log for details</p>

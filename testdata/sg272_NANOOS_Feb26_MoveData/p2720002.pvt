@@ -1,0 +1,8 @@
+version: 67.01
+glider: 272
+mission: 2
+dive: 2
+start: 2 3 126 19 35 52
+data:
+$TEL_NUM,881600005296
+$ALT_TEL_NUM,881600005296

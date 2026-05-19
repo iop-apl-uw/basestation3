@@ -38,6 +38,7 @@ import contextlib
 import glob
 import os
 import pathlib
+import pdb
 import shutil
 import sys
 import traceback
@@ -56,6 +57,16 @@ from BaseLog import (
     log_warning,
 )
 from Globals import known_files
+
+DEBUG_PDB = False
+
+
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
 
 
 def moveFiles(
@@ -77,15 +88,16 @@ def moveFiles(
         op_gerund = "Moving"
         op_past = "Moved"
 
-    files = (src / file_re_str).resolve()
-    log_debug("%s %s" % (op_gerund, str(files)))
+    # files = (src / file_re_str).resolve()
+    # log_debug("%s %s" % (op_gerund, str(files)))
 
-    myglob = glob.glob(files)
-    for file in myglob:
-        if os.path.isfile(file):
+    # myglob = glob.glob(files)
+    # for file in myglob:
+    for file in src.glob(file_re_str):
+        if file.is_file():
             try:
                 op(file, dest)
-                log_info("    %s %s" % (op_past, os.path.basename(file)))
+                log_info("    %s %s" % (op_past, file.name))
             except Exception:
                 log_error(
                     "%s %s failed (%s)" % (op_gerund, file, traceback.format_exc())
@@ -125,7 +137,7 @@ def moveFileList(files, target_dir, copy=False):
     return ret_val
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     """Prepares a home directory for a new deployment by moving mission files to a new location
 
     Returns:
@@ -138,19 +150,25 @@ def main():
     """
     # Get options
     base_opts = BaseOpts.BaseOptions(
-        "Prepares a home directory for a new deployment by moving mission files to a new location (run as root)"
+        "Prepares a home directory for a new deployment by moving mission files to a new location (run as root)",
+        cmdline_args=cmdline_args,
     )
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
+
     BaseLogger(base_opts)  # initializes BaseLog
 
     log_info(f"Moving from {base_opts.mission_dir} to {base_opts.target_dir}")
+
+    Sensors.set_globals()
 
     # Supports "./" to indicate local path
     # Supports absolute paths
     # Supports creation of trees, not just a single leaf directory
     # Does NOT stuff files into a directory that already existed
 
-    if os.path.exists(base_opts.target_dir):
-        if os.path.isdir(base_opts.target_dir):
+    if base_opts.target_dir.exists():
+        if base_opts.target_dir.is_dir():
             log_warning("directory already exists - proceeding")
         else:
             log_critical(
@@ -158,12 +176,12 @@ def main():
             )
             return 1
 
-    if not os.path.isdir(base_opts.target_dir):
+    if not base_opts.target_dir.is_dir():
         try:
-            os.makedirs(base_opts.target_dir)
-            log_info("created directory: " + base_opts.target_dir)
+            base_opts.target_dir.mkdir(parents=True)
+            log_info(f"created directory: {base_opts.target_dir}")
         except Exception:
-            log_critical("Unable to create directory: " + base_opts.target_dir)
+            log_critical(f"Unable to create directory: {base_opts.target_dir}")
             return 1
 
     if not base_opts.instrument_id:
@@ -342,7 +360,7 @@ def main():
         # or (more likely) they wanded off the glider during recovery in the middle of a transmission/
         # in any case, if this file is not removed, the next call, which will start a new comm.log
         # will start off with a "Reconnected" and foul comm.log parsing
-        os.remove(os.path.abspath(base_opts.mission_dir + "/.connected"))
+        (base_opts.mission_dir / ".connected").unlink()
 
     # Look for sub-directories created by loggers and move those
     for logger_prefix in FileMgr.logger_prefixes:
@@ -394,5 +412,10 @@ def main():
 
 
 if __name__ == "__main__":
-    retval = main()
+    try:
+        retval = main()
+    except Exception:
+        DEBUG_PDB_F()
+        log_critical("Unhandled exception in main -- exiting")
+
     sys.exit(retval)
