@@ -33,14 +33,17 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import collections
 import cProfile
 import os
 import pathlib
 import pdb
 import pstats
+import signal
 import sys
 import time
 import traceback
+import types
 
 import numpy as np
 import plotly
@@ -65,6 +68,25 @@ from BaseLog import (
 from CalibConst import getSGCalibrationConstants
 
 DEBUG_PDB = False
+
+
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
+
+
+# Extend from BaseException so cathches to Exception (which are everywhere)
+# are bypassed.
+class Timeout(BaseException):
+    """Defines an exception for timeout to system call"""
+
+
+def _timeout(signum: int, frame: types.FrameType | None) -> None:
+    """Raises the timeout exception"""
+    raise Timeout()
 
 
 def get_dive_plots(base_opts: BaseOpts.BaseOptions) -> dict:
@@ -108,8 +130,13 @@ def plot_dives(
     for dive_nc_file_name in dive_nc_file_names:
         log_info(f"Plotting {dive_nc_file_name}")
         dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
+        dive_plot_times: dict[str, float] = collections.defaultdict(float)
         for plot_name, plot_func in dive_plot_dict.items():
             try:
+                if base_opts.plot_dive_timeout:
+                    prev_handler = signal.signal(signal.SIGALRM, _timeout)
+                    signal.alarm(base_opts.plot_dive_timeout)
+                t0 = time.time()
                 if (
                     hasattr(base_opts, "stop_processing_event")
                     and base_opts.stop_processing_event.is_set()
@@ -126,19 +153,32 @@ def plot_dives(
                     generate_plots=generate_plots,
                     dbcon=con,
                 )
+            except Timeout:
+                log_error(
+                    f"Timeout: dive plot {plot_name} exceeded timeout ({base_opts.plot_dive_timeout})",
+                    alert="PLOT_TIMEOUT",
+                )
             except KeyboardInterrupt:
                 return (figs, output_files)
             except Exception:
-                if DEBUG_PDB:
-                    _, _, traceb = sys.exc_info()
-                    traceback.print_exc()
-                    pdb.post_mortem(traceb)
+                DEBUG_PDB_F()
                 log_error(f"{plot_name} failed {dive_nc_file_name}", "exc")
             else:
                 for figure in Utils.flatten(fig_list):
                     figs.append(figure)
                 for file_name in Utils.flatten(file_list):
                     output_files.append(file_name)
+            finally:
+                if base_opts.plot_dive_timeout:
+                    signal.alarm(0)
+                    signal.signal(signal.SIGALRM, prev_handler)
+                dive_plot_times[plot_name] += time.time() - t0
+
+    for plot_name, elapsed_time in dive_plot_times.items():
+        log_info(
+            f"Dive {plot_name} took {elapsed_time:.2f} secs, Avg {elapsed_time / len(dive_nc_file_names):.2f}"
+        )
+
     if dbcon is None:
         try:
             con.commit()
@@ -179,6 +219,7 @@ def plot_mission(
 
     figs: list[plotly.graph_objects.Figure] = []
     output_files: list[pathlib.Path] = []
+    mission_plot_times: dict[str, float] = {}
     for plot_name, plot_func in mission_plot_dict.items():
         try:
             if (
@@ -191,6 +232,10 @@ def plot_mission(
             pass
         log_debug(f"Trying Mission Plot: {plot_name}")
         try:
+            if base_opts.plot_mission_timeout:
+                prev_handler = signal.signal(signal.SIGALRM, _timeout)
+                signal.alarm(base_opts.plot_mission_timeout)
+            t0 = time.time()
             fig_list, file_list = plot_func(
                 base_opts,
                 mission_str,
@@ -198,27 +243,29 @@ def plot_mission(
                 generate_plots=generate_plots,
                 dbcon=con,
             )
-            # if dive == None:
-            #    fig_list, file_list = plot_func(base_opts, mission_str, generate_plots=generate_plots, dbcon=con)
-            # else:
-
-            #    fig_list, file_list = plot_func(
-            #        base_opts, mission_str, dive=dive, generate_plots=generate_plots, dbcon=con
-            #    )
+        except Timeout:
+            log_error(
+                f"Timeout: mission plot {plot_name} exceeded timeout ({base_opts.plot_mission_timeout})",
+                alert="PLOT_TIMEOUT",
+            )
         except KeyboardInterrupt:
             return (figs, output_files)
         except Exception:
             log_error(f"{plot_name}", "exc")
-            if DEBUG_PDB:
-                _, _, traceb = sys.exc_info()
-                traceback.print_exc()
-                pdb.post_mortem(traceb)
+            DEBUG_PDB_F()
         else:
             for figure in fig_list:
                 figs.append(figure)
             for file_name in file_list:
                 output_files.append(file_name)
+        finally:
+            if base_opts.plot_mission_timeout:
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, prev_handler)
+            mission_plot_times[plot_name] = time.time() - t0
 
+    for plot_name, elapsed_time in mission_plot_times.items():
+        log_info(f"Mission {plot_name} took {elapsed_time:.2f} secs")
     if dbcon is None:
         try:
             con.commit()
@@ -401,11 +448,7 @@ if __name__ == "__main__":
     except SystemExit:
         pass
     except Exception:
-        if DEBUG_PDB:
-            _, _, traceb = sys.exc_info()
-            traceback.print_exc()
-            pdb.post_mortem(traceb)
-
+        DEBUG_PDB_F()
         log_critical("Unhandled exception in main -- exiting", "exc")
 
     sys.exit(retval)

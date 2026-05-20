@@ -1378,6 +1378,36 @@ global_options_dict: dict[str, options_t] = {
             "option_group": "plotting",
         },
     ),
+    "plot_mission_timeout": options_t(
+        300,
+        {
+            "Base",
+            "Reprocess",
+            "BasePlot",
+        },
+        ("--plot_mission_timeout",),
+        int,
+        {
+            "option_group": "plotting",
+            "section": "plotting",
+            "help": "Timeout in seconds for the any individual mission plot",
+        },
+    ),
+    "plot_dive_timeout": options_t(
+        120,
+        {
+            "Base",
+            "Reprocess",
+            "BasePlot",
+        },
+        ("--plot_dive_timeout",),
+        int,
+        {
+            "section": "plotting",
+            "option_group": "plotting",
+            "help": "Timeout in seconds for the any individual mission plot",
+        },
+    ),
     # End plotting related
     # MakeKML related
     "skip_points": options_t(

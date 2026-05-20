@@ -58,6 +58,7 @@ import stat
 import subprocess
 import sys
 import time
+import types
 import typing
 import warnings
 from typing import Literal
@@ -496,10 +497,10 @@ def bzip_decompress(input_file_name: str, output_file_name: str) -> int:
 
 
 class Timeout(Exception):
-    """Defines an exception for timeout to system call"""
+    """Defines an exception for timeout"""
 
 
-def _timeout(x: Any, y: Any) -> Any:
+def _timeout(signum: int, frame: types.FrameType | None) -> None:
     """Raises the timeout exception"""
     raise Timeout()
 
