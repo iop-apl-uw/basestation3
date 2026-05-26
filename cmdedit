@@ -1,7 +1,7 @@
 #!/opt/basestation/bin/python
 
 ##
-## Copyright (c) 2006, 2007, 2008, 2011, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2008, 2011, 2020, 2026 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -166,6 +166,7 @@ try:
     comm.close()
 except IOError:
     print("could not open comm.log - cannot determine dive number")
+    sys.exit(1)
 
 
 # determine the name of the most recent (in a dive number sense) logfile
