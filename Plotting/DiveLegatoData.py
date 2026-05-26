@@ -122,11 +122,20 @@ def plot_legato_data(
 
     # Filter bad points - note, this includes NaNs which are common
     # in the legato on truck case
-    temp_mask = (temp >= -4.0) & (temp <= 40.0)
-    cond_mask = (conductivity >= 0.0) & (conductivity <= 40.0)
-    depth_mask = (depth >= 0.0) & (depth <= 1090.0)
+    # temp_mask = (temp >= -4.0) & (temp <= 40.0)
+    # cond_mask = (conductivity >= 0.0) & (conductivity <= 40.0)
+    # depth_mask = (depth >= 0.0) & (depth <= 1090.0)
+    # mask = cond_mask & temp_mask & depth_mask
 
-    mask = cond_mask & temp_mask & depth_mask
+    # This mask just filters the NaNs, so showing more data (like CTDs out of water
+    # or data from deck dives)
+    mask = np.logical_and.reduce(
+        (
+            np.logical_not(np.isnan(depth)),
+            np.logical_not(np.isnan(temp)),
+            np.logical_not(np.isnan(conductivity)),
+        )
+    )
 
     depth = depth[mask]
     temp = temp[mask]
@@ -417,7 +426,10 @@ def plot_legato_data(
                         depth_dive.max() if len(depth_dive) > 0 else 0,
                         depth_climb.max() if len(depth_climb) > 0 else 0,
                     ),
-                    0,
+                    min(
+                        depth_dive.min() if len(depth_dive) > 0 else 0,
+                        depth_climb.min() if len(depth_climb) > 0 else 0,
+                    ),
                 ],
                 "domain": (0.1, 1.0),
             },
@@ -446,8 +458,14 @@ def plot_legato_data(
                         depth_dive.max() if len(depth_dive) > 0 else 0,
                         depth_climb.max() if len(depth_climb) > 0 else 0,
                     ),
-                    0,
+                    min(
+                        depth_dive.min() if len(depth_dive) > 0 else 0,
+                        depth_climb.min() if len(depth_climb) > 0 else 0,
+                    ),
                 ],
+                # Hide because it gets over written by the legend and can get misaligned
+                # when dealing with really narrow ranges - like a SIM_W deck dive.
+                "visible": False,
             },
             "title": {
                 "text": title_text,
