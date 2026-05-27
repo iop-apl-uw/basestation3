@@ -60,7 +60,6 @@ import BaseGZip
 import BaseMagCal
 import BaseNetCDF
 import BaseOpts
-import BaseOptsType
 import CalibConst
 import DataFiles
 import FileMgr
@@ -8012,21 +8011,6 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     """
     base_opts = BaseOpts.BaseOptions(
         "Command line driver for creating per-dive netCDF files",
-        additional_arguments={
-            "basename": BaseOptsType.options_t(
-                None,
-                {
-                    "MakeDiveProfiles",
-                },
-                ("basename",),
-                str,
-                {
-                    "help": "Basename for netcdf file to process/create (pXXXYYYY where XXX is sd_id, YYYY is dive number) Use this or --mission-dir",
-                    "action": BaseOpts.FullPathAction,
-                    "nargs": "?",
-                },
-            ),
-        },
         cmdline_args=cmdline_args,
     )
 
