@@ -136,17 +136,15 @@ def post_slack(base_opts, instrument_id, slack_hook_url, subject_line, message_b
 # For some reason, this doesn't really work
 # pagers_ext = {'html' : lambda *args: send_email(*args, html_format=True)}
 pagers_ext = {
-    "html": lambda base_opts,
-    instrument_id,
-    email_addr,
-    subject_line,
-    message_body: send_email(
-        base_opts,
-        instrument_id,
-        email_addr,
-        subject_line,
-        message_body,
-        html_format=True,
+    "html": lambda base_opts, instrument_id, email_addr, subject_line, message_body: (
+        send_email(
+            base_opts,
+            instrument_id,
+            email_addr,
+            subject_line,
+            message_body,
+            html_format=True,
+        )
     ),
     "slack": post_slack,
 }
@@ -333,8 +331,8 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num, payload=No
         log_info(f"Finished processing on .urls pass({pass_num_or_gps})")
 
     for urls_file_name in (
-        os.path.join(base_opts.basestation_etc, ".urls"),
-        os.path.join(base_opts.group_etc, ".urls") if base_opts.group_etc else None,
+        base_opts.basestation_etc / ".urls",
+        base_opts.group_etc / ".urls" if base_opts.group_etc else None,
         base_opts.mission_dir / ".urls",
     ):
         if urls_file_name is None:
@@ -674,8 +672,8 @@ def process_pagers(
         log_info(f"Finished processing on {pagers_file_name}")
 
     for pagers_file_name in (
-        os.path.join(base_opts.basestation_etc, ".pagers"),
-        os.path.join(base_opts.group_etc, ".pagers") if base_opts.group_etc else None,
+        base_opts.basestation_etc / ".pagers",
+        base_opts.group_etc / ".pagers" if base_opts.group_etc else None,
         base_opts.mission_dir / ".pagers",
     ):
         if pagers_file_name is None:
@@ -1060,8 +1058,8 @@ def process_ftp(
     log_info(f"Starting processing on {ftp_type}")
 
     for ftp_file_name in (
-        os.path.join(base_opts.basestation_etc, ftp_type),
-        os.path.join(base_opts.group_etc, ftp_type) if base_opts.group_etc else None,
+        base_opts.basestation_etc / ftp_type,
+        base_opts.group_etc / ftp_type if base_opts.group_etc else None,
         base_opts.mission_dir / ftp_type,
     ):
         if ftp_file_name is None:
@@ -1447,8 +1445,8 @@ def process_mailer(
         "%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())
     )
     for mailer_file_name in (
-        os.path.join(base_opts.basestation_etc, ".mailer"),
-        os.path.join(base_opts.group_etc, ".mailer") if base_opts.group_etc else None,
+        base_opts.basestation_etc / ".mailer",
+        base_opts.group_etc / ".mailer" if base_opts.group_etc else None,
         base_opts.mission_dir / ".mailer",
     ):
         if mailer_file_name is None:
@@ -1634,11 +1632,9 @@ def process_extensions(
 
     ret_val = 0
     for extensions_file_name, additional_search_path in (
-        (os.path.join(base_opts.basestation_etc, ".extensions"), None),
+        (base_opts.basestation_etc / ".extensions", None),
         (
-            os.path.join(base_opts.group_etc, ".extensions")
-            if base_opts.group_etc
-            else None,
+            base_opts.group_etc / ".extensions" if base_opts.group_etc else None,
             base_opts.group_etc,
         ),
         (base_opts.mission_dir / ".extensions", base_opts.mission_dir),

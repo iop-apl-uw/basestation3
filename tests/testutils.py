@@ -34,7 +34,6 @@ import pathlib
 import shutil
 import time
 from collections.abc import Callable
-from typing import Any
 
 import pytest
 
@@ -47,10 +46,11 @@ def run_mission(
     mission_dir: pathlib.Path,
     main_func: Callable[[list[str]], int],
     cmd_line: list[str],
-    caplog: Any,
+    caplog: pytest.LogCaptureFixture,
     allowed_msgs: list[str],
     pre_test_hook: Callable[[pathlib.Path], None] | None = None,
     required_msgs: list[str] | None = None,
+    capsys: pytest.CaptureFixture[str] | None = None,
 ) -> None:
     """Copies a mission to a test directory, executes it and checks warning and error output against a known list
 
@@ -61,7 +61,8 @@ def run_mission(
     caplog: logging capture from pytest fixture
     allow_msgs: list of allowed messages that can appear in the caplog
     pre_test_hook: optional function to call before test is run - mission_dir is the argument
-    required_msgs: list of messages that must appear
+    required_msgs: optional list of messages that must appear
+    capsys: optional stdout/stderr capture - if present, will be serached for required_mesages
     """
     os.environ["TZ"] = "UTC"
     time.tzset()
@@ -87,9 +88,6 @@ def run_mission(
             shutil.copy(p, mission_dir)
     if pre_test_hook:
         pre_test_hook(mission_dir)
-    # import pdb
-
-    # pdb.set_trace()
     result = main_func(cmd_line)
     assert result == 0
     bad_errors = ""
@@ -97,6 +95,13 @@ def run_mission(
     if required_msgs is not None:
         for msg in required_msgs:
             req_msgs[msg] = False
+
+        if capsys is not None:
+            for output_line in capsys.readouterr():
+                for msg in req_msgs:
+                    if msg in output_line:
+                        req_msgs[msg] = True
+
     for record in caplog.records:
         # Required messages are exempt as bad_errors
         matched_one = False

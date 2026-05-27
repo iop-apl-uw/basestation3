@@ -92,7 +92,7 @@ def main():
                 BaseOpts.FullPathTrailingSlash,
                 {
                     "help": "Seagliders home directory - NOTE: no tilda expansion done",
-                    "action": BaseOpts.FullPathTrailingSlashAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
             "new_mission_dir": BaseOptsType.options_t(

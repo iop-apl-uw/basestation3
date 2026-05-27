@@ -32,12 +32,35 @@
 CalibConst.py: seaglider calibration constants (matlab file) parser
 """
 
+import os
+import pathlib
+import pdb
 import re
 import sys
+import time
+import traceback
 
 import BaseNetCDF
-from BaseLog import BaseLogger, log_debug, log_error, log_warning
+import BaseOpts
+from BaseLog import (
+    BaseLogger,
+    log_critical,
+    log_debug,
+    log_error,
+    log_info,
+    log_warning,
+)
 from Globals import ignore_tag, ignore_tags
+
+DEBUG_PDB = False
+
+
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
 
 
 def getSGCalibrationConstants(
@@ -194,39 +217,58 @@ def getSGCalibrationConstants(
     return calib_consts
 
 
-def dump(in_filename, fo):
+def dump(in_filename: pathlib.Path) -> None:
     """Dumps out the calib_consts dictionary constructed from a calibration constants matlab file"""
-    print("Calibration constants extracted from: %s" % (in_filename), file=fo)
+    log_info(f"Calibration constants extracted from: {in_filename}")
 
     calib_consts = getSGCalibrationConstants(in_filename)
 
     if calib_consts:
         for key, value in calib_consts.items():
-            print("%s = %s (%s)" % (key, value, type(value)), file=fo)
+            log_info(f"{key} = {value} ({type(value)}")
 
 
-if __name__ == "__main__":
-    import BaseOpts
-    import BaseOptsType
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
+    """Processes seaglider data files from dat to asc
+
+    returns:
+        0 for success
+        1 for failure
+
+    raises:
+        Any exceptions raised are considered critical errors and not expected
+
+    """
 
     base_opts = BaseOpts.BaseOptions(
         "Test entry for sg_calib_constants.m processing",
-        additional_arguments={
-            "calib_const_file": BaseOptsType.options_t(
-                None,
-                ("CalibConst",),
-                ("calib_const_file",),
-                str,
-                {
-                    "help": "File to process",
-                    "action": BaseOpts.FullPathAction,
-                },
-            ),
-        },
+        cmdline_args=cmdline_args,
+        add_to_arguments=["mission_dir"],
+        add_to_required=["mission_dir"],
     )
     BaseLogger(base_opts)  # initializes BaseLog
 
-    if base_opts.calib_const_file:
-        dump(base_opts.calib_const_file, sys.stdout)
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
+    sg_calib_consts_file = base_opts.mission_dir / "sg_calib_constants.m"
+    if not sg_calib_consts_file.exists():
+        log_error(f"{sg_calib_consts_file} does not exist")
+        return 1
 
-    sys.exit(0)
+    dump(sg_calib_consts_file)
+    return 0
+
+
+if __name__ == "__main__":
+    ret_val = 1
+
+    # Force to be in UTC
+    os.environ["TZ"] = "UTC"
+    time.tzset()
+
+    try:
+        rev_val = main()
+    except Exception:
+        log_critical("Unhandled exception in main -- exiting")
+
+    sys.exit(ret_val)

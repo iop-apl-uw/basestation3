@@ -60,18 +60,21 @@ known_labels = (
 known_typs = ("turb15", "turb21", "turb23", "fluo49", "fluo46")
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     base_opts = BaseOpts.BaseOptions(
         "Get legato pressure correction constants from a Seaglider selftest capture file",
+        cmdline_args=cmdline_args,
         additional_arguments={
             "capture": BaseOpts.options_t(
                 None,
-                ("GetTridenteChannels",),
+                {
+                    "GetTridenteChannels",
+                },
                 ("capture",),
-                str,
+                BaseOpts.FullPathlib,
                 {
                     "help": "Seaglider self-test capture",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
         },
@@ -212,6 +215,8 @@ def main():
             pdb.post_mortem(tb)
         else:
             log_error("Untrapped error", "exc")
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

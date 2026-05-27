@@ -90,8 +90,8 @@ class SensorExtensions:
         self.__extension_file_name = extension_file_name
         self.__extension_directory = sensor_extension_directory
         if base_opts.group_etc:
-            self.__group_extension_file_name = os.path.join(
-                base_opts.group_etc, sensor_extension_base_name
+            self.__group_extension_file_name = (
+                base_opts.group_etc / sensor_extension_base_name
             )
             self.__group_extension_directory = base_opts.group_etc
         else:

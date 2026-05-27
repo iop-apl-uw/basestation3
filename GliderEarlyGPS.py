@@ -32,7 +32,6 @@
 
 import inspect
 import os
-import pathlib
 import signal
 import sys
 import time
@@ -196,9 +195,7 @@ class GliderEarlyGPSClient:
         Closes out the comm.log and removes the .connected file
         """
         # If we have a path to the logout script - run that
-        if self.__base_opts.path_to_logout and os.path.exists(
-            self.__base_opts.path_to_logout
-        ):
+        if self.__base_opts.path_to_logout and self.__base_opts.path_to_logout.exits():
             try:
                 my_env = os.environ.copy()
                 my_env["logout"] = "shell_disappeared_logout"
@@ -433,24 +430,28 @@ def main():
         additional_arguments={
             "comm_log": BaseOptsType.options_t(
                 "",
-                ("GliderEarlyGPS",),
+                {
+                    "GliderEarlyGPS",
+                },
                 ("comm_log",),
                 str,
                 {
                     "help": "comm.log file (for testing only)",
                     "nargs": "?",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
             "path_to_logout": BaseOptsType.options_t(
                 "",
-                ("GliderEarlyGPS",),
+                {
+                    "GliderEarlyGPS",
+                },
                 ("--path_to_logout",),
                 str,
                 {
                     "help": "Path to the .logout file",
                     "nargs": "?",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
         },
@@ -470,7 +471,7 @@ def main():
     elif base_opts.comm_log:
         # TODO - this code appears to be unreachable - setup an alternative for testing?
         comm_log_filename = base_opts.comm_log
-        base_opts.mission_dir = pathlib.Path(os.path.split(base_opts.comm_log)[0])
+        base_opts.mission_dir = base_opts.comm_log.parent
         testing = True
     else:
         log_critical("Dive directory must be supplied or path to comm.log.")

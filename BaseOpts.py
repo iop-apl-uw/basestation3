@@ -87,49 +87,49 @@ def generate_range_action(arg, min_val, max_val):
     return RangeAction
 
 
-def FullPath(x):
-    """Expand user- and relative-paths"""
-    # This catches the case for a nargs=? argument that is FullPath type and the argument
-    # is not specified on the command line.  In this case, the default value is returned,
-    # but since our default is and empty stirng, it gets run through this helper and converted
-    # - so, don't do that.
-    if x == "":
-        return x
+# def FullPath(x):
+#     """Expand user- and relative-paths"""
+#     # This catches the case for a nargs=? argument that is FullPath type and the argument
+#     # is not specified on the command line.  In this case, the default value is returned,
+#     # but since our default is and empty stirng, it gets run through this helper and converted
+#     # - so, don't do that.
+#     if x == "":
+#         return x
 
-    if isinstance(x, list):
-        return list(map(lambda y: os.path.abspath(os.path.expanduser(y)), x))
-    else:
-        return os.path.abspath(os.path.expanduser(x))
-
-
-def FullPathTrailingSlash(x):
-    """Expand user- and relative-paths and include the trailing slash"""
-    if x == "":
-        return x
-
-    return FullPath(x) + "/"
+#     if isinstance(x, list):
+#         return list(map(lambda y: os.path.abspath(os.path.expanduser(y)), x))
+#     else:
+#         return os.path.abspath(os.path.expanduser(x))
 
 
-class FullPathAction(argparse.Action):
-    """Expand user- and relative-paths"""
+# def FullPathTrailingSlash(x):
+#     """Expand user- and relative-paths and include the trailing slash"""
+#     if x == "":
+#         return x
 
-    def __call__(self, parser, namespace, values, option_string=None):
-        if values is not None:
-            setattr(namespace, self.dest, FullPath(values))
-        else:
-            setattr(namespace, self.dest, values)
+#     return FullPath(x) + "/"
 
 
-class FullPathTrailingSlashAction(argparse.Action):
-    """Expand user- and relative-paths and include the trailing slash"""
+# class FullPathAction(argparse.Action):
+#     """Expand user- and relative-paths"""
 
-    def __call__(self, parser, namespace, values, option_string=None):
-        if values is not None:
-            setattr(
-                namespace, self.dest, os.path.abspath(os.path.expanduser(values)) + "/"
-            )
-        else:
-            setattr(namespace, self.dest, values)
+#     def __call__(self, parser, namespace, values, option_string=None):
+#         if values is not None:
+#             setattr(namespace, self.dest, FullPath(values))
+#         else:
+#             setattr(namespace, self.dest, values)
+
+
+# class FullPathTrailingSlashAction(argparse.Action):
+#     """Expand user- and relative-paths and include the trailing slash"""
+
+#     def __call__(self, parser, namespace, values, option_string=None):
+#         if values is not None:
+#             setattr(
+#                 namespace, self.dest, os.path.abspath(os.path.expanduser(values)) + "/"
+#             )
+#         else:
+#             setattr(namespace, self.dest, values)
 
 
 # Pathlib based
@@ -205,10 +205,8 @@ def generate_sample_conf_file(options_dict, calling_module):
             print(f"#{opt_n} = ", end="")
             if opt_v.var_type is bool:
                 print(f"{int(opt_v.default_val)}")
-            elif opt_v.var_type is FullPath:
+            elif opt_v.var_type is FullPathlib:
                 print("<path_to_file>")
-            elif opt_v.var_type is FullPathTrailingSlash:
-                print("<path_to_directory>")
             elif isinstance(opt_v.default_val, list):
                 # or isinstance(
                 #     opt_v.default_val, collections.abc.KeysView
@@ -267,7 +265,9 @@ def loadmodule(pathname):
     return None
 
 
-def find_additional_options(basestation_directory, cmdline_args):
+def find_additional_options(
+    basestation_directory: pathlib.Path, cmdline_args: list[str]
+):
     """Processes the .extensions and .sensors files to add any additional options.
     This code partially duplicates functions in Sensor.py and BaseDotFiles.py, but
     is re-written here to be free of any calls to the logginer infrastructure, which
@@ -277,8 +277,8 @@ def find_additional_options(basestation_directory, cmdline_args):
     new_option_groups = {}
     add_arguments = {}
     tmp_ap = argparse.ArgumentParser(description="find_additional_options")
-    tmp_ap.add_argument("--mission_dir", action=FullPathTrailingSlashAction)
-    tmp_ap.add_argument("--group_etc", action=FullPathTrailingSlashAction)
+    tmp_ap.add_argument("--mission_dir", action=FullPathlibAction)
+    tmp_ap.add_argument("--group_etc", action=FullPathlibAction)
     tmp_argv = []
     for arg in cmdline_args:
         if "-h" in arg:
@@ -286,7 +286,7 @@ def find_additional_options(basestation_directory, cmdline_args):
         tmp_argv.append(arg)
     args = tmp_ap.parse_known_args(tmp_argv)[0]
 
-    basestation_etc = os.path.join(basestation_directory, "etc")
+    basestation_etc = basestation_directory / "etc"
 
     for extension_directory, additional_search_path in (
         (basestation_etc, None),
@@ -448,20 +448,20 @@ global_options_dict: dict[str, options_t] = {
         None,  # Updated below
         None,
         ("--basestation_etc",),
-        FullPathTrailingSlash,
+        FullPathlib,
         {
             "help": "Basestation etc dirctory (master config)",
-            "action": FullPathTrailingSlashAction,
+            "action": FullPathlibAction,
         },
     ),
     "group_etc": options_t(
         None,  # Updated below
         None,
         ("--group_etc",),
-        FullPathTrailingSlash,
+        FullPathlib,
         {
             "help": "etc dirctory for a collection of Seagliders",
-            "action": FullPathTrailingSlashAction,
+            "action": FullPathlibAction,
         },
     ),
     "debug_pdb": options_t(
@@ -561,7 +561,7 @@ global_options_dict: dict[str, options_t] = {
         {
             "help": "glider mission directory",
             "action": FullPathlibAction,
-            "required": (
+            "required": {
                 "Base",
                 "BaseCtrlFiles",
                 "BaseDB",
@@ -589,7 +589,7 @@ global_options_dict: dict[str, options_t] = {
                 "Ver65",
                 "RegressVBD",
                 "Magcal",
-            ),
+            },
         },
     ),
     "delete_upload_files": options_t(
@@ -1082,13 +1082,15 @@ global_options_dict: dict[str, options_t] = {
     #
     "target_dir": options_t(
         "",
-        {"MoveData", "MakeDiveProfiles", "Reprocess"},
+        {"MoveData"},
         ("--target_dir", "-t"),
         FullPathlib,
         {
             "help": "target directory, used by MoveData.py",
             "action": FullPathlibAction,
-            "required": ("MoveData",),
+            "required": {
+                "MoveData",
+            },
         },
     ),
     # Used by a number of extensions when being run via the CLI
@@ -1783,6 +1785,7 @@ class BaseOptions:
         add_to_arguments: list[str] | None = None,
         add_option_groups: dict[str, str] | None = None,
         calling_module: str | None = None,
+        add_to_required: list[str] | None = None,
     ):
         """
         Input:
@@ -1792,7 +1795,8 @@ class BaseOptions:
                           equivilent to sys.argv[1:]
             add_to_arguments - adds the calling_module to the list of .group set of that option
             add_option_groups - dict of new option_groups and descriptions
-            calling_module -
+            calling_module - name if calling module if supplied
+            add_to_required - adds the calling_module as requiring the named arguments (arguments must also be in add_to_argument list)
         """
         global option_group_description
 
@@ -1821,28 +1825,31 @@ class BaseOptions:
                 if options_dict[add_arg].group is not None:
                     options_dict[add_arg].group.add(calling_module)
 
+        if add_to_required is not None:
+            for add_arg in add_to_required:
+                if "required" in options_dict[add_arg].kwargs:
+                    options_dict[add_arg].kwargs["required"].add(calling_module)
+                else:
+                    options_dict[add_arg].kwargs["required"] = {calling_module}
+
         if add_option_groups is not None:
             option_group_description |= add_option_groups
 
-        basestation_directory, _ = os.path.split(
-            # os.path.abspath(os.path.expanduser(sys.argv[0]))
-            __file__
-        )
+        basestation_directory = pathlib.Path(__file__).parent
 
         self.basestation_directory = basestation_directory  # make avaiable
         # add path to load common basestation modules from subdirectories
-        sys.path.append(basestation_directory)
+        sys.path.append(str(basestation_directory))
 
         # Update default config location
         options_dict["basestation_etc"] = dataclasses.replace(
             options_dict["basestation_etc"],
             **{
-                "default_val": FullPathTrailingSlash(
-                    os.path.join(self.basestation_directory, "etc")
-                ),
+                "default_val": FullPathlib(self.basestation_directory / "etc"),
             },
         )
 
+        # TODO - add ext_add_to_required
         ext_add_to_arguments, ext_add_option_groups, ext_add_options = (
             find_additional_options(self.basestation_directory, cmdline_args)
         )
@@ -1892,7 +1899,7 @@ class BaseOptions:
                     option_group_set.add(v.kwargs["option_group"])
                 if (
                     "required" in v.kwargs
-                    and isinstance(v.kwargs["required"], tuple)
+                    and isinstance(v.kwargs["required"], set)
                     and calling_module in v.kwargs["required"]
                 ):
                     option_group_set.add("required named arguments")
@@ -1938,7 +1945,7 @@ class BaseOptions:
                     kwargs["default"] = v.default_val
                     if "section" in kwargs:
                         del kwargs["section"]
-                    if "required" in kwargs and isinstance(kwargs["required"], tuple):
+                    if "required" in kwargs and isinstance(kwargs["required"], set):
                         kwargs["required"] = calling_module in kwargs["required"]
                     if (
                         "range" in kwargs
@@ -2037,10 +2044,10 @@ class BaseOptions:
                                         raise Exception(
                                             f"Could not convert {k} from {self._opts.config_file_name} to a list"
                                         ) from exc
-                                elif v.var_type is FullPath:
-                                    value = FullPath(value)
-                                elif v.var_type is FullPathTrailingSlash:
-                                    value = FullPathTrailingSlash(value)
+                                elif v.var_type is FullPathlib:
+                                    value = FullPathlib(value)
+                            #                                elif v.var_type is FullPathTrailingSlash:
+                            #                                    value = FullPathTrailingSlash(value)
                             # if value == v.default_val:
                             if value is None:
                                 continue

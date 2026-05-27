@@ -351,7 +351,7 @@ def update_globals_from_nodc(base_opts, globals_d):
             nodc_dicts[0][name] = globals_d[name]
 
     for yaml_filename in (
-        os.path.join(base_opts.basestation_etc, nodc_cnf_file),
+        base_opts.basestation_etc / nodc_cnf_file,
         base_opts.mission_dir / nodc_cnf_file,
     ):
         if os.path.exists(yaml_filename):

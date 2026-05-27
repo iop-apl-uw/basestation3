@@ -1,0 +1,1895 @@
+33.497,SUSR,N,Beginning selftest #5 on glider SG272
+0.555,SUSR,N,Mon Feb  2 21:00:08 2026
+0.576,SUSR,N,---- Audible pings to mark start of tests ----
+1.022,HXPDR,N,range was 4.632750 m
+3.756,HXPDR,N,range was 999.000000 m
+6.509,HXPDR,N,range was 999.000000 m
+8.524,SUSR,N,clearing tranponder ping count, prev count=0
+8.546,SUSR,N,xpdr/ranging can be tested while other tests proceed
+8.569,SUSR,N,---- Checking GPS ----
+8.720,HGPS,N,$GNTXT,01,01,02,u-blox AG - www.u-blox.com*4E
+8.764,HGPS,N,$GNTXT,01,01,02,HW UBX-M8030 00080000*60
+8.809,HGPS,N,$GNTXT,01,01,02,ROM CORE 3.01 (107888)*2B
+8.845,HGPS,N,$GNTXT,01,01,02,FWVER=SPG 3.01*46
+8.880,HGPS,N,$GNTXT,01,01,02,PROTVER=18.00*11
+8.918,HGPS,N,$GNTXT,01,01,02,GPS;GLO;GAL;BDS*77
+8.955,HGPS,N,$GNTXT,01,01,02,SBAS;IMES;QZSS*49
+8.993,HGPS,N,$GNTXT,01,01,02,GNSS OTP=GPS;GLO*37
+9.065,HGPS,N,$GNTXT,01,01,02,LLC=FFFFFFFF-FFFFFFED-FFFFFFFF-FFFFFFFF-FFFFFF69*23
+9.111,HGPS,N,$GNTXT,01,01,02,ANTSUPERV=AC SD PDoS SR*3E
+9.151,HGPS,N,$GNTXT,01,01,02,ANTSTATUS=DONTKNOW*2D
+9.179,HGPS,N,$GNTXT,01,01,02,PF=3FF*4B
+9.717,HGPS,N,$GNTXT,01,01,02,ANTSTATUS=INIT*3B
+10.713,HGPS,N,$GNTXT,01,01,02,ANTSTATUS=OK*25
+12.717,HGPS,N,Obtaining GPS fix
+12.830,HGPS,N,reset GPS, flags=1
+13.932,HGPS,N,Acquiring GPS fix (10,4,40)
+14.960,HGPS,N,VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVAAA
+55.592,HGPS,N,time not syncd, PPS timeout
+53.014,HGPS,N,clock sync to GPS serial
+56.000,HGPS,N,sync sentence $GNRMC,210103.00,A,4739.31624,N,12219.05331,W,0.015,,020226,,,A*7B
+
+56.113,HSUPER,N,0,0,time set to (1770066064)
+56.178,HSUPER,N,RTC time Mon Feb  2 21:01:04 2026
+56.221,HGPS,N,decl=15.1
+56.245,HGPS,N,020226 210051 4739.3164 -12219.0527 hdop=1.7 cog=0.0 sog=0.0 hpe=8.8 n=5 31/33 seconds
+56.819,SUSR,N,---- Checking Iridium phone ----
+67.363,HPHONE,N,model: 9523N
+69.405,HPHONE,N,IMEI: 300125063812830
+71.447,HPHONE,N,NUM: +CNUM:"","",129
+73.494,HPHONE,N,SIM: 8988169234003905239
+76.839,HPHONE,N,signal strength 5
+77.612,HPHONE,N,signal strength 5
+78.692,HPHONE,N,signal strength 5
+78.744,HPHONE,N,-MSGEO: -2300,-3632,4692,1434992b
+78.768,HPHONE,N,lat: 47.694527, lon: -122.344437, time: Wed Apr 29 17:11:01 2015
+78.817,HPHONE,N,WARNING: Phone reported 2 stat on CREG?
+78.839,HPHONE,N,CREG failed - phone not registered
+81.250,HPHONE,N,phone on 24584 ms, avg mA=59.6, max mA=346.7
+81.274,SUSR,N,---- Checking bathymetry data ----
+86.351,SBATHY,N,Loaded bathymap.006 [156 100] 100m (LL) 47.6800,-122.5000 (UR) 47.8204,-122.3663
+89.082,SBATHY,N,Loaded bathymap.007 [ 56  75] 100m (LL) 47.6500,-122.5000 (UR) 47.7004,-122.3998
+108.026,SBATHY,N,Loaded bathymap.001 [208 138] 1000m (LL) 46.7860,-126.0000 (UR) 48.6578,-124.1863
+119.963,SBATHY,N,Loaded bathymap.002 [167 108] 1000m (LL) 45.5000,-125.3000 (UR) 47.0029,-123.9133
+133.004,SBATHY,N,Loaded bathymap.003 [178 111] 1000m (LL) 44.0000,-125.3000 (UR) 45.6019,-123.9113
+133.040,SBATHY,N,WARNING: No bathymetry file covers the current location (4739.316406,-12219.052734)!
+133.066,SUSR,N,---- Checking icemap data ----
+133.120,SBATHY,N,WARNING: There are NO ice map files on board!
+133.148,SBATHY,N,NOTE: $USE_ICE (0.000000) does not correspond to a loaded, valid ice file; This may or may not be corrected automatically.
+133.182,SUSR,N,---- Checking compass and calibration files ----
+133.205,HCOMPASS,N,tcm2mat.cal:
+hard0="84.8 -386.6 -273.5"
+soft0="1.000 0.007 -0.056 -0.001 1.078 -0.019-0.015 -0.052 1.044"
+133.381,HCOMPASS,N,marking as read
+133.408,HCOMPASS,N,Compass 1, aux-B
+133.429,HCOMPASS,N,pitch A,B,C,D: 0.000000 1.000000 0.000000 0.000000
+133.454,HCOMPASS,N,roll A,B,C,D:  0.000000 1.000000 0.000000 0.000000
+133.479,HCOMPASS,N,hard iron P,Q,R: 84.800003 -386.600006 -273.500000
+133.508,HCOMPASS,N,soft iron: 1.000000 0.007000 -0.056000
+133.532,HCOMPASS,N,           -0.001000 1.078000 -0.019000
+133.556,HCOMPASS,N,           -0.015000 -0.052000 1.044000
+133.607,HCOMPASS,N,marking as read
+133.633,HCOMPASS,N,Compass 3, motor
+133.655,HCOMPASS,N,pitch A,B,C,D: 0.000000 1.000000 0.000000 0.000000
+133.679,HCOMPASS,N,roll A,B,C,D:  0.000000 1.000000 0.000000 0.000000
+133.704,HCOMPASS,N,hard iron P,Q,R: 0.000000 0.000000 0.000000
+133.731,HCOMPASS,N,soft iron: 1.000000 0.000000 0.000000
+133.754,HCOMPASS,N,           0.000000 1.000000 0.000000
+133.778,HCOMPASS,N,           0.000000 0.000000 1.000000
+134.787,HCOMPASS,N,1, aux-B, Hdg: 206.65 deg Rol: 68.84 deg Pit: -86.89 deg Tmp: 25.68 C
+134.815,HCOMPASS,N,1, aux-B, X: 1129.0 Y: 731.0 Z: 266.0
+136.048,HCOMPASS,N,version: 6742, compiled 2024-12-31 21:58
+136.073,HCOMPASS,N,config: G0 X4 O7 Nf716735159002a00 Kaf
+136.097,HCOMPASS,N,accel scale:  0.000060997 0.000000167 -0.000000118  00EE45 0000A7 FFFF8A
+136.128,HCOMPASS,N,              -0.000000083 0.000060931 -0.000000161  FFFFAD 00EE03 FFFF5F
+136.156,HCOMPASS,N,              -0.000000308 0.000000126 0.000062125  FFFECC 00007E 00F2AD
+136.184,HCOMPASS,N,accel offset: -0.043308031 0.010180490 0.014463310  BDEACD 0F88C1 1611BB
+136.209,HCOMPASS,N,Tslope: 12340, Toffset: 0
+136.231,SUSR,N,---- Checking supervisor configuration ----
+136.296,HSUPER,N,fuel gauge     = 2 (2.000000 Hz)
+136.319,HSUPER,N,aux monitoring = 0 (0 seconds)
+136.340,HSUPER,N,heartbeat      = 0 (0 seconds)
+136.366,HSUPER,N,watchdog period= 7 (600 seconds)
+136.387,HSUPER,N,pressure gain  = 0 (1)
+136.408,HSUPER,N,reed switch    = 1 (enabled)
+136.472,HSUPER,N,super FW ver 4
+136.537,HSUPER,N,status P0=27,P1=71,P2=254,7302=1,FORCED=0,RESET=0,ERRORS=0
+136.606,HSUPER,N,ADCO = 55, ADCG = 1.2908322811
+136.672,HSUPER,N,offset counts = 79, 93 (1.242729 mA, 7.109557 ma)
+136.696,SUSR,N,---- Reporting hardware configuration ----
+136.718,SUSR,N,Sensor in slot 1 is not installed
+136.740,SUSR,N,Sensor in slot 2 is not installed
+136.765,SUSR,N,Sensor in slot 3 is not installed
+136.787,SUSR,N,Sensor in slot 4 is not installed
+136.808,SUSR,N,Sensor in slot 5 is not installed
+136.830,SUSR,N,Sensor in slot 6 is not installed
+136.852,SUSR,N,Logger sensor in logger slot 1 is SciCon on USART5C (pwr GPIO F10) ()
+136.876,SUSR,N,Logger Sensor in logger slot 2 is not installed
+136.900,SUSR,N,Logger Sensor in logger slot 3 is not installed
+136.929,SUSR,N,Logger Sensor in logger slot 4 is not installed
+136.952,SUSR,N,Motherboard is Rev.E
+136.976,SUSR,N,Phone is Iridium9522
+136.997,SUSR,N,    Phone is configured for flow control and carrier detect
+137.020,SUSR,N,    Phone supply is battery 2
+137.041,SUSR,N,GPS is UBlox
+137.062,SUSR,N,Compass is aux-B on USART3C (pwr GPIO E5) (compass)
+137.084,SUSR,N,    Spare compass is not installed on nil
+137.108,SUSR,N,XPDR is AAE_955_3.08 on USART5A (pwr GPIO F8) ()
+137.130,SUSR,N,network is not installed on nil
+137.152,SUSR,N,RAFOS is not installed
+137.172,SUSR,N,nav[0] is not installed on nil
+137.198,SUSR,N,nav[1] is not installed on nil
+137.219,SUSR,N,nav[2] is not installed on nil
+137.241,SUSR,N,nav[3] is not installed on nil
+137.305,SUSR,N,External pressure sensor ADC gain=1
+137.328,SUSR,N,Current pressure is aux serial on USART3C (pwr GPIO E5) (compass)
+137.352,SUSR,N,---- Reporting serdev and logdev cnf files ----
+137.375,SUSR,N,.cnf files on disk:
+      317 06-26-2025 14:39:44 legato.cnf                      
+317 bytes used; 1 file
+137.467,SUSR,N,
+137.486,SUSR,N,.cnf files registered in serlib:
+137.511,SUSR,N,== legato.cnf ==
+name=legato
+prefix=rbr
+timeout=1000
+baud=19200
+warmup=8000
+voltage=10
+headerlines=0
+current=0.02
+format="%d-%d-%d %d:%d:%f, %00, %01, %02, %03"
+query="%F%n%1%F%n%[Ready: ]fetch sleepafter=true%r%n"
+column=conduc(10000,0)
+column=temp(10000,0)
+column=pressure(1000,0)
+column=conducTemp(10000,0)
+power-policy=1
+cycles=0
+137.986,SUSR,N,---- Reporting exec configuation ----
+138.034,SUSR,N,---- Reporting currents file ----
+138.095,SUSR,N,---- Reporting software version and processor info ----
+138.132,SSYS,N,Version 67.01/7361M (trunk) Nov 13 2025 12:45:22
+138.139,SSYS,N,Cortex-M4 GCC 13.3.1 
+138.143,SSYS,N,Rev E
+138.146,SSYS,N,IAP v1.9 
+138.150,SSYS,N,Super v4
+138.153,SSYS,N,Seaglider operating software developed and maintained
+138.161,SSYS,N,by Integrative Observational Platforms Group, APL-UW
+138.167,SSYS,N,Copyright 2003-2025, University of Washington. UW and
+138.175,SSYS,N,the developers expressly disclaim any and all warranties
+138.182,SSYS,N,pertaining to non-infringement, merchantability or fitness
+138.191,SSYS,N,for a particular purpose. User assumes and accepts all
+138.198,SSYS,N,risks associated with installation and operation of this
+138.206,SSYS,N,software.
+138.208,SSYS,N,o OLD KHH motor and supervisor support
+138.214,SSYS,N,x ICE, x RAFOS, x SciCon, o DG, o LUA
+138.221,SSYS,N,Chip ID F4xx(0x413), revision 0x100f
+138.255,SSYS,N,flash size 1024 kB
+138.280,SSYS,N,serial 0034 002a 4701 3431 3433 3937 
+138.311,SSYS,N,Core ID 410fc241
+138.416,SSYS,N,serial: 64
+138.528,SSYS,N,BOM: UW LSM disabled
+138.640,SSYS,N,lot: 
+138.688,SUSR,N,oscillator actual 8000266 Hz
+138.709,SUSR,N,---- Reporting utility storage ----
+138.731,HTT8,N,targetName = SE
+138.793,HTT8,N,selftest = 5
+138.813,HTT8,N,boot = 95
+138.833,HTT8,N,lastLat = 47.655273
+138.855,HTT8,N,lastLon = -122.317543
+138.875,HTT8,N,fixTime = 1770066064
+138.896,HTT8,N,magvar = 15.057545
+138.916,HTT8,N,escapeRoute = 0
+138.937,HTT8,N,escapeDepth = 0
+138.961,HTT8,N,deviceCnf0 = legato.cnf
+138.982,HTT8,N,deviceCnf1 = 
+139.002,HTT8,N,deviceCnf2 = 
+139.022,HTT8,N,deviceCnf3 = 
+139.042,HTT8,N,deviceCnf4 = 
+139.062,HTT8,N,loggerCnf0 = 
+139.083,HTT8,N,loggerCnf1 = 
+139.102,HTT8,N,loggerCnf2 = 
+139.123,HTT8,N,loggerCnf3 = 
+139.142,HTT8,N,loggerCnf4 = 
+139.163,HTT8,N,SMSemail = iopsggw@uw.edu
+139.183,HTT8,N,networkSessionID = 0
+139.204,HTT8,N,SMSinbox = 0
+139.224,HTT8,N,intPLatch = 14.803166
+139.246,HTT8,N,humidityLeak = 60.000000
+139.267,HTT8,N,intPLeak = 0.500000
+139.292,HTT8,N,rollAdjMaxDeg = 10.000000
+139.313,HTT8,N,CTslot = 1
+139.333,HTT8,N,CTparam = 120.000000
+139.354,SUSR,N,---- Reporting directory contents and uSD card info ----
+    54653 06-27-2025 12:39:22 bathymap.006                    
+        0 11-07-2025 23:11:34 dirtmp.txt                      
+      568 11-07-2025 23:20:02 THISDIVE.DAT                    
+      197 11-07-2025 23:25:14 THISDIVE.WRK                    
+      252 07-29-2025 20:41:40 BG072925                        
+    14815 06-27-2025 12:39:00 bathymap.007                    
+       52 06-17-2023 20:53:08 startup.scr                     
+       44 01-01-2000 00:04:28 boots.log                       
+    27000 06-26-2025 21:37:32 iap_F4_gnicl.bin                
+   307440 01-01-2000 00:26:32 gnicl.bin                       
+     4461 02-02-2026 21:01:00 THISDIVE.LOG                    
+     9922 02-02-2026 21:02:26 THISDIVE.KAP                    
+      247 11-13-2025 21:30:34 BATTERY                         
+        0 08-29-2025 15:09:12 dv0000/                         
+       3801 08-29-2025 15:09:14   sg0000kz.a                      
+         49 08-29-2025 15:09:14   sg0000en.x                      
+       1563 08-29-2025 15:09:14   sg0000lz.a                      
+       93 08-29-2025 16:42:46 tcm2mat.cal                     
+    25224 10-20-1921 11:06:08 iap_F4_glider_F2.bin            
+      317 06-26-2025 14:39:44 legato.cnf                      
+    27276 06-26-2025 23:08:04 iap_F4_glider.bin               
+        0 06-26-2025 15:48:28 old_scicon_files/               
+         41 06-17-2023 20:53:08   scicon.att                      
+       4432 06-17-2023 20:53:08   scicon.ins                      
+         47 01-01-2000 00:00:52   scicon.sch                      
+     3538 08-29-2025 15:08:04 sg0000kl.a                      
+      197 11-07-2025 23:25:14 cmdfile                         
+       73 11-07-2025 23:25:14 loggers.cmd                     
+        0 08-29-2025 16:37:16 dv0001/                         
+      38663 08-29-2025 16:37:18   sg0001kz.a                      
+       3574 08-29-2025 16:37:20   sg0001lz.a                      
+       4224 08-29-2025 16:37:24   sc0001ag.a                      
+        220 08-29-2025 16:37:20   sg0001en.x                      
+       4096 08-29-2025 16:37:24   sc0001bg.a                      
+       2670 08-29-2025 16:37:20   sg0001dz.a                      
+        0 08-29-2025 17:26:42 dv0002/                         
+      37202 08-29-2025 17:26:44   sg0002kz.a                      
+       3961 08-29-2025 17:26:44   sg0002lz.a                      
+       6144 08-29-2025 17:26:50   sc0002ag.a                      
+        283 08-29-2025 17:26:44   sg0002en.x                      
+       7168 08-29-2025 17:26:52   sc0002bg.a                      
+       4164 08-29-2025 17:26:44   sg0002dz.a                      
+      241 08-27-2025 21:48:20 BG082725                        
+      242 08-29-2025 14:50:12 BG082925                        
+        0 08-29-2025 18:18:22 dv0003/                         
+      40614 08-29-2025 18:18:26   sg0003kz.a                      
+       3913 08-29-2025 18:18:26   sg0003lz.a                      
+       6144 08-29-2025 18:18:30   sc0003ag.a                      
+        287 08-29-2025 18:18:26   sg0003en.x                      
+       7168 08-29-2025 18:18:32   sc0003bg.a                      
+       4253 08-29-2025 18:18:26   sg0003dz.a                      
+      116 08-29-2025 14:53:52 science                         
+      225 08-29-2025 14:53:56 targets                         
+        0 08-29-2025 19:09:14 dv0004/                         
+      40293 08-29-2025 19:09:16   sg0004kz.a                      
+       3863 08-29-2025 19:09:16   sg0004lz.a                      
+       7168 08-29-2025 19:09:22   sc0004ag.a                      
+        283 08-29-2025 19:09:18   sg0004en.x                      
+       6144 08-29-2025 19:09:24   sc0004bg.a                      
+       3780 08-29-2025 19:09:16   sg0004dz.a                      
+        0 08-29-2025 20:00:42 dv0005/                         
+      38956 08-29-2025 20:00:44   sg0005kz.a                      
+       3791 08-29-2025 20:00:44   sg0005lz.a                      
+       6144 08-29-2025 20:00:50   sc0005ag.a                      
+        306 06-26-2025 15:42:10   sg0005en.x                      
+       6144 08-29-2025 20:00:50   sc0005bg.a                      
+       4208 06-26-2025 15:42:10   sg0005lz.x                      
+       3712 08-29-2025 20:00:44   sg0005dz.a                      
+      247 11-07-2025 23:20:12 BG110725                        
+        0 11-07-2025 23:25:26 pdoslog                         
+   111943 11-10-2025 21:51:52 bathymap.001                    
+     1958 11-07-2025 23:23:26 st0004lz.a                      
+      357 11-07-2025 23:25:22 pdoslog.gz                      
+      322 11-07-2025 23:23:26 st0004dz.a                      
+    29231 11-07-2025 23:25:48 st0004kz.a                      
+    70646 11-10-2025 21:53:28 bathymap.002                    
+    76596 11-10-2025 21:55:24 bathymap.003                    
+   768000 01-01-2000 00:00:00 backup_b.bin                    
+    55092 11-13-2025 21:18:36 motor_RevE_no_LSM303.bin        
+143.417,SSYS,N,devicesize:7591,capacity:3887104 kbytes,blocksize:512 bytes,type:2
+143.443,SSYS,N,manuf:1,oem:PA,name:S04AG,rev:13
+143.464,SSYS,N,date:2004/5,sn:3672176869
+143.487,SSYS,N,3874912 kB free
+143.507,SFATFS,I,Starting check -1
+143.553,SFATFS,I,8 dirs, 72 files
+143.562,SFATFS,I,Total time:47 ms, Open time 0 ms, Check time 0 ms, Close time 0
+143.578,SUSR,N,---- Checking pressure sensor ----
+144.166,HCOMPASS,N,version: 6742, compiled 2024-12-31 21:58
+144.190,HCOMPASS,N,config: G0 X4 O7 Nf716735159002a00 Kaf
+144.211,HPRES,N,pfilter=3
+162.477,HPRES,N,                A/D         mVolts     Meters
+162.502,HPRES,N, Mean:          773559.1   115.038748 0.00    
+162.527,HPRES,N, Sigma:         32.2       0.004794   -121.65 
+162.551,HPRES,N, RMS:           773559.1   115.038749 0.00    
+162.575,HPRES,N, Min:           773506     115.030853 -0.00   
+162.608,HPRES,N, Max:           773600     115.044832 0.01    
+162.630,HPRES,N, Peak-to-peak:  94         13.979077  uV
+
+162.653,HPRES,N, Volts per bit: 1.487136e-07
+
+162.674,HPRES,N,Y-intercept is set correctly
+164.222,HSCICON,N,rst=3, exception=0, PC=0, wd=0, vee=1, LSI=0, safeboot=0
+Ready: legatoPoll.ct.P0 stored 10156
+
+>88.5 mAs
+175.523,SMOTOR,N,motor offset=0, slope=0.058777
+175.546,SUSR,N,---- Checking SciCon ----
+175.575,HSCICON,N,waiting 4908 ms before powering up
+182.029,HSCICON,N,rst=3, exception=0, PC=0, wd=0, vee=1, LSI=0, safeboot=0
+ààver long
+
+GNICL Version 0.3/7299M (trunk) Jun 23 2025 11:04:21
+Cortex-M4 GCC 13.3.1 
+Chip ID F4xx(0x413), revision 0x101f
+flash size 1024 kB
+serial 0052 0022 510b 3133 3939 3931 
+Core ID 410fc241
+serial: 231
+BOM: B.0 BME680
+lot: build of 32
+
+>cardinfo
+devicesize:7591,capacity:3887104 kbytes,blocksize:512 bytes,type:2
+manuf:58,oem:DD,name:DDINC,rev:30
+date:2008/7,sn:1837301612
+open files      = 0/0
+free kB         = 3876640
+free clusters   = 121145
+fat entries     = 121218
+sec per cluster = 64
+vol start sec   = 8192
+fat start sec   = 14488
+root dir start  = 2
+data start sec  = 16384
+
+>free
+3876640 kB free
+
+>fgwd config
+WDvalue idx = 2 (60 s)
+ADrate idx  = 2 (6.000000 Hz)
+Measure = 0
+Flags   = 1
+Offset  = 32707
+Slope   = 2876
+
+>flash status
+WRPR = 0xfff, OB = 57
+
+>batt
+temp: 14.98 C (912)
+ref: 1.198 V (1487) (nominal 1.21 implies VDDA=3.332)
+batt: 0.448 V (278)
+
+>clock
+01/01/2000 00:00:05 35
+
+>vee dump
+end addr = 224
+build.serial (4@8) = 231 0.000000
+build.BOM (64@40) = B.0 BME680
+build.lot (64@132) = build of 32
+legatoPoll.ct.P0 (4@224) = 10156 0.000000
+
+>compass init
+no compass attached
+
+>compass coeff
+no compass attached
+
+>prop
+
+# instance ct of class legatoPoll {
+legatoPoll = {
+ prefix = fb
+ baud = 19200
+ cycles = 0
+ timeout = 1000
+ warmup = 8000
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 10
+ query = %F%n%3%F%n%[Ready: ]fetch sleepafter=true%r%n
+ format = %d-%d-%d %d:%d:%f, %00, %01, %02, %03
+ meta = %F%n%1%F%n%[Ready: ]getall%r%n%[Ready:]
+ start = %F%n%1%F%n%[Ready: ]disable%r%n%[Ready: ]
+ stop = %F%n%1%F%n%[Ready: ]%9%9powerexternal used%r%n%[%n]
+#output = nil
+#status = nil
+ column = conduc(10000,0)
+ column = temp(10000,0)
+ column = pressure(1000,0)
+ column = conducTemp(10000,0)
+}
+# instance tridente of class tridentebb700bb470chla470 {
+tridentebb700bb470chla470 = {
+ prefix = td
+ baud = 19200
+ cycles = 0
+ timeout = 1000
+ warmup = 0
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 10
+#query = nil
+ format = %d, %00, %01, %02
+ meta = %9%9%F%n%[Ready: ]getall%r%n%[Ready:]
+#start = nil
+#stop = nil
+#output = nil
+#status = nil
+ column = bb700(100000,0)
+ column = bb470(100000,0)
+ column = chla470(1000,0)
+}
+# instance optode of class codaTODO {
+codaTODO = {
+ prefix = co
+ baud = 9600
+ cycles = 0
+ timeout = 2000
+ warmup = 0
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 10
+#query = nil
+ format = %d, %00, %01, %02, %03, %04
+ meta = %9%9%9%9%9%F%[%n]%n%9%9%F%n%[Ready: ]id%r%n%[Ready: ]hwrev%r%n%[Ready: ]settings%r%n%[Ready: ]channel all%r%n%[Ready: ]calibration 1%r%n%[Ready: ]calibration 2%r%n%[Ready: ]calibration 4%r%n%[Ready: ]calibration 5%r%[Ready: ]
+#start = nil
+#stop = nil
+#output = nil
+#status = nil
+ column = temp(10000,0)
+ column = doxy21(10000,0)
+ column = doxy22(10000,0)
+ column = doxy24(10000,0)
+ column = opt05(10000,0)
+}
+
+>attach
+attach
+ct = {
+ type = legatoPoll
+ hwchan = 3
+ verbose = 2
+}
+tridente = {
+ type = tridentebb700bb470chla470
+ hwchan = 0
+ verbose = 2
+}
+optode = {
+ type = codaTODO
+ hwchan = 1
+ verbose = 2
+}
+
+>scheme
+# (active)
+ct = {
+ 50,5.000000
+ 200,5.000000
+ 1000,20.000000
+}
+# (active)
+tridente = {
+ 100,5.000000
+ 250,10.000000
+ 1000,60.000000
+}
+# (active)
+optode = {
+ 200,5.000000
+ 500,10.000000
+ 1000,60.000000
+}
+
+>sysclk
+
+sysclk src  = hse
+hclk freq   = 8000000
+sysclk freq = 8000000
+PCLK1 freq  = 8000000
+PCLK2 freq  = 8000000
+USBCLK freq = 0
+SPI1 baud   = 4000000
+SPI2 baud   = 4000000
+PLL src     = hsi
+HSI state   = 0
+HSE state   = 1
+PLL state   = 0
+RTC src     = LSE
+LSE state   = 1
+LSI state   = 0
+
+>hscal
+count = 19531
+HCLK freq = 7999897.600
+
+>cat startup.scr
+prop scicon.ins
+attach scicon.att
+scheme scicon.sch
+
+>log test
+
+--checking ct legatoPoll
+ct: 0.000 16.554 10.154 19.447 
+avg mA=7.27, J=1.8
+--checking tridente tridentebb700bb470chla470
+tridente: 0.210 0.046 2.773 
+avg mA=9.46, J=0.0
+--checking optode codaTODO
+optode: 16.620 221.875 90.642 275.107 19.020 
+avg mA=10.08, J=0.1
+
+>log meta
+
+*** legatoPoll * ct
+Ready: serial baudrate = 19200, mode = rs232, availablebaudrates = 115200|19200|9600|4800|2400|1200|57600|230400|460800, availablemodes = rs232|rs485f|uart|uart_idlelow
+prompt state = on
+confirmation state = on
+link type = serial
+streamusb state = off
+streamserial state = off, aux1_enabled = false, aux1_setup = 1000, aux1_hold = 1000, aux1_active = high, aux1_sleep = tristate
+power source = ext, int = 0.00, ext = 14.99, reg = n/a
+powerinternal batterytype = none, capacity = 0.000e+000, used = 0.000e+000
+powerexternal batterytype = other, capacity = 0.000e+000, used = 96.02e-003
+meminfo used = 0, remaining = 1053227007, size = 1053227007
+memformat type = none, newtype = calbin00, availabletypes = rawbin00|calbin00
+settings fetchpoweroffdelay = 8000, sensorpoweralwayson = off, temperature = 15.0000, atmosphere = 10.1325000, pressure = 10.1325, density = 1.0260208, speccondtempco = 0.0191, salinity = 35.0000, avgsoundspeed = 1506.8000, altitude = 0.0000, castdetection = on, inputtimeout = 20000
+clock datetime = 20000101000044, offsetfromutc = -4.00
+sampling mode = continuous, period = 500, burstlength = 10, burstinterval = 300000, gate = none, userperiodlimit = 500, availablefastperiods = 500
+thresholding enabled = false, state = n/a, channelindex = 1, channellabel = conductivity_00, condition = above, value = 0.0000, interval = 15000
+regimes direction = ascending, count = 3, reference = seapressure
+regime 1 boundary = 1000, binsize = 2.0, samplingperiod = 1000 || regime 2 boundary = 500, binsize = 1.0, samplingperiod = 1000 || regime 3 boundary = 100, binsize = 0.5, samplingperiod = 500
+ddsampling direction = ascending, fastperiod = 1000, slowperiod = 5000, fastthreshold = 10.0, slowthreshold = 10.0
+deployment starttime = 20000101000000, endtime = 20991231235959, status = disabled
+calibration 1 label = conductivity_00, datetime = 20250319134245, c0 = 23.841634e-003, c1 = 181.64886e+000, c2 = 1.0011300e+000, x0 = 166.16662e-006, x1 = -22.805628e-006, x2 = 1.6156000e-006, x3 = -1.1966999e-009, x4 = 407.85700e-015, x5 = 15.036230e+000, x6 = 10.000000e+000, n0 = 8, n1 = 3 || calibration 2 label = temperature_00, datetime = 20250317125239, c0 = 3.5474850e-003, c1 = -254.54565e-006, c2 = 2.4896320e-006, c3 = -88.575896e-009 || calibration 3 label = pressure_00, datetime = 20250317185131, c0 = -30.720524e+000, c1 = 2.2332130e+003, c2 = 35.622240e+000, c3 = -20.383442e+000, x0 = 10.077700e+000, x1 = 51.302472e-003, x2 = 729.24442e-009, x3 = 88.287208e-009, x4 = -128.13165e-006, x5 = 21.063376e+000, n0 = 9 || calibration 4 label = seapressure_00, datetime = 20000401000000, n0 = 3, n1 = value || calibration 5 label = depth_00, datetime = 20000401000000, n0 = 3, n1 = value || calibration 6 label = salinity_00, datetime = 20000401000000, n0 = 2, n1 = 3, n2 = 1, n3 = value || calibration 7 label = count_00, datetime = 20000401000000, n0 = value || calibration 8 label = conductivitycelltemperature_00, datetime = 20250317125252, c0 = 3.1241680e-003, c1 = -280.34720e-006, c2 = 3.5004320e-006, c3 = -432.97539e-009
+outputformat type = caltext03, availabletypes = caltext01|caltext02|caltext03|caltext04|caltext07, labelslist = conductivity_00|temperature_00|pressure_00|conductivitycelltemperature_00
+simulation state = off, period = 3600000, channels = 1|2|3|8
+id model = RBRlegato3, version = 1.158, serial = 238229, fwtype = 104
+info pn = 0010072revE, fwlock = on
+hwrev pcb = L, cpu = 5659B, bsl = A
+channels count = 8, on = 4, settlingtime = 60, readtime = 290, minperiod = 440
+channel 1 type = cond22, module = 32, status = on, settlingtime = 60, readtime = 290, equation = corr_cond3, userunits = mS/cm, gain = none, availablegains = none, derived = off, label = conductivity_00 || channel 2 type = temp26, module = 1, status = on, settlingtime = 50, readtime = 260, equation = tmp, userunits = C, gain = none, availablegains = none, derived = off, label = temperature_00 || channel 3 type = pres24, module = 2, status = on, settlingtime = 50, readtime = 290, equation = corr_pres2, userunits = dbar, gain = none, availablegains = none, derived = off, label = pressure_00 || channel 4 type = pres08, module = 240, status = off, settlingtime = 0, readtime = 0, equation = deri_seapres, userunits = dbar, gain = none, availablegains = none, derived = on, label = seapressure_00 || channel 5 type = dpth01, module = 241, status = off, settlingtime = 0, readtime = 0, equation = deri_depth, userunits = m, gain = none, availablegains = none, derived = on, label = depth_00 || channel 6 type = sal_00, module = 242, status = off, settlingtime = 0, readtime = 0, equation = deri_salinity, userunits = PSU, gain = none, availablegains = none, derived = on, label = salinity_00 || channel 7 type = cnt_00, module = 243, status = off, settlingtime = 0, readtime = 0, equation = none, userunits = counts, gain = none, availablegains = none, derived = on, label = count_00 || channel 8 type = temp22, module = 33, status = on, settlingtime = 60, readtime = 260, equation = tmp, userunits = C, gain = none, availablegains = none, derived = off, label = conductivitycelltemperature_00
+sensor 1 || sensor 2 || sensor 3 serial = P323748 || sensor 4 || sensor 5 || sensor 6 || sensor 7 || sensor 8
+postprocessing status = disabled, mode = continuous, channels = mean(conductivity_00)|mean(temperature_00)|mean(pressure_00)|mean(seapressure_00)|mean(depth_00)|mean(salinity_00)|mean(count_00)|mean(conductivitycelltemperature_00), dc_alpha = 0.0410, dc_tau = 8.1100, dc_tdelay = 0.3500, dc_ctcoeff = 9.7000e-003
+postprocessing_regimes direction = descending, count = 1, reference = seapressure
+postprocessing_regime 1 boundary = 1000, binsize = 0.1
+pauseresume state = n/a
+Ready:
+*** tridentebb700bb470chla470 * tridente
+Ready: calibration 1 label = backscatter_00, datetime = 20250312130147, c0 = -669.07571e-009, c1 = 9.2683140e+000, n0 = 12||calibration 2 label = backscatter_01, datetime = 20250312130610, c0 = -1.1254674e-006, c1 = 9.8320660e+000, n0 = 15||calibration 3 label = chlorophyll_00, datetime = 20250311124047, c0 = 34.742136e-003, c1 = 1.6393912e+006, c2 = 103.31017e-003, n0 = 18||calibration 4 label = backscatter_00_median, datetime = 20000401000000, n0 = 1||calibration 5 label = backscatter_00_std, datetime = 20000401000000, n0 = 1||calibration 6 label = backscatter_01_median, datetime = 20000401000000, n0 = 2||calibration 7 label = backscatter_01_std, datetime = 20000401000000, n0 = 2||calibration 8 label = chlorophyll_00_median, datetime = 20000401000000, n0 = 3||calibration 9 label = chlorophyll_00_std, datetime = 20000401000000, n0 = 3||calibration 10 label = optical_00, datetime = 20000401000000, c0 = 0.0000000e+000, c1 = 1.0000000e+000||calibration 11 label = optical_01, datetime = 20250305181307, c0 = -766.51565e-009, c1 = 992.79949e-003, c2 = -831.38048e-009, c3 = 992.50400e-003, c4 = -840.47315e-009, c5 = 994.30182e-003, c6 = -830.63974e-009, c7 = 1.0000000e+000||calibration 12 label = optical_02, datetime = 20000401000000, x0 = 25.000000e+000, x1 = 0.0000000e+000, n0 = 10, n1 = 11, n2 = 19||calibration 13 label = optical_06, datetime = 20000401000000, c0 = 0.0000000e+000, c1 = 1.0000000e+000||calibration 14 label = optical_07, datetime = 20250305181348, c0 = -727.17658e-009, c1 = 991.94560e-003, c2 = -780.58240e-009, c3 = 992.06074e-003, c4 = -801.50214e-009, c5 = 992.29094e-003, c6 = -785.91181e-009, c7 = 1.0000000e+000||calibration 15 label = optical_08, datetime = 20000401000000, x0 = 25.000000e+000, x1 = 0.0000000e+000, n0 = 13, n1 = 14, n2 = 19||calibration 16 label = optical_03, datetime = 20000401000000, c0 = 0.0000000e+000, c1 = 1.0000000e+000||calibration 17 label = optical_04, datetime = 20250305181437, c0 = -385.79101e-009, c1 = 994.55910e-003, c2 = -243.97670e-009, c3 = 993.34630e-003, c4 = -276.41504e-009, c5 = 994.87078e-003, c6 = -269.45725e-009, c7 = 1.0000000e+000||calibration 18 label = optical_05, datetime = 20000401000000, x0 = 25.000000e+000, x1 = 0.0000000e+000, n0 = 16, n1 = 17, n2 = 19||calibration 19 label = temperature_00, datetime = 20000401000000, c0 = 3.3540160e-003, c1 = -235.29400e-006, c2 = 0.0000000e+000, c3 = 0.0000000e+000
+channel 1 type = turb21, module = 241, status = on, settlingtime = 50, readtime = 30, equation = deri_pulse, userunits = m-1sr-1, gain = none, availablegains = none, derived = on, label = backscatter_00||channel 2 type = turb23, module = 243, status = on, settlingtime = 50, readtime = 30, equation = deri_pulse, userunits = m-1sr-1, gain = none, availablegains = none, derived = on, label = backscatter_01||channel 3 type = fluo49, module = 245, status = on, settlingtime = 50, readtime = 30, equation = deri_pulse3, userunits = ug/L, gain = none, availablegains = none, derived = on, label = chlorophyll_00||channel 4 type = mdn_00, module = 246, status = off, settlingtime = 50, readtime = 30, equation = deri_median, userunits = m-1sr-1, gain = none, availablegains = none, derived = on, label = backscatter_00_median||channel 5 type = sd__00, module = 247, status = off, settlingtime = 50, readtime = 30, equation = deri_sd, userunits = m-1sr-1, gain = none, availablegains = none, derived = on, label = backscatter_00_std||channel 6 type = mdn_00, module = 248, status = off, settlingtime = 50, readtime = 30, equation = deri_median, userunits = m-1sr-1, gain = none, availablegains = none, derived = on, label = backscatter_01_median||channel 7 type = sd__00, module = 249, status = off, settlingtime = 50, readtime = 30, equation = deri_sd, userunits = m-1sr-1, gain = none, availablegains = none, derived = on, label = backscatter_01_std||channel 8 type = mdn_00, module = 250, status = off, settlingtime = 50, readtime = 30, equation = deri_median, userunits = ug/L, gain = none, availablegains = none, derived = on, label = chlorophyll_00_median||channel 9 type = sd__00, module = 251, status = off, settlingtime = 50, readtime = 30, equation = deri_sd, userunits = ug/L, gain = none, availablegains = none, derived = on, label = chlorophyll_00_std
+channels count = 9, on = 3, settlingtime = 50, readtime = 30, minperiod = 31
+clock datetime = 20000101000008, offsetfromutc = unknown
+confirmation state = on
+deployment starttime = 20000101000000, endtime = 20991231235959, status = streaming
+id model = RBRtridente, version = 1.018, serial = 238008, fwtype = 202, flavour = rt
+info pn = 0017826revA, fwlock = off
+outputformat type = caltext08, availabletypes = caltext08, channelslist = turb21|turb23|fluo49, labelslist = backscatter_00|backscatter_01|chlorophyll_00
+powerexternal batterytype = none, capacity = 0.000e+000, used = 0.000e+000
+prompt state = on
+sampling mode = continuous, period = 500, gate = none, userperiodlimit = 31, availablefastperiods = 500|250|125|63|42|31
+sensor 1 wavelength = 700nm, range = 1.5||sensor 2 wavelength = 470nm, range = 1.5||sensor 3 wavelength = 470nm, range = 500.0||sensor 4||sensor 5||sensor 6||sensor 7||sensor 8||sensor 9||sensor 10 wavelength = bb_700nm||sensor 11 wavelength = bb_700nm||sensor 12 wavelength = bb_700nm||sensor 13 wavelength = bb_470nm||sensor 14 wavelength = bb_470nm||sensor 15 wavelength = bb_470nm||sensor 16 wavelength = Chl-a_470nm||sensor 17 wavelength = Chl-a_470nm||sensor 18 wavelength = Chl-a_470nm||sensor 19
+serial baudrate = 19200, mode = rs232, availablebaudrates = 115200|57600|19200|9600|4800|2400|1200, availablemodes = rs232
+settings fetchpoweroffdelay = 8000, temperature = 15.0000, atmosphere = 10.1325, pressure = 10.1325, salinity = 35.0000, density = 1.0260, altitude = 0.0000, inputtimeout = 10000
+streamserial state = on
+Ready:
+*** codaTODO * optode
+0, 16.4351, 222.4856, 90.5649, 275.9470, 19.0521
+Ready: id model = RBRcoda, version = 1.070, serial = 237923, fwtype = 200
+Ready: hwrev pcb = A, cpu = P401D, sbsl = 1.000
+Ready: settings fetchpoweroffdelay = 8000, salinity = 35.5000, pressure = 10.1325, atmosphere = 10.1325
+Ready: channel 1 type = temp15, module = 7, status = on, latency = 250, readtime = 300, equation = tmp, userunits = C | 2 type = doxy21, module = 242, status = on, latency = 0, readtime = 0, equation = deri_o2salcomp_garcia, userunits = umol/L | 3 type = doxy22, module = 243, status = on, latency = 0, readtime = 0, equation = deri_o2sat_garcia, userunits = % | 4 type = doxy24, module = 241, status = on, latency = 0, readtime = 0, equation = deri_o2_poly, userunits = umol/L | 5 type = opt_05, module = 240, status = on, latency = 0, readtime = 0, equation = deri_phasecorrection, userunits = ï¿½
+Ready: calibration 1 type = temp15, datetime = 20250315135416, c0 = 3.4851730e-003, c1 = -251.84898e-006, c2 = 2.4672780e-006, c3 = -83.866416e-009
+Ready: calibration 2 type = doxy21, datetime = 20000401000000, c0 = 32.000000e-006, n0 = 4, n1 = 1, n2 = value, n3 = value, n4 = value
+Ready: calibration 4 type = doxy24, datetime = 20250320113541, c0 = 0.0000000e+000, c1 = 1.0000000e+000, c2 = 0.0000000e+000, c3 = 1.0000000e+000, c4 = 3.7726280e+003, c5 = -101.91490e+000, c6 = 1.5130921e+000, c7 = -11.690810e-003, c8 = -344.37850e+000, c9 = 6.5528440e+000, c10 = -59.343300e-003, c11 = 221.61030e-006, c12 = 13.008160e+000, c13 = -153.90830e-003, c14 = 623.43507e-006, c15 = 0.0000000e+000, c16 = -231.84890e-003, c17 = 1.2923640e-003, c18 = 0.0000000e+000, c19 = 0.0000000e+000, c20 = 1.5879281e-003, c21 = 0.0000000e+000, c22 = 0.0000000e+000, c23 = 0.0000000e+000, n0 = 5, n1 = 1
+Ready: 2000, 16.4204, 207.4710, 84.4289, 257.3308, 19.6732
+calibration 5 type = opt_05, datetime = 20250303141809, c0 = 206.60667e-003, c1 = 87.741976e+000, n0 = 7, n1 = 9, n2 = 6
+Ready: 
+>£491.1 mAs
+242.436,SUSR,N,---- Checking alternate sensor config ----
+242.469,SUSR,N,testing to see whether an SBE CT sensor can be connected
+242.504,SSENSOR,N,assigned SBE_CT to sensor slot 1 (p = 10) [index 0; ch 10])
+242.541,SSENSOR,N,SBE_CT is calMaster
+242.577,SUSR,N,SBE_CT on port named CT (timer 1), calMaster=1
+249.143,SUSR,N,4 timeouts during sampling!
+249.176,SUSR,N,
+249.207,SUSR,N,     Freq1      Freq2    | Temp      Salinity  density
+249.242,SUSR,N,         0.000 |     0.000 |  0.00000   0.00000     0.000
+249.283,SUSR,N,         0.000 |     0.000 |  0.00000   0.00000     0.000
+249.319,SUSR,N,         0.000 |     0.000 |  0.00000   0.00000     0.000
+249.355,SUSR,N, -------------------------------------------------------
+249.423,SUSR,N,min      0.000 |     0.000
+249.489,SUSR,N,max      0.000 |     0.000
+249.555,SUSR,N,mean     0.000 |     0.000
+249.609,SUSR,N, std     0.000 |     0.000
+249.641,SUSR,N,
+If you see freq of 0, it means there is no signal and
+the counter timed out !
+249.684,SUSR,N,testing to see whether a serial CTD can be connected
+249.719,SSENSOR,N,assigned legato to sensor slot 1 (p = 120) [index 7; ch 8])
+258.704,HLEGATO,N,conduc:19 temp:161856 
+258.737,HLEGATO,N,pressure:10149 conducTemp:191736 
+258.771,SUSR,N,---- Checking motors and controller ----
+258.811,SMOTOR,N,version 7360, built 2025-11-13 21:17:41
+258.853,SMOTOR,N,pwm p = 0.000000
+258.885,SMOTOR,N,pwm i = 0.000000
+258.916,SMOTOR,N,pwm d = 0.000000
+258.949,SMOTOR,N,pitch p = 1.000000
+258.986,SMOTOR,N,pitch i = 0.000000
+259.017,SMOTOR,N,pitch d = 5.000000
+259.049,SMOTOR,N,PWM min speed = 100.000000
+259.117,SMOTOR,N,hard iron P,Q,R: 0.000000 0.000000 0.000000
+259.151,SMOTOR,N,soft iron:
+259.182,SMOTOR,N,       1.000000 0.000000 0.000000
+259.216,SMOTOR,N,       0.000000 1.000000 0.000000
+259.250,SMOTOR,N,       0.000000 0.000000 1.000000
+259.283,SMOTOR,N,accel scale:
+259.314,SMOTOR,N,       0.000061 0.000000 0.000000
+259.348,SMOTOR,N,       0.000000 0.000061 0.000000
+259.381,SMOTOR,N,       0.000000 0.000000 0.000061
+259.420,SMOTOR,N,accel offset:
+       0.000000 0.000000 0.000000
+259.464,SMOTOR,N,pressure: offset=0, slope=0.058777
+259.497,SUSR,N,---- Checking pitch motor ----
+259.529,SUSR,N,Pitching up... (aft)
+259.641,HPITCH,N,+ move commanded from 1.56 cm (2597.06) to 5.86 cm (3640.00)...
+259.851,SMOTOR,N,roll limits on
+260.407,HPITCH,N,1.8 cm (ad: 2659.94) mA=288 V=15.63 D=0.00done.
+268.598,SMOTOR,N,new min V reading 15.597 (was 50.000)
+268.644,HPITCH,N,Pitch completed from 1.56 cm (2597.06) to 5.86 cm (3637.88) dest 3640.00 took 8.6 sec 303mA (659mA peak) 15.6V (15.6Vmin) 121.31 AD/sec 1716 ticks
+268.701,SMOTOR,N,543.531250,410.562500,676.500000,3637.875000,1990.250000
+ 410.6  676.6 2599.8 1991.3  483.4   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.6 2609.8 1991.6  345.8   15.8    0.0   0.0   0.0   0.0
+ 410.6  676.6 2621.4 1991.1  293.0   15.7    0.0   0.0   0.0   0.0
+ 410.6  676.6 2633.1 1992.1  294.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 2645.9 1991.5  294.0   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.7 2658.0 1991.5  290.5   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 2673.5 1991.7  290.0   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 2685.1 1991.5  296.9   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 2697.2 1991.4  302.4   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.7 2709.8 1991.4  305.0   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 2721.8 1991.4  303.8   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 2735.1 1992.0  295.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 2749.1 1991.7  297.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 2760.7 1991.5  294.5   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 2772.4 1991.6  297.8   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 2785.1 1991.5  296.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 2797.6 1991.6  301.3   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 2811.1 1991.8  295.4   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 2821.6 1991.8  292.7   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 2835.0 1991.6  291.2   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 2846.6 1991.6  293.4   15.6    0.0   0.0   0.0   0.0
+ 410.8  676.8 2858.2 1991.6  298.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 2870.3 1991.8  301.8   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 2882.4 1991.3  299.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 2894.9 1991.5  292.9   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.6 2907.9 1991.2  293.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 2919.9 1991.3  298.5   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 2932.0 1991.6  299.4   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.9 2943.0 1991.6  304.1   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.8 2954.6 1991.6  307.0   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 2966.9 1991.6  298.4   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.8 2978.9 1991.5  293.2   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.6 2990.4 1991.8  295.3   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 3002.6 1991.9  300.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 3013.6 1991.8  308.0   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.7 3025.8 1991.6  307.7   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 3037.5 1991.4  307.1   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.7 3049.5 1991.2  300.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 3061.3 1991.9  295.5   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 3074.0 1991.8  298.9   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.6 3085.0 1991.3  304.8   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 3098.4 1991.5  308.8   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.8 3109.8 1991.6  307.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 3122.2 1991.7  305.3   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 3134.4 1991.6  306.0   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 3147.0 1991.4  303.3   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.8 3159.0 1991.9  304.7   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 3171.2 1991.2  308.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.8 3182.2 1991.8  308.9   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 3194.6 1991.6  305.4   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 3206.6 1991.4  301.9   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 3218.8 1991.9  299.5   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.7 3232.1 1991.3  298.3   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 3243.5 1991.3  303.0   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.5 3255.4 1991.7  304.5   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 3267.6 1991.2  304.9   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.5 3280.1 1991.4  303.8   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 3291.0 1991.2  303.3   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.4 3303.8 1991.6  303.2   15.6    0.0   0.0   0.0   0.0
+ 410.4  676.7 3315.2 1991.8  309.5   15.6    0.0   0.0   0.0   0.0
+ 410.4  676.7 3326.6 1991.7  312.8   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 3338.7 1991.9  312.4   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.5 3350.8 1991.1  309.1   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.5 3363.2 1991.4  306.9   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 3375.0 1991.6  309.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.5 3387.1 1991.2  305.7   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 3399.1 1991.8  313.0   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 3410.6 1991.6  314.0   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 3422.3 1991.6  313.2   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.8 3435.2 1991.7  310.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 3448.4 1991.3  305.4   15.6    0.0   0.0   0.0   0.0
+ 410.4  676.6 3460.7 1991.3  305.9   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.5 3472.5 1991.6  308.0   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.8 3483.5 1991.8  312.6   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 3495.9 1991.8  311.8   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 3507.9 1991.4  310.4   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 3520.5 1991.6  304.9   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.7 3531.1 1991.8  301.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 3543.8 1991.8  301.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 3555.9 1991.4  303.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 3567.4 1991.5  310.9   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.7 3580.5 1992.2  311.5   15.6    0.0   0.0   0.0   0.0
+ 410.4  676.8 3592.3 1991.8  312.0   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 3605.5 1991.4  311.1   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.7 3617.1 1991.8  308.4   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.5 3629.8 1991.5  308.9   15.6    0.0   0.0   0.0   0.0
+270.244,SUSR,N,Pitching down... (fwd)
+270.369,HPITCH,N,- move commanded from 5.86 cm (3638.12) to -8.16 cm (245.00)...
+270.579,SMOTOR,N,roll limits on
+271.134,HPITCH,N,5.6 cm (ad: 3571.94) mA=107 V=16.10 D=0.00
+281.245,HPITCH,N,-1.2 cm (ad: 1937.00) mA=87 V=16.13 D=0.00
+291.349,HPITCH,N,-7.9 cm (ad: 296.88) mA=101 V=16.09 D=0.00done.
+292.042,HPITCH,N,Pitch completed from 5.86 cm (3638.12) to -8.18 cm (238.19) dest 245.00 took 21.4 sec 100mA (577mA peak) 16.1V (16.0Vmin) 158.65 AD/sec 4286 ticks
+292.094,SMOTOR,N,543.562500,410.500000,676.625000,238.187500,1990.250000
+ 410.6  676.4 3639.7 1991.4  471.7   16.2    0.0   0.0   0.0   0.0
+ 410.8  676.6 3635.2 1991.8  188.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 3621.0 1991.8  112.6   16.1    0.0   0.0   0.0   0.0
+ 410.8  676.8 3605.4 1991.4  109.6   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.6 3590.1 1991.8  103.3   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 3574.7 1991.5   98.4   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 3554.2 1991.6  106.4   16.1    0.0   0.0   0.0   0.0
+ 410.8  676.8 3538.0 1991.8   98.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 3521.6 1991.7   88.0   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 3507.6 1991.6   98.0   16.1    0.0   0.0   0.0   0.0
+ 410.8  676.8 3491.7 1991.9  102.4   16.1    0.0   0.0   0.0   0.0
+ 410.8  676.7 3476.0 1992.0  107.1   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 3459.9 1991.8  103.2   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.7 3444.6 1991.7  102.0   16.1    0.0   0.0   0.0   0.0
+ 410.8  676.6 3428.2 1991.4  113.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 3413.3 1991.4   95.6   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 3395.8 1991.4  107.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 3380.7 1991.9  101.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 3364.9 1991.9   99.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 3348.6 1991.4  107.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 3333.5 1991.8   98.7   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 3318.4 1991.4  103.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 3302.6 1991.5  100.1   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 3287.3 1991.6  103.7   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.7 3271.6 1991.6   99.9   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.8 3255.2 1991.6   97.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 3239.2 1991.6  100.7   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 3223.3 1991.6  102.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 3207.4 1991.8  102.7   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 3191.3 1991.9   95.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 3176.2 1991.5   96.3   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.8 3161.0 1991.4  104.1   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 3143.8 1991.7  101.0   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.8 3128.8 1991.8  101.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 3112.2 1991.2   95.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 3096.6 1991.7  101.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 3080.5 1991.7  105.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 3065.1 1991.3  103.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 3049.5 1991.5  102.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 3033.8 1991.6   99.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 3018.6 1991.8   94.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 3003.3 1991.6  101.7   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.5 2987.4 1991.6  101.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2972.4 1991.6  103.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2956.6 1991.4  100.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2941.3 1991.6   95.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 2925.8 1991.8   99.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 2910.6 1991.6  100.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 2893.8 1991.7  101.6   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.6 2878.7 1991.6   94.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2860.8 1991.5   90.4   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.8 2845.9 1991.6   96.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.5 2829.5 1991.8   97.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 2813.9 1991.7  104.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2798.9 1991.4  102.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 2780.9 1991.9   95.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2765.4 1991.3  103.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 2749.1 1991.4  102.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2732.6 1991.7  102.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2716.4 1991.5   95.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 2699.9 1992.1   99.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2684.4 1991.5  108.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2669.2 1991.6  101.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2652.4 1991.7  105.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2636.0 1991.7   91.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2621.2 1991.5   99.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2605.2 1991.6  105.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 2589.9 1991.6  104.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2574.6 1991.8  108.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2557.4 1991.6  101.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 2540.7 1991.9   96.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2525.6 1991.2  103.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2510.9 1991.6  101.6   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.6 2494.1 1991.8  103.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2477.8 1991.8  101.8   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.6 2461.9 1991.4   98.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2446.8 1991.6   98.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2430.8 1991.8   99.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 2414.3 1990.9  101.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2399.0 1991.6   91.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2383.2 1991.4   92.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 2366.9 1991.9   96.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2350.8 1991.9  101.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2335.9 1991.8  104.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2319.1 1991.5   97.6   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.8 2302.5 1991.7   90.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2286.5 1991.8   99.8   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.8 2272.5 1991.3   99.8   16.1    0.0   0.0   0.0   0.0
+ 410.8  676.7 2257.1 1991.4  101.3   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.8 2240.9 1991.4   89.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 2224.2 1991.4   95.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2208.8 1991.4   98.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2192.3 1991.8   99.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 2176.9 1991.6  105.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 2161.5 1991.6   86.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2147.1 1991.5   97.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2130.1 1991.7  101.8   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.6 2114.6 1991.7  103.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.9 2099.1 1991.3  104.5   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.8 2083.6 1991.7   89.1   16.1    0.0   0.0   0.0   0.0
+ 410.8  676.6 2068.2 1991.7   95.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 2051.9 1991.4   99.4   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.6 2037.1 1991.8   98.9   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 2021.4 1991.8   99.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 2004.1 1991.5   90.1   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 1988.0 1991.8   94.1   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1971.8 1991.7   97.7   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1954.9 1991.7   97.7   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6 1939.3 1991.7   98.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1919.4 1991.6   88.1   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1903.8 1991.3   94.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 1887.4 1991.6  100.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 1871.0 1991.5  103.1   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.8 1854.6 1991.6   93.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.9 1838.5 1991.2   89.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1822.6 1991.8   99.2   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.8 1806.9 1991.7  105.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1790.2 1992.1  102.2   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 1774.6 1991.7   95.4   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 1759.0 1991.6   95.1   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.8 1742.2 1991.6  102.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.4 1727.0 1991.4  105.1   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1711.4 1991.5  101.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1694.1 1991.8   96.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.5 1679.1 1991.9   90.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1663.0 1991.6  101.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 1647.0 1991.4  103.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1630.0 1991.6  106.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.5 1613.8 1991.5   96.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 1599.5 1991.6   90.7   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6 1582.8 1991.9   99.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 1567.2 1991.9  100.2   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6 1551.9 1991.6  105.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1536.6 1991.8   92.2   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.8 1519.6 1991.8   91.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1503.6 1990.9   97.3   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6 1488.1 1991.8   99.2   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.6 1472.1 1991.6  106.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1456.6 1991.4   92.5   16.1    0.0   0.0   0.0   0.0
+ 410.8  676.8 1440.2 1991.8   89.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1423.5 1991.7   93.7   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1407.7 1991.9  103.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1392.9 1991.6  110.2   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.6 1377.9 1991.6   94.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1362.6 1992.1   92.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 1346.2 1991.8   99.1   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 1330.4 1991.8  103.7   16.1    0.0   0.0   0.0   0.0
+ 410.8  676.7 1315.4 1991.6  110.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1300.0 1991.8   90.9   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 1283.6 1991.2   94.0   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.4 1268.8 1991.8  100.8   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.8 1253.4 1991.5  108.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1237.4 1991.8  109.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1221.7 1991.6   91.5   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6 1206.2 1991.8   93.0   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.8 1189.9 1991.2  102.7   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 1173.5 1991.6  106.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 1157.1 1991.4  105.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1140.7 1991.5   90.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1124.9 1991.3   93.1   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1109.0 1991.4   99.7   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1092.9 1991.4  101.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1077.6 1991.4  109.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1062.4 1992.2   90.7   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1046.3 1991.2   93.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1030.8 1991.5   99.0   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.5 1015.0 1991.6  108.2   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6  998.8 1991.7  110.9   16.1    0.0   0.0   0.0   0.0
+ 410.4  676.7  982.9 1991.6   90.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  966.7 1991.9   93.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.5  950.8 1991.6  102.7   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  934.1 1991.7  112.7   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6  918.8 1991.2  109.4   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.7  902.4 1991.4   94.7   16.1    0.0   0.0   0.0   0.0
+ 410.4  676.7  886.4 1991.8  105.4   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.5  870.4 1991.6  113.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  853.9 1991.6  115.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  838.1 1991.5  116.0   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6  823.7 1991.5   94.7   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.7  807.5 1991.8  105.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  792.4 1991.4  114.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  777.1 1991.8  119.1   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8  761.6 1992.1  118.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  745.9 1991.8   95.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8  730.1 1991.2   99.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8  714.4 1991.3  105.0   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6  699.2 1992.1  108.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7  683.5 1991.8  107.7   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  667.8 1991.6   94.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  651.0 1991.4   96.4   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6  634.4 1991.7   97.7   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.8  618.0 1991.2   98.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.9  601.9 1991.2  103.0   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7  586.6 1991.9   91.7   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  570.6 1991.2   94.1   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6  554.8 1991.6   95.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7  539.2 1991.8  100.6   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.8  522.9 1992.0   99.7   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7  507.9 1991.6   91.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7  492.4 1991.7   94.7   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8  476.8 1991.6  100.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  460.9 1991.7  104.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  446.1 1991.3  100.9   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.8  430.1 1991.5   93.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  415.2 1991.3  101.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8  399.0 1991.8  107.3   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6  384.0 1992.0  108.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  367.3 1991.9  105.1   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  350.7 1991.4   94.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  335.0 1991.7  103.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8  318.1 1991.6  108.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7  301.4 1991.6  113.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.5  281.8 1991.8  104.1   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6  265.0 1991.8  100.7   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7  249.4 1991.5  112.3   16.1    0.0   0.0   0.0   0.0
+295.933,SUSR,N,Backing off pitch mass...
+296.058,HPITCH,N,+ move commanded from -8.18 cm (238.44) to -2.37 cm (1645.00)...
+296.274,SMOTOR,N,roll limits on
+296.829,HPITCH,N,-8.0 cm (ad: 294.75) mA=303 V=15.60 D=0.00
+306.934,HPITCH,N,-2.6 cm (ad: 1580.06) mA=300 V=15.63 D=0.00done.
+307.629,HPITCH,N,Pitch completed from -8.18 cm (238.44) to -2.38 cm (1643.19) dest 1645.00 took 11.3 sec 303mA (577mA peak) 15.6V (15.6Vmin) 124.26 AD/sec 2261 ticks
+307.680,SMOTOR,N,543.312500,410.500000,676.125000,1643.187500,1990.562500
+ 410.6  676.4  238.4 1991.2  467.9   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.7  243.4 1991.6  326.1   15.9    0.0   0.0   0.0   0.0
+ 410.6  676.8  255.6 1991.6  300.4   15.7    0.0   0.0   0.0   0.0
+ 410.8  676.6  268.1 1991.5  302.7   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.6  280.8 1991.5  302.8   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.8  293.6 1991.5  308.2   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.8  308.9 1991.5  305.5   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.7  321.7 1992.2  314.2   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.7  333.9 1991.9  306.7   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.6  346.2 1991.9  307.4   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7  358.7 1991.9  307.3   15.6    0.0   0.0   0.0   0.0
+ 410.8  676.8  371.6 1991.4  310.2   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.8  384.1 1991.9  301.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7  396.3 1991.6  306.8   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.8  408.0 1991.7  302.2   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  419.1 1991.5  304.9   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  430.8 1991.6  304.8   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7  443.4 1991.5  301.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  455.6 1991.7  300.4   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.5  467.2 1991.4  304.3   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  480.2 1991.4  300.9   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  491.9 1991.4  293.9   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  503.6 1991.6  294.5   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7  516.6 1991.6  293.5   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.7  530.3 1991.6  297.1   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.8  542.4 1991.6  296.7   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.8  553.9 1991.6  297.5   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.4  566.6 1991.8  293.5   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.8  578.9 1991.6  292.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  591.6 1991.3  299.3   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  604.9 1991.8  295.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.4  617.1 1991.7  298.3   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.5  630.4 1991.6  300.9   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.8  643.2 1991.3  295.0   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7  655.7 1991.5  296.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.8  668.2 1991.6  299.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7  681.5 1991.6  295.2   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.4  693.8 1991.7  299.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  705.9 1991.6  298.7   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6  717.8 1991.1  301.0   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.5  729.6 1991.5  302.8   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.5  741.4 1991.4  306.4   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.6  753.5 1991.3  307.8   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6  765.7 1991.5  303.3   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.5  778.1 1991.7  299.9   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7  789.7 1991.6  308.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  801.7 1991.4  312.2   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.6  814.2 1991.7  312.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  826.5 1991.4  314.7   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  839.0 1991.6  311.4   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6  852.5 1991.6  308.9   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  863.8 1991.9  306.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  875.9 1991.4  307.7   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.5  889.2 1991.6  311.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  901.9 1991.7  309.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  915.0 1991.7  305.7   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.5  927.8 1991.6  307.5   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.7  941.2 1992.1  307.5   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6  952.7 1991.5  302.2   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.8  965.4 1991.6  300.4   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  977.5 1991.6  300.4   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6  991.6 1991.7  300.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1003.6 1991.7  299.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1016.8 1991.6  299.4   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.5 1029.9 1991.3  298.2   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 1041.6 1991.0  296.6   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 1054.0 1991.8  301.9   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 1066.4 1991.6  302.4   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1079.0 1991.6  302.8   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1091.2 1991.4  302.2   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1103.9 1991.8  300.8   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.6 1116.3 1991.4  300.4   15.6    0.0   0.0   0.0   0.0
+ 410.7  676.6 1129.4 1991.4  300.4   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.5 1142.1 1991.8  305.8   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 1156.1 1991.6  303.6   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1169.8 1991.4  301.9   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 1181.5 1991.4  303.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1194.4 1991.4  301.9   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.5 1207.3 1991.9  305.4   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 1219.6 1991.7  308.9   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 1232.6 1991.5  304.0   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 1244.6 1991.6  301.8   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1257.1 1991.6  299.9   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 1269.9 1991.7  304.3   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.8 1281.0 1991.9  310.7   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1293.7 1991.2  310.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.4 1306.0 1991.6  308.2   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 1318.2 1991.7  306.4   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.5 1330.4 1991.6  302.0   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.8 1343.6 1991.4  302.2   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1355.1 1991.7  301.6   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 1367.9 1991.4  298.4   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.5 1379.5 1991.5  301.2   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1392.0 1991.6  302.7   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1405.0 1991.7  304.7   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 1416.8 1991.6  302.9   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 1429.7 1991.5  294.5   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 1441.8 1991.2  299.2   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.5 1455.3 1991.9  303.5   15.6    0.0   0.0   0.0   0.0
+ 410.4  676.5 1468.4 1991.5  300.4   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1481.1 1991.6  305.8   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 1492.6 1991.1  301.7   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 1505.0 1991.2  301.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 1517.8 1991.4  304.2   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1530.6 1991.8  307.2   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.5 1543.5 1991.8  307.4   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.8 1555.2 1991.8  307.0   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1567.3 1991.8  301.5   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1579.4 1991.2  304.4   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1594.7 1991.8  304.5   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.7 1607.4 1991.7  309.1   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.6 1619.0 1991.4  308.2   15.6    0.0   0.0   0.0   0.0
+ 410.5  676.8 1631.6 1991.2  306.1   15.6    0.0   0.0   0.0   0.0
+ 410.6  676.6 1644.2 1991.5  303.0   15.6    0.0   0.0   0.0   0.0
+309.726,SUSR,N,---- Checking roll motor ----
+309.786,SUSR,N,Roll to port...
+309.897,HROLL,N,+ move commanded from -1.92 deg (1990.00) to 80.00 deg (3481.00)...
+310.113,SMOTOR,N,roll limits on
+310.668,HROLL,N,9.3 deg (ad: 2194.56) mA=80 V=16.17 D=0.00done.
+313.868,HROLL,N,Roll completed from -1.92 deg (1990.00) to 81.12 deg (3501.44) dest 3481.00 took 3.5 sec 88mA (561mA peak) 16.1V (16.1Vmin) 433.08 AD/sec 698 ticks
+313.919,SMOTOR,N,543.375000,410.500000,676.250000,1644.250000,3501.437500
+ 410.6  676.4 1645.8 1990.8  493.9   16.1    0.0   0.0   0.0   0.0
+ 410.8  676.6 1646.2 2021.6  170.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.1 2063.8   82.9   16.1    0.0   0.0   0.0   0.0
+ 410.8  676.8 1646.3 2105.8   74.0   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.8 1645.9 2147.9   78.4   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.8 1646.2 2190.2   77.5   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.0 2243.6   78.8   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.7 1646.4 2285.6   78.8   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.2 2329.4   80.4   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.8 1646.2 2374.0   80.2   16.2    0.0   0.0   0.0   0.0
+ 410.8  676.6 1646.2 2416.1   79.7   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.1 2458.8   81.7   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.2 2501.7   81.8   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.4 2544.1   82.9   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.2 2587.6   83.5   16.2    0.0   0.0   0.0   0.0
+ 410.8  676.6 1646.0 2631.3   83.6   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.5 1646.1 2675.6   86.3   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.6 1646.2 2716.2   88.1   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.5 1646.2 2759.9   88.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.2 2801.9   88.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.1 2844.4   86.6   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.7 1646.2 2888.2   83.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1645.9 2932.8   85.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.1 2973.8   85.6   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.7 1646.4 3017.1   86.2   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6 1646.1 3059.8   86.9   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.1 3102.7   88.4   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.6 1646.1 3144.9   89.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.5 1646.2 3188.8   89.1   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.1 3232.6   89.8   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.5 1646.1 3273.8   91.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.2 3316.4   92.4   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.1 3358.7   92.5   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 1646.1 3401.5   94.0   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.4 3443.1   93.5   16.1    0.0   0.0   0.0   0.0
+314.584,SUSR,N,Roll to starboard...
+314.703,HROLL,N,- move commanded from 81.13 deg (3501.56) to -80.00 deg (569.00)...
+314.913,SMOTOR,N,roll limits on
+315.468,HROLL,N,69.7 deg (ad: 3294.44) mA=72 V=16.19 D=0.00done.
+322.170,HROLL,N,Roll completed from 81.13 deg (3501.56) to -80.96 deg (551.44) dest 569.00 took 6.9 sec 103mA (579mA peak) 16.1V (16.0Vmin) 425.09 AD/sec 1388 ticks
+322.227,SMOTOR,N,543.062500,410.312500,675.812500,1644.250000,551.437500
+ 410.6  676.5 1645.6 3502.0  489.5   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.8 1645.9 3469.4  160.6   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 1646.4 3426.1   84.0   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 1646.3 3384.1   69.4   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.8 1646.3 3342.1   71.7   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.8 1646.5 3298.7   72.7   16.2    0.0   0.0   0.0   0.0
+ 410.9  676.8 1646.3 3244.7   74.9   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.8 1646.4 3200.3   76.3   16.2    0.0   0.0   0.0   0.0
+ 410.8  676.6 1646.5 3157.8   76.5   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.8 1646.7 3114.5   79.2   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.8 1646.5 3072.0   78.9   16.2    0.0   0.0   0.0   0.0
+ 410.8  676.8 1646.5 3028.8   79.4   16.2    0.0   0.0   0.0   0.0
+ 410.8  676.8 1646.4 2985.1   79.1   16.2    0.0   0.0   0.0   0.0
+ 410.9  676.8 1646.2 2942.7   79.4   16.2    0.0   0.0   0.0   0.0
+ 410.8  676.6 1646.2 2900.1   79.9   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.2 2855.0   81.0   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.6 1646.2 2813.1   82.2   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.8 1646.4 2768.9   80.8   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.8 1646.3 2725.8   83.0   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.7 1646.4 2682.5   83.4   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.8 1646.6 2639.7   84.0   16.2    0.0   0.0   0.0   0.0
+ 410.5  676.8 1646.8 2595.8   83.2   16.2    0.0   0.0   0.0   0.0
+ 410.8  676.7 1646.1 2552.5   83.8   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.6 1646.2 2510.2   84.7   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.6 2466.7   83.6   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.7 1646.1 2423.4   85.8   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.6 1646.4 2380.2   86.9   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 1646.2 2335.5   86.9   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.6 1646.4 2294.5   87.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.3 2250.9   89.1   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.8 2207.2   90.3   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.8 1646.4 2165.2   89.8   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 1646.2 2122.3   91.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.4 2080.4   92.8   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6 1646.1 2038.2   93.9   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 1646.2 1995.4   97.3   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6 1646.4 1952.0   96.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 1646.3 1908.7   98.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.3 1866.9  102.8   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6 1645.8 1825.8  105.7   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6 1646.2 1784.8  106.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.3 1739.9  108.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.2 1700.0  112.1   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.1 1656.9  115.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 1646.5 1615.4  116.3   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.8 1646.3 1573.9  119.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.4 1532.4  123.4   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.6 1646.5 1490.4  124.9   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.6 1449.0  127.3   16.0    0.0   0.0   0.0   0.0
+ 410.5  676.6 1646.4 1407.6  127.0   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.3 1366.2  128.5   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.2 1326.6  130.1   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.4 1284.4  130.4   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.2 1243.8  130.4   16.0    0.0   0.0   0.0   0.0
+ 410.7  676.6 1646.4 1203.9  129.2   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.4 1162.6  132.8   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.5 1121.9  130.1   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.5 1646.3 1080.0  128.7   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.5 1037.6  129.5   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.5  996.1  134.1   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.7  956.4  132.8   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.4  915.6  131.7   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.3  874.2  128.7   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.2  832.8  128.6   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.8  790.4  128.0   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.8 1645.9  748.8  128.7   16.0    0.0   0.0   0.0   0.0
+ 410.5  676.6 1646.5  708.8  125.0   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.2  666.1  124.3   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.5 1646.3  624.6  120.9   16.0    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.6  583.8  122.4   16.0    0.0   0.0   0.0   0.0
+323.510,SUSR,N,Roll to neutral...
+323.627,HROLL,N,+ move commanded from -80.96 deg (551.56) to 0.00 deg (2025.00)...
+323.837,SMOTOR,N,roll limits on
+324.393,HROLL,N,-69.7 deg (ad: 757.00) mA=80 V=16.17 D=0.00done.
+327.598,HROLL,N,Roll completed from -80.96 deg (551.56) to 1.90 deg (2059.62) dest 2025.00 took 3.4 sec 83mA (578mA peak) 16.2V (16.1Vmin) 439.67 AD/sec 686 ticks
+327.655,SMOTOR,N,543.125000,410.375000,675.875000,1644.937500,2059.625000
+ 410.6  676.5 1646.1  551.3  493.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.6  580.4  151.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.7  623.0   95.4   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 1646.5  666.1   79.0   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.8 1646.6  710.1   68.0   16.2    0.0   0.0   0.0   0.0
+ 410.8  676.7 1646.6  752.6   79.3   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.8 1646.6  806.7   77.0   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.6 1646.4  849.9   84.6   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.8 1646.4  893.2   82.3   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.6 1646.5  935.3   86.2   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.7  978.0   88.5   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.5 1021.4   88.0   16.1    0.0   0.0   0.0   0.0
+ 410.8  676.6 1646.6 1064.0   89.3   16.1    0.0   0.0   0.0   0.0
+ 410.5  676.6 1646.4 1107.9   88.7   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.7 1646.4 1150.4   86.8   16.1    0.0   0.0   0.0   0.0
+ 410.7  676.6 1646.6 1192.8   82.6   16.1    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.9 1235.5   84.0   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.5 1646.5 1279.3   84.4   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.5 1319.9   84.0   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.5 1363.1   82.2   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.6 1406.8   81.2   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.8 1450.2   82.3   16.2    0.0   0.0   0.0   0.0
+ 410.7  676.5 1646.6 1493.8   79.2   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.8 1646.5 1537.2   80.1   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.8 1646.6 1580.5   79.2   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.8 1646.7 1624.4   79.0   16.2    0.0   0.0   0.0   0.0
+ 410.5  676.6 1646.1 1666.1   79.0   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.6 1710.7   80.3   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.6 1754.9   79.0   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.4 1646.4 1798.3   79.0   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.6 1647.0 1840.2   79.7   16.2    0.0   0.0   0.0   0.0
+ 410.5  676.6 1646.6 1884.1   77.6   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.7 1646.2 1927.1   78.5   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.8 1646.7 1970.5   77.7   16.2    0.0   0.0   0.0   0.0
+ 410.6  676.6 1646.6 2016.2   77.8   16.2    0.0   0.0   0.0   0.0
+328.319,SUSR,N,---- Checking VBD and valve ----
+328.386,HVBD,N,    VBD pos = 426.03 cc, AD#=543.22 (410.44,676.00)
+328.507,HVBD,N,+ move commanded from 426.06 cc (543.12) to 239.09 cc (1305.33)...
+328.717,SMOTOR,N,roll limits on
+329.273,HVBD,N,422.2 cc (ad: 558.81 [432.38,685.25]) mA=5 V=16.40 D=0.00
+339.381,HVBD,N,349.7 cc (ad: 854.25 [761.25,947.25]) mA=5 V=16.42 D=0.00
+349.490,HVBD,N,282.2 cc (ad: 1129.38 [1059.19,1199.56]) mA=5 V=16.42 D=0.00done.
+356.693,HVBD,N,VBD completed from 426.06 cc (543.12) to 239.48 cc (1303.72 [410.31,675.94]->[1254.50, 1352.94]) dest 1305.33 took 28.0 sec 6mA (2443mA peak) 16.4V (14.7Vmin) 27.13 AD/sec 5607 ticks
+356.755,SMOTOR,N,1303.718750,1254.500000,1352.937500,1644.437500,2059.812500
+ 413.4  676.2 1646.0 2061.6 2442.9   13.3    0.0   0.0   0.0   0.0
+ 455.9  697.4 1646.3 2061.7   24.4   16.3    0.0   0.0   0.0   0.0
+ 490.9  721.2 1646.2 2062.1    5.0   16.4    0.0   0.0   0.0   0.0
+ 524.9  746.3 1646.1 2061.5    5.0   16.4    0.0   0.0   0.0   0.0
+ 556.7  772.1 1646.1 2061.4    5.0   16.4    0.0   0.0   0.0   0.0
+ 588.8  798.2 1646.0 2061.8    5.0   16.4    0.0   0.0   0.0   0.0
+ 619.8  823.9 1646.1 2061.8    5.0   16.4    0.0   0.0   0.0   0.0
+ 649.0  850.8 1646.1 2061.8    5.0   16.4    0.0   0.0   0.0   0.0
+ 679.8  876.1 1645.9 2061.6    5.0   16.4    0.0   0.0   0.0   0.0
+ 710.2  902.2 1646.2 2061.5    5.0   16.4    0.0   0.0   0.0   0.0
+ 739.0  928.1 1645.9 2061.7    5.0   16.4    0.0   0.0   0.0   0.0
+ 769.1  954.2 1646.0 2061.8    5.0   16.4    0.0   0.0   0.0   0.0
+ 797.9  980.2 1646.0 2061.4    5.0   16.4    0.0   0.0   0.0   0.0
+ 827.4 1005.5 1646.6 2061.1    5.0   16.4    0.0   0.0   0.0   0.0
+ 856.9 1030.9 1646.2 2061.5    5.0   16.4    0.0   0.0   0.0   0.0
+ 885.1 1055.1 1646.2 2062.3    5.0   16.4    0.0   0.0   0.0   0.0
+ 913.9 1079.5 1646.0 2061.7    5.0   16.4    0.0   0.0   0.0   0.0
+ 942.8 1104.1 1646.2 2062.2    5.0   16.4    0.0   0.0   0.0   0.0
+ 971.4 1127.4 1646.1 2062.3    5.0   16.4    0.0   0.0   0.0   0.0
+ 999.1 1151.0 1646.4 2061.3    5.0   16.4    0.0   0.0   0.0   0.0
+1027.5 1173.9 1646.2 2061.8    5.0   16.4    0.0   0.0   0.0   0.0
+1056.7 1196.9 1646.2 2062.1    5.0   16.4    0.0   0.0   0.0   0.0
+1084.6 1220.5 1646.2 2061.8    5.0   16.4    0.0   0.0   0.0   0.0
+1113.6 1242.9 1646.2 2061.9    5.0   16.4    0.0   0.0   0.0   0.0
+1142.1 1265.2 1646.4 2061.8    5.0   16.4    0.0   0.0   0.0   0.0
+1170.2 1287.4 1646.0 2061.7    5.0   16.4    0.0   0.0   0.0   0.0
+1198.9 1309.1 1645.9 2061.8    5.0   16.4    0.0   0.0   0.0   0.0
+1226.2 1331.3 1646.2 2061.6    5.0   16.4    0.0   0.0   0.0   0.0
+1253.4 1353.4 1646.1 2061.9    5.0   16.4    0.0   0.0   0.0   0.0
+357.313,HVBD,N,    VBD pos = 239.54 cc, AD#=1303.47 (1254.81,1352.12)
+357.362,SUSR,N,Pumping 100cc ...
+357.473,HVBD,N,- move commanded from 239.56 cc (1303.41) to 339.54 cc (895.80)...
+357.683,SMOTOR,N,roll limits on
+358.240,HVBD,N,240.5 cc (ad: 1299.38 [1253.56,1345.19]) mA=99 V=16.13 D=0.00
+368.349,HVBD,N,248.1 cc (ad: 1268.78 [1223.06,1314.50]) mA=1101 V=14.93 D=0.00
+378.457,HVBD,N,259.2 cc (ad: 1223.16 [1173.94,1272.38]) mA=1075 V=15.15 D=0.00
+388.565,HVBD,N,271.0 cc (ad: 1175.41 [1120.19,1230.62]) mA=1061 V=15.23 D=0.00
+398.696,HVBD,N,282.6 cc (ad: 1127.94 [1068.38,1187.50]) mA=1065 V=15.25 D=0.00
+408.804,HVBD,N,294.4 cc (ad: 1079.91 [1016.00,1143.81]) mA=1051 V=15.28 D=0.00
+418.913,HVBD,N,306.4 cc (ad: 1031.06 [962.69,1099.44]) mA=1053 V=15.29 D=0.00
+429.020,HVBD,N,318.2 cc (ad: 982.72 [911.00,1054.44]) mA=1034 V=15.29 D=0.00
+439.127,HVBD,N,330.1 cc (ad: 934.22 [858.62,1009.81]) mA=1040 V=15.31 D=0.00done.
+447.313,SMOTOR,N,new min V reading 15.215 (was 15.597)
+447.373,HVBD,N,VBD completed from 239.56 cc (1303.41) to 339.38 cc (896.47 [1254.62,1352.19]->[819.06, 973.88]) dest 895.80 took 91.0 sec 1037mA (5135mA peak) 15.2V (10.9Vmin) 4.47 AD/sec 18196 ticks
+447.430,SMOTOR,N,896.468750,819.062500,973.875000,1644.312500,2059.312500
+1255.4 1352.6 1645.8 2061.2  395.2   16.2    0.0   0.0   0.0   0.0
+1254.0 1345.1 1646.2 2061.9   99.2   16.1    0.0   0.0   0.0   0.0
+1253.7 1345.3 1646.1 2061.6   96.4   16.1    0.0   0.0   0.0   0.0
+1253.8 1345.2 1646.2 2061.4   95.9   16.1    0.0   0.0   0.0   0.0
+1252.1 1340.6 1645.9 2061.6 1435.7   14.1    0.0   0.0   0.0   0.0
+1249.6 1337.4 1646.1 2061.5 1171.8   14.5    0.0   0.0   0.0   0.0
+1245.1 1333.9 1646.2 2061.5 1152.2   14.6    0.0   0.0   0.0   0.0
+1240.0 1329.3 1646.1 2061.6 1136.5   14.7    0.0   0.0   0.0   0.0
+1236.4 1326.4 1646.1 2061.6 1126.0   14.7    0.0   0.0   0.0   0.0
+1231.7 1321.6 1645.9 2061.9 1115.7   14.8    0.0   0.0   0.0   0.0
+1227.2 1318.1 1646.2 2061.6 1106.8   14.9    0.0   0.0   0.0   0.0
+1222.6 1313.9 1645.9 2061.4 1099.5   14.9    0.0   0.0   0.0   0.0
+1218.2 1309.0 1646.1 2061.6 1094.7   15.0    0.0   0.0   0.0   0.0
+1213.2 1305.8 1645.8 2061.6 1089.4   15.0    0.0   0.0   0.0   0.0
+1207.9 1301.1 1646.2 2061.5 1085.0   15.0    0.0   0.0   0.0   0.0
+1204.3 1297.1 1646.5 2061.5 1081.6   15.0    0.0   0.0   0.0   0.0
+1198.9 1293.2 1646.1 2061.2 1079.7   15.1    0.0   0.0   0.0   0.0
+1194.2 1288.7 1646.7 2061.2 1076.0   15.1    0.0   0.0   0.0   0.0
+1188.6 1284.9 1646.1 2061.9 1073.5   15.1    0.0   0.0   0.0   0.0
+1184.4 1281.4 1646.1 2061.6 1072.6   15.1    0.0   0.0   0.0   0.0
+1179.7 1276.6 1646.1 2061.8 1070.9   15.1    0.0   0.0   0.0   0.0
+1174.7 1272.6 1645.9 2061.4 1068.7   15.2    0.0   0.0   0.0   0.0
+1168.6 1270.0 1646.1 2061.1 1067.9   15.2    0.0   0.0   0.0   0.0
+1164.0 1265.0 1646.0 2061.1 1067.1   15.2    0.0   0.0   0.0   0.0
+1159.1 1261.1 1646.1 2061.5 1065.3   15.2    0.0   0.0   0.0   0.0
+1154.4 1257.0 1645.9 2061.2 1065.9   15.2    0.0   0.0   0.0   0.0
+1148.8 1253.2 1646.1 2061.1 1063.9   15.2    0.0   0.0   0.0   0.0
+1143.2 1249.2 1646.0 2061.1 1064.1   15.2    0.0   0.0   0.0   0.0
+1138.2 1244.4 1645.8 2061.6 1063.5   15.2    0.0   0.0   0.0   0.0
+1132.9 1240.8 1646.4 2061.4 1063.1   15.2    0.0   0.0   0.0   0.0
+1128.1 1236.8 1645.8 2061.2 1061.5   15.2    0.0   0.0   0.0   0.0
+1123.2 1232.3 1645.8 2061.1 1061.8   15.2    0.0   0.0   0.0   0.0
+1117.6 1227.9 1645.9 2061.5 1060.6   15.2    0.0   0.0   0.0   0.0
+1112.2 1224.1 1645.8 2061.2 1063.0   15.2    0.0   0.0   0.0   0.0
+1107.3 1220.1 1645.9 2061.4 1060.8   15.2    0.0   0.0   0.0   0.0
+1102.0 1216.3 1645.9 2061.4 1058.9   15.2    0.0   0.0   0.0   0.0
+1097.1 1212.2 1646.0 2061.7 1059.2   15.2    0.0   0.0   0.0   0.0
+1091.6 1207.4 1646.0 2061.4 1063.3   15.2    0.0   0.0   0.0   0.0
+1087.4 1203.6 1645.9 2061.1 1062.0   15.3    0.0   0.0   0.0   0.0
+1081.6 1199.6 1646.1 2061.3 1061.6   15.3    0.0   0.0   0.0   0.0
+1076.2 1195.0 1645.9 2061.1 1060.3   15.3    0.0   0.0   0.0   0.0
+1071.4 1190.8 1645.9 2061.2 1057.9   15.3    0.0   0.0   0.0   0.0
+1066.9 1186.3 1646.0 2061.4 1057.3   15.3    0.0   0.0   0.0   0.0
+1061.6 1181.9 1645.6 2061.6 1061.7   15.3    0.0   0.0   0.0   0.0
+1056.8 1177.8 1645.9 2061.3 1055.9   15.3    0.0   0.0   0.0   0.0
+1051.2 1173.9 1645.8 2061.4 1059.7   15.3    0.0   0.0   0.0   0.0
+1045.9 1170.2 1645.9 2061.3 1057.1   15.3    0.0   0.0   0.0   0.0
+1041.5 1165.4 1645.9 2061.2 1057.8   15.3    0.0   0.0   0.0   0.0
+1036.5 1160.9 1646.0 2061.6 1058.3   15.3    0.0   0.0   0.0   0.0
+1031.6 1157.2 1645.8 2061.6 1058.0   15.3    0.0   0.0   0.0   0.0
+1025.8 1152.6 1645.8 2061.2 1055.7   15.3    0.0   0.0   0.0   0.0
+1020.3 1148.5 1645.9 2061.4 1058.0   15.3    0.0   0.0   0.0   0.0
+1016.8 1144.2 1645.7 2061.4 1056.4   15.3    0.0   0.0   0.0   0.0
+1011.4 1139.2 1646.1 2061.1 1057.1   15.3    0.0   0.0   0.0   0.0
+1006.1 1135.8 1645.9 2061.2 1057.3   15.3    0.0   0.0   0.0   0.0
+1000.5 1131.9 1645.9 2061.2 1055.6   15.3    0.0   0.0   0.0   0.0
+ 995.9 1127.3 1646.0 2061.1 1055.6   15.3    0.0   0.0   0.0   0.0
+ 990.6 1123.2 1645.9 2061.2 1056.7   15.3    0.0   0.0   0.0   0.0
+ 986.0 1119.5 1646.2 2061.3 1057.1   15.3    0.0   0.0   0.0   0.0
+ 981.1 1114.6 1645.8 2061.4 1055.9   15.3    0.0   0.0   0.0   0.0
+ 975.6 1109.9 1645.8 2061.9 1055.6   15.3    0.0   0.0   0.0   0.0
+ 970.3 1105.8 1645.8 2061.6 1055.8   15.3    0.0   0.0   0.0   0.0
+ 965.4 1101.1 1645.9 2061.5 1054.4   15.3    0.0   0.0   0.0   0.0
+ 960.1 1096.8 1646.1 2061.1 1054.3   15.3    0.0   0.0   0.0   0.0
+ 955.3 1092.7 1645.9 2061.5 1055.6   15.3    0.0   0.0   0.0   0.0
+ 950.4 1088.1 1646.1 2061.4 1054.7   15.3    0.0   0.0   0.0   0.0
+ 945.3 1083.9 1646.3 2061.5 1053.5   15.3    0.0   0.0   0.0   0.0
+ 940.3 1079.6 1645.9 2060.9 1054.4   15.3    0.0   0.0   0.0   0.0
+ 935.0 1075.4 1645.9 2061.1 1054.5   15.3    0.0   0.0   0.0   0.0
+ 930.0 1071.1 1646.0 2061.2 1054.3   15.3    0.0   0.0   0.0   0.0
+ 924.1 1066.6 1645.9 2061.1 1053.8   15.3    0.0   0.0   0.0   0.0
+ 919.8 1062.8 1645.9 2061.4 1054.4   15.3    0.0   0.0   0.0   0.0
+ 915.2 1058.4 1646.2 2061.2 1053.4   15.3    0.0   0.0   0.0   0.0
+ 910.2 1053.6 1645.8 2061.4 1053.4   15.3    0.0   0.0   0.0   0.0
+ 904.4 1048.8 1646.1 2061.2 1053.5   15.3    0.0   0.0   0.0   0.0
+ 899.9 1045.7 1645.9 2060.9 1052.7   15.3    0.0   0.0   0.0   0.0
+ 894.2 1040.6 1646.0 2061.4 1053.0   15.3    0.0   0.0   0.0   0.0
+ 889.5 1036.4 1646.6 2061.3 1053.2   15.3    0.0   0.0   0.0   0.0
+ 884.2 1032.1 1646.2 2061.1 1052.1   15.3    0.0   0.0   0.0   0.0
+ 880.0 1028.2 1645.8 2061.1 1051.2   15.3    0.0   0.0   0.0   0.0
+ 874.6 1023.7 1646.2 2061.3 1051.4   15.3    0.0   0.0   0.0   0.0
+ 869.6 1019.0 1646.1 2061.2 1052.1   15.3    0.0   0.0   0.0   0.0
+ 864.6 1014.4 1646.2 2061.4 1052.3   15.3    0.0   0.0   0.0   0.0
+ 859.1 1010.4 1645.9 2061.2 1051.1   15.3    0.0   0.0   0.0   0.0
+ 854.2 1005.8 1646.0 2061.2 1050.5   15.3    0.0   0.0   0.0   0.0
+ 849.5 1001.3 1645.9 2061.2 1052.0   15.3    0.0   0.0   0.0   0.0
+ 844.9  997.0 1646.1 2061.7 1051.0   15.3    0.0   0.0   0.0   0.0
+ 839.2  992.2 1646.2 2061.3 1050.8   15.3    0.0   0.0   0.0   0.0
+ 834.0  988.2 1645.9 2061.4 1050.8   15.3    0.0   0.0   0.0   0.0
+ 828.7  983.6 1646.2 2061.1 1050.6   15.3    0.0   0.0   0.0   0.0
+ 824.2  979.4 1646.1 2060.9 1050.3   15.3    0.0   0.0   0.0   0.0
+449.067,SUSR,N,Pumping up to maximum buoyancy...
+449.196,HVBD,N,- move commanded from 339.35 cc (896.59) to 439.09 cc (490.00)...
+449.405,SMOTOR,N,roll limits on
+449.961,HVBD,N,339.5 cc (ad: 895.91 [817.88,973.94]) mA=96 V=15.93 D=0.00
+460.071,HVBD,N,348.6 cc (ad: 858.84 [778.06,939.62]) mA=1086 V=15.29 D=0.00
+470.184,HVBD,N,360.8 cc (ad: 809.31 [724.81,893.81]) mA=1051 V=15.31 D=0.00
+480.291,HVBD,N,372.8 cc (ad: 760.22 [671.69,848.75]) mA=1032 V=15.31 D=0.00
+490.400,HVBD,N,384.8 cc (ad: 711.47 [619.25,803.69]) mA=1031 V=15.30 D=0.00
+500.507,HVBD,N,397.0 cc (ad: 661.59 [564.00,759.19]) mA=1027 V=15.30 D=0.00
+510.615,HVBD,N,409.0 cc (ad: 612.66 [510.62,714.69]) mA=1044 V=15.30 D=0.00
+520.723,HVBD,N,420.9 cc (ad: 564.00 [456.94,671.06]) mA=1042 V=15.29 D=0.00
+530.831,HVBD,N,433.0 cc (ad: 514.97 [403.19,626.75]) mA=1035 V=15.28 D=0.00done.
+536.038,HVBD,N,VBD completed from 339.35 cc (896.59) to 438.83 cc (491.06 [819.06,974.12]->[376.81, 605.31]) dest 490.00 took 88.0 sec 1019mA (5135mA peak) 15.3V (12.1Vmin) 4.61 AD/sec 17608 ticks
+536.095,SMOTOR,N,491.062500,376.812500,605.312500,1644.812500,2059.687500
+ 819.4  974.5 1645.9 2061.1  397.8   15.9    0.0   0.0   0.0   0.0
+ 818.0  973.8 1646.1 2061.4  106.0   15.9    0.0   0.0   0.0   0.0
+ 818.1  973.8 1646.3 2061.6   96.2   15.9    0.0   0.0   0.0   0.0
+ 818.1  973.8 1646.2 2061.4   95.9   15.9    0.0   0.0   0.0   0.0
+ 812.6  969.5 1645.9 2061.2 1349.7   15.1    0.0   0.0   0.0   0.0
+ 807.7  965.5 1646.1 2060.8 1093.0   15.3    0.0   0.0   0.0   0.0
+ 802.4  961.2 1645.9 2061.2 1085.6   15.3    0.0   0.0   0.0   0.0
+ 797.3  956.3 1645.9 2061.3 1079.9   15.3    0.0   0.0   0.0   0.0
+ 792.5  952.0 1645.9 2061.2 1075.0   15.3    0.0   0.0   0.0   0.0
+ 787.2  947.6 1646.2 2060.9 1070.8   15.3    0.0   0.0   0.0   0.0
+ 782.1  943.3 1645.9 2061.1 1067.8   15.3    0.0   0.0   0.0   0.0
+ 776.7  938.3 1646.2 2061.1 1064.6   15.3    0.0   0.0   0.0   0.0
+ 771.9  934.3 1645.8 2060.8 1063.2   15.3    0.0   0.0   0.0   0.0
+ 766.6  929.3 1646.0 2061.2 1059.6   15.3    0.0   0.0   0.0   0.0
+ 761.1  925.2 1645.9 2061.1 1059.0   15.3    0.0   0.0   0.0   0.0
+ 756.5  920.7 1646.2 2061.1 1057.1   15.3    0.0   0.0   0.0   0.0
+ 751.3  916.5 1645.8 2061.2 1057.1   15.3    0.0   0.0   0.0   0.0
+ 746.8  912.4 1645.6 2061.4 1055.3   15.3    0.0   0.0   0.0   0.0
+ 741.2  908.2 1646.1 2061.7 1053.5   15.3    0.0   0.0   0.0   0.0
+ 735.8  903.5 1646.1 2061.2 1054.4   15.3    0.0   0.0   0.0   0.0
+ 731.2  899.6 1645.4 2061.7 1052.1   15.3    0.0   0.0   0.0   0.0
+ 726.0  894.5 1645.9 2060.9 1051.2   15.3    0.0   0.0   0.0   0.0
+ 720.4  890.5 1645.9 2061.3 1052.4   15.3    0.0   0.0   0.0   0.0
+ 715.6  885.7 1646.1 2061.9 1050.8   15.3    0.0   0.0   0.0   0.0
+ 710.7  881.2 1646.4 2061.4 1049.4   15.3    0.0   0.0   0.0   0.0
+ 705.3  877.2 1645.9 2061.8 1050.2   15.3    0.0   0.0   0.0   0.0
+ 700.1  872.8 1645.5 2061.6 1049.1   15.3    0.0   0.0   0.0   0.0
+ 694.3  868.4 1645.8 2061.4 1048.4   15.3    0.0   0.0   0.0   0.0
+ 689.9  864.2 1646.1 2061.4 1048.9   15.3    0.0   0.0   0.0   0.0
+ 684.6  860.4 1645.9 2061.2 1048.6   15.3    0.0   0.0   0.0   0.0
+ 679.5  855.4 1646.5 2061.1 1047.8   15.3    0.0   0.0   0.0   0.0
+ 673.5  851.4 1646.3 2060.7 1048.9   15.3    0.0   0.0   0.0   0.0
+ 668.8  846.0 1645.9 2061.1 1046.8   15.3    0.0   0.0   0.0   0.0
+ 663.6  841.9 1646.1 2061.4 1046.5   15.3    0.0   0.0   0.0   0.0
+ 658.3  837.4 1646.2 2061.6 1046.6   15.3    0.0   0.0   0.0   0.0
+ 653.2  833.2 1645.9 2061.2 1046.4   15.3    0.0   0.0   0.0   0.0
+ 648.2  828.6 1646.2 2061.8 1046.4   15.3    0.0   0.0   0.0   0.0
+ 643.1  823.9 1646.0 2061.4 1046.3   15.3    0.0   0.0   0.0   0.0
+ 638.2  819.5 1646.2 2061.2 1046.8   15.3    0.0   0.0   0.0   0.0
+ 633.1  814.6 1645.9 2061.2 1046.6   15.3    0.0   0.0   0.0   0.0
+ 627.7  811.2 1646.1 2061.5 1046.2   15.3    0.0   0.0   0.0   0.0
+ 622.1  806.4 1646.1 2061.1 1045.4   15.3    0.0   0.0   0.0   0.0
+ 617.0  802.8 1645.9 2061.4 1045.3   15.3    0.0   0.0   0.0   0.0
+ 612.0  798.8 1646.2 2061.0 1045.5   15.3    0.0   0.0   0.0   0.0
+ 606.6  793.5 1646.5 2061.5 1045.7   15.3    0.0   0.0   0.0   0.0
+ 601.9  789.6 1646.3 2061.0 1045.2   15.3    0.0   0.0   0.0   0.0
+ 595.8  785.8 1646.0 2061.9 1045.0   15.3    0.0   0.0   0.0   0.0
+ 591.2  780.8 1645.8 2061.1 1046.2   15.3    0.0   0.0   0.0   0.0
+ 585.6  777.1 1646.2 2061.0 1045.1   15.3    0.0   0.0   0.0   0.0
+ 581.2  772.2 1645.8 2061.3 1043.7   15.3    0.0   0.0   0.0   0.0
+ 575.2  768.4 1645.9 2061.1 1043.9   15.3    0.0   0.0   0.0   0.0
+ 569.9  763.4 1645.9 2060.9 1043.7   15.3    0.0   0.0   0.0   0.0
+ 564.9  759.4 1645.8 2061.1 1044.6   15.3    0.0   0.0   0.0   0.0
+ 559.3  754.7 1645.7 2061.2 1044.3   15.3    0.0   0.0   0.0   0.0
+ 554.9  750.4 1645.9 2061.1 1043.4   15.3    0.0   0.0   0.0   0.0
+ 548.4  746.5 1645.9 2061.1 1043.4   15.3    0.0   0.0   0.0   0.0
+ 543.2  742.6 1645.9 2061.4 1043.9   15.3    0.0   0.0   0.0   0.0
+ 537.8  737.8 1645.9 2061.6 1043.0   15.3    0.0   0.0   0.0   0.0
+ 533.2  734.1 1645.8 2061.1 1043.9   15.3    0.0   0.0   0.0   0.0
+ 527.9  729.6 1645.9 2060.9 1042.0   15.3    0.0   0.0   0.0   0.0
+ 522.4  724.9 1646.1 2061.3 1042.0   15.3    0.0   0.0   0.0   0.0
+ 516.8  720.9 1645.9 2061.2 1042.5   15.3    0.0   0.0   0.0   0.0
+ 512.2  716.4 1645.8 2061.6 1042.0   15.3    0.0   0.0   0.0   0.0
+ 506.5  712.1 1646.0 2061.2 1041.4   15.3    0.0   0.0   0.0   0.0
+ 501.6  708.5 1645.6 2061.5 1042.4   15.3    0.0   0.0   0.0   0.0
+ 496.2  703.9 1646.1 2061.6 1040.3   15.3    0.0   0.0   0.0   0.0
+ 490.9  700.0 1645.9 2061.2 1042.0   15.3    0.0   0.0   0.0   0.0
+ 486.0  695.6 1645.9 2061.5 1040.7   15.3    0.0   0.0   0.0   0.0
+ 480.6  691.4 1646.1 2061.4 1041.3   15.3    0.0   0.0   0.0   0.0
+ 475.8  686.8 1646.1 2061.2 1040.0   15.3    0.0   0.0   0.0   0.0
+ 470.7  683.2 1646.2 2061.4 1040.3   15.3    0.0   0.0   0.0   0.0
+ 464.8  678.9 1646.4 2061.5 1041.2   15.3    0.0   0.0   0.0   0.0
+ 460.5  674.2 1646.4 2060.9 1040.0   15.3    0.0   0.0   0.0   0.0
+ 455.6  670.2 1646.3 2061.3 1039.6   15.3    0.0   0.0   0.0   0.0
+ 450.1  666.5 1645.8 2061.2 1039.3   15.3    0.0   0.0   0.0   0.0
+ 444.6  662.2 1646.1 2061.1 1039.3   15.3    0.0   0.0   0.0   0.0
+ 439.3  657.4 1645.8 2061.8 1039.2   15.3    0.0   0.0   0.0   0.0
+ 434.4  653.1 1646.1 2060.9 1038.8   15.3    0.0   0.0   0.0   0.0
+ 428.4  649.4 1646.0 2061.6 1039.4   15.3    0.0   0.0   0.0   0.0
+ 423.7  644.2 1646.3 2061.3 1040.0   15.3    0.0   0.0   0.0   0.0
+ 419.0  640.1 1645.7 2061.3 1037.4   15.3    0.0   0.0   0.0   0.0
+ 413.9  635.6 1646.1 2061.3 1039.8   15.3    0.0   0.0   0.0   0.0
+ 408.1  631.6 1646.1 2062.1 1038.2   15.3    0.0   0.0   0.0   0.0
+ 403.3  627.1 1646.1 2061.2 1038.6   15.3    0.0   0.0   0.0   0.0
+ 398.4  623.1 1645.9 2061.2 1037.4   15.3    0.0   0.0   0.0   0.0
+ 392.6  618.1 1646.0 2061.2 1037.1   15.3    0.0   0.0   0.0   0.0
+ 387.1  614.3 1646.1 2061.3 1036.7   15.3    0.0   0.0   0.0   0.0
+ 382.1  610.3 1646.1 2061.6 1037.3   15.3    0.0   0.0   0.0   0.0
+ 377.3  605.6 1646.2 2061.2 1036.4   15.3    0.0   0.0   0.0   0.0
+0.720,SSURF,N,Initializing data file
+0.811,SSURF,N,Initializing log file
+1.324,HSUPER,N,accum time 574 sec/0.159 hours/0.007 days
+1.359,HTT8,N,Updating parameter $FG_AHR_24V to 4.6726589
+1.402,HSUPER,N,adding 194130.027 mA-s to 24V FG: 4.6726589 A-hr (count=733, dt=574.00)
+1.439,HTT8,N,Updating parameter $FG_AHR_10V to 1.478514
+1.481,HSUPER,N,adding 5532.865 mA-s to 10V FG: 1.4785140 A-hr
+1.872,SUSR,N,---- Checking sensors and data file creation ----
+1.955,SSENSOR,N,Changing to bin 100.0() at 0.00m: sec=5.0s gc=120.0s sensors=0 pressure=1 compass=1 timeout=10.00 turn=0
+2.002,SSENSOR,N,Changing to bin 100.0() at 0.00m: sec=5.0s gc=120.0s sensors=0 pressure=1 compass=1 timeout=10.00 turn=0
+0.042,SSURF,N,Dive started Mon Feb  2 21:09:07 2026
+ (1770066547)
+1.605,HSCICON,N,rst=3, exception=0, PC=0, wd=0, vee=1, LSI=0, safeboot=0
+3.239,HSCICON,N,started ok
+9.826,HSCICON,N,no prompt on open
+9.865,HSCICON,N,ct parse err [~] (ontime=9779ms)
+12.851,SSENSOR,N,P 6314ms 0.02m 202.8 #1
+16.344,SSENSOR,N,P 15166ms 0.02m 205.5 #2
+20.343,SSENSOR,N,P 19166ms 0.01m 203.7 #3
+24.343,SSENSOR,N,P 23165ms 0.01m 204.4 #4
+28.345,SSENSOR,N,P 27166ms 0.02m 205.5 #5
+31.658,SSENSOR,N,A 30474ms [0,4] 0.02m 203.0 #6
+35.657,SSENSOR,N,A 34474ms [0,4] 0.02m 202.6 #7
+39.658,SSENSOR,N,A 38473ms [0,4] 0.01m 203.0 #8
+43.660,SSENSOR,N,A 42474ms [0,4] 0.03m 205.2 #9
+47.656,SSENSOR,N,A 46472ms [0,4] 0.01m 204.5 #10
+52.345,SSENSOR,N,P 51166ms 0.02m 204.8 #11
+56.343,SSENSOR,N,P 55165ms 0.03m 205.3 #12
+60.344,SSENSOR,N,P 59165ms 0.01m 204.5 #13
+64.344,SSENSOR,N,P 63166ms 0.01m 204.0 #14
+68.345,SSENSOR,N,P 67166ms 0.04m 207.1 #15
+72.407,HSCICON,N,no prompt after cmd log stop []
+79.905,HSCICON,N,no prompt after cmd log stop []
+87.403,HSCICON,N,no prompt after cmd log stop []
+87.437,HSCICON,N,stopped err
+87.467,HSCICON,N,FINISH forcing off
+90.968,HSCICON,N,FG before poweroff: initial prompt error
+version: 67.01
+glider: 272
+mission: 1
+selftest: 5
+start: 2 2 126 21 9 5
+columns: rec,elaps_tms,depth,heading,pitch,roll,GC_state,mag.x,mag.y,mag.z,
+data:
+0 6314 2 2027 -867 702 0 1135 715 279
+1 15166 1 2054 -868 691 0 1137 715 271
+2 19166 1 2037 -869 687 0 1131 711 282
+3 23165 0 2044 -869 686 0 1132 719 279
+4 27166 1 2054 -869 683 0 1120 722 275
+5 30474 1 2029 -869 699 1 1137 719 279
+6 34474 2 2025 -869 690 1 1140 715 286
+7 38473 1 2030 -868 689 1 1136 718 285
+8 42474 2 2052 -868 681 1 1134 725 278
+9 46472 0 2044 -868 697 1 1134 714 273
+10 51166 2 2048 -868 694 0 1138 713 273
+11 55165 2 2052 -868 684 0 1133 718 276
+12 59165 1 2044 -868 688 0 1127 722 278
+13 63166 0 2040 -868 689 0 1135 720 280
+14 67166 3 2070 -867 677 0 1133 718 272
+92.100,SUSR,N,---- Writing internal sensors to log ----
+93.255,SUSR,N,internal humidity 8444242 counts (55.37 RH)
+93.291,SUSR,N,internal temp 10909310 counts (20.366 degC)
+93.327,SUSR,N,internal pressure 8.587 psia
+93.370,SUSR,N,latched internal pressure = 14.803
+93.403,SUSR,N,---- Checking altimeter ----
+93.866,HXPDR,N,range was 4.652250 m
+94.028,SUSR,N,---- Checking transponder ----
+95.300,HXPDR,N,Tried 1 times to respond to command $N
+95.481,SUSR,N,transponder reply ping count=12
+96.258,HXPDR,N,Tried 1 times to respond to command $W
+96.311,HXPDR,N,version($W)=3.08 E4947
+96.452,HXPDR,N,channel($R)=90
+96.599,HXPDR,N,int/repl($V)=14.5,13.0
+96.740,HXPDR,N,xpdr disabled($B)=0
+96.908,HXPDR,N,id1($HR1)=00000000
+97.078,HXPDR,N,id2($HR2)=00000000
+97.248,HXPDR,N,id3($HR3)=00000000
+97.417,HXPDR,N,id4($HR4)=00000000
+97.685,SUSR,N,---- Reporting targets specifications ----
+97.777,SNAV,N,starting target SE at 1770066644, dive 0
+97.828,SNAV,N,      Target     Latitude  Longitude    Heading Radius Depth Finish Timeout Dive Exec Next-target Escp-target Timeout-goto Timeout-exec Slow goto exec Fence lat lon radius goto exec Src timeout exec goto
+97.882,SNAV,N,  =>  SE         4743.000  -12224.000  -1.0    100.0m    0  -1  0.0 0 0 NE none none 0 0.000,0.00,0,0 none 0 0.0000 0.0000 0.00 none 0 none 0.000000 none 0
+97.932,SNAV,N,      NE         4743.500  -12224.000  -1.0    100.0m    0  -1  0.0 0 0 NW none none 0 0.000,0.00,0,0 none 0 0.0000 0.0000 0.00 none 0 none 0.000000 none 0
+97.988,SNAV,N,      NW         4743.500  -12225.000  -1.0    100.0m    0  -1  0.0 0 0 SW none none 0 0.000,0.00,0,0 none 0 0.0000 0.0000 0.00 none 0 none 0.000000 none 0
+98.038,SNAV,N,      SW         4743.000  -12225.000  -1.0    100.0m    0  -1  0.0 0 0 SE none none 0 0.000,0.00,0,0 none 0 0.0000 0.0000 0.00 none 0 none 0.000000 none 0
+98.082,SUSR,N,---- Reporting science specifications ----
+98.188,SSENSOR,N,100.0 gc=120.0 seconds=5.0 turn=0 sensors=0 compass=1 pressure=1 network=0,0,0,0 dest=-1 retries=0,0 rate=1 // 
+98.237,SSENSOR,N,250.0 gc=180.0 seconds=10.0 turn=0 sensors=0 compass=1 pressure=1 network=0,0,0,0 dest=-1 retries=0,0 rate=1 // 
+98.280,SUSR,N,---- Reporting battery status ----
+98.652,SPOWER,N,------ Fuel gauges (Cumulative Amp-secs) -------
+
+98.692,SPOWER,N,                          cumulative      / since power up
+98.729,SPOWER,N,                VBD_pump:  6512.56 amp-sec /   207.05 sec
+98.771,SPOWER,N,             Pitch_motor:   171.50 amp-sec /    41.32 sec
+98.808,SPOWER,N,              Roll_motor:   164.43 amp-sec /    13.86 sec
+98.845,SPOWER,N,                 Iridium:   555.89 amp-sec /    24.58 sec
+98.882,SPOWER,N,        Transponder_ping:    21.00 amp-sec /     4.00 sec
+98.918,SPOWER,N,      ------------- 24V total = 2.063 AmpHr -----------
+98.955,SPOWER,N,                     GPS:    10.71 amp-sec /    48.62 sec
+98.992,SPOWER,N,                    Core:   248.52 amp-sec /   251.51 sec
+99.034,SPOWER,N,                    Fast:     0.00 amp-sec /     0.00 sec
+99.070,SPOWER,N,                    Slow:     0.00 amp-sec /     0.00 sec
+99.107,SPOWER,N,                 LPSleep:  3237.70 amp-sec /    10.80 sec
+99.144,SPOWER,N,                 Compass:    25.60 amp-sec /    47.56 sec
+99.180,SPOWER,N,                   RAFOS:     0.00 amp-sec /     0.00 sec
+99.217,SPOWER,N,             Transponder:     0.75 amp-sec /     4.00 sec
+99.259,SPOWER,N,                Compass2:     0.00 amp-sec /     0.00 sec
+99.294,SPOWER,N,                 network:     0.00 amp-sec /     0.00 sec
+99.332,SPOWER,N,             uninstalled:     0.37 amp-sec /    15.57 sec
+99.369,SPOWER,N,                  SciCon:    65.73 amp-sec /    78.00 sec
+99.405,SPOWER,N,      ------------- 10V total = 0.997 AmpHr ------------
+100.293,HBATT,N,24V batt pack voltage = 15.30V (min 15.22V)
+100.330,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+100.839,HSUPER,N,accum time 101 sec/0.028 hours/0.001 days
+100.881,HTT8,N,Updating parameter $FG_AHR_24V to 4.6729012
+100.925,HSUPER,N,adding 872.397 mA-s to 24V FG: 4.6729012 A-hr (count=123, dt=101.00)
+100.962,HTT8,N,Updating parameter $FG_AHR_10V to 1.4790908
+101.005,HSUPER,N,adding 2076.705 mA-s to 10V FG: 1.4790908 A-hr
+101.177,SUSR,N,---- Checking capture vector ----
+101.210,SUSR,N,all capture settings at default values
+101.364,SUSR,N,---- Checking SMS ----
+101.401,SUSR,N,sms_email = iopsggw@uw.edu
+102.125,HBATT,N,24V batt pack voltage = 15.30V (min 15.22V)
+102.166,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+103.233,SDIVE,N,Measuring depth & angle for 1 sec...
+106.407,SDIVE,N,Complete. Measured depth: 0.03m angle: -86.96deg
+106.443,SSENSOR,N,assigned legato to sensor slot 1 (p = 120) [index 7; ch 8])
+114.978,SSURF,N,T=15.62 S=0.019 rho=-0.9785
+117.472,HPHONE,N,Checking for SMS capability (up to one minute)
+141.152,HPHONE,N,Phone can send sms and can receive sms (3)
+171.378,HPHONE,N,Phone not registered
+171.412,HPHONE,N,
+
+Failed to send sms message (invalid email or message)
+171.452,HPHONE,N,Powering off the phone after SMS
+173.875,HPHONE,N,phone on 59859 ms, avg mA=35.7, max mA=144.5
+173.910,SUSR,N,*** EOTD ***
+173.941,SUSR,N,---- Self test FAILED or ABORTED! ----
+173.974,SUSR,N,2 failures noted
+174.005,SUSR,N,--> bathymetry maps failed
+174.037,SUSR,N,--> SMS failed
+174.068,SUSR,N,1 warnings noted
+174.099,SUSR,N,--> Iridium registration
+Compressing THISDIVE.LOG to st0005lz.x
+Compressing THISDIVE.DAT to st0005dz.x
+174.875,SUSR,N,---- Checking communications ----
+174.919,HSCICON,N,skipping dive data
+174.951,HSCICON,N,skipping climb data
+174.989,HSCICON,N,skipping loiter data
+175.021,HSCICON,N,skipping surf_loiter data
+175.053,SUSR,N,Testing comms by transmitting self-test results:
+175.859,HBATT,N,24V batt pack voltage = 15.36V (min 15.22V)
+175.901,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+176.967,SDIVE,N,Measuring depth & angle for 1 sec...
+179.766,SDIVE,N,Complete. Measured depth: 0.02m angle: -86.78deg
+179.802,SSENSOR,N,assigned legato to sensor slot 1 (p = 120) [index 7; ch 8])
+188.798,SSURF,N,T=15.21 S=0.020 rho=-0.9146
+188.837,SSURF,N,Trying call 0...
+188.870,SSURF,N,Calling phone number: 881600005296
+191.390,HPHONE,N,initializing RUDICS connection
+221.571,HPHONE,N,Phone registered
+222.639,HPHONE,N,Iridium signal strength: 4
+222.673,HPHONE,N,cnt_NoComm:0 callCycle:0 smsLastCallCycle:-1
+222.742,HPHONE,N,Iridium geolocation: 47.656044 -122.389450 Wed Apr 29 17:22:17 2015
+232.673,HPHONE,N,dialing succeeded
+242.674,SSURF,N,printf "0:0:1:0:1:95:0:1645:2060:491:-86.8:0.02:20.3:15.00:15.36:8.59:55.5:15.2:0.0:-0.9 GPS,020226,210051,4739.316,-12219.053,31,1.7,33,15.1\n" >> comm.log
+255.117,SSURF,N,Logged in...
+256.642,SSURF,N,Receiving cmdfile...
+256.683,SSURF,N,Sending cmd rawsend cmdfile
+258.966,SSURF,N,received 281 of 281 for cmdfile
+259.112,SSURF,N,Transmission succeeded...
+259.170,HTT8,N,Updating parameter $MASS to 73956
+259.220,HTT8,N,Updating parameter $RHO to 1.0275
+259.264,HTT8,N,Updating parameter $XPDR_INT to 11
+259.807,HTT8,N,Updating parameter $XPDR_REP to 10.5
+260.570,HXPDR,N,Tried 1 times to respond to command $C1
+260.893,HTT8,N,Updating parameter $C_VBD to 2968
+260.940,HTT8,N,Updating parameter $N_DIVES to 1
+260.982,HTT8,N,Updating parameter $D_TGT to 45
+261.024,HTT8,N,Updating parameter $T_DIVE to 15
+261.066,HTT8,N,Updating parameter $T_MISSION to 30
+261.109,HTT8,N,Updating parameter $D_ABORT to 125
+261.151,SDIVE,N,Parsed command: $QUIT
+262.735,SUSR,N,$ID,272
+262.739,SUSR,N,$MISSION,1
+262.742,SUSR,N,$DIVE,0
+262.746,SUSR,N,$N_DIVES,1
+262.750,SUSR,N,$STOP_T,0
+262.753,SUSR,N,$D_SURF,2
+262.757,SUSR,N,$D_FLARE,3
+262.761,SUSR,N,$D_TGT,45
+262.764,SUSR,N,$D_ABORT,125
+262.768,SUSR,N,$D_BATHY_OFFSET,0
+262.773,SUSR,N,$D_NO_BLEED,50
+262.777,SUSR,N,$D_BOOST,0
+262.780,SUSR,N,$T_BOOST,0
+262.784,SUSR,N,$D_FINISH,0
+262.788,SUSR,N,$D_PITCH,0
+262.791,SUSR,N,$D_SAFE,0
+262.794,SUSR,N,$D_CALL,0
+262.797,SUSR,N,$SURFACE_URGENCY,0
+262.802,SUSR,N,$SURFACE_URGENCY_TRY,0
+262.806,SUSR,N,$SURFACE_URGENCY_FORCE,0
+262.812,SUSR,N,$T_DIVE,15
+262.816,SUSR,N,$T_MISSION,30
+262.820,SUSR,N,$T_ABORT,1440
+262.824,SUSR,N,$T_TURN,225
+262.829,SUSR,N,$T_TURN_SAMPINT,-5
+262.833,SUSR,N,$T_NO_W,120
+262.836,SUSR,N,$T_LOITER,0
+262.840,SUSR,N,$T_EPIRB,0
+262.844,SUSR,N,$USE_BATHY,-6
+262.848,SUSR,N,$USE_ICE,0
+262.852,SUSR,N,$ICE_FREEZE_MARGIN,0.30000001
+262.858,SUSR,N,$D_OFFGRID,100
+262.862,SUSR,N,$RELAUNCH,1
+262.866,SUSR,N,$APOGEE_PITCH,-5
+262.871,SUSR,N,$MAX_BUOY,150
+262.875,SUSR,N,$GLIDE_SLOPE,30
+262.878,SUSR,N,$SPEED_FACTOR,1
+262.883,SUSR,N,$RHO,1.0275
+262.887,SUSR,N,$MASS,73956
+262.891,SUSR,N,$NAV_MODE,2
+262.895,SUSR,N,$FERRY_MAX,45
+262.899,SUSR,N,$KALMAN_USE,2
+262.904,SUSR,N,$HD_A,0.003
+262.908,SUSR,N,$HD_B,0.0099999998
+262.913,SUSR,N,$HD_C,1.6e-05
+262.916,SUSR,N,$HEADING,-1
+262.920,SUSR,N,$ESCAPE_HEADING,0
+262.925,SUSR,N,$ESCAPE_HEADING_DELTA,10
+262.930,SUSR,N,$FIX_MISSING_TIMEOUT,0
+262.935,SUSR,N,$TGT_DEFAULT_LAT,4736
+262.940,SUSR,N,$TGT_DEFAULT_LON,-12218
+262.945,SUSR,N,$TGT_AUTO_DEFAULT,0
+262.950,SUSR,N,$SM_CC,615.703
+262.954,SUSR,N,$N_FILEKB,8
+262.958,SUSR,N,$FILEMGR,0
+262.961,SUSR,N,$CALL_NDIVES,1
+262.965,SUSR,N,$COMM_SEQ,7
+262.969,SUSR,N,$PROTOCOL,9
+262.973,SUSR,N,$N_NOCOMM,1
+262.977,SUSR,N,$N_NOCOMM_RESUME,0
+262.982,SUSR,N,$NOCOMM_ACTION,899
+262.986,SUSR,N,$N_NOSURFACE,0
+262.991,SUSR,N,$UPLOAD_DIVES_MAX,-1
+262.995,SUSR,N,$NETBOX,1
+262.999,SUSR,N,$CALL_TRIES,5
+263.003,SUSR,N,$CALL_WAIT,60
+263.006,SUSR,N,$N_CYCLES,0
+263.010,SUSR,N,$CAPUPLOAD,0
+263.014,SUSR,N,$CAPMAXSIZE,100000
+263.019,SUSR,N,$T_GPS,5
+263.072,SUSR,N,$N_GPS,100440
+263.076,SUSR,N,$T_RSLEEP,2
+263.079,SUSR,N,$STROBE,0
+263.083,SUSR,N,$RAFOS_PEAK_OFFSET,0
+263.087,SUSR,N,$RAFOS_CORR_THRESH,60
+263.092,SUSR,N,$RAFOS_HIT_WINDOW,3600
+263.097,SUSR,N,$RAFOS_MMODEM,0
+263.101,SUSR,N,$PITCH_MIN,245
+263.106,SUSR,N,$PITCH_MAX,3640
+263.111,SUSR,N,$C_PITCH,2220
+263.115,SUSR,N,$PITCH_DBAND,0.1
+263.120,SUSR,N,$PITCH_CNV,0.0041299998
+263.125,SUSR,N,$PITCH_GAIN,15
+263.128,SUSR,N,$PITCH_TIMEOUT,30
+263.133,SUSR,N,$PITCH_MAXERRORS,1
+263.138,SUSR,N,$PITCH_ADJ_GAIN,0.0099999998
+263.143,SUSR,N,$PITCH_ADJ_DBAND,1
+263.148,SUSR,N,$C_PITCH_AUTO_DELTA,0
+263.152,SUSR,N,$C_PITCH_AUTO_MAX,0
+263.157,SUSR,N,$PITCH_GAIN_AUTO_DELTA,0
+263.162,SUSR,N,$PITCH_GAIN_AUTO_MAX,0
+263.166,SUSR,N,$PITCH_W_GAIN,0
+263.169,SUSR,N,$PITCH_W_DBAND,0
+263.174,SUSR,N,$ROLL_MIN,175
+263.178,SUSR,N,$ROLL_MAX,3850
+263.183,SUSR,N,$ROLL_DEG,80
+263.187,SUSR,N,$C_ROLL_DIVE,2025
+263.192,SUSR,N,$C_ROLL_CLIMB,2100
+263.197,SUSR,N,$HEAD_ERRBAND,10
+263.201,SUSR,N,$ROLL_CNV,0.054945
+263.206,SUSR,N,$ROLL_TIMEOUT,15
+263.210,SUSR,N,$ROLL_MAXERRORS,1
+263.214,SUSR,N,$ROLL_ADJ_GAIN,0
+263.218,SUSR,N,$ROLL_ADJ_DBAND,0
+263.223,SUSR,N,$VBD_MIN,490
+263.227,SUSR,N,$VBD_MAX,3960
+263.232,SUSR,N,$C_VBD,2968
+263.236,SUSR,N,$VBD_DBAND,2
+263.240,SUSR,N,$VBD_CNV,-0.24529999
+263.245,SUSR,N,$VBD_LP_IGNORE,0
+263.249,SUSR,N,$VBD_TIMEOUT,720
+263.253,SUSR,N,$PITCH_VBD_SHIFT,0.0012300001
+263.259,SUSR,N,$UNCOM_BLEED,20
+263.263,SUSR,N,$VBD_MAXERRORS,1
+263.267,SUSR,N,$C_VBD_AUTO_DELTA,0
+263.272,SUSR,N,$C_VBD_AUTO_MAX,0
+263.276,SUSR,N,$W_ADJ_DBAND,0
+263.280,SUSR,N,$DBDW,0
+263.283,SUSR,N,$LOITER_W_DBAND,0
+263.287,SUSR,N,$LOITER_DBDW,0
+263.291,SUSR,N,$LOITER_D_TOP,0
+263.294,SUSR,N,$LOITER_D_BOTTOM,0
+263.299,SUSR,N,$LOITER_N_DIVE,0
+263.303,SUSR,N,$CF8_MAXERRORS,20
+263.308,SUSR,N,$AH0_24V,575
+263.312,SUSR,N,$AH0_10V,0
+263.316,SUSR,N,$MINV_24V,11
+263.320,SUSR,N,$MINV_10V,11
+263.324,SUSR,N,$MAXI_24V,5
+263.328,SUSR,N,$MAXI_10V,1.5
+263.333,SUSR,N,$FG_AHR_10V,1.4790908
+263.337,SUSR,N,$FG_AHR_24V,4.6729012
+263.342,SUSR,N,$PHONE_SUPPLY,2
+263.347,SUSR,N,$PRESSURE_YINT,-177.6008
+263.395,SUSR,N,$PRESSURE_SLOPE,0.00022959753
+263.401,SUSR,N,$COMPASS_USE,16388
+263.405,SUSR,N,$ALTIM_PING_FIT,0
+263.409,SUSR,N,$ALTIM_TOP_PING_RANGE,0
+263.414,SUSR,N,$ALTIM_BOTTOM_TURN_MARGIN,0
+263.418,SUSR,N,$ALTIM_TOP_TURN_MARGIN,0
+263.423,SUSR,N,$ALTIM_TOP_MIN_OBSTACLE,1
+263.428,SUSR,N,$ALTIM_PING_DEPTH,0
+263.433,SUSR,N,$ALTIM_PING_DELTA,0
+263.438,SUSR,N,$ALTIM_FREQUENCY,13
+263.443,SUSR,N,$ALTIM_PULSE,3
+263.447,SUSR,N,$ALTIM_SENSITIVITY,2
+263.452,SUSR,N,$XPDR_VALID,4
+263.456,SUSR,N,$XPDR_INHIBIT,90
+263.460,SUSR,N,$XPDR_INT,11
+263.464,SUSR,N,$XPDR_REP,10.5
+263.469,SUSR,N,$INT_PRESSURE_SLOPE,1.9639999e-06
+263.475,SUSR,N,$INT_PRESSURE_YINT,2.8
+263.480,SUSR,N,$DEEPGLIDER,0
+263.483,SUSR,N,$DEEPGLIDERMB,0
+263.488,SUSR,N,$MOTHERBOARD,6
+263.492,SUSR,N,$DEVICE1,-1
+263.496,SUSR,N,$DEVICE2,-1
+263.500,SUSR,N,$DEVICE3,-1
+263.503,SUSR,N,$DEVICE4,-1
+263.507,SUSR,N,$DEVICE5,-1
+263.512,SUSR,N,$DEVICE6,-1
+263.516,SUSR,N,$LOGGERS,7
+263.520,SUSR,N,$LOGGERDEVICE1,7
+263.524,SUSR,N,$LOGGERDEVICE2,-1
+263.529,SUSR,N,$LOGGERDEVICE3,-1
+263.533,SUSR,N,$LOGGERDEVICE4,-1
+263.538,SUSR,N,$COMPASS_DEVICE,66
+263.542,SUSR,N,$COMPASS2_DEVICE,-1
+263.547,SUSR,N,$PHONE_DEVICE,33
+263.552,SUSR,N,$GPS_DEVICE,48
+263.556,SUSR,N,$RAFOS_DEVICE,-1
+263.560,SUSR,N,$NAV_DEVICE,-1
+263.565,SUSR,N,$NAV2_DEVICE,-1
+263.569,SUSR,N,$NAV3_DEVICE,-1
+263.574,SUSR,N,$NAV4_DEVICE,-1
+263.578,SUSR,N,$NETWORK_DEVICE,-1
+263.583,SUSR,N,$PRESSURE_DEVICE,34
+263.587,SUSR,N,$XPDR_DEVICE,21
+263.591,SUSR,N,$SIM_W,0
+263.594,SUSR,N,$SIMULATE,0
+263.599,SUSR,N,$SEABIRD_T_G,0.0043000001
+263.604,SUSR,N,$SEABIRD_T_H,0.00063999998
+263.610,SUSR,N,$SEABIRD_T_I,2.4999999e-05
+263.615,SUSR,N,$SEABIRD_T_J,4.3e-06
+263.620,SUSR,N,$SEABIRD_C_G,-10
+263.625,SUSR,N,$SEABIRD_C_H,1
+263.628,SUSR,N,$SEABIRD_C_I,-0.0020000001
+263.634,SUSR,N,$SEABIRD_C_J,0.00019999999
+263.639,SUSR,N,$OPTIONS,0
+263.643,SSENSOR,N,$SC_RECORDABOVE,2000.0
+263.698,SSENSOR,N,$SC_PROFILE,3.0
+263.730,SSENSOR,N,$SC_XMITPROFILE,3.0
+263.762,SSENSOR,N,$SC_NDIVE,1.0
+265.282,SSURF,N,Receiving science...
+265.324,SSURF,N,Sending cmd rawsend science
+267.149,SSURF,N,received 115 of 115 for science
+267.304,SSURF,N,Transmission succeeded...
+268.790,SSURF,N,Receiving targets...
+268.832,SSURF,N,Sending cmd rawsend targets
+270.833,SSURF,N,received 170 of 170 for targets
+270.983,SSURF,N,Transmission succeeded...
+271.078,SNAV,N,Using the first target 'OFFSHORE'
+271.118,SNAV,N,starting target OFFSHORE at 1770066818, dive 0
+272.756,SSURF,N,Receiving scicon.sch...
+272.798,SSURF,N,Sending cmd rawsend scicon.sch
+274.795,SSURF,N,received 170 of 170 for scicon.sch
+274.963,SSURF,N,Transmission succeeded...
+275.007,SSURF,N,walking the list n=2, types=ldk
+275.024,SSURF,N,adding st0005dz.x
+275.047,SSURF,N,adding st0005lz.x
+275.069,SSURF,N,list complete, files=2
+280.455,SSURF,N,sent 325 of 325 of st0005dz.x, EOF=1, stat=0,OK
+287.834,SSURF,N,sent 1967 of 1967 of st0005lz.x, EOF=1, stat=0,OK
+287.961,SSURF,N,waiting for prompt
+288.000,SSURF,N,batch exit
+288.032,SSURF,N,walking the list n=2, types=abcd
+288.043,SSURF,N,list complete, files=0
+288.055,SSURF,N,walking the list n=2, types=ldk
+288.067,SSURF,N,list complete, files=0
+288.082,SSURF,N,call try complete
+Compressing THISDIVE.KAP to st0005kz.x

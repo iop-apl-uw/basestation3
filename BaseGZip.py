@@ -277,7 +277,7 @@ def decompress(input_file_name, output_file_or_file_name):
     return retval
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     """Decompresses files from the glider to stdout
 
     Returns:
@@ -290,23 +290,33 @@ def main():
     """
     base_opts = BaseOpts.BaseOptions(
         "Decompresses files from the glider to stdout",
+        cmdline_args=cmdline_args,
+        add_to_arguments=["mission_dir"],
+        add_to_required=["mission_dir"],
         additional_arguments={
-            "compressed_file": BaseOptsType.options_t(
-                "",
-                ("BaseGZip",),
-                ("compressed_file",),
+            "compressed_files": BaseOptsType.options_t(
+                [],
+                {
+                    "BaseGZip",
+                },
+                ("compressed_files",),
                 str,
                 {
-                    "help": "File to decompress",
-                    "action": BaseOpts.FullPathAction,
+                    "help": "Files to decompress",
+                    "nargs": "*",
                 },
             ),
         },
     )
 
-    BaseLogger(base_opts)  # initializes BaseLog
+    BaseLogger(base_opts)
 
-    decompress(base_opts.compressed_file, f"{base_opts.compressed_file}.decomp")
+    for cmp_file in base_opts.compressed_files:
+        inp_file = base_opts.mission_dir / cmp_file
+        out_file = (base_opts.mission_dir / cmp_file).with_suffix(".decomp")
+        log_info(f"Decompressing {inp_file} to {out_file}")
+        decompress(inp_file, out_file)
+
     return 0
 
 

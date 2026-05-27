@@ -99,7 +99,9 @@ def main():
         additional_arguments={
             "home_dir": BaseOptsType.options_t(
                 "/home",
-                ("Commission",),
+                {
+                    "Commission",
+                },
                 ("--home_dir",),
                 str,
                 {
@@ -108,7 +110,9 @@ def main():
             ),
             "glider_password": BaseOptsType.options_t(
                 None,
-                ("Commission",),
+                {
+                    "Commission",
+                },
                 ("--glider_password",),
                 str,
                 {
@@ -117,7 +121,9 @@ def main():
             ),
             "glider_group": BaseOptsType.options_t(
                 "gliders",
-                ("Commission",),
+                {
+                    "Commission",
+                },
                 ("--glider_group",),
                 str,
                 {
@@ -126,7 +132,9 @@ def main():
             ),
             "home_dir_group": BaseOptsType.options_t(
                 "gliders",
-                ("Commission",),
+                {
+                    "Commission",
+                },
                 ("--home_dir_group",),
                 str,
                 {
@@ -135,7 +143,9 @@ def main():
             ),
             "glider_id": BaseOptsType.options_t(
                 None,
-                ("Commission",),
+                {
+                    "Commission",
+                },
                 ("glider_id",),
                 int,
                 {
@@ -144,17 +154,21 @@ def main():
             ),
             "glider_jail": BaseOptsType.options_t(
                 None,
-                ("Commission",),
+                {
+                    "Commission",
+                },
                 ("--jail",),
                 str,
                 {
                     "help": "Root of the jail to commision the glider in",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
             "uid": BaseOptsType.options_t(
                 None,
-                ("Commission",),
+                {
+                    "Commission",
+                },
                 ("--uid",),
                 int,
                 {
@@ -197,7 +211,7 @@ def main():
     )
 
     if base_opts.glider_jail:
-        if not os.path.exists(base_opts.glider_jail):
+        if not base_opts.glider_jail.exists():
             log_error(f"Jail dir {base_opts.glider_jail} does not exsist - bailing out")
             return 1
         else:
@@ -245,14 +259,12 @@ def main():
     syscall("chsh -s /usr/bin/tcsh %s" % glider)
     if base_opts.glider_jail:
         # More the home directory
-        syscall(
-            f"mv {glider_path} {os.path.join(base_opts.glider_jail, glider_path[1:])}"
-        )
+        syscall(f"mv {glider_path} {str(base_opts.glider_jail / glider_path[1:])}")
 
         # Deal with the jailed passwd file
         pd = pwd.getpwnam(glider)
         pwd_str = f"{pd.pw_name}:{pd.pw_passwd}:{pd.pw_uid}:{pd.pw_gid}:{pd.pw_gecos}:{pd.pw_dir}:{pd.pw_shell}"
-        jail_pwd = os.path.join(base_opts.glider_jail, "etc/passwd")
+        jail_pwd = base_opts.glider_jail / "etc/passwd"
         log_info(f"Jail password file {jail_pwd}")
         try:
             fi = open(jail_pwd, "r")
@@ -287,7 +299,7 @@ def main():
             return 1
 
         gp = grp.getgrgid(pd.pw_gid)
-        jail_grp = os.path.join(base_opts.glider_jail, "etc/group")
+        jail_grp = base_opts.glider_jail / "etc/group"
         # grp.struct_group(gr_name='gliders', gr_passwd='x', gr_gid=1002, gr_mem=['sg095', 'gbs', 'sg080'])
         grp_str = f"{gp.gr_name}:{gp.gr_passwd}:{gp.gr_gid}:"
         for member in gp.gr_mem:

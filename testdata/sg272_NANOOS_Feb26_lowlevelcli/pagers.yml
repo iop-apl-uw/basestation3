@@ -1,0 +1,4 @@
+geoff:
+   status: on
+   ntfy: [ { filters: [gps,critical], topic: notifytopic } ]
+   email: [ { address: gbs2@uw.edu } ]

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -32,11 +32,25 @@
 Strip1A.py: Strips '1A's from files, called by basestation code
 """
 
+import os
+import pdb
 import sys
+import time
+import traceback
 
 import BaseOpts
 import BaseOptsType
-from BaseLog import BaseLogger, log_debug, log_error, log_warning
+from BaseLog import BaseLogger, log_critical, log_debug, log_error, log_warning
+
+DEBUG_PDB = False
+
+
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
 
 
 def strip1A(in_filename, out_filename, size=0):
@@ -121,33 +135,51 @@ def strip1A(in_filename, out_filename, size=0):
     return 0
 
 
-if __name__ == "__main__":
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
+    """Processes seaglider file for 1a padding
+
+    returns:
+        0 for success
+        1 for failure
+
+    raises:
+        Any exceptions raised are considered critical errors and not expected
+
+    """
+
     base_opts = BaseOpts.BaseOptions(
         "Test entry point for Strip1a processing",
+        cmdline_args=cmdline_args,
         additional_arguments={
             "infile": BaseOptsType.options_t(
                 None,
-                ("Strip1A",),
+                {
+                    "Strip1A",
+                },
                 ("infile",),
                 str,
                 {
                     "help": "Name of file to strip",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
             "outfile": BaseOptsType.options_t(
                 None,
-                ("Strip1A",),
+                {
+                    "Strip1A",
+                },
                 ("outfile",),
                 str,
                 {
                     "help": "Name of output file",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
             "strip_size": BaseOptsType.options_t(
                 None,
-                ("Strip1A",),
+                {
+                    "Strip1A",
+                },
                 ("strip_size",),
                 int,
                 {
@@ -160,9 +192,30 @@ if __name__ == "__main__":
 
     BaseLogger(base_opts)  # initializes BaseLog
 
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
+
     if base_opts.strip_size:
         strip1A(base_opts.infile, base_opts.outfile, base_opts.strip_size)
     else:
         strip1A(base_opts.infile, base_opts.outfile)
 
-    sys.exit(0)
+    return 0
+
+
+if __name__ == "__main__":
+    retval = 1
+
+    # Force to be in UTC
+    os.environ["TZ"] = "UTC"
+    time.tzset()
+
+    try:
+        retval = main()
+    except SystemExit:
+        pass
+    except Exception:
+        DEBUG_PDB_F()
+        log_critical("Unhandled exception in main -- exiting")
+
+    sys.exit(retval)

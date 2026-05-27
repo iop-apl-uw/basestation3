@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -43,18 +43,21 @@ from BaseLog import BaseLogger, log_error, log_info, log_warning
 DEBUG_PDB = False
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     base_opts = BaseOpts.BaseOptions(
         "Get legato pressure correction constants from a Seaglider selftest capture file",
+        cmdline_args=cmdline_args,
         additional_arguments={
             "capture": BaseOpts.options_t(
                 None,
-                ("GetLegatoPressCorr",),
+                {
+                    "GetLegatoPressCorr",
+                },
                 ("capture",),
-                str,
+                BaseOpts.FullPathlib,
                 {
                     "help": "Seaglider self-test capture",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
         },
@@ -81,17 +84,26 @@ def main():
                     press_label = "label = conductivity"
                     n = s.find(press_label)
                     if n >= 0:
-                        s=s[n+len(press_label) :]
-                        values = scanf("_%d, datetime = %d, c0 = %f, c1 = %f, c2 = %f, x0 = %f, x1 = %f, x2 = %f, x3 = %f, x4 = %f, x5 = %f", s)
+                        s = s[n + len(press_label) :]
+                        values = scanf(
+                            "_%d, datetime = %d, c0 = %f, c1 = %f, c2 = %f, x0 = %f, x1 = %f, x2 = %f, x3 = %f, x4 = %f, x5 = %f",
+                            s,
+                        )
                         if len(values) == 11:
                             f_found_vals = True
-                            print(f"Found pressure cal values x2:{values[7]} x3:{values[8]} x4:{values[9]}")
+                            print(
+                                f"Found pressure cal values x2:{values[7]} x3:{values[8]} x4:{values[9]}"
+                            )
                             if values[7] or values[8] or values[9]:
                                 print("On-board pressure correction enabled")
-                                print("set \"legato_cond_press_correction = 0;\" in sg_calib_constants.m")
+                                print(
+                                    "Add to sg_calib_constants.m\nlegato_cond_press_correction = 0;"
+                                )
                             else:
                                 print("On-board pressure correction not enabled")
-                                print("set \"legato_cond_press_correction = 1;\" in sg_calib_constants.m")
+                                print(
+                                    "Add to sg_calib_constants.m\nlegato_cond_press_correction = 1;"
+                                )
                             break
 
             if not f_found_vals:
@@ -103,6 +115,8 @@ def main():
             pdb.post_mortem(tb)
         else:
             log_error("Untrapped error", "exc")
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

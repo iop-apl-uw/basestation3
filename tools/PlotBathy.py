@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -116,19 +116,22 @@ def read_bathy(path_to_bathy_map):
             return None
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     base_opts = BaseOpts.BaseOptions(
         "Plot Seaglider Bathy maps",
+        cmdline_args=cmdline_args,
         additional_arguments={
             "bathy_files": BaseOpts.options_t(
-                "",
-                ("PlotBathy",),
+                [],
+                {
+                    "PlotBathy",
+                },
                 ("bathy_files",),
-                str,
+                BaseOpts.FullPathlib,
                 {
                     "help": "List of bathy files",
                     "nargs": "+",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
         },
@@ -174,14 +177,14 @@ def main():
                 alpha=0.5,
                 # clip=True,
             )
-            output_file = bf + ".png"
+            output_file = bf.with_suffix(".png")
             bathymap_short_name = os.path.split(bf)[1]
             plt.savefig(output_file, bbox_inches="tight", transparent=True)
             bathy_data.append(bathy_t(output_file, bathymap_short_name, bd))
 
     if f_kml:
-        bathy_dir = os.path.split(base_opts.bathy_files[0])[0]
-        bathy_kml = os.path.join(bathy_dir, "bathymap.kml")
+        bathy_dir = base_opts.bathy_files[0].parent
+        bathy_kml = bathy_dir / "bathymap.kml"
         with open(bathy_kml, "w") as fo:
             fo.write('<?xml version="1.0" encoding="UTF-8"?>\n')
             fo.write(
@@ -241,6 +244,7 @@ def main():
                 }
             )
         fig.show()
+    return 0
 
 
 if __name__ == "__main__":

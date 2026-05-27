@@ -41,6 +41,7 @@ import traceback
 
 import numpy as np
 
+import BaseNetCDF
 import BaseOpts
 import BaseOptsType
 import CalibConst
@@ -325,7 +326,7 @@ class DataFile:
             try:
                 for ob in obs:
                     self.timeouts_times[cls] += (
-                        f"{start_time + self.data[ob,self.columns.index('elaps_t')]:.3f},"
+                        f"{start_time + self.data[ob, self.columns.index('elaps_t')]:.3f},"
                     )
             except Exception:
                 log_error(f'Failed processing timeouts for instrument "{cls}"', "exc")
@@ -668,7 +669,7 @@ def process_data_file(in_filename, file_type, calib_consts):
         return data_file
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     """Processes seaglider data files from dat to asc
 
     returns:
@@ -679,29 +680,24 @@ def main():
         Any exceptions raised are considered critical errors and not expected
 
     """
+    Sensors.set_globals()
+    BaseNetCDF.set_globals()
+
     # Get options
     base_opts = BaseOpts.BaseOptions(
         "Processes seaglider data files from dat to asc",
+        cmdline_args=cmdline_args,
         additional_arguments={
-            "data_file": BaseOptsType.options_t(
-                None,
-                ("DataFiles",),
-                ("data_file",),
+            "data_files": BaseOptsType.options_t(
+                [],
+                {
+                    "DataFiles",
+                },
+                ("data_files",),
                 str,
                 {
                     "help": "Seaglider .dat file to process",
-                    # "action": BaseOpts.FullPathAction,
-                },
-            ),
-            "log_file": BaseOptsType.options_t(
-                None,
-                ("DataFiles",),
-                ("log_file",),
-                str,
-                {
-                    "help": "Seaglider .log file matching the .dat file",
-                    # "action": BaseOpts.FullPathAction,
-                    "nargs": "?",
+                    "nargs": "*",
                 },
             ),
         },
@@ -710,12 +706,6 @@ def main():
 
     global DEBUG_PDB
     DEBUG_PDB = base_opts.debug_pdb
-
-    datafile_name = base_opts.mission_dir / base_opts.data_file
-    if base_opts.log_file:
-        logfile_name = base_opts.mission_dir / base_opts.log_file
-    else:
-        logfile_name = None
 
     sg_calib_file_name = base_opts.mission_dir / "sg_calib_constants.m"
 
@@ -727,57 +717,55 @@ def main():
     if init_ret_val > 0:
         log_warning("Sensor initialization failed")
 
-    log_info("Processing file: %s" % datafile_name)
+    if not base_opts.data_files:
+        base_opts.data_files = [
+            ii.name
+            for ii in base_opts.mission_dir.glob(
+                "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].dat"
+            )
+        ]
 
-    fc = FileMgr.FileCode(datafile_name, 0)
+    for df_name in base_opts.data_files:
+        datafile_name = base_opts.mission_dir / df_name
 
-    if fc.is_seaglider() or fc.is_seaglider_selftest():
-        if fc.is_gzip() or fc.is_tar() or fc.is_tgz():
-            log_info("Handling compressed or tar files NYI: %s" % datafile_name)
-            return 0
-        elif not fc.is_received():
-            log_info("Don't know how to handle %s" % datafile_name)
-            return 1
-        elif fc.is_data():
-            log_info("Processing %s from a data to asc format" % datafile_name)
-            data_file = process_data_file(datafile_name, "dat", calib_consts)
-            if not data_file:
+        log_info("Processing file: %s" % datafile_name)
+
+        fc = FileMgr.FileCode(datafile_name, 0)
+
+        if fc.is_seaglider() or fc.is_seaglider_selftest():
+            if fc.is_gzip() or fc.is_tar() or fc.is_tgz():
+                log_info("Handling compressed or tar files NYI: %s" % datafile_name)
+                return 0
+            elif not fc.is_received():
+                log_info("Don't know how to handle %s" % datafile_name)
                 return 1
+            elif fc.is_data():
+                log_info("Processing %s from a data to asc format" % datafile_name)
+                data_file = process_data_file(datafile_name, "dat", calib_consts)
+                if not data_file:
+                    return 1
 
-            data_file.dat_to_asc()
+                data_file.dat_to_asc()
 
-            if logfile_name:
+                logfile_name = datafile_name.with_suffix(".log")
+
                 log_file = LogFile.parse_log_file(
                     logfile_name,
                     issue_warn=True,
                 )
                 if not log_file:
-                    return 1
+                    continue
                 if data_file.asc_to_eng(log_file):
                     log_error("%s failed in conversion from asc to eng" % datafile_name)
 
-            data_file.dump(sys.stdout)
+                data_file.dump(sys.stdout)
+            else:
+                log_info("Don't know how to process %s" % datafile_name)
+                continue
         else:
-            log_info("Don't know how to process %s" % datafile_name)
-            return 1
-    else:
-        # Assume its an eng file
-        data_file = process_data_file(datafile_name, "eng", calib_consts)
-        data_file.dump(sys.stdout)
-        return 1
-
-    #     log_file = LogFile.parse_log_file(logfile_name, base_opts.mission_dir)
-
-    #     if (data_file is not None and log_file is not None):
-    #         data_file.asc_to_eng(log_file)
-    #         data_file.dump(sys.stdout)
-    #     else:
-    #         log_error("cannot generate eng file, error with asc and/or log")
-
-    # Each row in the data is a dictionary, so you index it via the column header name
-    # For example, to show the depth:
-    # for i in data_file.data:
-    #    print i['depth']
+            # Assume its an eng file
+            data_file = process_data_file(datafile_name, "eng", calib_consts)
+            data_file.dump(sys.stdout)
 
     return 0
 

@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -47,18 +47,21 @@ from BaseLog import (
 DEBUG_PDB = False
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     base_opts = BaseOpts.BaseOptions(
         "Get optode constants from a Seaglider selftest capture file",
+        cmdline_args=cmdline_args,
         additional_arguments={
             "capture": BaseOpts.options_t(
                 None,
-                ("GetOptodeConstants",),
+                {
+                    "GetOptodeConstants",
+                },
                 ("capture",),
-                str,
+                BaseOpts.FullPathlib,
                 {
                     "help": "Seaglider self-test capture",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
         },
@@ -124,27 +127,27 @@ def main():
                         foil_strs[foil] = ""
                         for ii in range(2, 16):
                             foil_strs[foil] = (
-                                f"{foil_strs[foil]}optode_FoilCoef{foil}{ii-2:d} = {values[ii]:g};\n"
+                                f"{foil_strs[foil]}optode_FoilCoef{foil}{ii - 2:d} = {values[ii]:g};\n"
                             )
                         continue
 
                 values = scanf("PhaseCoef %s %d %f %f %f %f", s)
                 if values:
                     for ii in range(2, 6):
-                        phase = f"{phase}optode_PhaseCoef{ii-2} = {values[ii]:g};\n"
+                        phase = f"{phase}optode_PhaseCoef{ii - 2} = {values[ii]:g};\n"
                     continue
 
                 values = scanf("TempCoef %s %d %f %f %f %f %f %f", s)
                 if values:
                     for ii in range(2, 6):
-                        temp = f"tempoptode_TempCoef{ii-2} = {values[ii]:g};\n"
+                        temp = f"tempoptode_TempCoef{ii - 2} = {values[ii]:g};\n"
                     continue
 
                 values = scanf("ConcCoef %s %d %f %f", s)
                 if values:
                     for ii in range(2, 4):
                         # just add it to phase
-                        phase = f"{phase}optode_ConcCoef{ii-2} = {values[ii]:g};\n"
+                        phase = f"{phase}optode_ConcCoef{ii - 2} = {values[ii]:g};\n"
                     continue
 
                 for ccoef in ("0", "1", "2", "3", "4"):
@@ -152,7 +155,7 @@ def main():
                     if values:
                         for ii in range(2, 6):
                             ccoef_strs[ccoef] = (
-                                f"{ccoef_strs[ccoef]}optode_C{ccoef}{ii-2}Coef = {values[ii]:g};\n"
+                                f"{ccoef_strs[ccoef]}optode_C{ccoef}{ii - 2}Coef = {values[ii]:g};\n"
                             )
                         continue
 
@@ -164,11 +167,11 @@ def main():
                 values = scanf("SVUFoilCoef %s %d %f %f %f %f %f %f %f", s)
                 if values:
                     for ii in range(2, 9):
-                        SVUcoef = f"{SVUcoef}optode_SVUCoef{ii-2} = {values[ii]:g};\n"
+                        SVUcoef = f"{SVUcoef}optode_SVUCoef{ii - 2} = {values[ii]:g};\n"
 
         print("%% Add these lines to sg_calib_constants.m")
         print(
-            f"calibcomm_optode = ''Optode {optode_type} SN: {sn} {foilID} calibrated ??/??/????'';"
+            f"calibcomm_optode = 'Optode {optode_type} SN: {sn} {foilID} calibrated ??/??/????';"
         )
         print(phase)
         print(temp)
@@ -190,6 +193,8 @@ def main():
             pdb.post_mortem(tb)
         else:
             log_error("Untrapped error", "exc")
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

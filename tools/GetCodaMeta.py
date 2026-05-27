@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -45,18 +45,21 @@ DEBUG_PDB = False
 known_typs = ("temp15", "doxy21", "doxy24", "opt_05", "opt05")
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     base_opts = BaseOpts.BaseOptions(
         "Get coda calib comm str and cal coefficient from a Seaglider selftest capture file",
+        cmdline_args=cmdline_args,
         additional_arguments={
             "capture": BaseOpts.options_t(
                 None,
-                ("GetCodaMeta",),
+                {
+                    "GetCodaMeta",
+                },
                 ("capture",),
-                str,
+                BaseOpts.FullPathlib,
                 {
                     "help": "Seaglider self-test capture",
-                    "action": BaseOpts.FullPathAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
         },
@@ -172,6 +175,8 @@ def main():
             pdb.post_mortem(tb)
         else:
             log_error("Untrapped error", "exc")
+            return 1
+    return 0
 
 
 if __name__ == "__main__":

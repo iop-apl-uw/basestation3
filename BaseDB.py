@@ -1571,19 +1571,18 @@ def main():
         additional_arguments={
             "netcdf_files": BaseOptsType.options_t(
                 [],
-                ("BaseDB",),
+                {"BaseDB",},
                 ("netcdf_files",),
                 str,
                 {
                     "help": "List of netcdf files to add to the db",
                     "nargs": "*",
-                    "action": BaseOpts.FullPathAction,
                     "subparsers": ("addncfs",),
                 },
             ),
             "dive_num": BaseOptsType.options_t(
                 0,
-                ("BaseDB",),
+                {"BaseDB",},
                 ("dive_num",),
                 int,
                 {
@@ -1593,7 +1592,7 @@ def main():
             ),
             "value_name": BaseOptsType.options_t(
                 "",
-                ("BaseDB",),
+                {"BaseDB",},
                 ("value_name",),
                 str,
                 {
@@ -1603,7 +1602,7 @@ def main():
             ),
             "value": BaseOptsType.options_t(
                 0,
-                ("BaseDB",),
+                {"BaseDB",},
                 ("value",),
                 int,
                 {
@@ -1613,7 +1612,7 @@ def main():
             ),
             "network": BaseOptsType.options_t(
                 False,
-                ("BaseDB",),
+                {"BaseDB",},
                 ("--network",),
                 bool,
                 {
@@ -1623,7 +1622,7 @@ def main():
             ),
             "schema": BaseOptsType.options_t(
                 False,
-                ("BaseDB",),
+                {"BaseDB",},
                 ("--schema",),
                 bool,
                 {
@@ -1633,7 +1632,7 @@ def main():
             ),
             "init_db": BaseOptsType.options_t(
                 False,
-                ("BaseDB",),
+                {"BaseDB",},
                 ("--init_db",),
                 bool,
                 {
@@ -1643,7 +1642,7 @@ def main():
             ),
             "rebuild_history": BaseOptsType.options_t(
                 False,
-                ("BaseDB",),
+                {"BaseDB",},
                 ("--rebuild_history",),
                 bool,
                 {
@@ -1712,7 +1711,7 @@ def main():
     if base_opts.subparser_name == "addncfs":
         if base_opts.netcdf_files:
             for ncf in base_opts.netcdf_files:
-                loadDB(base_opts, ncf)
+                loadDB(base_opts, base_opts.mission_dir / ncf)
         else:
             rebuildDivesGC(base_opts, "nc" if not base_opts.network else "ncdf")
 

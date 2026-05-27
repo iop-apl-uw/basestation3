@@ -125,7 +125,7 @@ def main():
                 str,
                 {
                     "help": "Root of the seaglider jail, if used",
-                    "action": BaseOpts.FullPathTrailingSlashAction,
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
             "archive": BaseOptsType.options_t(
@@ -286,8 +286,7 @@ def main():
                 seaglider_mission_dir = seaglider_mission_dir.rstrip()
                 log_file = log_file.rstrip()
                 if base_opts.jail_root and log_file.startswith(seaglider_mission_dir):
-                    log_file = os.path.join(base_opts.jail_root, log_file[1:])
-
+                    log_file = base_opts.jail_root / log_file[1:]
                 try:
                     glider_id = int(os.path.split(seaglider_home_dir)[1][2:])
                 except Exception:

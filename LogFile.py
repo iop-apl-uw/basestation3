@@ -999,25 +999,23 @@ def parse_log_file(in_filename, issue_warn=False):
     return log_file
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     """Test entry point for logfile processing"""
     Sensors.set_globals()
     BaseNetCDF.set_globals()
 
     base_opts = BaseOpts.BaseOptions(
         "Test entry point for logfile processing",
+        cmdline_args=cmdline_args,
         additional_arguments={
-            "log_file": BaseOptsType.options_t(
-                None,
+            "log_files": BaseOptsType.options_t(
+                [],
                 {
                     "LogFile",
                 },
-                ("log_file",),
+                ("log_files",),
                 str,
-                {
-                    "help": "Seaglider logfile to process",
-                    # "action": BaseOpts.FullPathAction,
-                },
+                {"help": "Seaglider logfiles to process", "nargs": "*"},
             ),
         },
     )
@@ -1037,20 +1035,29 @@ def main():
     # Initialze the netCDF tables
     BaseNetCDF.init_tables(init_dict)
 
-    log_filename = os.path.join(base_opts.mission_dir, base_opts.log_file)
+    if not base_opts.log_files:
+        base_opts.log_files = [
+            ii.name
+            for ii in base_opts.mission_dir.glob(
+                "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].log"
+            )
+        ]
 
-    log_info(f"Processing file: {log_filename}")
+    for lf_name in base_opts.log_files:
+        log_filename = base_opts.mission_dir / lf_name
 
-    log_file = parse_log_file(log_filename)
-    # You can dump the whole processed object using this method
+        log_info(f"Processing file: {log_filename}")
 
-    if log_file is not None:
-        log_file.dump(sys.stdout)
+        log_file = parse_log_file(log_filename)
+        # You can dump the whole processed object using this method
 
-    # Each row in the data is a dictionary, so you index it via the column header name
-    # For example, to show the depth:
-    # for i in data_file.data:
-    #    print i['depth']
+        if log_file is not None:
+            log_file.dump(sys.stdout)
+
+        # Each row in the data is a dictionary, so you index it via the column header name
+        # For example, to show the depth:
+        # for i in data_file.data:
+        #    print i['depth']
 
     return 0
 

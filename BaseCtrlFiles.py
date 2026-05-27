@@ -430,8 +430,8 @@ def load_ctrl_yml(
         yml_dicts = [{}]
 
     for yml_file_name in (
-        os.path.join(base_opts.basestation_etc, ctrl_file_name),
-        os.path.join(base_opts.group_etc, ctrl_file_name)
+        base_opts.basestation_etc / ctrl_file_name,
+        base_opts.group_etc / ctrl_file_name
         if base_opts.group_etc
         else None,
         base_opts.mission_dir / ctrl_file_name,
@@ -867,7 +867,7 @@ def process_pagers_yml(
                     log_warning(f"pagers msg {msg} NYI")
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     """cli test/utility for ctrl file processing
 
     Returns:
@@ -882,6 +882,7 @@ def main():
     # pylint: disable=unused-argument
     base_opts = BaseOpts.BaseOptions(
         "cmdline entry for basestation ctrl file processing",
+        cmdline_args=cmdline_args,
         additional_arguments={
             "basectrlfiles_action": BaseOptsType.options_t(
                 (),
@@ -916,7 +917,7 @@ def main():
 
     if comm_log is None:
         log_error("Could not process comm.log")
-        return
+        return 1
 
     if base_opts.basectrlfiles_action == "dump_pagers_yml":
         pagers_dict = load_ctrl_yml(
@@ -924,12 +925,12 @@ def main():
         )
         if pagers_dict is None:
             log_error("Failed to load pager(s).yml - bailing out")
-            return
+            return 0
 
         pagers_dict = check_canonicalize_pagers_dict(pagers_dict)
         
         dump_pagers_dict(pagers_dict)
-        return
+        return 0
 
     if base_opts.basectrlfiles_action in pagers_msgs:
         process_pagers_yml(
@@ -940,6 +941,8 @@ def main():
         )
     else:
         log_error("Unkown action {base_opts.basectrlfiles_action}")
+
+    return 0
 
 
 if __name__ == "__main__":
