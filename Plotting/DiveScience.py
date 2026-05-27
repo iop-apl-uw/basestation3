@@ -129,8 +129,8 @@ def plot_science(
     search_dirs = [
         pathlib.Path(sd)
         for sd in (
-            pathlib.Path(base_opts.basestation_directory) / "config",
-            pathlib.Path(base_opts.basestation_directory) / "etc",
+            base_opts.basestation_directory / "config",
+            base_opts.basestation_directory / "etc",
             base_opts.group_etc,
             base_opts.mission_dir,
         )
