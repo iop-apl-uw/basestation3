@@ -127,10 +127,10 @@ def plot_dives(
     else:
         con = dbcon
 
+    dive_plot_times: dict[str, float] = collections.defaultdict(float)
     for dive_nc_file_name in dive_nc_file_names:
         log_info(f"Plotting {dive_nc_file_name}")
         dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
-        dive_plot_times: dict[str, float] = collections.defaultdict(float)
         for plot_name, plot_func in dive_plot_dict.items():
             try:
                 if base_opts.plot_dive_timeout:
@@ -174,10 +174,11 @@ def plot_dives(
                     signal.signal(signal.SIGALRM, prev_handler)
                 dive_plot_times[plot_name] += time.time() - t0
 
-    for plot_name, elapsed_time in dive_plot_times.items():
-        log_info(
-            f"Dive {plot_name} took {elapsed_time:.2f} secs, Avg {elapsed_time / len(dive_nc_file_names):.2f}"
-        )
+    if len(dive_nc_file_names):
+        for plot_name, elapsed_time in dive_plot_times.items():
+            log_info(
+                f"Dive {plot_name} took {elapsed_time:.2f} secs, Avg {elapsed_time / len(dive_nc_file_names):.2f}"
+            )
 
     if dbcon is None:
         try:
