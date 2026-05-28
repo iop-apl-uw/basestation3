@@ -80,7 +80,7 @@ nc_ancillary_variables = "ancillary_variables"
 # Support functions for creating and merging global attributes
 def nc_ISO8601_date(epoch_time):
     """return an epoch_time ala time.time() in required metadata standard format"""
-    return time.strftime("%Y-%m-%dT%H:%m:%SZ", time.gmtime(epoch_time))
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(epoch_time))
 
 
 # These functions compare date strings for mergers
