@@ -456,7 +456,7 @@ def load_ctd_vars(
 @add_arguments(
     additional_arguments={
         "plot_ctd_raw": BaseOptsType.options_t(
-            None,
+            False,
             {"Base", "BasePlot", "Reprocess"},
             ("--plot_ctd_raw",),
             bool,

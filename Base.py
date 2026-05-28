@@ -99,7 +99,6 @@ from BaseLog import (
 )
 from Globals import known_files, known_ftp_tags, known_mailer_tags
 
-# DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
 
 
