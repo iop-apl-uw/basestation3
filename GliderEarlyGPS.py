@@ -195,7 +195,7 @@ class GliderEarlyGPSClient:
         Closes out the comm.log and removes the .connected file
         """
         # If we have a path to the logout script - run that
-        if self.__base_opts.path_to_logout and self.__base_opts.path_to_logout.exits():
+        if self.__base_opts.path_to_logout and self.__base_opts.path_to_logout.exists():
             try:
                 my_env = os.environ.copy()
                 my_env["logout"] = "shell_disappeared_logout"
