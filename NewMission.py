@@ -89,7 +89,7 @@ def main():
                     "NewMission",
                 },
                 ("glider_home",),
-                BaseOpts.FullPathTrailingSlash,
+                BaseOpts.FullPathlib,
                 {
                     "help": "Seagliders home directory - NOTE: no tilda expansion done",
                     "action": BaseOpts.FullPathlibAction,
@@ -116,30 +116,28 @@ def main():
 
     if not base_opts.instrument_id:
         try:
-            glider_id = int(
-                os.path.split(os.path.split(base_opts.glider_home)[0])[1][2:]
-            )
+            glider_id = int(base_opts.glider_home.name[2:])
             base_opts.instrument_id = glider_id
         except Exception:
             log_error("Failed to figure out instrument_id", "exc")
             return 1
 
-    new_mission_dir = os.path.abspath(
-        os.path.join(base_opts.glider_home, base_opts.new_mission_dir)
+    new_mission_dir = pathlib.Path(
+        os.path.abspath(base_opts.glider_home / base_opts.new_mission_dir)
     )
-    current_symlink = os.path.abspath(os.path.join(base_opts.glider_home, "current"))
+    current_symlink = pathlib.Path(os.path.abspath(base_opts.glider_home / "current"))
 
-    if os.path.isdir(new_mission_dir):
+    if new_mission_dir.is_dir():
         log_error(f"{new_mission_dir} exists - bailing out")
         return 1
 
     current_mission_dir = None
-    if os.path.exists(current_symlink):
-        if not os.path.islink(current_symlink):
+    if current_symlink.exists():
+        if not current_symlink.is_symlink():
             log_error(f"{current_symlink} exists and is not a symlink")
             return 1
-        current_mission_dir = os.path.realpath(current_symlink)
-        if not os.path.isdir(current_mission_dir):
+        current_mission_dir = current_symlink.resolve()
+        if not current_mission_dir.is_dir():
             log_error(
                 f"{current_symlink} points to {current_mission_dir} which is not a directory"
             )
@@ -152,11 +150,11 @@ def main():
     # The owner may fail if the script is not run by root
 
     if current_mission_dir:
-        stat_st = os.stat(current_mission_dir)
-        base_opts.mission_dir = pathlib.Path(current_mission_dir)
+        stat_st = current_mission_dir.stat()
+        base_opts.mission_dir = current_mission_dir
     else:
-        stat_st = os.stat(base_opts.glider_home)
-        base_opts.mission_dir = pathlib.Path(base_opts.glider_home)
+        stat_st = base_opts.glider_home.stat()
+        base_opts.mission_dir = base_opts.glider_home
 
     # Sensor extensions
     (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
@@ -169,7 +167,7 @@ def main():
     os.umask(0o000)
 
     try:
-        os.mkdir(new_mission_dir, mode=0o775)
+        new_mission_dir.mkdir(mode=0o775)
     except Exception:
         log_error(f"Failed to crete {new_mission_dir}", "exc")
         return 1
@@ -194,16 +192,16 @@ def main():
     for copy_file_name in copy_files:
         copy_file_fullpath = None
         if current_mission_dir:
-            copy_file_fullpath = os.path.join(current_mission_dir, copy_file_name)
-            if not os.path.exists(copy_file_fullpath):
+            copy_file_fullpath = current_mission_dir / copy_file_name
+            if not copy_file_fullpath.exists():
                 copy_file_fullpath = None
         if not copy_file_fullpath:
-            copy_file_fullpath = os.path.join(base_opts.glider_home, copy_file_name)
-            if not os.path.exists(copy_file_fullpath):
+            copy_file_fullpath = base_opts.glider_home / copy_file_name
+            if not copy_file_fullpath.exists():
                 copy_file_fullpath = None
 
         if copy_file_fullpath:
-            new_copy_file_fullpath = os.path.join(new_mission_dir, copy_file_name)
+            new_copy_file_fullpath = new_mission_dir / copy_file_name
             try:
                 shutil.copy(copy_file_fullpath, new_copy_file_fullpath)
             except Exception:
@@ -222,7 +220,6 @@ def main():
     #    log_error("Failed to write {new_cmdfile}", "exc")
     ##else:
     #    items.append(new_cmdfile)
-
     for dotfile in (
         ".pagers",
         ".canonicals",
@@ -236,11 +233,12 @@ def main():
         ".post_mission",
         "pagers.yml",
     ):
-        master_dotfile = os.path.join(base_opts.glider_home, dotfile)
+        master_dotfile = base_opts.glider_home / dotfile
         # if os.path.exists(master_dotfile):
-        link_dotfile = os.path.join(new_mission_dir, dotfile)
+        link_dotfile = new_mission_dir / dotfile
         try:
-            os.symlink(master_dotfile, link_dotfile)
+            # os.symlink(master_dotfile, link_dotfile)
+            link_dotfile.symlink_to(master_dotfile)
         except Exception:
             log_error("Failed to create symlink {link_dotfile}", "exc")
         # Cannot set permissions on symlink files
@@ -248,7 +246,7 @@ def main():
         #    items.append(link_dotfile)
 
     try:
-        os.unlink(current_symlink)
+        current_symlink.unlink()
     except FileNotFoundError:
         pass
     except Exception:
