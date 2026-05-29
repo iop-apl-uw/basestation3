@@ -732,7 +732,7 @@ def magcal_worker(
     lim = max([abs(minlim), abs(maxlim)])*1.05
     if softiron:
         fit_line = (
-            f'hard0="{P.item(0):.1f} {P.item(1):.1f} {P.item(2):.1f}"<br>soft0="{abc0[0][0]:.3f} {abc0[0][1]:.3f} {abc0[0][2]:.3f} {abc0[1][0]:.3f} {abc0[1][1]:.3f} {abc0[1][2]:.3f} {abc0[2][0]:.3f} {abc0[2][1]:.3f} {abc0[2][2]:.3f}'
+            f'hard0="{P.item(0):.1f} {P.item(1):.1f} {P.item(2):.1f}"<br>soft0="{abc0[0][0]:.3f} {abc0[0][1]:.3f} {abc0[0][2]:.3f} {abc0[1][0]:.3f} {abc0[1][1]:.3f} {abc0[1][2]:.3f} {abc0[2][0]:.3f} {abc0[2][1]:.3f} {abc0[2][2]:.3f}"'
         )
     else:
         fit_line = (

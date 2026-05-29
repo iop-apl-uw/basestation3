@@ -1697,7 +1697,7 @@ def attachHandlers(app: sanic.Sanic):
 
         return sanic.response.html((f'<html>hard0="{hard[0]:.1f} {hard[1]:.1f} {hard[2]:.1f}"<br>'
                                     f'soft0="{soft[0][0]:.3f} {soft[0][1]:.3f} {soft[0][2]:.3f} '
-                                    f'{soft[1][0]:.3f} {soft[1][1]:.3f} {soft[1][2]:.3f}'
+                                    f'{soft[1][0]:.3f} {soft[1][1]:.3f} {soft[1][2]:.3f} '
                                     f'{soft[2][0]:.3f} {soft[2][1]:.3f} {soft[2][2]:.3f}"'
                                     '<p>') + plt) 
 
