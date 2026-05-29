@@ -91,6 +91,11 @@ async def displayTables(fname):
    
     if 'GCHEAD' not in L:
         return
+
+    if 'VBD_CNV' in L:
+        vbd_cnv = L['VBD_CNV']
+    else:
+        vbd_cnv = -0.2453
  
     L['GCHEAD'] = L['GCHEAD'] + ["pitch_rate", "roll_rate", "vbd_rate", "vbd_eff"]
 
@@ -530,7 +535,7 @@ async def displayTables(fname):
             if (abs(g[k_ad] - GC[j][k_ad]) > 2):
                 g[k_vbd] = "%.1f" % rate
 
-                rate = rate*L['VBD_CNV'] # -4.0767;
+                rate = rate*vbd_cnv # -0.2453 # -4.0767;
                 if g[k_vbd_i] > 0:
                     x = 0.01*rate*g[k_pres]/g[k_vbd_i]/g[k_vbd_v] # L['24V_AH'][0]
                     g[k_eff] = "%.3f" % x

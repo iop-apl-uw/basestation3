@@ -357,9 +357,10 @@ async def formatCaptureFile(file, firstPlot=False):
 
             elif line.find(' completed from ') > -1:
                 a = completed.search(line)
-                insideMoveDump.append(a.group(1))
-                moveTime.append(float(a.group(2)))
-                moveRecord = []
+                if a:
+                    insideMoveDump.append(a.group(1))
+                    moveTime.append(float(a.group(2)))
+                    moveRecord = []
 
             if crit.search(line):
                 out = out + f'<span id="crits{crits}"><b>' + line + "</b></span>\n"                
