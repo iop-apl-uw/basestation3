@@ -1130,10 +1130,10 @@ def make_netcdf_network_files(network_files, processed_files_list):
     for nf in network_files:
         dive_num = int(os.path.split(nf)[1][4:8])
 
-        if nf.endswith(".nlog"):
-            net_files[dive_num].add(nf[: nf.rfind(".nlog")] + ".npro")
-        elif nf.endswith(".npro"):
-            net_files[dive_num].add(nf[: nf.rfind(".npro")] + ".nlog")
+        if nf.suffix == ".nlog":
+            net_files[dive_num].add(nf.with_suffix(".npro"))
+        elif nf.suffix == ".npro":
+            net_files[dive_num].add(nf.with_suffix(".nlog"))
         else:
             log_warning(f"{nf} is not a network file - skipping")
             continue
