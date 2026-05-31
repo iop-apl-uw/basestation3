@@ -43,13 +43,13 @@ L.Util.extend(L.KML, {
 		var layers = [], l;
 		for (var i = 0; i < el.length; i++) {
 			if (!this._check_folder(el[i])) { continue; }
-			l = this.parseFolder(el[i], style);
+			l = this.parseFolder(el[i], style, kmlOptions);
 			if (l) { console.log('added folder layer ' + el[i].id + ' ' + l.options.name); layers.push(l); }
 		}
 		el = xml.getElementsByTagName('Placemark');
 		for (var j = 0; j < el.length; j++) {
 			if (!this._check_folder(el[j])) { continue; }
-			l = this.parsePlacemark(el[j], xml, style);
+			l = this.parsePlacemark(el[j], xml, style, {}, kmlOptions);
 			if (l) { console.log('add placemark layer ' + l.options.name); layers.push(l); }
 		}
 		el = xml.getElementsByTagName('GroundOverlay');
@@ -186,12 +186,12 @@ L.Util.extend(L.KML, {
 		return;
 	},
 
-	parseFolder: function (xml, style) {
+	parseFolder: function (xml, style, kmlOptions) {
 		var el, layers = [], l;
 		el = xml.getElementsByTagName('Folder');
 		for (var i = 0; i < el.length; i++) {
 			if (!this._check_folder(el[i], xml)) { continue; }
-			l = this.parseFolder(el[i], style);
+			l = this.parseFolder(el[i], style, kmlOptions);
             if (l) {
                 l.layerID = el[i].id;
 			    layers.push(l); 
@@ -200,7 +200,7 @@ L.Util.extend(L.KML, {
 		el = xml.getElementsByTagName('Placemark');
 		for (var j = 0; j < el.length; j++) {
 			if (!this._check_folder(el[j], xml)) { continue; }
-			l = this.parsePlacemark(el[j], xml, style);
+			l = this.parsePlacemark(el[j], xml, style, {}, kmlOptions);
 			if (l) { layers.push(l); }
 		}
 		el = xml.getElementsByTagName('GroundOverlay');
@@ -223,7 +223,7 @@ L.Util.extend(L.KML, {
 		return l;
 	},
 
-	parsePlacemark: function (place, xml, style, options) {
+	parsePlacemark: function (place, xml, style, options, kmlOptions) {
 		var h, i, j, k, el, il, opts = options || {};
 
 		el = place.getElementsByTagName('styleUrl');
@@ -233,6 +233,35 @@ L.Util.extend(L.KML, {
 				opts[a] = style[url][a];
 			}
 		}
+        
+        var de = place.getElementsByTagName('description');
+        if (de) {
+            if (de.length && de[0].childNodes.length) {
+                var desc = de[0].childNodes[0].nodeValue;
+                var t = '', d = '', mm, dd, yy;
+
+                if (desc.startsWith('GPS fix at ')) {
+                    t = desc.split(' ')[3];
+                    d = desc.split(' ')[4];
+                }
+                else if (desc.startsWith('Dive started')) {
+                    t = desc.split(' ')[2];
+                    d = desc.split(' ')[3];
+                } 
+                else if (desc.startsWith('Dive finished')) {
+                    t = desc.split(' ')[2];
+                    d = desc.split(' ')[3];
+                }
+                
+                if (t != '' && d != '') {
+                    var mm = d.split('/')[0];
+                    var dd = d.split('/')[1];
+                    var yy = '20' + d.split('/')[2];
+                    opts['timestamp'] = yy + '-' + mm + '-' + dd + 'T' + t + 'Z';
+                }
+            }
+        }
+
 		il = place.getElementsByTagName('Style')[0];
 		if (il) {
 			var inlineStyle = this.parseStyle(place);
@@ -247,7 +276,7 @@ L.Util.extend(L.KML, {
 		for (h in multi) {
 			el = place.getElementsByTagName(multi[h]);
 			for (i = 0; i < el.length; i++) {
-				var layer = this.parsePlacemark(el[i], xml, style, opts);
+				var layer = this.parsePlacemark(el[i], xml, style, opts, kmlOptions);
 				if (layer === undefined)
 					continue;
 				this.addPlacePopup(place, layer);
@@ -262,7 +291,7 @@ L.Util.extend(L.KML, {
 			var tag = parse[j];
 			el = place.getElementsByTagName(tag);
 			for (i = 0; i < el.length; i++) {
-				var l = this['parse' + tag.replace(/gx:/, '')](el[i], xml, opts);
+				var l = this['parse' + tag.replace(/gx:/, '')](el[i], xml, opts, kmlOptions);
 				if (l) { layers.push(l); }
 			}
 		}
@@ -303,13 +332,13 @@ L.Util.extend(L.KML, {
 		return this._read_coords(el[0]);
 	},
 
-	parseLineString: function (line, xml, options) {
+	parseLineString: function (line, xml, options, kmlOptions) {
 		var coords = this.parseCoords(line);
 		if (!coords.length) { return; }
 		return new L.Polyline(coords, options);
 	},
 
-	parseTrack: function (line, xml, options) {
+	parseTrack: function (line, xml, options, kmlOption) {
 		var el = xml.getElementsByTagName('gx:coord');
 		if (el.length === 0) { el = xml.getElementsByTagName('coord'); }
 		var coords = [];
@@ -320,7 +349,19 @@ L.Util.extend(L.KML, {
 		return new L.Polyline(coords, options);
 	},
 
-	parsePoint: function (line, xml, options) {
+	parsePoint: function (line, xml, options, kmlOptions) {
+        var colorLookup = { red: '#ff0000',
+                            green: '#00ff00',
+                            blue: '#0000ff',
+                            magenta: '#ff00ff',
+                            yellow: '#ffff00',
+                            black: '#000000' };
+        var gliderLookup = { yellow: 'SeagliderYellowIcon.png',
+                             blue: 'SeagliderBlueIcon.png',
+                             red: 'SeagliderRedIcon.png',
+                             green: 'SeagliderGreenIcon.png',
+                             magenta: 'SeagliderMagentaIcon.png',
+                             black: 'SeagliderMagentaIcon.png' };
 		var el = line.getElementsByTagName('coordinates');
 		if (!el.length) {
 			return;
@@ -331,6 +372,11 @@ L.Util.extend(L.KML, {
             options['icon']['options']['iconUrl'] = options['icon']['options']['iconUrl'].replace('https://maps.google.com/mapfiles/kml/shapes', '../script/images');
             options['icon']['options']['iconUrl'] = options['icon']['options']['iconUrl'].replace('https://iop.apl.washington.edu', '../script');
             options['icon']['options']['iconUrl'] = options['icon']['options']['iconUrl'].replace('arrow_narrow.png', '../script/images/arrow_narrow.png');
+            if (options['icon']['options']['iconUrl'].includes('SeagliderYellowIcon.png') 
+                && kmlOptions && 'color' in kmlOptions && kmlOptions['color'] in gliderLookup) {
+
+                 options['icon']['options']['iconUrl'] = options['icon']['options']['iconUrl'].replace('SeagliderYellowIcon.png', gliderLookup[kmlOptions['color']] );
+            }
             if (options['icon']['options']['iconUrl'].includes('marker')) {
                 options['icon']['options']['iconSize'] = [8,8];
                 options['icon']['options']['iconAnchor'] = [4,4];
@@ -372,7 +418,7 @@ L.Util.extend(L.KML, {
                                            {
                                                 shape: 'circle',
                                                 radius: 8*options['icon']['options']['iconScale'],
-                                                color: options['color'],
+                                                color: kmlOptions && 'color' in kmlOptions && kmlOptions['color'] in colorLookup ? colorLookup[kmlOptions['color']] : '#ffff00', // options['color'],
                                            });
             return marker;
         }

@@ -1,4 +1,3 @@
-A
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
@@ -21,7 +20,7 @@ A
         <script src="../script/colormaps.js"></script>
         <script src="../script/leaflet-control.js"></script>
         <script src="../script/leaflet-grids.js"></script>
-        <script src="../script/leaflet-slider.js"></script>
+        <!-- <script src="../script/leaflet-slider.js"></script> -->
 
 
         <style>
@@ -62,9 +61,10 @@ A
                     if (this._toggle) this._toggle(this.toggled);
                     return false;
                 },
-                configure: function(toggle, html) {
+                configure: function(toggle, html, tip) {
                     this._toggle = toggle;
                     this._container.innerHTML = html; // style.backgroundImage = 'url(' + image + ')';
+                    this._container.title = tip;
                     return this;
                 }
             });
@@ -177,6 +177,17 @@ A
             <input type="button" onclick="heatControlAdjust(true, 1);" value="+" class="incrButton">
             <input type="button" onclick="heatControlAdjust(true, -1);" value="-" class="incrButton">
         </div>
+        <div id="timeSliderDiv" class="hamDiv" style="width: 250px;">
+            <div style="display: flex; flex-direction: column; width: 100%; max-width: 250px;">
+                <div><input type="range" id="rngTimeSlider" min="0" max="100" value="0" style="width: 100%; max-width: 250px;" oninput="timeSliderUpdateDisplay();"/></div>
+                <div style="display: flex; flex-direction: row; width: 100%; max-width: 250px;">
+                    <div style="flex: initial; text-align: left; font-family: verdana, arial, tahoma, 'sans serif'; font-size: 10px;" id="spnTimeSliderMin">&nbsp;</div>
+                    <div style="flex: auto;">&nbsp;</div>
+                    <div style="flex: initial; text-align: right; font-family: verdana, arial, tahoma, 'sans serif'; font-size: 10px;" id="spnTimeSliderMax">&nbsp;</div>
+                </div>
+            </div>
+        </div>
+
 
         <script type="text/javascript">
             var targetsChannel = null;
@@ -434,6 +445,20 @@ A
                     document.getElementById('heatControlDiv').style.display = 'none';
                 }
             }
+            function toggleTimeSliderControl() {
+                const state = document.getElementById('timeSliderDiv').style.display;
+                console.log(state);
+                if (state != 'block') {
+                    const btn = timeSliderBtn.getContainer();
+                    const rect = btn.getBoundingClientRect();
+                    document.getElementById('timeSliderDiv').style.display = 'block';
+                    document.getElementById('timeSliderDiv').style.top = rect.top;
+                    document.getElementById('timeSliderDiv').style.left = rect.right;
+                }
+                else {
+                    document.getElementById('timeSliderDiv').style.display = 'none';
+                }
+            }
 
             
             async function fetchWeather(latlng, popup, map) {
@@ -532,7 +557,7 @@ A
                         short = "..." + d['id'].slice(-5);
                     else
                         short = d['id'];
-
+imestamp
                     html = [
                         d.class + " " + d.id,
                         formatPos(dd2ddmm(d.lat)) + "," + formatPos(dd2ddmm(d.lon)),
@@ -541,23 +566,15 @@ A
                     ].join('<br />');
 
                     t = Date.parse(d.date + 'T' + d.time + 'Z')/1000;
-                    if (tailMinTime == 0 || t < tailMinTime)
-                        tailMinTime = t;
-                    if (t > tailMaxTime) {
-                        tailMaxTime = t;
-                        console.log('new max time');
-                        if (slider.value == 100) {
-                            slider.updateText();
-                        }
-                    } 
+
                     mk = null;
                     fnd = saAssets.filter((a) => a.id == short);
                     if (fnd.length > 0)
                         mk = fnd[0]['mark'];
 
-                    if (mk && fnd[0].time != t) {
+                    if (mk && fnd[0].timestamp != t) {
                         if (d.subcat > 0 || shipTailGroup == null) {
-                            if (fnd[0].tail.filter((p) => p.time == t).length == 0) {
+                            if (fnd[0].tail.filter((p) => p.timestamp == t).length == 0) {
                                 ta = new L.circleMarker([d.lat, d.lon],
                                                {
                                                     radius: 1,
@@ -565,14 +582,15 @@ A
                                                })
                                                .bindPopup(html);
 
-                                fnd[0]['tail'].push( { mark: ta, time: t } );
+                                ta.timestamp = t; // attach timestamp to layer
+                                fnd[0]['tail'].push( { mark: ta, timestamp: t } );
                                 ta.addTo(saTailLayers[i]);
                             }
                         }
-                        if (t > fnd[0].time) {
+                        if (t > fnd[0].timestamp) {
                             mk.setLatLng([d.lat, d.lon]);
                             mk.getPopup().setContent(html);
-                            fnd[0].time = t;
+                            fnd[0].timestamp = t;
                         }
                     }
                     else if (mk == null) {
@@ -586,10 +604,13 @@ A
                                             .bindTooltip(short, { permanent: true, className: 'assetLabel' })
                                             .bindPopup(html);
 
-                        saAssets.push( { mark: mk, id: short, tail: [], time: t } );
+                        mk.timestamp = t;
+                        saAssets.push( { mark: mk, id: short, tail: [], timestamp: t } );
                         mk.addTo(saLayers[i]);
                     }
                 } 
+
+                timeSliderUpdateLimits();
             }
 
             async function loadSA(map, layerControl, urls, labels) {
@@ -673,7 +694,7 @@ A
             var shipTailHeatMx = null;
             var shipTailHeatMn = null;
             var shipTailHeatVal = null;
-            var tailMinTime = 0;
+            var tailMinTime = Date.now()/1000;
             var tailMaxTime = 0;
             var droppedMarks = [];
             var assetMarkers = [];
@@ -836,14 +857,6 @@ A
                     return false;
  
                 let ttext = new Date(t*1000).toISOString().replace('T', ' ').slice(0,-8);
-                if (t > tailMaxTime) {
-                    tailMaxTime = t;
-                    if (slider.value == 100) {
-                        slider.updateText();
-                    }
-                }
-                if (tailMinTime == 0 || t < tailMinTime)
-                    tailMinTime = t;
 
                 if (hv) {
                     color = colormap('turbo', hv, shipTailHeatMn, shipTailHeatMx);
@@ -867,7 +880,7 @@ A
                                            .bindPopup(ttext);
 
                 tailMarker.heat = hv;
-                tailMarker.t = t;
+                tailMarker.timestamp = t;
 
                 if (shipTailGroup == null) {
                     shipTailGroup = L.layerGroup( [ tailMarker ]);
@@ -877,6 +890,8 @@ A
                 else {
                     tailMarker.addTo(shipTailGroup);
                 }
+
+                timeSliderUpdateLimits();
 
                 return remap;
             } 
@@ -998,7 +1013,7 @@ A
 
                         var key = msg['glider'] + '_' + (msg['mission'] ? msg['mission'] : '');
                         if (key in gliderKMLlayers) { 
-                            loadGliderKML(map, layerControl, [ msg['glider'] ], [ msg['mission'] ? msg['mission'] : '' ], -1, null, false, true);
+                            loadGliderKML(map, layerControl, [ msg['glider'] ], [ msg['mission'] ? msg['mission'] : '' ], -1, null, false, true, [ 'color' in msg ? msg['color'] : 'yellow' ]);
                         }
                         else {
                             console.log('unknown ' + key);
@@ -1337,7 +1352,6 @@ A
                                 }
                                 catch(e) {
                                     console.log('assets ' + e);
-                                    console.log(d);
                                 }
 
                                 if (aa.tail && parseInt(aa.tail) > 0) {
@@ -1407,7 +1421,6 @@ A
                                     }
                                     catch(e) {
                                         console.log('assets ' + e);
-                                        console.log(d);
                                     }
 
                                     if (aa.tail && parseInt(aa.tail) > 0) {
@@ -1458,6 +1471,10 @@ A
                             fetch(aa.url,  {
                                               method: method,
                                               body: JSON.stringify(obj),
+                                              headers: {
+                                                'Content-Type': 'application/json',
+                                                'Accept': 'application/json' 
+                                              },
                                           })
                             .then(resp => resp.json())
                             .then(d => {
@@ -1592,8 +1609,6 @@ A
                                 const shapes = ["triangle", "circle", "square"];
                                 const colors = ["#ff0000", "#00ff00", "#ff00ff", "#0000ff"];
 
-                                console.log(d);
-
                                 var types = [];
                                 for (var i = 0 ; i < d['features'].length ; i++) {
                                     if (d['features'][i]['properties']['feature_type'] == "latest" && types.indexOf(d['features'][i]['properties']['asset_type']) == -1)
@@ -1648,6 +1663,8 @@ A
                 var gliders = [];
                 var missions = [];
                 var assets = [];
+                var colors = [];
+                var color = 'yellow';
                 console.log(also);
                 for (var i = 0 ; i < also.length ; i++)  {
                     if ('glider' in also[i]) {
@@ -1655,12 +1672,23 @@ A
                         if (also[i].glider instanceof Array) {
                             for (var j = 0 ; j < also[i].glider.length ; j++) {
                                 gliders.push(also[i].glider[j]);
-                                loadGliderPosition(map, layerControl, also[i].glider[j], also[i].mission);
+                                if ('color' in also[i] && also[i].color instanceof Array && j < also[i].color.length)
+                                    color = also[i].color[j];
+                                else
+                                    color = 'yellow';
+
+                                loadGliderPosition(map, layerControl, also[i].glider[j], also[i].mission, color);
+                                colors.push(color);
                             }
                         }
                         else {
                             gliders.push(also[i].glider);
-                            loadGliderPosition(map, layerControl, also[i].glider, also[i].mission);
+                            if ('color' in also[i])
+                                color = also[i].color;
+                            else
+                                color = 'yellow';
+                            colors.push(color);
+                            loadGliderPosition(map, layerControl, also[i].glider, also[i].mission, color);
                         }
                     }
                     else if ('asset' in also[i]) {
@@ -1675,7 +1703,7 @@ A
                     loadAssets(map, layerControl, assets, glider, mission);
                 }
                 if (gliders.length)
-                    loadGliderKML(map, layerControl, gliders, missions, tail, null, false, false);
+                    loadGliderKML(map, layerControl, gliders, missions, tail, null, false, false, colors);
             }
 
                  
@@ -1702,7 +1730,6 @@ A
                         return;
                     }
                      
-                    console.log(d);
                     if ('kml' in d && d.kml) {
                         console.log('loading KML');
                         loadKML(map, layerControl, d.kml, d.kml);
@@ -1828,7 +1855,7 @@ A
             }
                     
                             
-            async function loadGliderPosition(map, layerControl, glider, mission)  {
+            async function loadGliderPosition(map, layerControl, glider, mission, color)  {
                 var url = '../pos/poll/' + glider;
                 if (mission && mission != '')
                     url = url + '?mission=' + mission;
@@ -1844,7 +1871,8 @@ A
                         console.log('glider ' + glider + ' ' + d['error']);
                         return;
                     }
-
+                    console.log('pos poll d'); 
+                    console.log(d);
                     if (key in gliderMarkers) {
                         gliderMarkers[key].setLatLng([ d['lat'], d['lon'] ]);
                     }
@@ -1853,7 +1881,7 @@ A
                                                            {
                                                               shape: 'diamond',
                                                               radius: 5,
-                                                              color: 'yellow',
+                                                              color: color == '' || color == null ? 'yellow' : color,
                                                               zIndexOffset: 100,
                                                            }
                                                           ).addTo(map);
@@ -1866,11 +1894,17 @@ A
                             markerClicked = true;
                             activateGlider(this);
                         });
+
+                        let stamp = new Date(d['epoch']*1000).toISOString().replace('T', ' ').slice(0,-8);
+                        let html = [ 'SG' + glider + ' dive ' + d['dive'] + ' at ' + stamp, 
+                                     formatPos(dd2ddmm(d.lat)) + "," + formatPos(dd2ddmm(d.lon))].join('<br>');
+                        gliderMarkers[key].bindPopup(html);
+
                         // gliderMarkers[key].bindPopup((p) => { markerClicked = true; activateGlider(p); return key });
                     }
                 }); 
             }
-            async function loadGliderKML(map, layerControl, gliders, missions, tail, lastBounds, doCtr, leaveFirst) {
+            async function loadGliderKML(map, layerControl, gliders, missions, tail, lastBounds, doCtr, leaveFirst, colors) {
                 var kml;
                 var parser;
                 var i;
@@ -1902,7 +1936,8 @@ A
                     track = new L.KML(kml, {
                                                 iconOptions: {
                                                     iconSize: [16,16],
-                                                }
+                                                },
+                                                color: colors[i]
                                            });
 
                     // delete any existing track (in case this is a reload of this glider/mission)
@@ -1987,7 +2022,23 @@ A
 
                         }
 
-                            
+                        if (track._layers[k].options.hasOwnProperty('name') && track._layers[k].options.name.includes('Dives')) {
+
+                            track._layers[k].eachLayer(function(layer1) {
+                                if (layer1.options.hasOwnProperty('timestamp')) {
+                                    layer1.timestamp = Math.floor(Date.parse(layer1.options.timestamp) / 1000);
+                                }
+                                else {
+                                    layer1.eachLayer(function(layer2) {
+                                        if (layer2.options.hasOwnProperty('timestamp')) {
+                                            layer1.timestamp = Math.floor(Date.parse(layer2.options.timestamp) / 1000);
+                                        }
+                                    });
+                                }
+                            });
+
+                        }
+                        timeSliderUpdateLimits();
                     }
 
                     // Adjust map to show the kml for the first glider
@@ -2117,36 +2168,51 @@ A
                 return false;
             }
 
-            function sliderUpdateTime(v) {
-                t = (100 - v)/100.0*(tailMaxTime - tailMinTime) + tailMinTime;
-                return new Date(t*1000).toISOString().replace('T', ' ').slice(0,-8);
+            function timeSliderUpdateLimits() {
+                map.eachLayer(function(grp) {
+                    var t;
+                    if (typeof grp.eachLayer === 'function') { 
+                        grp.eachLayer(function(layer) {
+                            if (layer.hasOwnProperty('timestamp')) {
+                                t = layer.timestamp;       
+                                if (t > tailMaxTime)
+                                    tailMaxTime = t;
+                                if (tailMinTime == 0 || t < tailMinTime)
+                                    tailMinTime = t;
+                            }
+                        });
+                    }
+                });
+                timeSliderUpdateText(document.getElementById('rngTimeSlider').value);
             }
 
-            function sliderUpdateDisplay(v) {
-                t = (100-v)/100.0*(tailMaxTime - tailMinTime) + tailMinTime;
-                // var saAssets     = []; // [ { id: , mark:, time:, tail: [ { mark:, time: } ] } ], 
-                for (var a of saAssets) {
-                    if ('tail' in a && a.tail.length > 0) {
-                        for (var tl of a.tail) {
-                            if (map.hasLayer(tl.mark) && tl.time <= t)
-                                map.removeLayer(tl.mark); 
-                            else if (map.hasLayer(tl.mark) == false && tl.time >= t)
-                                tl.mark.addTo(map);
-                        }
-                    }     
-                }
+            function timeSliderUpdateText(v) {
+                v = document.getElementById('rngTimeSlider').value;
+                let t2 = new Date(tailMaxTime*1000).toISOString().replace('T', '<br>').slice(0,-8);            
+                let t1 = new Date(1000*(v/100.0*(tailMaxTime - tailMinTime) + tailMinTime)).toISOString().replace('T', '<br>').slice(0,-8);
+                document.getElementById('spnTimeSliderMin').innerHTML = t1;
+                document.getElementById('spnTimeSliderMax').innerHTML = t2;
+            }
 
-                if (shipTailGroup == null)
-                    return;
+            function timeSliderUpdateDisplay() {
+                v = document.getElementById('rngTimeSlider').value;
+                t = v/100.0*(tailMaxTime - tailMinTime) + tailMinTime;
 
-                const marks = shipTailGroup.getLayers();
-                for (var i = 0 ; i < marks.length ; i++) {
-                    if (map.hasLayer(marks[i]) && marks[i].t <= t) {
-                        map.removeLayer(marks[i]);
+                map.eachLayer(function(grp) {
+                    timeSliderUpdateText(v);
+                    if (typeof grp.eachLayer === 'function') { 
+                        grp.eachLayer(function(layer) {
+                            if (layer.hasOwnProperty('timestamp')) {
+                                if (map.hasLayer(layer) && layer.timestamp <= t) {
+                                    map.removeLayer(layer);
+                                }
+                                else if (!map.hasLayer(layer) && layer.timestamp >= t) {
+                                    layer.addTo(map);
+                                }
+                            }
+                        });
                     }
-                    else if (map.hasLayer(marks[i]) == false && marks[i].t >= t)
-                        marks[i].addTo(map);
-                }
+                });
             }
     
             function deleteMark(id) {
@@ -2505,17 +2571,20 @@ A
                  } 
             });
 
-            shipCenterToggle = L.control.toggle({ position: 'topleft' }).addTo(map).configure(null, '<span style="font-size: 20px;">&nbsp;&#x1F6A2;</span>');
-            console.log('added shipCenterToggle');
+            shipCenterToggle = L.control.toggle({ position: 'topleft' }).addTo(map).configure(null, '<span style="font-size: 20px;">&nbsp;&#x1F6A2;</span>', 'keep ship centered');
 
-            let slider = L.control.slider(sliderUpdateDisplay, {id: 'timeSlider', orientation: 'vertical', position: 'topleft', getValue: sliderUpdateTime });
-            slider.addTo(map);
+            // let slider = L.control.slider(sliderUpdateDisplay, {id: 'timeSlider', orientation: 'horizontal', position: 'topleft', getValue: sliderUpdateTime });
+            // slider.addTo(map);
+
+            var timeSliderBtn = L.easyButton('<span class="hamburger" style="font-size: 1.6em; margin-left: -1px; margin-top: 0px; display: inline-block;">&#x1F550;&nbsp;</span>', function(btn, map) {
+                toggleTimeSliderControl(); 
+            }, 'timeline scrubber control').addTo(map);
 
             // var heat = L.popup().setContent('<ul><li>menu1<li>menu2<li>menu3</ul>');
 
-            var heatControlBtn = L.easyButton('<span class="hamburger" style="font-size: 28px; margin-top: -3px; display: inline-block;">&#x1F321;&nbsp;</span>', function(btn, map) {
+            var heatControlBtn = L.easyButton('<span class="hamburger" style="font-size: 24px; margin-left: 4px; margin-top: 0px; display: inline-block;">&#x1F321;&nbsp;</span>', function(btn, map) {
                 toggleHeatControl(); // btn.getContainer());
-            }).addTo(map);
+            }, 'ship tail heat map controls').addTo(map);
 
             // layer control
 
@@ -2629,16 +2698,17 @@ A
                         mission = d['mission']['mission'];
                         currMission = mission;
                     }
-                    loadGliderPosition(map, layerControl, glider, mission);
-                    loadGliderKML(map, layerControl, [ glider ], [ mission ], tail, lastBounds, true, true);
+                    console.log(d['mission']);
+                    loadGliderPosition(map, layerControl, glider, mission, 'color' in d['mission'] ? d['mission']['color'] : 'yellow');
+                    loadGliderKML(map, layerControl, [ glider ], [ mission ], tail, lastBounds, true, true, [ 'color' in d['mission'] ? d['mission']['color'] : 'yellow' ]);
                     loadGliderDAC(map, layerControl, path[first], mission); 
 
-                    L.easyButton('<img src="../script/images/diveplot_icon.png">', function(){
+                    L.easyButton('<img src="../script/images/diveplot_icon.png" style="margin-left: -3px;">', function(){
                         if (mission != '')
                             window.open('../' + glider + '?mission=' + mission, 'SG' + glider);
                         else
                             window.open('../' + glider, 'SG' + glider);
-                    }).addTo(map);
+                    }, 'SG' + glider + ' controls').addTo(map);
                 });
 
             }

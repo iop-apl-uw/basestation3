@@ -93,10 +93,10 @@ function reckon(pt, range, az)
     const lam1 = pt[1]*DTR;
     const del  = range / 6378137;
     az = az*DTR;
-    console.log(phi1, lam1, del); 
+    // console.log(phi1, lam1, del); 
     const phi2 = Math.asin( Math.sin(phi1)*Math.cos(del) +
                           Math.cos(phi1)*Math.sin(del)*Math.cos(az) );
-    console.log(phi2);
+    // console.log(phi2);
     const lam2 = lam1 + Math.atan2(Math.sin(az)*Math.sin(del)*Math.cos(phi1),
                                Math.cos(del)-Math.sin(phi1)*Math.sin(phi2));
 

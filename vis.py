@@ -159,7 +159,7 @@ compress = sanic_gzip.Compress()
 # making this a dict makes a set intersection simple when
 # we use it in filterMission
 publicMissionFields = {"glider", "mission", "status",
-                       "started", "ended", "planned",
+                       "started", "ended", "planned", "color",
                        "orgname", "orglink", "contact", "email", "alert",
                        "project", "link", "comment", "reason"} 
 
@@ -1072,17 +1072,22 @@ def attachHandlers(app: sanic.Sanic):
         password = request.json.get('password', None)
         ssl      = request.json.get('ssl', True)
 
+        sanic.log.logger.info(request.json)
+
         async with aiohttp.ClientSession() as session:
-            if user is not None and password is not None:
-                async with session.get(url, auth=aiohttp.BasicAuth(user, password), ssl=ssl) as response:
-                    if response.status == 200:
-                        body = await response.read()
-                        return sanic.response.raw(body)
-            else:
-                async with session.get(url, ssl=ssl) as response:
-                    if response.status == 200:
-                        body = await response.read()
-                        return sanic.response.raw(body)
+            try:
+                if user is not None and password is not None:
+                    async with session.get(url, auth=aiohttp.BasicAuth(user, password), ssl=ssl) as response:
+                        if response.status == 200:
+                            body = await response.read()
+                            return sanic.response.raw(body)
+                else:
+                    async with session.get(url, ssl=ssl) as response:
+                        if response.status == 200:
+                            body = await response.read()
+                            return sanic.response.raw(body)
+            except:
+                return sanic.response.text('fetch error')
 
     # This is not a great idea to leave this open as a public proxy server,
     # but we need it for all layers to work with public maps at the moment.
@@ -3176,7 +3181,7 @@ async def buildMissionTable(app, config=None):
 
     missionDictKeys = [ "mission", "users", "pilotusers", "groups", "pilotgroups", 
                         "started", "ended", "planned", 
-                        "orgname", "orglink", "contact", "email", 
+                        "orgname", "orglink", "contact", "email", "color",
                         "project", "link", "comment", "reason", "endpoints",
                         "sa", "also", "kml", "sadata", "alert"
                       ]
@@ -3851,6 +3856,6 @@ if __name__ == '__main__':
         #app.run(host="0.0.0.0", port=443, ssl=ssl, access_log=True, debug=False)
     else:
         # app.prepare(host="0.0.0.0", port=port, access_log=True, debug=False, fast=True)
-        app.prepare(host="0.0.0.0", port=port, access_log=True, debug=False, fast=True)
+        app.prepare(host="0.0.0.0", port=port, access_log=True, debug=True, fast=True, auto_reload=True, reload_dir=["/home/jgobat/work/git/basestion3/html", "/home/jgobat/work/git/basestation3/scripts"])
         sanic.Sanic.serve(primary=app, app_loader=loader)
         # app.run(host='0.0.0.0', port=port, access_log=True, debug=True, fast=True)
