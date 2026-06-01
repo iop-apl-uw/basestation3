@@ -6,7 +6,7 @@
         <link rel="stylesheet" href="../script/easy-button.css" />
         <link rel="stylesheet" href="../script/Control.Coordinates.css" />
         <link rel="stylesheet" href="../script/leaflet.groupedlayercontrol.css" />
-        <link rel="stylesheet" href="../script/leaflet-slider.css" />
+        <link rel="stylesheet" href="../script/nouislider.min.css" />
         <script src="../script/leaflet.js"></script>
         <script src="../script/leaflet-ruler.js"></script>
         <script src="../script/easy-button.js"></script>
@@ -20,7 +20,7 @@
         <script src="../script/colormaps.js"></script>
         <script src="../script/leaflet-control.js"></script>
         <script src="../script/leaflet-grids.js"></script>
-        <!-- <script src="../script/leaflet-slider.js"></script> -->
+        <script src="../script/nouislider.min.js"></script> 
 
 
         <style>
@@ -30,6 +30,28 @@
               border-color: chartreuse !important;
               border-width: 4px !important;
           }
+            #rngTimeSlider {
+                height: 10px;
+            }
+
+            #rngTimeSlider .noUi-connect {
+                background: #f0791b;
+            }
+
+            #rngTimeSlider .noUi-handle {
+                height: 16px;
+                width: 16px;
+                top: -5px;
+                right: -8px; /* half the width */
+                border-radius: 8px;
+                background: #3040f0;
+            }
+
+          .noUi-handle:before,
+          .noUi-handle:after {
+                display: none;
+          }
+
         </style>
         <script>
             L.Control.toggle = L.Control.extend({
@@ -140,7 +162,7 @@
         </style>
     </head>
 
-    <body onunload="saveBounds();">
+    <body onunload="saveBounds();" onload="initialize();">
         <div style="width: 100vw; height: 100vh" id="map"></div>
 
         <div id="info">
@@ -179,17 +201,32 @@
         </div>
         <div id="timeSliderDiv" class="hamDiv" style="width: 250px;">
             <div style="display: flex; flex-direction: column; width: 100%; max-width: 250px;">
-                <div><input type="range" id="rngTimeSlider" min="0" max="100" value="0" style="width: 100%; max-width: 250px;" oninput="timeSliderUpdateDisplay();"/></div>
-                <div style="display: flex; flex-direction: row; width: 100%; max-width: 250px;">
+                <div id="rngTimeSlider"></div>
+                <div style="display: flex; flex-direction: row; width: 100%; max-width: 250px; margin-top: 5px;">
                     <div style="flex: initial; text-align: left; font-family: verdana, arial, tahoma, 'sans serif'; font-size: 10px;" id="spnTimeSliderMin">&nbsp;</div>
                     <div style="flex: auto;">&nbsp;</div>
                     <div style="flex: initial; text-align: right; font-family: verdana, arial, tahoma, 'sans serif'; font-size: 10px;" id="spnTimeSliderMax">&nbsp;</div>
                 </div>
             </div>
         </div>
+    </body>
+</html>
 
 
         <script type="text/javascript">
+            
+            function initialize() {
+                var slider = document.getElementById('rngTimeSlider');
+                noUiSlider.create(slider, {
+                    start: [0,100],
+                    range: { 'min': 0, '50%': 80, 'max': 100},
+                    connect: true,
+                });
+
+                slider.noUiSlider.on('update', function() { timeSliderUpdateDisplay(); } );
+                timeSliderUpdateText([0, 100]);
+            }
+
             var targetsChannel = null;
             var currentMission = '';
 
@@ -2183,30 +2220,31 @@ imestamp
                         });
                     }
                 });
-                timeSliderUpdateText(document.getElementById('rngTimeSlider').value);
+                if (document.getElementById('rngTimeSlider').hasOwnProperty('noUiSlider'))
+                    timeSliderUpdateText(document.getElementById('rngTimeSlider').noUiSlider.get(true));
             }
 
             function timeSliderUpdateText(v) {
-                v = document.getElementById('rngTimeSlider').value;
-                let t2 = new Date(tailMaxTime*1000).toISOString().replace('T', '<br>').slice(0,-8);            
-                let t1 = new Date(1000*(v/100.0*(tailMaxTime - tailMinTime) + tailMinTime)).toISOString().replace('T', '<br>').slice(0,-8);
+                let t1 = new Date(1000*(v[0]/100.0*(tailMaxTime - tailMinTime) + tailMinTime)).toISOString().replace('T', '<br>').slice(0,-8);
+                let t2 = new Date(1000*(v[1]/100.0*(tailMaxTime - tailMinTime) + tailMinTime)).toISOString().replace('T', '<br>').slice(0,-8); 
                 document.getElementById('spnTimeSliderMin').innerHTML = t1;
                 document.getElementById('spnTimeSliderMax').innerHTML = t2;
             }
 
             function timeSliderUpdateDisplay() {
-                v = document.getElementById('rngTimeSlider').value;
-                t = v/100.0*(tailMaxTime - tailMinTime) + tailMinTime;
+                let v = document.getElementById('rngTimeSlider').noUiSlider.get(true);
+                let t1 = v[0]/100.0*(tailMaxTime - tailMinTime) + tailMinTime;
+                let t2 = v[1]/100.0*(tailMaxTime - tailMinTime) + tailMinTime;
 
+                timeSliderUpdateText(v);
                 map.eachLayer(function(grp) {
-                    timeSliderUpdateText(v);
                     if (typeof grp.eachLayer === 'function') { 
                         grp.eachLayer(function(layer) {
                             if (layer.hasOwnProperty('timestamp')) {
-                                if (map.hasLayer(layer) && layer.timestamp <= t) {
+                                if (map.hasLayer(layer) && (layer.timestamp < t1 || layer.timestamp > t2)) {
                                     map.removeLayer(layer);
                                 }
-                                else if (!map.hasLayer(layer) && layer.timestamp >= t) {
+                                else if (!map.hasLayer(layer) && layer.timestamp >= t1 && layer.timestamp <= t2) {
                                     layer.addTo(map);
                                 }
                             }
@@ -2771,5 +2809,3 @@ imestamp
             setupStream();
 
         </script>
-    </body>
-</html>
