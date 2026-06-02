@@ -5278,6 +5278,9 @@ def make_dive_profile(
 
         # Handle missing pressure observations
         good_depth_pts = np.logical_not(np.isnan(sg_depth_m_v))
+        if np.nonzero(good_depth_pts)[0].size < 2:
+            log_error("Less then two valid depth points - skipping profile")
+            return (2, None)
         try:
             w_cm_s_v = Utils.ctr_1st_diff(
                 -sg_depth_m_v[good_depth_pts] * m2cm, elapsed_time_s_v[good_depth_pts]
