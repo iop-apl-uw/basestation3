@@ -1086,7 +1086,7 @@ def attachHandlers(app: sanic.Sanic):
                         if response.status == 200:
                             body = await response.read()
                             return sanic.response.raw(body)
-            except:
+            except Exception:
                 return sanic.response.text('fetch error')
 
     # This is not a great idea to leave this open as a public proxy server,
