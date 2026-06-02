@@ -402,6 +402,11 @@ def matchMission(gld, request, mission=None):
 
         mission = request.args['mission'][0]
 
+    if mission is None:
+        x = next(filter(lambda d: d['glider'] == int(gld) and d['status'] == 'active',  request.ctx.ctx.missionTable), None)
+        if x:
+            return x
+
     x = next(filter(lambda d: d['glider'] == int(gld) and d['mission'] == mission,  request.ctx.ctx.missionTable), None)
     if x:
         return x
@@ -2793,7 +2798,14 @@ def attachHandlers(app: sanic.Sanic):
                     if ('mission' not in out):
                         mission = activeMission(out['glider'], request)
                         out.update( { 'mission': mission['mission'] if mission else '' } )
-
+                        if (mission and 'color' in mission):
+                            out.update( { 'color': mission['color'] } )
+                    else:
+                        missionName = out['mission']
+                        mission = activeMission(out['glider'], None, missionName)
+                        if (mission and 'color' in mission):
+                            out.update( { 'color': mission['color'] } )
+                
                     await ws.send(f"{dumps(out).decode('utf-8')}")
 
             except BaseException as e: # websockets.exceptions.ConnectionClosed:

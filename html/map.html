@@ -1874,8 +1874,9 @@ imestamp
                                 }
                                //  layerControl.removeLayer(track._layers[k]._layers[1]);
                             }
-                            layerControl.removeLayer(track._layers[k]);
+                            // layerControl.removeLayer(track._layers[k]);
                         }
+                        layerControl.removeLayer(track._layers[k]);
                     }
 
                     map.removeLayer(track);
@@ -2039,41 +2040,47 @@ imestamp
                             && track._layers[k].options.name.includes('Dives')) {
                             console.log('looking for dive layers');
                             var dv, mx = -1;
-                            track._layers[k].eachLayer(function(layer) {
-                                if (layer.hasOwnProperty('layerID') && layer.layerID.startsWith(`SG${gliders[i]} dive `)) {
-                                    dv = parseInt(layer.layerID.split(' ')[2]);
-                                    if (dv > mx)
-                                        mx = dv; 
-                                }
-                            });
-                            console.log('latest dive is ' + mx);
 
-                            track._layers[k].eachLayer(function(layer) {
-                                if (layer.hasOwnProperty('layerID') && layer.layerID.startsWith(`SG${gliders[i]} dive `)) {
-                                    dv = parseInt(layer.layerID.split(' ')[2]);
-                                    if (dv < mx - tail) {
-                                        track._layers[k].removeLayer(layer);
+                            if (typeof track._layers[k].eachLayer === 'function') { 
+                                track._layers[k].eachLayer(function(layer) {
+                                    if (layer.hasOwnProperty('layerID') && layer.layerID.startsWith(`SG${gliders[i]} dive `)) {
+                                        dv = parseInt(layer.layerID.split(' ')[2]);
+                                        if (dv > mx)
+                                            mx = dv; 
                                     }
-                                }
-                            });
+                                });
+                            
+                                console.log('latest dive is ' + mx);
 
+                                track._layers[k].eachLayer(function(layer) {
+                                    if (layer.hasOwnProperty('layerID') && layer.layerID.startsWith(`SG${gliders[i]} dive `)) {
+                                        dv = parseInt(layer.layerID.split(' ')[2]);
+                                        if (dv < mx - tail) {
+                                            track._layers[k].removeLayer(layer);
+                                        }
+                                    }
+                                });
+                            }
                         }
 
                         if (track._layers[k].options.hasOwnProperty('name') && track._layers[k].options.name.includes('Dives')) {
 
-                            track._layers[k].eachLayer(function(layer1) {
-                                if (layer1.options.hasOwnProperty('timestamp')) {
-                                    layer1.timestamp = Math.floor(Date.parse(layer1.options.timestamp) / 1000);
-                                }
-                                else {
-                                    layer1.eachLayer(function(layer2) {
-                                        if (layer2.options.hasOwnProperty('timestamp')) {
-                                            layer1.timestamp = Math.floor(Date.parse(layer2.options.timestamp) / 1000);
+                            if (typeof track._layers[k].eachLayer === 'function') { 
+                                track._layers[k].eachLayer(function(layer1) {
+                                    if (layer1.options.hasOwnProperty('timestamp')) {
+                                        layer1.timestamp = Math.floor(Date.parse(layer1.options.timestamp) / 1000);
+                                    }
+                                    else {
+                                        if (typeof layer1.eachLayer === 'function') { 
+                                            layer1.eachLayer(function(layer2) {
+                                                if (layer2.options.hasOwnProperty('timestamp')) {
+                                                    layer1.timestamp = Math.floor(Date.parse(layer2.options.timestamp) / 1000);
+                                                }
+                                            });
                                         }
-                                    });
-                                }
-                            });
-
+                                    }
+                                });
+                            }
                         }
                         timeSliderUpdateLimits();
                     }
