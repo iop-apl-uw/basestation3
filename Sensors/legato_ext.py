@@ -236,6 +236,13 @@ def remap_engfile_columns_netcdf(base_opts, module, calib_constants, column_name
         "legatoPollSUNA_pressure": "legato_pressure",
         "legatoPollSUNA_depth": "legato_depth",
         "legatoPollSUNA_conducTemp": "legato_conducTemp",
+        "legatoPollv4_time": "legato_time",
+        "legatoPollv4_conduc": "legato_conduc",
+        "legatoPollv4_temp": "legato_temp",
+        "legatoPollv4_salinity": "legato_salinity",
+        "legatoPollv4_pressure": "legato_pressure",
+        "legatoPollv4_depth": "legato_depth",
+        "legatoPollv4_conducTemp": "legato_conducTemp",
         "rbr": "legato",
     }
     if (
@@ -252,6 +259,7 @@ instruments_d = {
     "legatoFast": "legato",
     "legatoPoll": "legato",
     "legatoPollSUNA": "legato",
+    "legatoPollv4": "legato",
     "rbr": "legato",
 }
 
