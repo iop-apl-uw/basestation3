@@ -1,0 +1,42 @@
+# This file contains a list of file groups to NOT process by Base.py.
+# If a file name files_to_skip.txt appears in the glider's mission directory,
+# it will be processed automatically.
+#
+# The intention here is as a way to reduce error output during glider
+# missions where a small number of bad files cannot be processed or lead
+# to processing errors that will show up in each conversion run.  This mechanism
+# should be used with care.
+#
+# The format is a single root file name per-line - these names are
+# of the form:
+# CCDDDDTP
+# Where CC is the two letter encoding for the origin of the file
+# sg - seaglider truck
+# st - seaglider selftest
+# ll - the two letter prefix for a logger file (for example, sc for scicon)
+#
+# DDDD is dive number (zero padded)
+# T is the type of the underlying file - for example l for log, d for data
+# P is the packing/encoding - for example z for gzip, g for tar/gzip
+#
+# The names are of the same format as what is written into processed_files.cache
+#
+# Each root file name implies that any files associated with the name will be ignored.
+# For example, sg0001dz implies that all transmitted files (sg0001dz.x00, sg0001dz.x01, etc)
+# will be not processed.  N.B. if you want to prevent an entire dive from being processed, you
+# must include ALL files associated with the.  See the example below.
+#
+# Lines in this file with a # in the first column are ignored
+#
+# Example (commented out) - skip dive 1 on a seaglider with a scicon
+#sg0001dz
+#sg0001lz
+#sg0001kz
+#sc0001ag
+#sc0001bg
+#sc0001cg
+#
+# Note that any files listed here that do not actually exist have no impact.
+# In the above example, if dive one contained no loiter (profile 'c'), the
+# sc0001cg specified would have no impact.
+

@@ -118,6 +118,7 @@ def DEBUG_PDB_F() -> None:
 # Globals
 file_trans_received = "r"
 processed_files_cache = "processed_files.cache"
+files_to_skip = "files_to_skip.txt"
 # Set by signal handler to skip the time consuming processing of the whole mission data
 stop_processing_event = threading.Event()
 base_lockfile_name = ".conversion_lock"
@@ -177,6 +178,39 @@ def my_prompt_user_passwd(self, host, realm):
 # via testcase what the situation where this code is triggered to confirm the fix
 urllib.request.FancyURLopener.prompt_user_passwd = my_prompt_user_passwd
 # urllib.request.urlopen.prompt_user_passwd = my_prompt_user_passwd
+
+
+def load_files_to_skip(base_opts: BaseOpts.BaseOptions) -> list[str]:
+    skip_file = base_opts.mission_dir / files_to_skip
+    skip_file_list = []
+    if not skip_file.exists() or not skip_file.is_file():
+        return skip_file_list
+    try:
+        line_num = 0
+        with open(skip_file) as fi:
+            for ll in fi.readlines():
+                line_num += 1
+                lline = ll.strip()
+                if lline.startswith("#"):
+                    continue
+                try:
+                    fc = FileMgr.FileCode(lline, base_opts.instrument_id)
+                except ValueError as ee:
+                    log_warning(f"{skip_file} line:{line_num} {ee}")
+                    continue
+
+                if fc.is_seaglider() or fc.is_seaglider_selftest() or fc.is_logger():
+                    skip_file_list.append(fc.base_name())
+                else:
+                    log_warning(
+                        f"Not a recoginized basename {lline}, {skip_file}, line:{line_num}"
+                    )
+        # log_info(f"Skiping {skip_file_list}")
+        return skip_file_list
+    except Exception as exception:
+        log_warning(f"Problems processing {files_to_skip} ({exception})")
+
+    return []
 
 
 def read_processed_files(
@@ -317,6 +351,7 @@ def process_dive_selftest(
     instrument_id,
     comm_log,
     complete_files_dict,
+    files_to_skip,
     incomplete_files,
 ):
     """Given a list of files belonging to a single dive, process them
@@ -351,7 +386,9 @@ def process_dive_selftest(
     # of seaglider data files
     for base, file_group in list(dive_files_dict.items()):
         # Process the file only if it hasn't been processed yet
-        if check_process_file_group(base, file_group, complete_files_dict):
+        if check_process_file_group(
+            base, file_group, complete_files_dict, files_to_skip
+        ):
             fc = FileMgr.FileCode(base, instrument_id)
             if fc.is_log() and (fc.is_seaglider() or fc.is_seaglider_selftest()):
                 try:
@@ -387,9 +424,9 @@ def process_dive_selftest(
     for base, file_group in list(dive_files_dict.items()):
         # if(complete_files.count(base) == 0):
         fc = FileMgr.FileCode(base, instrument_id)
-        if check_process_file_group(base, file_group, complete_files_dict) or (
-            fc.is_data() and force_data_processing
-        ):
+        if check_process_file_group(
+            base, file_group, complete_files_dict, files_to_skip
+        ) or (fc.is_data() and force_data_processing):
             if (fc.is_seaglider() or fc.is_seaglider_selftest()) and fc.is_pdos_log():
                 # This is covered way before we get here.
                 continue
@@ -480,12 +517,16 @@ def generate_resend(fragment_name, instrument_id):
     return ret_val
 
 
-def check_process_file_group(base, file_group, complete_files_dict):
+def check_process_file_group(base, file_group, complete_files_dict, files_to_skip):
     """Determines if the file group should be processed and reports details on why
 
     Returns: True to indicate the group should be processed
              False to inicated the group should not be processed
     """
+    if base in files_to_skip:
+        # log_info(f"Skipping {base}")
+        return False
+
     if base not in complete_files_dict:
         return True
 
@@ -564,7 +605,7 @@ def process_file_group(
     ret_val = 0
 
     log_debug(f"process_file_group dictionary = {pprint.pformat(file_group)}")
-    root, ext = os.path.splitext(FileMgr.get_non_partial_filename(file_group[0]))
+    root, _ = os.path.splitext(FileMgr.get_non_partial_filename(file_group[0]))
     defrag_file_name = root + "." + file_trans_received
 
     log_info(f"Processing {root}")
@@ -1745,6 +1786,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     else:
         base_opts.instrument_id = instrument_id
 
+    # Look for files to skip
+    files_to_skip = load_files_to_skip(base_opts)
+
     log_info(f"Instrument ID = {str(instrument_id)}")
 
     po.update_base_opts(base_opts)
@@ -1985,6 +2029,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             instrument_id,
             comm_log,
             complete_files_dict,
+            files_to_skip,
             incomplete_files,
         )
         if selftest_processed > 0:
@@ -2047,6 +2092,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             instrument_id,
             comm_log,
             complete_files_dict,
+            files_to_skip,
             incomplete_files,
         )
         if dive_processed > 0:

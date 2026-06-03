@@ -177,6 +177,28 @@ def test_reprocess(caplog, additional_options, required_msgs, allowed_msgs):
         required_msgs=required_msgs,
         pre_test_hook=update_timestamps,
     )
-    # import pdb
 
-    # pdb.set_trace()
+
+def test_skip_files(caplog):
+    data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_magcal")
+    mission_dir = data_dir.joinpath("mission_dir")
+
+    def create_skip_file(mission_dir: pathlib.Path) -> None:
+        skip_file_name = mission_dir / "files_to_skip.txt"
+        files_to_skip = ["sg0002dz", "sg0002lz", "sc0002ag", "sc0002bg"]
+        with open(skip_file_name, "w") as skip_file:
+            for file_to_skip in files_to_skip:
+                skip_file.write(f"{file_to_skip}\n")
+
+    allowed_msgs = [""]
+    required_msgs = ["Dives to process = []"]
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        Base.main,
+        f"--verbose  --local --no-notify_vis --skip_flight_model --plot_types none --ignore_flight_model --mission_dir {mission_dir}".split(),
+        caplog,
+        allowed_msgs,
+        pre_test_hook=create_skip_file,
+        required_msgs=required_msgs,
+    )
