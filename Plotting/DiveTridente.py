@@ -181,7 +181,7 @@ def plot_tridente(
                 ("pc550", fc("Rhodamine", "ug/l")),
                 ("fitc470", fc("Rhodamine", "ug/l")),
                 ("tu650", fc("Turbidity", "FTU")),
-                ("tu750", fc("Turbidity", "FTU")),
+                ("tu700", fc("Turbidity", "FTU")),
             )
         )
 
