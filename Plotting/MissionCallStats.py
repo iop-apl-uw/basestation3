@@ -36,6 +36,7 @@ from __future__ import annotations
 import collections
 import os
 import pathlib
+import time
 import typing
 
 import numpy as np
@@ -96,6 +97,9 @@ def mission_callstats(
     crc_errors = []
     dive_number = []
     crc_errors_present = False
+
+    session_times = []
+    dives_times_accum = collections.defaultdict(float)
     # rate = []
     for session in comm_log.sessions:
         if session.dive_num is None:
@@ -116,6 +120,28 @@ def mission_callstats(
         if len(list(session.crc_errors.keys())):
             crc_errors_present = True
         dive_number.append(session.dive_num)
+        session_time = 0.0
+        if (
+            session.connect_ts
+            and session.disconnect_ts
+            and session.dive_num is not None
+        ):
+            session_time = time.mktime(session.disconnect_ts) - time.mktime(
+                session.connect_ts
+            )
+        session_times.append(session_time)
+        if session.dive_num is not None:
+            dives_times_accum[session.dive_num] += session_time
+
+    # Build up a list of the totals secs per dive
+    dive_times = []
+    dive_times_session_num = []  # For the time axis
+    dive_times_dive_num = []  # For the meta data
+    for ii, dd in enumerate(dive_number):
+        if dd in dives_times_accum and dd not in dive_times_dive_num:
+            dive_times_session_num.append(ii)
+            dive_times_dive_num.append(dd)
+            dive_times.append(dives_times_accum[dd])
 
     t = np.linspace(
         start=0,
@@ -188,6 +214,20 @@ def mission_callstats(
                                 file_type_secs[ty][ii] += tmp
                                 files_transfered_secs[ii] += tmp
 
+    # Build up a list of the total bytes per dive
+    dives_bytes_accum = collections.defaultdict(float)
+    for ii, dd in enumerate(dive_number):
+        dives_bytes_accum[dd] += files_transfered_bytes[ii]
+
+    dive_bytes = []
+    dive_bytes_session_num = []  # For the time axis
+    dive_bytes_dive_num = []  # For the meta data
+    for ii, dd in enumerate(dive_number):
+        if dd in dives_bytes_accum and dd not in dive_bytes_dive_num:
+            dive_bytes_session_num.append(ii)
+            dive_bytes_dive_num.append(dd)
+            dive_bytes.append(dives_bytes_accum[dd])
+
     fig = plotly.graph_objects.Figure()
 
     # Clean up dive_number array - deal with previous stuff in comm.log
@@ -234,6 +274,21 @@ def mission_callstats(
 
     fig.add_trace(
         {
+            "name": "Total bytes transfered per dive (bytes)",
+            "x": dive_bytes_session_num,
+            "y": dive_bytes,
+            "meta": dive_bytes_dive_num,
+            "yaxis": "y2",
+            "mode": "markers+lines",
+            "marker": {"symbol": "cross", "color": "darkgreen", "size": 3},
+            "line": {"dash": "dot", "width": 1, "color": "darkgreen"},
+            "hovertemplate": "Total transfered per dive<br>Dive Number %{meta:.0f}<br> bytes %{y:.0f}<extra></extra>",
+            "visible": "legendonly",
+        }
+    )
+
+    fig.add_trace(
+        {
             "name": "Total bytes transfered (bytes)",
             "x": t,
             "y": files_transfered_bytes,
@@ -267,7 +322,37 @@ def mission_callstats(
             "yaxis": "y3",
             "mode": "lines",
             "line": {"dash": "dot", "width": 1, "color": "Black"},
-            "hovertemplate": "Total transfered<br>Call Number %{x:.0f}<br>Dive Number %{meta:.0f}<br> secs %{y:.0f}<extra></extra>",
+            "hovertemplate": "Total transfered time<br>Call Number %{x:.0f}<br>Dive Number %{meta:.0f}<br> secs %{y:.0f}<extra></extra>",
+        }
+    )
+
+    fig.add_trace(
+        {
+            "name": "Total session time (secs)",
+            "x": t,
+            "y": session_times,
+            "meta": dive_number,
+            "yaxis": "y3",
+            "mode": "markers+lines",
+            "marker": {"symbol": "cross", "color": "Black", "size": 3},
+            "line": {"dash": "dot", "width": 1, "color": "Black"},
+            "hovertemplate": "Total session time<br>Call Number %{x:.0f}<br>Dive Number %{meta:.0f}<br> secs %{y:.0f}<extra></extra>",
+            "visible": "legendonly",
+        }
+    )
+
+    fig.add_trace(
+        {
+            "name": "Total session time per dive (secs)",
+            "x": dive_times_session_num,
+            "y": dive_times,
+            "meta": dive_times_dive_num,
+            "yaxis": "y3",
+            "mode": "markers+lines",
+            "marker": {"symbol": "cross", "color": "Red", "size": 3},
+            "line": {"dash": "dot", "width": 1, "color": "Red"},
+            "hovertemplate": "Total time for all sessions<br>Dive Number %{meta:.0f}<br> secs %{y:.0f}<extra></extra>",
+            "visible": "legendonly",
         }
     )
 
@@ -348,6 +433,7 @@ def mission_callstats(
                     + " %{y:.0f} secs<extra></extra>",
                 }
             )
+
     # Must be last for button logic to work
     fig.add_trace(
         {
@@ -408,12 +494,18 @@ def mission_callstats(
                 # x=1.1,
                 "x": 0.55,
                 "xanchor": "center",
-                "y": -0.08,
+                "yanchor": "top",
+                # "y": -0.08,
+                "y": -0.12,
                 "visible": True,
                 "showactive": True,
                 # "foobar": True,
             }
         ]
+    )
+    l_annotations = []
+    l_annotations.append(
+        PlotUtilsPlotly.add_help_link("eng_download_stats", x_pos=1.05)
     )
 
     title_text = f"{mission_str}<br>Download Statistics vs Call Num"
@@ -464,7 +556,8 @@ def mission_callstats(
                 "x": 0.5,
                 "y": 0.95,
             },
-            "margin": {"t": 150, "b": 150},
+            # "margin": {"t": 150, "b": 150},
+            "margin": {"t": 130, "b": 150},
             "legend": {
                 "x": 1.075,
                 "y": 1,
