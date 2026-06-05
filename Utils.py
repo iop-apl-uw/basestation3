@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import bz2
 import collections
+import contextlib
 import errno
 import functools
 import importlib.util
@@ -2233,7 +2234,9 @@ def find_common_dimensions(pq_dir):
     files_by_dimension = collections.defaultdict(list)
 
     for ff in pq_dir.iterdir():
-        dimension = ff.name.split("_", 1)[1].split(".")[0]
+        # Ignore any garbage in the directory
+        with contextlib.suppress(IndexError):
+            dimension = ff.name.split("_", 1)[1].split(".")[0]
         files_by_dimension[dimension].append(ff)
     return {k: sorted(v) for k, v in files_by_dimension.items()}
 
