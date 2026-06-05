@@ -412,6 +412,8 @@ def extractVarTimeDepth(nc_filename, varname, extnci=None):
     return message
 
 def extractVarTimeDepth_pd(pd_df_c, varname):
+    import pdb
+    pdb.set_trace()
     pq_dfs = pd_df_c.find_all_cols(varname)
 
     # TODO - handle this case - add code to migrate data columns
@@ -492,10 +494,10 @@ if __name__ == "__main__":
         # Parquet
         base_opts = BaseOptsSimple
         base_opts.mission_dir = pathlib.Path(sys.argv[2])
-        base_opts.parquet_directory = None
-        if Utils.setup_parquet_directory(base_opts):
-            print("Error setting up parquet directory")
-            sys.exit(1)
+        base_opts.parquet_directory = base_opts.mission_dir / "parquet"
+        #if Utils.setup_parquet_directory(base_opts):
+        #    print("Error setting up parquet directory")
+        #    sys.exit(1)
         pd_df_c = Utils.read_parquet_pd(base_opts.parquet_directory)
         if pd_df_c is None:
             print("Error reading parquet directory")
@@ -508,7 +510,9 @@ if __name__ == "__main__":
         #print(msg)
 
         varnames = getVarNames(None, pd_df_c=pd_df_c)
-        print(varnames)
+        print("varname, dimension")
+        for varname in varnames:
+            print(f"{varname['var']},{varname['dim']}")
     else:
         # Timeseries
         #msg = extractVars(sys.argv[1], ['temperature'], 10, 10)
