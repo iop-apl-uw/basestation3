@@ -54,6 +54,12 @@ Basestation extensions are a flexible way to extend the basestation's functional
 
 [SimplePlotExtension.py](../SimplePlotExtension.py) is an example of such an extension that may be used as a starting point for per-dive plots.  See [.extensions](../sg000/.extensions) for more details and references to other extensions included in the basestation code base.
 
-### Using a basestation plotting function
+### Using a basestation plotting extension
 
-Basestation plotting functions are the most closely coupled with the built-in basestation plotting routines.  All plotting functions reside in `/usr/local/basestaiton3/Plotting` or in `/usr/local/basestaiton3/Plotting/local`.  Files in the later location may be symlinks to other locations in the file system.  
+Basestation plotting extensions are the most closely coupled with the built-in basestation plotting routines.  All plotting extensions reside in `/usr/local/basestaiton3/Plotting` or in `/usr/local/basestaiton3/Plotting/local`.  Files in the later location may be symlinks to other locations in the file system.
+
+### Configurable plotting services
+
+There are currently two basestation plotting extensions that allow plot generation for variables driven by user defined configuration files.  
+- For single dives, [DiveScience](../sg000/divescience.yml) allows for single or multiple variables to plotted as down and up profiles against gliderdepth.
+- For a series of dives, [MissionProfile](../sg000/sections.yml) allows for the plotting of single variables as a heatmap as time vs. depth.
