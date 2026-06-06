@@ -28,3 +28,7 @@ Details on the [RBR Tridente](https://rbr-global.com/products/sensors/rbrtrident
 ## Details on plotting
 
 A short guide to adding plots to the basestation may be found in [plotting.md](plotting.md)
+
+## Sensor integration guide
+
+A short guide to adding sensors and sensor data processing on the basestation may be found in [sensor_integration.md](sensor_integration.md)
