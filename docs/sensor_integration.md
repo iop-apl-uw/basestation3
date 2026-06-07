@@ -65,6 +65,7 @@ The other class of instruments are generally described as ```loggers```.  Logger
 ### Logdev
 
 There is existing [documentation](https://iop.apl.washington.edu/iopsg/logdev.txt) on how the logdev machinery in the glider's firmware can be used to control a logger device.  This document will focus on the data flows.  Here is a sample .cnf file - this for a Rockland MicroriderG:
+
 ```name=MRI
 prefix=mr
 cmdprefix=$MR_
@@ -83,7 +84,7 @@ stop=%1
 poll="%F%r%[$]odas stats short%r%[%n]%[%n]"
 prompt="$"
 datatype="u"
-clock-set="odas date {%Y-%m-%d %H:%M:%S}%r"
+clock-set="odas date \{%Y-%m-%d %H:%M:%S\}%r"
 clock-read="odas date%r"
 post-clock=on
 xmodem="%F%r%[$]sx -k /home/debian/links/%f%r%[now.]"
