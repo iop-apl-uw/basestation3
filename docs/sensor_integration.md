@@ -29,24 +29,23 @@ In addition support for a set of instruments that have built in support, additio
 the serdev .cnf files.  A serdev .cnf file contains information on how to interact with the
 instrument and on how to extract and store data from the instrument into the seaglider's dat file (the truck generates a single dat file per):
 
-```
-name=legato
-prefix=rbr
-timeout=2000
-baud=19200
-warmup=12000
-voltage=10
-headerlines=0
-current=0.02
-format="%d-%d-%d %d:%d:%f %00 %01 %02 %f %f %f %f %03"
-query="%F%n%3%F%n%[ready: ]poll%r%nsleep%r%n"
-vcolumn=conduc(10000,0)
-column=temp(10000,0)
-column=pressure(1000,0)
-column=conducTemp(10000,0)
-power-policy=1
-cycles=0
-```
+        name=legato
+        prefix=rbr
+        timeout=2000
+        baud=19200
+        warmup=12000
+        voltage=10
+        headerlines=0
+        current=0.02
+        format="%d-%d-%d %d:%d:%f %00 %01 %02 %f %f %f %f %03"
+        query="%F%n%3%F%n%[ready: ]poll%r%nsleep%r%n"
+        vcolumn=conduc(10000,0)
+        column=temp(10000,0)
+        column=pressure(1000,0)
+        column=conducTemp(10000,0)
+        power-policy=1
+        cycles=0
+
 
 Full documentation on this syntax may be found [here](https://iop.apl.washington.edu/iopsg/serdev.txt)
 From a data flow standpoint, the key things are the ```prefix=``` and ```column=``` specifications.  The ```prefix``` 
@@ -66,32 +65,32 @@ The other class of instruments are generally described as ```loggers```.  Logger
 
 There is existing [documentation](https://iop.apl.washington.edu/iopsg/logdev.txt) on how the logdev machinery in the glider's firmware can be used to control a logger device.  This document will focus on the data flows.  Here is a sample .cnf file - this for a Rockland MicroriderG:
 
-```name=MRI
-prefix=mr
-cmdprefix=$MR_
-timeout=5000
-baud=115200
-warmup=25000
-voltage=10
-current=0.5
-min-power-cycle=15000
-powerup-timeout=40000
-pre-start=%@30000@
-start="%r%[$]odas start%r%[DAQ]%[%n]"
-dive-state-end="%r%[$]sh linkfile.sh %f%r%[OK]%[$]odas stop%r%[DAQ stop message sent]%@30000@"
-climb-state-end="%r%[$]sh linkfile.sh %f%r%[OK]%[$]odas stop%r%[DAQ stop message sent]%@30000@"
-stop=%1
-poll="%F%r%[$]odas stats short%r%[%n]%[%n]"
-prompt="$"
-datatype="u"
-clock-set="odas date \{%Y-%m-%d %H:%M:%S\}%r"
-clock-read="odas date%r"
-post-clock=on
-xmodem="%F%r%[$]sx -k /home/debian/links/%f%r%[now.]"
-profiles-download=separate
-post-transfer=on
-cleanup="%r%r%[$]rm /home/debian/links/* %r"
-```
+    	name=MRI
+        prefix=mr
+        cmdprefix=$MR_
+        timeout=5000
+        baud=115200
+        warmup=25000
+        voltage=10
+        current=0.5
+        min-power-cycle=15000
+        powerup-timeout=40000
+        pre-start=%@30000@
+        start="%r%[$]odas start%r%[DAQ]%[%n]"
+        dive-state-end="%r%[$]sh linkfile.sh %f%r%[OK]%[$]odas stop%r%[DAQ stop message sent]%@30000@"
+        climb-state-end="%r%[$]sh linkfile.sh %f%r%[OK]%[$]odas stop%r%[DAQ stop message sent]%@30000@"
+        stop=%1
+        poll="%F%r%[$]odas stats short%r%[%n]%[%n]"
+        prompt="$"
+        datatype="u"
+        clock-set="odas date \{%Y-%m-%d %H:%M:%S}%r"
+        clock-read="odas date%r"
+        post-clock=on
+        xmodem="%F%r%[$]sx -k /home/debian/links/%f%r%[now.]"
+        profiles-download=separate
+        post-transfer=on
+        cleanup="%r%r%[$]rm /home/debian/links/* %r"
+
 
 The key items here are the ```prefix=``` and ```datatype=``` and ```xmodem=``` specifications.  ```prefix```  is always exactly two letters
 and must be unique from any other loggers - preferably across all Seagliders everywhere - but it must be unique for all instruments configure on a 
@@ -108,29 +107,29 @@ The scicon is a particular custom logger, that itself has devices (serial or fre
 - `scicon.att` How the instruments are attached to the scicon hardware.
 - `scicon.sch` How the instruments are sampled.
 
-`scicon.ins` is a list of instrument definitions - it may contain more definitions then are installed on a given scicon.  Here is an example of a single instrument::
+`scicon.ins` is a list of instrument definitions - it may contain more definitions then are installed on a given scicon.  Here is an example of a single instrument:
 
-```tridentebb700bb470chla470 = {
- prefix = td
- baud = 19200
- cycles = 0
- timeout = 1000
- warmup = 0
- pumptime = 0
- skip = 0
- bufflen = 0
- avg = 0
- dec = 0
- multiline = 0
- power = 0
- terminator = 10
- format = %d, %00, %01, %02
- meta = %9%9%F%n%[Ready: ]getall%r%n%[Ready:]
- column = bb700(100000,0)
- column = bb470(100000,0)
- column = chla470(1000,0)
-}
-```
+        tridentebb700bb470chla470 = {
+         prefix = td
+         baud = 19200
+         cycles = 0
+         timeout = 1000
+         warmup = 0
+         pumptime = 0
+         skip = 0
+         bufflen = 0
+         avg = 0
+         dec = 0
+         multiline = 0
+         power = 0
+         terminator = 10
+         format = %d, %00, %01, %02
+         meta = %9%9%F%n%[Ready: ]getall%r%n%[Ready:]
+         column = bb700(100000,0)
+         column = bb470(100000,0)
+         column = chla470(1000,0)
+        }
+
 
 Each instrument on a scicon is sampled on its own unique sampling time grid, resulting in a data file containing the time of the observation and all columns recorded for that observation.  From a data flow standpoint, the important specifications are the sensor name - ```tridentebb700bb470chla470``` and the `column` specifications.  The column name in the final .eng file on the basestation will be formed by the sensor name and column name.  Just as in the serdev devices, data will be offset and scaled before a first order diff is applied prior to data transmission.  Unlike the serdev, the scale and offset are included in the transmitted .dat file.
 
@@ -318,3 +317,7 @@ poogggddddt.ext
 ### Installation and configuration of Sensor Extensions
 
 <!-- Outline the installation locations and the dot file syntax -->
+
+### Development and troubleshooting strategies
+
+<!-- Serdev, scicon and logdev devices -->
