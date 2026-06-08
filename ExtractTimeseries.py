@@ -412,8 +412,6 @@ def extractVarTimeDepth(nc_filename, varname, extnci=None):
     return message
 
 def extractVarTimeDepth_pd(pd_df_c, varname):
-    import pdb
-    pdb.set_trace()
     pq_dfs = pd_df_c.find_all_cols(varname)
 
     # TODO - handle this case - add code to migrate data columns
