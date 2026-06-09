@@ -1725,7 +1725,7 @@ def load_dive_profile_data(
                 ncf_file_time = 0
 
             if nc_file_parsable:
-                log_debug("Reloading data from %s" % nc_dive_file_name)
+                log_info("Reloading data from %s" % nc_dive_file_name)
                 # reload and initialize from nc file
                 # this will contain the last gc and gps arrays
                 log_f = LogFile.LogFile()
