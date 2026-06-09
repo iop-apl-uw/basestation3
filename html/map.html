@@ -228,7 +228,8 @@
             }
 
             var targetsChannel = null;
-            var currentMission = '';
+            var currMission = '';
+            var currGlider = null;
 
             function xy2magdir(x, y)
             {
@@ -1050,7 +1051,7 @@ imestamp
 
                         var key = msg['glider'] + '_' + (msg['mission'] ? msg['mission'] : '');
                         if (key in gliderKMLlayers) { 
-                            loadGliderKML(map, layerControl, [ msg['glider'] ], [ msg['mission'] ? msg['mission'] : '' ], -1, null, false, true, [ 'color' in msg ? msg['color'] : 'yellow' ]);
+                            loadGliderKML(map, layerControl, [ msg['glider'] ], [ msg['mission'] ? msg['mission'] : '' ], -1, null, false, currGlider && msg['glider'] == currGlider, [ 'color' in msg ? msg['color'] : 'yellow' ]);
                         }
                         else {
                             console.log('unknown ' + key);
@@ -1861,25 +1862,37 @@ imestamp
                 var k;
                 var track;
                 var key = glider + '_' + mission;
+                var removed = [];
+
                 console.log('maybe removing: ' + key);
                 if (key in gliderKMLlayers && gliderKMLlayers[key] != null) {
                     track = gliderKMLlayers[key];
                     console.log('removing ' + key);
                     for (k of Object.keys(track._layers)) {
-                        if (track._layers[k].options.hasOwnProperty('name') 
-                            && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets') || track._layers[k].options.name.includes('SSH'))) {
-                            if (track._layers[k].options.name.includes('SSH') && track._layers[k].hasOwnProperty('_layers')) {
-                                for (var i = 0 ; i < track._layers[k]._layers.length ; i++) {
-                                    layerControl.removeLayer(track._layers[k]._layers[i]);
+                        if (track._layers[k].hasOwnProperty('_layers')) {
+                            for (var i of Object.keys(track._layers[k]._layers)) {
+                                if (track._layers[k]._layers[i].hasOwnProperty('key') && map.hasLayer(track._layers[k]._layers[i]))  {
+                                    removed.push(track._layers[k]._layers[i].key);
                                 }
-                               //  layerControl.removeLayer(track._layers[k]._layers[1]);
+                                if (track._layers[k]._layers[i].hasOwnProperty('key')) {
+                                    layerControl.removeLayer(track._layers[k]._layers[i]);
+                                    map.removeLayer(track._layers[k]._layers[i]);
+                                    console.log('removing ' + track._layers[k]._layers[i].key);
+                                }
                             }
-                            // layerControl.removeLayer(track._layers[k]);
                         }
-                        layerControl.removeLayer(track._layers[k]);
-                    }
+                        if (track._layers[k].hasOwnProperty('key') && map.hasLayer(track._layers[k])) 
+                            removed.push(track._layers[k].key);
 
+                        layerControl.removeLayer(track._layers[k]);
+                        map.removeLayer(track._layers[k]);
+                    }
+                    if (map.hasLayer(track) && track.hasOwnProperty('key')) 
+                        removed.push(track.key);
+
+                    layerControl.removeLayer(track);
                     map.removeLayer(track);
+                    
                     gliderKMLlayers[key] = null; // .track = null; 
                 }
                 else {
@@ -1890,6 +1903,8 @@ imestamp
                         console.log(gliderKMLlayers);
                     } 
                 }
+
+                return removed;
             }
                     
                             
@@ -1946,6 +1961,7 @@ imestamp
                 var kml;
                 var parser;
                 var i;
+                var removed;
 
                 var urls = [];
                 for (i = 0 ; i < gliders.length ; i++) {                
@@ -1978,10 +1994,11 @@ imestamp
                                                 color: colors[i]
                                            });
 
-                    // delete any existing track (in case this is a reload of this glider/mission)
-                    removeGliderKMLlayer(map, layerControl, gliders[i], missions[i]);
+                    // delete any existing layers associated with this glider/mission
+                    removed = removeGliderKMLlayer(map, layerControl, gliders[i], missions[i]);
 
                     map.addLayer(track);
+                    track['key'] = gliders[i] + '_' + missions[i];
                     gliderKMLlayers[gliders[i] + '_' + missions[i]] = track;
                     console.log('added layer: ' +gliders[i] + '_' + missions[i]);
                     // layerControl.addOverlay(track, "KML"); // If we add controls for the dives and targets layers
@@ -1989,11 +2006,13 @@ imestamp
                                                               // If we don't add controls for dives and targets
                                                               // then the "KML" control works as expected
 
+                    console.log(track);
+
                     for (k of Object.keys(track._layers)) {
                         if (track._layers[k].options.hasOwnProperty('id') && track._layers[k].options.id == "seagliderPositionHighlightState") {
                             ctr = track._layers[k]._latlng;
                             layerControl.addOverlay(track._layers[k], 'KML position', '' + gliders[i] + ' ' + missions[i]);
-                            track._layers[k]['key'] = gliders[i] + '_' + missions[i];
+                            track._layers[k]['key'] = gliders[i] + '_' + missions[i] + ' KML position';
                             track._layers[k].on('click', function(e) {
                                 console.log('glider marker KML click');
                                 markerClicked = true;
@@ -2001,10 +2020,17 @@ imestamp
                             });
                         }
                         if (track._layers[k].options.hasOwnProperty('name')
-                            && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets') || track._layers[k].options.name.includes('SSH') || track._layers[k].options.name.includes('layer_') )) {
+                            && (   track._layers[k].options.name.includes('Dives') 
+                                || track._layers[k].options.name.includes('Targets') 
+                                || track._layers[k].options.name.includes('SSH') 
+                                || track._layers[k].options.name.includes('layer_') )) {
+
                             if (track._layers[k].options.name.includes('Dives')) {
                                 layerControl.addOverlay(track._layers[k], 'dives', '' + gliders[i] + ' ' + missions[i]);
                                 if (i > 0 || !leaveFirst) map.removeLayer(track._layers[k]);
+
+                                key = gliders[i] + ' ' + missions[i] + ' dives';
+                                track._layers[k]['key'] = key;
                             }
                             else if (track._layers[k].options.name.includes('Targets')) {
                                 layerControl.addOverlay(track._layers[k], 'targets', gliders[i] + ' ' + missions[i]);
@@ -2018,20 +2044,30 @@ imestamp
                                 //else {
                                 //    console.log("targets " + localStorage['layerStatus_targets']);
                                // }
+
+                                key = gliders[i] + ' ' + missions[i] + ' targets';
+                                track._layers[k]['key'] = key;
                             }
                             else if (track._layers[k].options.name.includes('layer_')) {
                                 var [dm, ...nm] = track._layers[k].options.name.split('_')
+                                console.log('layer_ adding ' + key);
+                                key = gliders[i] + ' ' + missions[i] + ' ' + nm.join('_');
+                                track._layers[k]['key'] = key;
                                 layerControl.addOverlay(track._layers[k], nm.join('_'), gliders[i] + ' ' + missions[i]);
                                 map.removeLayer(track._layers[k]);
                             }
                             else {
-                                var kk;
-                                for (kk in track._layers[k]._layers) {
+                                for (var kk of Object.keys(track._layers[k]._layers)) {
+                                    key = gliders[i] + ' ' + missions[i] + ' ' + track._layers[k]._layers[kk].options.name;
+                                    track._layers[k]['key'] = 'parent ' + key;
+                                    console.log('adding ' + key);
+                                    track._layers[k]._layers[kk]['key'] = key;
                                     console.log(track._layers[k]._layers[kk]);
                                     layerControl.addOverlay(track._layers[k]._layers[kk], track._layers[k]._layers[kk].options.name, gliders[i] + ' ' + missions[i]);
                                     map.removeLayer(track._layers[k]._layers[kk]);
                                 }
                             }
+
                             // console.log(track._layers[k].options.name);
                             // console.log(missions[i]);
                         }
@@ -2104,6 +2140,9 @@ imestamp
                     console.log('bringing ' + k + ' to front');
                     gliderMarkers[k].bringToFront();
                 }
+
+                console.log('layerControl');
+                console.log(layerControl);
             }
 
             function findGoto(goto, list) {
@@ -2717,6 +2756,7 @@ imestamp
             var tail = params.has('tail') ? parseInt(params.get('tail')) : -1;
 
             currMission = mission;
+            currGlider = glider;
 
             if (glider !== null) {
                 document.title = glider + '-map';
