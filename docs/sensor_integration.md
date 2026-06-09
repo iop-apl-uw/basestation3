@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document disccuss instrument integration into the Seaglider, with a focus on the data flows 
+This document covers instrument integration into the Seaglider, with a focus on the data flows 
 from the Seaglider and data handling/processing on the basestation.
 
 ## A note on terminology
@@ -83,7 +83,7 @@ There is existing [documentation](https://iop.apl.washington.edu/iopsg/logdev.tx
         poll="%F%r%[$]odas stats short%r%[%n]%[%n]"
         prompt="$"
         datatype="u"
-        clock-set="odas date \{%Y-%m-%d %H:%M:%S}%r"
+        clock-set="odas date { %Y-%m-%d %H:%M:%S}%r"
         clock-read="odas date%r"
         post-clock=on
         xmodem="%F%r%[$]sx -k /home/debian/links/%f%r%[now.]"
