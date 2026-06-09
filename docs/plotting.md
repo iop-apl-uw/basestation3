@@ -40,13 +40,14 @@ One completely valid way to add new plots is to have some other process running 
 
 An issue to be aware of is the plots directory needs to be writable by the user id generating the plots and readable by the user id that vis is running under.  By default, the plots directory is owend by the glider or the runner account (depending on which method you are using).  One solution is to make the plots directory writeable by everyone - with the attendent security concerns.  If using a runner account, another option is to use that account to generate the plots.
 
+#### vis notifications
+
+The drawback of the above is that <code>vis</code> is not notified when a new plot has been created and will not automatically add the new plot to the interface.  Later basestation activity will cause the plots directory to be re-scanned, or the users browswer can be refreshed.
+
 ### Using a hook script file.
 
 There are a number of places where the basestation calls out to hook scripts - these any executable with the correct naming - during the course of processing.  (See the main [Readme.md](../Readme.md#additional-hook-scripts) for more details on hook scripts)  One good option is to `.post_mission` script - which gets called with a list of all files generated or updated during processing on the cmdline - allowing the script to look for any specific files to generate plots off.
 
-#### vis notifications
-
-Either of the above methods has a draw back that <code>vis</code> is not notified when a new plot has been created and will not automatically add the new plot to the interface.  Later basestation activity will cause the plots directory to be re-scanned, or the users browswer can be refreshed.
 
 ### Using a basestation extension
 
