@@ -55,6 +55,7 @@ test_cases = (
             "Could not fetch needed variables 'depth'",
             "skipping bathy in plots",
             "Not all needed vars available for buoy freq",
+            "Could not find a dive number in the comm.log - using alert_message.html for alerts",
         ),
     ),
     (
@@ -68,6 +69,7 @@ test_cases = (
             "Large mis-match between predicted and observed w",
             "Compass invalid out for",
             "is marked as having a processing error",
+            "Could not find a dive number in the comm.log - using alert_message.html for alerts",
         ),
     ),
     (

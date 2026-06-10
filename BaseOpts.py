@@ -774,7 +774,20 @@ global_options_dict: dict[str, options_t] = {
             "help": "PID of the login shell",
         },
     ),
-    "ignore_lock": options_t(
+    "base_backup": options_t(
+        False,
+        {
+            "Base",
+            "GliderEarlyGPS",
+        },
+        ("--base_backup",),
+        bool,
+        {
+            "help": "Are backup files created by Base.py or GliderEarlyGPS.py",
+            "action": argparse.BooleanOptionalAction,
+        },
+    ),
+   "ignore_lock": options_t(
         False,
         {"Base", "BaseRunner", "GliderEarlyGPS"},
         ("--ignore_lock",),

@@ -1900,11 +1900,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 rename_divenum,
                 rename_call_counter,
             ) = comm_log.get_last_dive_num_and_call_counter()
-            # pdos_log_name = "sg%04dpz.%03d" % (comm_log.last_surfacing().dive_num, comm_log.last_surfacing().calls_made)
-            pdos_log_name = "sg%04dpz.%03d" % (rename_divenum, rename_call_counter)
-            pdos_log_name = base_opts.mission_dir / pdos_log_name
-            log_info(f"Moving {flash_file_name} to {pdos_log_name}")
-            shutil.move(flash_file_name, pdos_log_name)
+            if rename_divenum is not None:
+                # pdos_log_name = "sg%04dpz.%03d" % (comm_log.last_surfacing().dive_num, comm_log.last_surfacing().calls_made)
+                pdos_log_name = "sg%04dpz.%03d" % (rename_divenum, rename_call_counter)
+                pdos_log_name = base_opts.mission_dir / pdos_log_name
+                log_info(f"Moving {flash_file_name} to {pdos_log_name}")
+                shutil.move(flash_file_name, pdos_log_name)
 
         # Handle the FLASH file
         flash_file_name = base_opts.mission_dir / "FLASH"
@@ -1954,10 +1955,11 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 rename_call_counter,
             ) = comm_log.get_last_dive_num_and_call_counter()
             # parms_name = "parms.%04dpu.%03d" % (comm_log.last_surfacing().dive_num, comm_log.last_surfacing().calls_made)
-            parms_name = "parms.%d.%d" % (rename_divenum, rename_call_counter)
-            parms_name = os.path.join(base_opts.mission_dir, parms_name)
-            log_info(f"Moving {parms_file_name} to {parms_name}")
-            shutil.move(parms_file_name, parms_name)
+            if rename_divenum is not None:
+                parms_name = "parms.%d.%d" % (rename_divenum, rename_call_counter)
+                parms_name = os.path.join(base_opts.mission_dir, parms_name)
+                log_info(f"Moving {parms_file_name} to {parms_name}")
+                shutil.move(parms_file_name, parms_name)
 
     # fragment_size = comm_log.last_fragment_size()
     # if(fragment_size is None):
@@ -2268,39 +2270,44 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     if not dives_to_profile:
         log_info("No dives found to profile")
     po.process_progress("per_dive_netcdfs", "stop")
+
+    po.process_progress("backup_files", "start", send=False)
+
     (
         backup_dive_num,
         backup_call_cycle,
     ) = comm_log.get_last_dive_num_and_call_counter()
-
-    po.process_progress("backup_files", "start", send=False)
-
-    # Back up all files - using the dive # and call_cycle # from the comm log
-    # Do this without regard to what dives got processed
-    for known_file in known_files:
-        backup_filename = base_opts.mission_dir / known_file
-        if os.path.exists(backup_filename):
-            if backup_dive_num is not None:
-                backup_target_filename = "%s.%04d.%04d" % (
-                    backup_filename,
-                    int(backup_dive_num),
-                    int(backup_call_cycle),
-                )
-                log_info(f"Backing up {backup_filename} to {backup_target_filename}")
-                shutil.copyfile(backup_filename, backup_target_filename)
-
-                if backup_filename.name != "cmdfile":
-                    BaseDB.logControlFile(
-                        base_opts,
-                        backup_dive_num,
-                        backup_call_cycle,
-                        os.path.basename(backup_filename),
-                        os.path.basename(backup_target_filename),
+    
+    # Note: when not set, backup happens in GliderEarlyGPS and then only in response to trasnsmitted callbacks    
+    if base_opts.base_backup:
+        # Back up all files - using the dive # and call_cycle # from the comm log
+        # Do this without regard to what dives got processed
+        for known_file in known_files:
+            backup_filename = base_opts.mission_dir / known_file
+            if os.path.exists(backup_filename):
+                if backup_dive_num is not None:
+                    backup_target_filename = "%s.%04d.%04d" % (
+                        backup_filename,
+                        int(backup_dive_num),
+                        int(backup_call_cycle),
                     )
-            else:
-                log_error(
-                    f"Could not find a dive number in the comm.log - not backing up file {backup_filename}"
-                )
+                    log_info(
+                        f"Backing up {backup_filename} to {backup_target_filename}"
+                    )
+                    shutil.copyfile(backup_filename, backup_target_filename)
+
+                    if backup_filename.name != "cmdfile":
+                        BaseDB.logControlFile(
+                            base_opts,
+                            backup_dive_num,
+                            backup_call_cycle,
+                            os.path.basename(backup_filename),
+                            os.path.basename(backup_target_filename),
+                        )
+                else:
+                    log_error(
+                        f"Could not find a dive number in the comm.log - not backing up file {backup_filename}"
+                    )
 
     if backup_dive_num is not None and int(backup_dive_num) >= 1:
         cmdfile_name = (
@@ -2311,7 +2318,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         if os.path.exists(fullname):
             BaseDB.logParameterChanges(base_opts, backup_dive_num, cmdfile_name)
 
-    # Known files have been back up.
+    # Known files have been backed up.
     delete_files = []
     preserve_files = []
     for kf in known_files:
@@ -2352,7 +2359,10 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             ):
                 # Remove the uploaded file if it was transferred in the most recent comm session
                 # and the size and date criteria are met
-                session = comm_log.last_complete_surfacing()
+                
+                #session = comm_log.last_complete_surfacing()
+                # Use the actual last session
+                session = comm_log.last_surfacing()
                 if (
                     known_files[ii] in session.file_stats
                     and time.mktime(session.disconnect_ts)
@@ -2543,7 +2553,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     po.process_progress("per_dive_extensions", "stop")
 
-    (dive_num, _) = comm_log.get_last_dive_num_and_call_counter()
+    (dive_num, _) = comm_log.get_last_dive_num_and_call_counter(latest=False)
     # Process the urls file for the first pass (before mission profile, timeseries, etc).
     if not base_opts.local:
         BaseDotFiles.process_urls(base_opts, 1, instrument_id, dive_num)

@@ -290,7 +290,7 @@ class CommLog:
         log_debug("No instrument ID found")
         return None
 
-    def get_last_dive_num_and_call_counter(self):
+    def get_last_dive_num_and_call_counter(self, latest=True):
         """Find the last dive number by searching backward through the
         sessions, looking for one that has a dive number set
 
@@ -299,7 +299,7 @@ class CommLog:
             None if no dive number found
         """
         for i in reversed(range(len(self.sessions))):
-            if self.sessions[i].dive_num is not None:
+            if latest or self.sessions[i].dive_num is not None:
                 if self.sessions[i].call_cycle is not None:
                     return (self.sessions[i].dive_num, self.sessions[i].call_cycle)
                 else:

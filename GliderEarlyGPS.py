@@ -32,6 +32,7 @@
 
 import inspect
 import os
+import shutil
 import signal
 import sys
 import time
@@ -47,8 +48,10 @@ import BaseOpts
 import BaseOptsType
 import CommLog
 import Daemon
+import Sensors
 import Utils
 from BaseLog import BaseLogger, log_critical, log_error, log_info, log_warning
+from Globals import known_files
 
 # Early process for gps - call back for ver= line in comm.log - at that point, recovery condition has been seen
 # Form up the GPS line and call proceess .pagers
@@ -59,9 +62,10 @@ gliderearlygps_lockfile_name = ".gliderearlygps_lockfile"
 class GliderEarlyGPSClient:
     """Client to handle connection to jabber server and comm callbacks"""
 
-    def __init__(self, comm_log_file_name, base_opts):
+    def __init__(self, comm_log_file_name, base_opts, known_files:list[str]):
         self.__comm_log_file_name = comm_log_file_name
         self.__base_opts = base_opts
+        self.__known_files = known_files
         self._start_pos = 0
         self._commlog_session = None
         self._commlog_linecount = 0
@@ -326,8 +330,31 @@ class GliderEarlyGPSClient:
     def callback_received(self, filename, receivedsize):
         """Callback for comm.log received line"""
         if not self._first_time:
-            msg = "Received file %s (%d bytes)" % (filename, receivedsize)
-            log_info(msg)
+            log_info( f"Received file {filename} ({receivedsize} bytes)")
+            if not self.__base_opts.base_backup:
+                if filename not in self.__known_files:
+                    return
+                backup_filename = self.__base_opts.mission_dir / filename
+                if backup_filename.exists():
+                    if self._commlog_session.dive_num is not None and self._commlog_session.call_cycle is not None:
+                        backup_target_filename = backup_filename.with_suffix(f".{self._commlog_session.dive_num:04d}.{self._commlog_session.call_cycle:04d}")
+                        log_info(
+                            f"Backing up {backup_filename} to {backup_target_filename}"
+                        )
+                        shutil.copyfile(backup_filename, backup_target_filename)
+                        if backup_filename.name != "cmdfile":
+                            BaseDB.logControlFile(
+                                self.__base_opts,
+                                self._commlog_session.dive_num,
+                                self._commlog_session.call_cycle,
+                                backup_filename.name,
+                                backup_target_filename.name,
+                            )
+                    else:
+                        log_error(
+                            f"Could not find a dive number in the comm.log - not backing up file {backup_filename}"
+                        )
+
 
     def callback_recovery(self, recovery_msg):
         """Callback for a comm.log In Recovery line"""
@@ -464,6 +491,20 @@ def main():
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
+    # Sensor extensions
+    (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
+    if init_ret_val > 0:
+        log_warning("Sensor initialization failed")
+
+    # Now, the loggers
+    for key in list(init_dict.keys()):
+        d = init_dict[key]
+        if "known_files" in d:
+            for b in d["known_files"]:
+                known_files.append(b)
+
+    log_info("known files = %s" % known_files)
+
     # Check for required "options"
     if base_opts.mission_dir:
         comm_log_filename = base_opts.mission_dir / "comm.log"
@@ -512,7 +553,7 @@ def main():
     Utils.create_lock_file(base_opts, gliderearlygps_lockfile_name)
 
     # Start up the bot
-    glider_client = GliderEarlyGPSClient(comm_log_filename, base_opts)
+    glider_client = GliderEarlyGPSClient(comm_log_filename, base_opts, known_files)
     if testing:
         # For testing, go to the last session and process that
         (comm_log, _, _, _, _) = CommLog.process_comm_log(base_opts.comm_log, base_opts)
