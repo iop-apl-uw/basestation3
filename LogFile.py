@@ -315,14 +315,14 @@ def parse_log_file(in_filename, issue_warn=False):
     elif fc.is_processed_seaglider_log() or fc.is_processed_seaglider_selftest_log():
         log_debug("Input file is a processed seaglider log file: %s" % (in_filename))
     else:
-        log_error("Invalid seaglider logfile: %s" % (in_filename))
+        log_error(f"Invalid seaglider logfile: %{in_filename}")
         return None
     # TODO: Add handling for .asc and .eng files
 
     try:
         raw_log_file = open(in_filename, "rb")
     except OSError:
-        log_error("Could not open " + in_filename + " for reading")
+        log_error(f"Could not open {in_filename} for reading")
         return None
 
     log_file_start_time = 0
