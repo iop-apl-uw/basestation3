@@ -16,9 +16,10 @@ config.py
 rawxfer/rawrcv2
 rawxfer/rawsend
 etc
-local
+/local/
 ssh
 microstructure
 adcp
 data/
 site
+/Plotting/local/
