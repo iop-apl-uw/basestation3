@@ -2249,22 +2249,23 @@
         var today = new Date();
         var spin, incr, mult;
         var str;
-        var i, j, nr;
+        var i, j, nr, n;
         var rows = $('scienceTable').getElementsByTagName("TR");
         var line;
 
         str = "/ science file created by online sciedit\n";
         str = str + '/ ' + today.toLocaleString() + '\n';
-        str = str + '/ ';
 
         if (parms_SENSORS) {
-            for (i = 0 ; i < parms_SENSORS.length && i < 6 ; i++) {
+            str = str + '/ ';
+            n = parms_SENSORS.length >= 6 ? 6 : parms_SENSORS.length;
+            
+            for (i = 0 ; i < n ; i++) {
                 str = str + parms_SENSORS[i];
-                if (i < parms_SENSORS.length - 1)
+                if (i < n - 1)
                     str = str + ', ';
-                else
-                    str = str + '\n';
             }
+            str = str + '\n';
         } 
         nr = rows.length;
         for (i = 0 ; i < nr ; i++) {
