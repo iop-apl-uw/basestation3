@@ -30,6 +30,7 @@
 import os
 import pathlib
 from datetime import datetime
+from decimal import Decimal
 
 import pytest
 import testutils
@@ -204,3 +205,43 @@ def test_skip_files(caplog):
         pre_test_hook=create_skip_file,
         required_msgs=required_msgs,
     )
+
+
+def test_eng_precision(caplog):
+    data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_base")
+    mission_dir = data_dir.joinpath("mission_dir")
+
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        Base.main,
+        f"--verbose --local --no-notify_vis --plot_types none --skip_flight_model --force --mission_dir {mission_dir}".split(),
+        caplog,
+        [""],
+    )
+    # Check that legato has 3 decimal places of precision
+    with open(mission_dir / "sc0002a" / "psc2720002a_legatoPoll_ct.eng") as fi:
+        for line in fi.readlines():
+            if line.startswith("%"):
+                continue
+            assert all(
+                [Decimal(vv.strip()).as_tuple().exponent == -3 for vv in line.split()]
+            )
+            break
+
+    # Check that the backscatter channes have 5 decimal places of precision
+    with open(
+        mission_dir / "sc0002a" / "psc2720002a_tridentebb700bb470chla470_tridente.eng"
+    ) as fi:
+        for line in fi.readlines():
+            if line.startswith("%"):
+                continue
+
+            exponents = [-3, -5, -5, -3]
+            assert all(
+                [
+                    Decimal(vv.strip()).as_tuple().exponent == exponents[ii]
+                    for ii, vv in enumerate(line.split())
+                ]
+            )
+            break

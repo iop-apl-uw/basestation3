@@ -28,9 +28,31 @@ Tridente Sensor extension
 # For the Tridente, all calibrations are applied on the instrument, so this
 # extension simply generates metadata
 
+import collections
+
 import BaseNetCDF
 import Utils2
 from BaseLog import log_error
+
+scale_off_pts = collections.namedtuple("scale_off_pts", ("scale", "off", "pts"))
+
+# The collection of scale, offset (for truck) and decimal pts needed for .eng file output
+# Note: scale/off must match .cnf file on glider
+scale_off_pt_dict = {
+    "chla470": scale_off_pts(1000, 0, 3),
+    "chla435": scale_off_pts(1000, 0, 3),
+    "fdom365": scale_off_pts(1000, 0, 3),
+    # "pc590": scale_off_pts(0, 0, 3),
+    # "pc525": scale_off_pts(0, 0, 3),
+    # "rd550": scale_off_pts(0, 0, 3),
+    # "fitc470": scale_off_pts(0, 0, 3),
+    "bb470": scale_off_pts(100000, 0, 5),
+    "bb525": scale_off_pts(100000, 0, 5),
+    "bb650": scale_off_pts(100000, 0, 5),
+    "bb700": scale_off_pts(100000, 0, 5),
+    "tu650": scale_off_pts(1000, 0, 3),
+    "tu700": scale_off_pts(1000, 0, 3),
+}
 
 
 def init_sensor(module_name, init_dict=None):
@@ -216,4 +238,45 @@ def init_sensor(module_name, init_dict=None):
         meta_data_adds |= Utils2.add_scicon_stats(instrument)
 
     init_dict[module_name] = {"netcdf_metadata_adds": meta_data_adds}
+    return 0
+
+
+def eng_decimal_pts(
+    base_opts,
+    module_name,
+    eng_col_names: list[str] | None = None,
+    eng_decimal_pts: dict[str, int] | None = None,
+) -> int:
+    """
+    eng_decimal_pts mapper
+
+    returns:
+    -1 - error in processing
+     0 - success (data found and processed)
+     1 - no data found to process
+    """
+    import pdb
+
+    if eng_col_names is None:
+        log_error(
+            "No eng_col_names list supplied for eng_decimal_pts conversion - version mismatch?"
+        )
+        pdb.set_trace()
+        return -1
+
+    if eng_decimal_pts is None:
+        log_error(
+            "No eng_decimal_pts dict supplied for eng_decimal_pts conversion - version mismatch?"
+        )
+        pdb.set_trace()
+        return -1
+
+    # TODO - this needs to be expanded to get the full name space - instance digit
+    known_tridente_channels = Utils2.known_tridente_channels()
+    for eng_col_name in eng_col_names:
+        if "." not in eng_col_name:
+            continue
+        instrument_name, col_name = eng_col_name.split(".", 1)
+        if any(ii in instrument_name for ii in known_tridente_channels):
+            eng_decimal_pts[eng_col_name] = scale_off_pt_dict[col_name].pts
     return 0

@@ -160,7 +160,7 @@ class DataFile:
             return 1
 
         self.eng_dict = {}
-        self.eng_cols = []
+        self.eng_cols: list[str] = []
 
         #
         # Truck processing
@@ -342,6 +342,12 @@ class DataFile:
         0 do whatever the file format says to
         1 use
         """
+
+        self.eng_decimal_pts: dict[str, int] = {}
+        Sensors.process_sensor_extensions(
+            "eng_decimal_pts", self.columns, self.eng_decimal_pts
+        )
+
         if matlab_comment_override > 0:
             prefix = "%"
         elif matlab_comment_override < 0:
@@ -398,7 +404,11 @@ class DataFile:
                     if np.isfinite(self.data[i][j]):
                         # print >>fo, '%0.f' % self.data[i][j],
                         if self.file_type == "eng":
-                            fo.write("%.3f " % self.data[i][j])
+                            fmt = "%.3f "
+                            # Check to see if different decimal points of precision are needed
+                            if self.columns[j] in self.eng_decimal_pts:
+                                fmt = f"%.{self.eng_decimal_pts[self.columns[j]]}f "
+                            fo.write(fmt % self.data[i][j])
                         else:
                             fo.write("%0.f " % self.data[i][j])
                     else:

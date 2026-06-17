@@ -1220,6 +1220,25 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
                     alert="MISSING_SEALEVEL",
                 )
 
+    # Lookup the output format specification
+    instrument_name = [df_meta.instrument.instr_class]
+    Sensors.process_sensor_extensions("remap_instrument_names", instrument_name)
+    eng_col_names: list[str] = []
+    for c in df_meta.columns.split()[1:]:
+        eng_col_names.append(f"{instrument_name[0]}.{c.rstrip().lstrip()}")
+
+    eng_decimal_pts: dict[str, int] = {}
+    Sensors.process_sensor_extensions("eng_decimal_pts", eng_col_names, eng_decimal_pts)
+
+    fmts: list[str] = ["%.3f "]  # For the time vector - always first
+
+    for eng_column_name in eng_col_names:
+        if eng_column_name in eng_decimal_pts:
+            fmts.append(f"%.{eng_decimal_pts[eng_column_name]}f ")
+        else:
+            fmts.append("%.3f ")
+    # End lookup output format specification
+
     line_count = 0
     for raw_line in inp_file:
         line_count += 1
@@ -1374,14 +1393,7 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
                 out_cols[aux_cols.index("pressureCounts")] += 16777216
 
         if out_cols is not None:
-            fmts = []
-            for ii in range(len(out_cols)):
-                tmp = np.ceil(np.log10(df_meta.scale_off[ii].scale))
-                log_scale = 0 if np.isinf(tmp) else int(tmp)
-                if log_scale > 3:
-                    fmts.append(f"%.{log_scale}f ")
-                else:
-                    fmts.append("%.3f ")
+            # For lookup of non-standard formats
             for ii in range(len(out_cols)):
                 out_file.write(fmts[ii] % out_cols[ii])
             out_file.write("\n")

@@ -355,6 +355,7 @@ def add_scicon_stats(instrument: str) -> dict:
     return meta_data_adds
 
 
+# TODO - move this to the extension and have other things call that to get answers
 def known_tridente_channels() -> tuple:
     """
     The list of all possible tridente channels can be auto generated but
