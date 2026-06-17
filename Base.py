@@ -2277,8 +2277,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         backup_dive_num,
         backup_call_cycle,
     ) = comm_log.get_last_dive_num_and_call_counter()
-    
-    # Note: when not set, backup happens in GliderEarlyGPS and then only in response to trasnsmitted callbacks    
+
+    # Note: when not set, backup happens in GliderEarlyGPS and then only in response to trasnsmitted callbacks
     if base_opts.base_backup:
         # Back up all files - using the dive # and call_cycle # from the comm log
         # Do this without regard to what dives got processed
@@ -2359,8 +2359,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             ):
                 # Remove the uploaded file if it was transferred in the most recent comm session
                 # and the size and date criteria are met
-                
-                #session = comm_log.last_complete_surfacing()
+
+                # session = comm_log.last_complete_surfacing()
                 # Use the actual last session
                 session = comm_log.last_surfacing()
                 if (
@@ -3101,7 +3101,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
             else:
                 # pathlib
-                p = processed_file_name.relative_to(pathlib.Path(base_opts.mission_dir))
+                p = processed_file_name.relative_to(base_opts.mission_dir)
 
             processed_files_msg += f"{p}\n"
 
