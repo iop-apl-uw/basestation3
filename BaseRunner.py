@@ -61,7 +61,7 @@ from BaseLog import (
     log_warning,
 )
 
-basestation_dir = str(pathlib.Path(__file__).parent.absolute())
+basestation_dir = str(pathlib.Path(__file__).parent.resolve())
 
 base_runner_lockfile_name = ".base_runner_lockfile"
 previous_runner_time_out = 10

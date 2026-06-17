@@ -248,7 +248,7 @@ def main():
         syscall("chown %s %s" % (glider, full_dst_file_name))
 
     base_opts.instrument_id = glider_id
-    base_opts.mission_dir = pathlib.Path(glider_path).expanduser().absolute()
+    base_opts.mission_dir = pathlib.Path(glider_path).expanduser().resolve()
     BaseDB.createDB(base_opts)
     db_file_name = os.path.join(glider_path, "%s.db" % glider)
     syscall("chown %s:%s %s" % (glider, base_opts.home_dir_group, db_file_name))

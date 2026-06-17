@@ -143,9 +143,9 @@ def FullPathlib(x):
         return None
 
     if isinstance(x, list):
-        return list(map(lambda y: pathlib.Path(y).expanduser().absolute(), x))
+        return list(map(lambda y: pathlib.Path(y).expanduser().resolve(), x))
     else:
-        return pathlib.Path(x).expanduser().absolute()
+        return pathlib.Path(x).expanduser().resolve()
 
 
 class FullPathlibAction(argparse.Action):
@@ -787,7 +787,7 @@ global_options_dict: dict[str, options_t] = {
             "action": argparse.BooleanOptionalAction,
         },
     ),
-   "ignore_lock": options_t(
+    "ignore_lock": options_t(
         False,
         {"Base", "BaseRunner", "GliderEarlyGPS"},
         ("--ignore_lock",),
