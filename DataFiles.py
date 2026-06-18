@@ -30,6 +30,9 @@
 
 """Contains all routines for extracting data from a glider's data file"""
 
+# TODO: This can be removed as of python 3.11
+from __future__ import annotations
+
 import collections
 import copy
 import os

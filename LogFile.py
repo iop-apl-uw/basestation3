@@ -30,6 +30,9 @@
 
 """Contains all routines for extracting data from a glider's comm logfile."""
 
+# TODO: This can be removed as of python 3.11
+from __future__ import annotations
+
 import collections
 import contextlib
 import os

@@ -50,7 +50,6 @@ import io
 import math
 import os
 import pathlib
-import pickle
 import re
 import select
 import signal
@@ -62,6 +61,7 @@ import time
 import types
 import typing
 import warnings
+from collections.abc import Callable
 from typing import Literal
 
 import aiofiles
@@ -78,8 +78,11 @@ import seawater
 import yaml
 import zmq
 import zmq.asyncio
+from numpy.typing import NDArray
 
+import DataFiles
 import Globals
+import LogFile
 
 # Avoid circular input for type checking
 if typing.TYPE_CHECKING:
@@ -87,6 +90,7 @@ if typing.TYPE_CHECKING:
 from typing import Any
 
 from BaseLog import log_critical, log_debug, log_error, log_info, log_warning
+from BaseType import DT, KT, VT
 
 netcdf4_datatypes_nonchar = (
     # (NC_BYTE)
@@ -216,8 +220,10 @@ def unique(s: list[Any]) -> list[Any]:
 
 
 def flatten(
-    inlist: list[Any], ltype=(list, tuple), maxint: int = sys.maxsize
-) -> list[Any]:
+    inlist: list,
+    ltype: type | tuple[type, ...] = (list, tuple),
+    maxint: int = sys.maxsize,
+) -> list:
     """Flatten out a list."""
     try:
         # for every possible index
@@ -509,7 +515,7 @@ def _timeout(signum: int, frame: types.FrameType | None) -> None:
 def which(program: str) -> str | None:
     """Searches PATH for a program"""
 
-    def is_exe(fpath):
+    def is_exe(fpath: str) -> bool:
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
     fpath, _ = os.path.split(program)
@@ -576,7 +582,7 @@ def read_from_process(p: subprocess.Popen[bytes]) -> io.BytesIO:
 
 
 def run_cmd_shell(
-    cmd: str, timeout: int = 0, env=None
+    cmd: str, timeout: int = 0, env: dict[str, str] | None = None
 ) -> tuple[int | None, io.BytesIO | None]:
     """Runs a program with arguments in a shell context"""
 
@@ -611,7 +617,8 @@ def run_cmd_shell(
     return (sts, out_f)
 
 
-def read_eng_file(eng_file_name):
+# TODO - create a single type here for the eng file return
+def read_eng_file(eng_file_name: str | pathlib.Path) -> dict[str, dict | list] | None:
     """Reads and eng file, returning the column headers and data in a dictionary
 
     Returns:
@@ -695,7 +702,7 @@ def read_eng_file(eng_file_name):
     return {"file_header": file_header, "data": data}
 
 
-def ctr_1st_diff(y, x):
+def ctr_1st_diff(y: NDArray, x: NDArray) -> NDArray:
     """Compute centered first-difference approximation to the
     first derivative of y with respect to x.
 
@@ -713,8 +720,9 @@ def ctr_1st_diff(y, x):
 
     # Check for equal length of scalar arrays
     if len(y) != len(x):
-        log_error("Lengths of scalar arrays are unequal -- bailing out of ctr_1st_diff")
-        return 1
+        # log_error("Lengths of scalar arrays are unequal -- bailing out of ctr_1st_diff")
+        # return 1
+        raise ValueError(f"Lengths of scalar arrays are unequal ({len(x)} != {len(y)})")
 
     dydx = np.array(np.zeros(len(y)), float)
     end = len(x) - 1
@@ -724,13 +732,13 @@ def ctr_1st_diff(y, x):
     return dydx
 
 
-def pol2cart(theta, r):
+def pol2cart(theta: NDArray, r: NDArray) -> tuple[NDArray, NDArray]:
     """theta in radians"""
     z = r * np.exp(1j * theta)  # convert to complex
     return np.real(z), np.imag(z)
 
 
-def cart2pol(x, y):
+def cart2pol(x: NDArray, y: NDArray) -> tuple[NDArray, NDArray]:
     """returns theta (radians), r"""
     z = x + 1j * y  # convert to complex
     return np.angle(z), np.abs(z)
@@ -738,7 +746,7 @@ def cart2pol(x, y):
 
 # http://staff.washington.edu/bdjwww/medfilt.py
 # def medfilt1(x=None, L=None):
-def medfilt1(x, L):
+def medfilt1(x: NDArray, L: int) -> NDArray | None:
     """
     A simple median filter for 1d numpy arrays.
 
@@ -808,7 +816,7 @@ def medfilt1(x, L):
     return xout
 
 
-def intersect(list1, list2):
+def intersect(list1: list, list2: list) -> list:
     """Return the intersection of two lists
     Inputs:
     list1,list2 - the lists
@@ -822,7 +830,7 @@ def intersect(list1, list2):
     return np.intersect1d(np.array(list1, object), np.array(list2, object)).tolist()
 
 
-def union(list1, list2):
+def union(list1: list, list2: list) -> list:
     """Return the union of two lists
     Inputs:
     list1,list2 - the lists
@@ -838,7 +846,7 @@ def union(list1, list2):
     # return union1d(array(list1), array(list2)).tolist()
 
 
-def setdiff(list1, list2):
+def setdiff(list1: list, list2: list) -> list:
     """Return the set difference of two lists
     Inputs:
     list1,list2 - the lists
@@ -854,7 +862,7 @@ def setdiff(list1, list2):
     return sorted(list(set(list1) - set(list2)))
 
 
-def sort_i(list1):
+def sort_i(list1: list) -> list:
     """Sort a list of indices, returning a list
     Handles arrays
 
@@ -867,11 +875,11 @@ def sort_i(list1):
     Raises:
     None
     """
-    list1 = np.sort(list1)
-    return list1.tolist()
+    t_list1 = np.sort(list1)
+    return t_list1.tolist()
 
 
-def index_i(list1, list_i):
+def index_i(list1: list, list_i: list[int] | NDArray[np.intp]) -> list:
     """Return a list of elements of list1 selected by indicices in list_i
     E.g., under numpy list1[list_i] but handles lists and returns lists...
 
@@ -888,7 +896,7 @@ def index_i(list1, list_i):
     return np.array(list1)[list_i].tolist()
 
 
-def succinct_elts(elts, matlab_offset=1):
+def succinct_elts(elts: list, matlab_offset: int = 1) -> str:
     """Return a string of elts, succinctly showing runs of consecutive values, if any
     Inputs:
     elts - a set of integers
@@ -900,30 +908,30 @@ def succinct_elts(elts, matlab_offset=1):
     Raises:
     None
     """
-    elts = np.sort(unique(elts))
-    elts = elts + matlab_offset
+    t_elts = np.sort(unique(elts))
+    t_elts = t_elts + matlab_offset
     selts = ""
     prefix = ""
-    num_elts = len(elts)
+    num_elts = len(t_elts)
     if num_elts:
-        diff_elts = np.diff(elts)
+        diff_elts = np.diff(t_elts)
         breaks_i_v = [i for i in range(len(diff_elts)) if diff_elts[i] > 1]
-        breaks_i_v.append(len(elts) - 1)  # add the final point
+        breaks_i_v.append(len(t_elts) - 1)  # add the final point
         last_i = 0
         for break_i in breaks_i_v:
-            nelts = elts[break_i] - elts[last_i]
+            nelts = t_elts[break_i] - t_elts[last_i]
             if nelts == 0:
-                selts = "%s%s%d" % (selts, prefix, elts[break_i])
+                selts = "%s%s%d" % (selts, prefix, t_elts[break_i])
             elif nelts == 1:
-                selts = "%s%s%d %d" % (selts, prefix, elts[last_i], elts[break_i])
+                selts = "%s%s%d %d" % (selts, prefix, t_elts[last_i], t_elts[break_i])
             else:
-                selts = "%s%s%d:%d" % (selts, prefix, elts[last_i], elts[break_i])
+                selts = "%s%s%d:%d" % (selts, prefix, t_elts[last_i], t_elts[break_i])
             last_i = break_i + 1
             prefix = " "
     return selts
 
 
-def get_key(dict_d, key, default=None):
+def get_key(dict_d: dict[KT, VT], key: KT, default: DT | None = None) -> VT | DT | None:
     """Looks for key in dict_d, returns that value otherwise returns default (like getattr but for dicts)"""
     try:
         return dict_d[key]
@@ -931,7 +939,7 @@ def get_key(dict_d, key, default=None):
         return default
 
 
-def Oxford_comma(strings, connector="and"):
+def Oxford_comma(strings: list[str], connector: str = "and") -> str:
     """Returns a string of string elements, in given order, serial comma-separated according to the Oxford rule."""
     n = len(strings)
     if n == 0:
@@ -950,7 +958,7 @@ def Oxford_comma(strings, connector="and"):
         return string
 
 
-def ensure_basename(basename):
+def ensure_basename(basename: str) -> str:
     """Returns basename with problematic filename characters replaced
 
     Inputs:
@@ -1063,7 +1071,7 @@ def check_versions(base_opts: BaseOpts.BaseOptions) -> None:
     #     raise RuntimeError(msg)
 
 
-def normalize_version(v):
+def normalize_version(v: str | float | int) -> list[int]:
     """Normalizes version stamps"""
     if not isinstance(v, str):
         v = str(
@@ -1072,7 +1080,7 @@ def normalize_version(v):
     return [int(x) for x in re.sub(r"(\.0+)*$", "", v).split(".")]
 
 
-def is_integer(s):
+def is_integer(s: str) -> bool:
     """Test a string to see if converts to an integer"""
     try:
         int(s)
@@ -1081,7 +1089,7 @@ def is_integer(s):
         return False
 
 
-def is_float(s):
+def is_float(s: str) -> bool:
     """Test a string to see if converts to an float"""
     try:
         float(s)
@@ -1090,7 +1098,9 @@ def is_float(s):
         return False
 
 
-def remap_column_names(replace_dict, column_names=None):
+def remap_column_names(
+    replace_dict: dict[str, str], column_names: list[str] | None = None
+) -> int:
     """
     Called from various sensor extensions to remap column headers from older .eng files to
     current naming standards for netCDF output.  Updates column_names by side-effect and
@@ -1114,7 +1124,9 @@ def remap_column_names(replace_dict, column_names=None):
     return ret_val
 
 
-def remap_dict_from_sg_calib(calib_consts, remap_str):
+def remap_dict_from_sg_calib(
+    calib_consts: dict[str, str | int | float], remap_str: str
+) -> dict[str, str | int | float] | None:
     """
     Retries a remap dictionary from the sg_calib_constants.m variable remap_eng_cols.
     This variable is of the form remap_eng_cols='oldname:newname,oldname,newname';
@@ -1135,7 +1147,9 @@ def remap_dict_from_sg_calib(calib_consts, remap_str):
     return None
 
 
-def nearest_indices(first_values_v, second_values_v):
+def nearest_indices(
+    first_values_v: NDArray, second_values_v: NDArray
+) -> tuple[list, list]:
     """For each entry in first_values_v, find the index of the nearest second_values_v
     Assumes both values_v arrays increase monotonically
     NOTE: It is possible for indices to be duplicated; return indices where that occurred
@@ -1162,7 +1176,12 @@ def nearest_indices(first_values_v, second_values_v):
     return indices_v, duplicates_v
 
 
-def interp1d(first_epoch_time_s_v, data_v, second_epoch_time_s_v, kind="linear"):
+def interp1d(
+    first_epoch_time_s_v: NDArray,
+    data_v: NDArray,
+    second_epoch_time_s_v: NDArray,
+    kind: str = "linear",
+) -> NDArray:
     """For each data point data_v at first_epoch_time_s_v, determine the value at second_epoch_time_s_v
     Interpolate according to type
     Assumes both epoch_time_s_v arrays increase monotonically
@@ -1190,8 +1209,13 @@ def interp1d(first_epoch_time_s_v, data_v, second_epoch_time_s_v, kind="linear")
 
 
 def invert_sparton_correction(
-    corrected_angle_degrees_v, prc_degrees_v, coef0, coef1, coef2, coef3
-):
+    corrected_angle_degrees_v: NDArray,
+    prc_degrees_v: NDArray,
+    coef0: float,
+    coef1: float,
+    coef2: float,
+    coef3: float,
+) -> NDArray:
     """Given corrected angles (pitch or roll) and the alternative (roll or pitch)
     corrected angles, plus the correction coefficients (for pitch or roll)
     compute the originally measured angles from the compass
@@ -1213,7 +1237,9 @@ def invert_sparton_correction(
 
 
 # TODO rename this function oxygen_solubility_air?  and the doc on the nc variable
-def compute_oxygen_saturation(temp_cor_v, salin_cor_v):
+def compute_oxygen_saturation(
+    temp_cor_v: NDArray, salin_cor_v: NDArray | float
+) -> tuple[NDArray, NDArray, NDArray]:
     """Compute (max) oxygen saturation (solubility) (uM/L)
     at standard air and pressure (1013hPa) for fresh and seawater at given temperature and salinity
 
@@ -1271,14 +1297,16 @@ def compute_oxygen_saturation(temp_cor_v, salin_cor_v):
     o2_molar_mass = 44.6596
     #  uM/L of oxygen at standard pressure and temperature
     # relative_sat_v = measured_molar_oxygen_concentration_v/oxygen_sat_v * 100 # relative O2 saturation (percent)
-    return [
+    return (
         oxygen_sat_seawater_v * o2_molar_mass,  # uM/L
         oxygen_sat_fresh_water_v * o2_molar_mass,  # uM/L
         oxygen_sat_salinity_adjustment_v,
-    ]  # scale factor
+    )  # scale factor
 
 
-def nan_helper(y):
+def nan_helper(
+    y: NDArray,
+) -> tuple[NDArray[np.bool_], Callable[[NDArray[np.bool_]], NDArray[np.intp]]]:
     """Helper to handle indices and logical indices of NaNs.
 
     Input:
@@ -1339,7 +1367,7 @@ def basestation_cmp_function(a: pathlib.Path, b: pathlib.Path) -> Literal[-1, 0,
 
 
 def find_recent_basestation_file(
-    mission_dir: pathlib.Path, root_name: str, root_first=False
+    mission_dir: pathlib.Path, root_name: str, root_first: bool = False
 ) -> pathlib.Path | None:
     """
     Finds the most recent input file, using the basestations back file naming convention
@@ -1353,7 +1381,7 @@ def find_recent_basestation_file(
         Fully qualified file name, or None
     """
 
-    def find_root(mission_dir: pathlib.Path, root_name: str) -> pathlib.Path:
+    def find_root(mission_dir: pathlib.Path, root_name: str) -> pathlib.Path | None:
         file_name = mission_dir / root_name
         if file_name.exists():
             return file_name
@@ -1384,27 +1412,7 @@ def find_recent_basestation_file(
         return None
 
 
-qc_log_type = collections.namedtuple("qc_log_type", ["qc_str", "qc_type", "qc_points"])
-
-
-def load_qc_pickl(qc_file):
-    """Loads QC pickle file"""
-    try:
-        fi = open(qc_file, "rb")  # noqa: SIM115
-    except Exception:
-        return None
-
-    ret_list = []
-    while True:
-        try:
-            x = pickle.load(fi)
-        except EOFError:
-            break
-        ret_list.append(qc_log_type(*x))
-    return ret_list
-
-
-def fix_gps_rollover(struct_time):
+def fix_gps_rollover(struct_time: time.struct_time) -> time.struct_time:
     """Fixes time stamps set from GPS units with the epoch rollover bug"""
     if struct_time.tm_year >= 1999 and struct_time.tm_year <= 2001:
         log_warning(
@@ -1416,7 +1424,13 @@ def fix_gps_rollover(struct_time):
     return struct_time
 
 
-def density(salinity, temperature, pressure, longitude, latitude):
+def density(
+    salinity: NDArray,
+    temperature: NDArray,
+    pressure: NDArray,
+    longitude: NDArray,
+    latitude: NDArray,
+) -> NDArray:
     """Computes density using the gsw toolbox"""
     salinity_absolute = gsw.SA_from_SP(salinity, pressure, longitude, latitude)
     dens = gsw.rho_t_exact(
@@ -1427,28 +1441,49 @@ def density(salinity, temperature, pressure, longitude, latitude):
     return dens
 
 
-def pdensity(salinity, temperature, pressure, longitude, latitude):
+def pdensity(
+    salinity: NDArray,
+    temperature: NDArray,
+    pressure: NDArray,
+    longitude: NDArray,
+    latitude: NDArray,
+) -> NDArray:
     salinity_absolute = gsw.SA_from_SP(salinity, pressure, longitude, latitude)
     cons_temp = gsw.CT_from_t(salinity_absolute, temperature, pressure)
     dens = 1000 + gsw.density.sigma0(salinity_absolute, cons_temp)
     return dens
 
 
-def ptemp(salinity, temperature, pressure, longitude, latitude, pref=0.0):
+def ptemp(
+    salinity: NDArray,
+    temperature: NDArray,
+    pressure: NDArray,
+    longitude: NDArray,
+    latitude: NDArray,
+    pref: float = 0.0,
+) -> NDArray:
     """Computes potential temperature using the gsw toolbox"""
     salinity_absolute = gsw.SA_from_SP(salinity, pressure, longitude, latitude)
     l_ptemp = gsw.pt_from_t(salinity_absolute, temperature, pressure, pref)
     return l_ptemp
 
 
-def svel(salinity, temperature, pressure, longitude, latitude):
+def svel(
+    salinity: NDArray,
+    temperature: NDArray,
+    pressure: NDArray,
+    longitude: NDArray,
+    latitude: NDArray,
+) -> NDArray:
     """Computes sound velocity using the gsw toolbox"""
     salinity_absolute = gsw.SA_from_SP(salinity, pressure, longitude, latitude)
     l_svel = gsw.sound_speed(salinity_absolute, temperature, pressure)
     return l_svel
 
 
-def fp(salinity, pressure, longitude, latitude):
+def fp(
+    salinity: NDArray, pressure: NDArray, longitude: NDArray, latitude: NDArray
+) -> NDArray:
     """Calulates seawater freezing point using the gsw toolbox"""
     salinity_absolute = gsw.SA_from_SP(salinity, pressure, longitude, latitude)
     freeze_pt = gsw.t_freezing(
@@ -1457,7 +1492,7 @@ def fp(salinity, pressure, longitude, latitude):
     return freeze_pt
 
 
-def parse_time(ts, f_gps_rollover=False):
+def parse_time(ts: str, f_gps_rollover: bool = False) -> float:
     """Parse a standard time stamp from file header, returning time in epoch seconds"""
     time_parts = ts.split()
     if int(time_parts[2]) - 100 < 0:
@@ -1490,7 +1525,7 @@ def parse_time(ts, f_gps_rollover=False):
     return time.mktime(time_struct) + (float(dec_sec_part) / 1000.0)
 
 
-def format_time(t):
+def format_time(t: float) -> str:
     """Formats time for output files"""
     milli, sec = math.modf(t)
     st = time.localtime(sec)
@@ -1514,7 +1549,7 @@ DTR = 0.0174532925  # degrees to radians 3.14159265/180.
 METERS_PER_DEG = 111120.0  # 60*METERS_PER_N
 
 
-def bearing(lat0, lon0, lat1, lon1):
+def bearing(lat0: float, lon0: float, lat1: float, lon1: float) -> tuple[float, float]:
     """Returns the bearing and range from current_pos
     target_pos
 
@@ -1543,7 +1578,9 @@ def bearing(lat0, lon0, lat1, lon1):
     return (rng, bear)
 
 
-def synthesize_lat_lon(lat, lon, bear, rng):
+def synthesize_lat_lon(
+    lat: float, lon: float, bear: float, rng: float
+) -> tuple[float, float]:
     """Generate a new lat/lon
 
     Input:
@@ -1582,7 +1619,9 @@ def synthesize_lat_lon(lat, lon, bear, rng):
     return (newlat, newlon)
 
 
-def average_position(gps_a_lat, gps_a_lon, gps_b_lat, gps_b_lon):
+def average_position(
+    gps_a_lat: float, gps_a_lon: float, gps_b_lat: float, gps_b_lon: float
+) -> tuple[float, float]:
     """Given two gps positions in D.D format,
     calculate the mean position between them, based on the great cicle route
     """
@@ -1606,7 +1645,7 @@ def average_position(gps_a_lat, gps_a_lon, gps_b_lat, gps_b_lon):
     return (math.degrees(gps_mean_lat), math.degrees(gps_mean_lon))
 
 
-def loadmodule(pathname):
+def loadmodule(pathname: str) -> types.ModuleType | None:
     """Loads a module and returns a module handle
 
     pathname - fully qualified path to the module to be loaded
@@ -1640,11 +1679,11 @@ def loadmodule(pathname):
             log_error(f"Error loading {pathname}")
             return None
         mod = importlib.util.module_from_spec(spec)
-        if mod is None:
-            log_error(f"Error loading {pathname}")
-            return None
+        # if mod is None:
+        #    log_error(f"Error loading {pathname}")
+        #    return None
         sys.modules[name] = mod
-        spec.loader.exec_module(mod)  # ty: ignore[possibly-missing-attribute]
+        spec.loader.exec_module(mod)
         return mod
     except Exception:
         log_error(f"Error loading {pathname}", "exc")
@@ -1652,7 +1691,7 @@ def loadmodule(pathname):
     return None
 
 
-def mission_database_filename(base_opts: BaseOpts.BaseOptions):
+def mission_database_filename(base_opts: BaseOpts.BaseOptions) -> pathlib.Path | None:
     """Opens a mission database file"""
     if not base_opts.mission_dir:
         log_error("mission_dir is not set")
@@ -1665,7 +1704,7 @@ def mission_database_filename(base_opts: BaseOpts.BaseOptions):
 
 
 def open_mission_database(
-    base_opts: BaseOpts.BaseOptions, ro=False
+    base_opts: BaseOpts.BaseOptions, ro: bool = False
 ) -> sqlite3.Connection | None:
     import BaseDB
 
@@ -1697,7 +1736,7 @@ def open_mission_database(
             return None
 
     if ro:
-        conn = sqlite3.connect("file:" + db + "?mode=ro", uri=True)
+        conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
         # logDB(f"utils open (ro)")
     else:
         conn = sqlite3.connect(db)
@@ -1709,7 +1748,9 @@ def open_mission_database(
     return conn
 
 
-def dive_var_trend(base_opts, dive_col, y_col):
+def dive_var_trend(
+    base_opts: BaseOpts.BaseOptions, dive_col: NDArray, y_col: NDArray
+) -> tuple[float, float]:
     """Get the trend (dive over dive slope) of a dive variable"""
 
     p_dives_back = (
@@ -1726,7 +1767,13 @@ def dive_var_trend(base_opts, dive_col, y_col):
     return (m, b)
 
 
-def estimate_endurance(base_opts, dive_col, gauge_col, dive_times, dive_end):
+def estimate_endurance(
+    base_opts: BaseOpts.BaseOptions,
+    dive_col: NDArray,
+    gauge_col: NDArray,
+    dive_times: NDArray,
+    dive_end: NDArray,
+) -> tuple[float, float, str]:
     """Estimate endurace from normalized remaining battery capacity"""
     # print(dive_col)
 
@@ -1758,7 +1805,7 @@ def estimate_endurance(base_opts, dive_col, gauge_col, dive_times, dive_end):
     return (dives_remaining, days_remaining, end_date)
 
 
-def notifyVis(glider: int, topic: str, body: str):
+def notifyVis(glider: int, topic: str, body: str) -> None:
     """
     Check for vis.py processes to notify - each main process
     creates a socket in /tmp so we just glob through there and
@@ -1779,7 +1826,7 @@ def notifyVis(glider: int, topic: str, body: str):
         socket.close()
 
 
-async def notifyVisAsync(glider: int, topic: str, body: str):
+async def notifyVisAsync(glider: int, topic: str, body: str) -> None:
     p = anyio.Path("/tmp")
     topic = f"{glider:03d}-{topic}"
     ctx = zmq.asyncio.Context()
@@ -1794,7 +1841,7 @@ async def notifyVisAsync(glider: int, topic: str, body: str):
         socket.close()
 
 
-def cleanupZombieVisSockets():
+def cleanupZombieVisSockets() -> None:
     p = pathlib.Path("/tmp")
     running_pids = []
     for f in p.glob("sanic-*-*.ipc"):
@@ -1811,14 +1858,16 @@ def cleanupZombieVisSockets():
                 running_pids.append(pid)
 
 
-def logDB(msg):
+def logDB(msg: str) -> None:
     pass
     # f = open("/home/seaglider/home/db.log", "a")
     # f.write(f"{time.time()} {msg}\n")
     # f.close()
 
 
-async def readResponseStackFile(name, keys):
+async def readResponseStackFile(
+    name: str, keys: list[str]
+) -> list[dict[str, str | list[str]]] | None:
     if not await aiofiles.os.path.exists(name):
         return None
 
@@ -1847,7 +1896,7 @@ async def readResponseStackFile(name, keys):
         return a
 
 
-async def readTargetsFile(name):
+async def readTargetsFile(name: str) -> list[dict[str, str | list[str]]] | None:
     return await readResponseStackFile(
         name,
         [
@@ -1873,7 +1922,7 @@ async def readTargetsFile(name):
     )
 
 
-async def readScienceFile(name):
+async def readScienceFile(name: str) -> list[dict[str, str | list[str]]] | None:
     d = await readResponseStackFile(
         name,
         [
@@ -1964,7 +2013,7 @@ def whole_mission_cfg(
                         f"Problems processing {k} in section {section} of {cfg_file}"
                     )
 
-    return tuple(v for k, v in ret_dicts.items())
+    return tuple(v for _, v in ret_dicts.items())
 
 
 def dump_mission_cfg(stream: io.TextIO, meta_data_d: dict[str, Any]) -> None:
@@ -2035,22 +2084,30 @@ def strip_vars(
 class RedirStdout:
     """Context manager for redirecting stdout"""
 
-    def __enter__(self):
+    def __enter__(self) -> io.StringIO:
         self._redirected_output = io.StringIO()
         self._prev_stdout = sys.stdout
         sys.stdout = self._redirected_output
         return self._redirected_output
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
+    ) -> None:
         sys.stdout = self._prev_stdout
         self._redirected_output.seek(0)
 
 
-def fix_TC_times(log_f, eng_f):
+def fix_TC_times(log_f: LogFile.LogFile, eng_f: DataFiles.DataFile) -> None:
     try:
         tc_start_time_est = log_f.tc_data["start_time_est"]
         tc_secs = log_f.tc_data["sec"]
-        eng_file_start_time = time.mktime(eng_f.start_ts)
+        if eng_f.start_ts is None:
+            eng_file_start_time = 0
+        else:
+            eng_file_start_time = time.mktime(eng_f.start_ts)
         elapsed_time_s_v = eng_f.get_col("elaps_t")
         # First attempt - nearest time
         sg_epoch_time_s_v = eng_file_start_time + elapsed_time_s_v
@@ -2087,7 +2144,9 @@ class CopyInterp:
     Note: assumes x is monotonically increasing
     """
 
-    def __init__(self, x, y, fill_value=None):
+    def __init__(
+        self, x: NDArray, y: NDArray, fill_value: tuple[float, float] | None = None
+    ) -> None:
         self._y = y
         self._x = x
         if fill_value is None:
@@ -2099,7 +2158,7 @@ class CopyInterp:
         else:
             raise ValueError("fill_value must be None or valid Collection of len 2")
 
-    def __call__(self, new_x):
+    def __call__(self, new_x: NDArray) -> NDArray:
         new_y = []
         for val in new_x:
             if val < self._x[0]:
@@ -2151,23 +2210,25 @@ def setup_parquet_directory(base_opts: BaseOpts.BaseOptions) -> int:
     return 0
 
 
-def generate_parquet_schema(pq_dir, pq_root, promote_options="permissive"):
-    if not pq_dir.exists():
-        log_error(f"{pq_dir} does not exist - cannot generate dataframe")
-        return None
-    schemas = []
-    try:
-        for ff in list(pq_dir.glob(f"*{pq_root}.parquet")):
-            schema = pq.read_schema(ff)
-            schemas.append(schema)
-        merged_schema = pa.unify_schemas(schemas, promote_options=promote_options)
-    except Exception:
-        log_error(
-            f"Problem generation schema from parquet files in dir:{pq_dir} root{pq_root}",
-            "exc",
-        )
-        return None
-    return merged_schema
+# def generate_parquet_schema(
+#     pq_dir: pathlib.Path, pq_root, promote_options="permissive"
+# ):
+#     if not pq_dir.exists():
+#         log_error(f"{pq_dir} does not exist - cannot generate dataframe")
+#         return None
+#     schemas = []
+#     try:
+#         for ff in list(pq_dir.glob(f"*{pq_root}.parquet")):
+#             schema = pq.read_schema(ff)
+#             schemas.append(schema)
+#         merged_schema = pa.unify_schemas(schemas, promote_options=promote_options)
+#     except Exception:
+#         log_error(
+#             f"Problem generation schema from parquet files in dir:{pq_dir} root{pq_root}",
+#             "exc",
+#         )
+#         return None
+#     return merged_schema
 
 
 class PandasCollection:
@@ -2175,7 +2236,7 @@ class PandasCollection:
     A class to manage a list of Pandas DataFrames.
     """
 
-    def __init__(self, dataframes: dict[str, pa.DataFrame]):
+    def __init__(self, dataframes: dict[str, pa.DataFrame]) -> None:
         """
         Initializes the PandasCollection with a dict of Pandas DataFrames with dimensions as keys.
 
@@ -2184,7 +2245,7 @@ class PandasCollection:
         """
         if not all(isinstance(df, pd.DataFrame) for _, df in dataframes.items()):
             raise TypeError("All elements in 'dataframes' must be Pandas DataFrames.")
-        self.dataframes = dataframes
+        self.dataframes: dict[str, pd.DataFrame] = dataframes
 
     def __contains__(self, item: str) -> bool:
         """
@@ -2192,11 +2253,11 @@ class PandasCollection:
         """
         return any(item in pl_df.columns for _, pl_df in self.dataframes.items())
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         # Define the condition for truthiness
         return bool(self.dataframes)
 
-    def find_first_col(self, col):
+    def find_first_col(self, col: str) -> pd.DataFrame | None:
         """
         Find the first dataframe the contains the column
         """
@@ -2206,7 +2267,7 @@ class PandasCollection:
         else:
             return None
 
-    def find_all_cols(self, col):
+    def find_all_cols(self, col: str) -> dict[str, pd.DataFrame]:
         """
         Find all the dataframes the contains the column, returing a dict of dimname/columns
         """
@@ -2216,7 +2277,7 @@ class PandasCollection:
                 results[dimname] = df
         return results
 
-    def find_dimension(self, dimension):
+    def find_dimension(self, dimension: str) -> pa.DataFrame | None:
         """
         Find the dataframe for the dimension name
 
@@ -2226,11 +2287,11 @@ class PandasCollection:
         else:
             return None
 
-    def get_all_dfs(self):
+    def get_all_dfs(self) -> dict[str, pd.DataFrame]:
         return dict(self.dataframes)
 
 
-def find_common_dimensions(pq_dir):
+def find_common_dimensions(pq_dir: pathlib.Path) -> dict[str, list[pathlib.Path]]:
     files_by_dimension = collections.defaultdict(list)
 
     for ff in pq_dir.iterdir():
@@ -2238,10 +2299,13 @@ def find_common_dimensions(pq_dir):
         with contextlib.suppress(IndexError):
             dimension = ff.name.split("_", 1)[1].split(".")[0]
         files_by_dimension[dimension].append(ff)
+
     return {k: sorted(v) for k, v in files_by_dimension.items()}
 
 
-def read_parquet_pd(pq_dir, expected_schema=None):
+def read_parquet_pd(
+    pq_dir: pathlib.Path, expected_schema: pa.lib.Schema | None = None
+) -> PandasCollection | None:
     pd_dfs = {}
     if not pq_dir.exists():
         print(f"{pq_dir} does not exist - cannot generate dataframe")
@@ -2252,7 +2316,7 @@ def read_parquet_pd(pq_dir, expected_schema=None):
             # The merging of the schemas is to make sure any columns in any file are
             # included in the resulting data frame
             promote_options = "permissive"
-            schemas = []
+            schemas: list[pa.lib.Schema] = []
             if expected_schema is not None:
                 schemas.append(expected_schema)
             try:
@@ -2284,10 +2348,10 @@ def expand_dive_spec(
     dive_list: list[pathlib.Path] = []
     expanded_dive_nums: list[int] = []
 
-    if not hasattr(base_opts, "dive_specs") or not len(base_opts.dive_specs):
+    if not hasattr(base_opts, "dive_specs") or not len(base_opts.dive_specs):  # ty: ignore
         return (dive_list, expanded_dive_nums)
 
-    for dive_num in base_opts.dive_specs:
+    for dive_num in base_opts.dive_specs:  # ty: ignore
         try:
             strs = dive_num.split(":", 1)
             if len(strs) == 2:
