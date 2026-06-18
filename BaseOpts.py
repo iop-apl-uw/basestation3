@@ -53,6 +53,7 @@ import sys
 import time
 import traceback
 import uuid
+from typing import TYPE_CHECKING, Any
 
 import Plotting
 from BaseOptsType import DeprecateAction, deprecated_options, options_t
@@ -1791,6 +1792,12 @@ class BaseOptions:
        Defaults are trumped by options listed in configuration file;
        config file options are trumped by command-line arguments.
     """
+
+    if TYPE_CHECKING:
+        # Avoids  errors surrounding dynamically added attributes
+        def __getattr__(self, name: str) -> Any: ...
+
+        def __setattr__(self, name: str, value: Any) -> None: ...
 
     def __init__(
         self,

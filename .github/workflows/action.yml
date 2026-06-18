@@ -31,7 +31,7 @@ jobs:
       run: |
         uv run ruff check --output-format=github
 
-    - name: Check with uv
+    - name: Check with ty
       run: |
         uv run ty check --output-format=github
         

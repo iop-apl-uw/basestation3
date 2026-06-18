@@ -563,12 +563,12 @@ def read_from_process(p: subprocess.Popen[bytes]) -> io.BytesIO:
 
         ready = select.select([p.stdout, p.stderr], [], [], 0.1)
 
-        if p.stderr in ready[0]:
+        if p.stderr and p.stderr in ready[0]:
             data = p.stderr.read(1024)
             if len(data) > 0:
                 outf.write(data)
 
-        if p.stdout in ready[0]:
+        if p.stdout and p.stdout in ready[0]:
             data = p.stdout.read(1024)
             # Read of zero bytes means EOF
             if len(data) == 0:
@@ -1131,20 +1131,24 @@ def remap_dict_from_sg_calib(
     Retries a remap dictionary from the sg_calib_constants.m variable remap_eng_cols.
     This variable is of the form remap_eng_cols='oldname:newname,oldname,newname';
     """
-    if remap_str in calib_consts:
-        remap_dict = {}
-        try:
-            splits = calib_consts[remap_str].split(",")
-            for s in splits:
-                k, v = s.split(":")
-                remap_dict[k.strip()] = v.strip()
-            return remap_dict
-        except Exception:
-            log_error(
-                "Could not process remap_eng_cols from sg_calib_contants.m (%s)", "exc"
-            )
-            return None
-    return None
+    if remap_str not in calib_consts:
+        return None
+    remap_val = calib_consts[remap_str]
+    if not isinstance(remap_val, str):
+        log_error(f"{remap_str}={remap_val} must be a string value")
+        return None
+    remap_dict = {}
+    try:
+        splits = remap_val.split(",")
+        for s in splits:
+            k, v = s.split(":")
+            remap_dict[k.strip()] = v.strip()
+        return remap_dict
+    except Exception:
+        log_error(
+            "Could not process remap_eng_cols from sg_calib_contants.m (%s)", "exc"
+        )
+        return None
 
 
 def nearest_indices(
@@ -1683,6 +1687,9 @@ def loadmodule(pathname: str) -> types.ModuleType | None:
         #    log_error(f"Error loading {pathname}")
         #    return None
         sys.modules[name] = mod
+        if spec.loader is None:
+            log_error(f"Error loading {pathname}")
+            return None
         spec.loader.exec_module(mod)
         return mod
     except Exception:
@@ -1944,7 +1951,7 @@ async def readScienceFile(name: str) -> list[dict[str, str | list[str]]] | None:
         for k in ["sensors", "profiles", "dives"]:
             if k in b:
                 if "," in b[k]:
-                    b[k] = b[k].split(",")
+                    b[k] = b[k].split(",")  # ty: ignore
                 else:
                     b[k] = list(b[k])
 
@@ -2016,7 +2023,7 @@ def whole_mission_cfg(
     return tuple(v for _, v in ret_dicts.items())
 
 
-def dump_mission_cfg(stream: io.TextIO, meta_data_d: dict[str, Any]) -> None:
+def dump_mission_cfg(stream: typing.TextIO, meta_data_d: dict[str, Any]) -> None:
     """Dumps a sample config file the output stream (typically stdout)
 
     Args:
@@ -2185,7 +2192,7 @@ def setup_parquet_directory(base_opts: BaseOpts.BaseOptions) -> int:
         1 for failure
 
     """
-    if not base_opts.parquet_directory:
+    if not hasattr(base_opts, "parquet_directory") or not base_opts.parquet_directory:
         base_opts.parquet_directory = base_opts.mission_dir / "parquet"
 
     if not base_opts.parquet_directory.exists():
@@ -2236,7 +2243,7 @@ class PandasCollection:
     A class to manage a list of Pandas DataFrames.
     """
 
-    def __init__(self, dataframes: dict[str, pa.DataFrame]) -> None:
+    def __init__(self, dataframes: dict[str, pd.DataFrame]) -> None:
         """
         Initializes the PandasCollection with a dict of Pandas DataFrames with dimensions as keys.
 
@@ -2277,7 +2284,7 @@ class PandasCollection:
                 results[dimname] = df
         return results
 
-    def find_dimension(self, dimension: str) -> pa.DataFrame | None:
+    def find_dimension(self, dimension: str) -> pd.DataFrame | None:
         """
         Find the dataframe for the dimension name
 
@@ -2348,10 +2355,10 @@ def expand_dive_spec(
     dive_list: list[pathlib.Path] = []
     expanded_dive_nums: list[int] = []
 
-    if not hasattr(base_opts, "dive_specs") or not len(base_opts.dive_specs):  # ty: ignore
+    if not hasattr(base_opts, "dive_specs") or not len(base_opts.dive_specs):
         return (dive_list, expanded_dive_nums)
 
-    for dive_num in base_opts.dive_specs:  # ty: ignore
+    for dive_num in base_opts.dive_specs:
         try:
             strs = dive_num.split(":", 1)
             if len(strs) == 2:
