@@ -62,7 +62,7 @@ import types
 import typing
 import warnings
 from collections.abc import Callable
-from typing import Literal
+from typing import Any, Literal
 
 import aiofiles
 import aiofiles.os
@@ -87,7 +87,6 @@ import LogFile
 # Avoid circular input for type checking
 if typing.TYPE_CHECKING:
     import BaseOpts
-from typing import Any
 
 from BaseLog import log_critical, log_debug, log_error, log_info, log_warning
 from BaseType import DT, KT, VT
