@@ -39,12 +39,20 @@ from __future__ import annotations
 import collections
 import contextlib
 import os
+import pathlib
 import re
+from typing import TYPE_CHECKING
+
+import netCDF4
 
 import BaseNetCDF
 import CalibConst
 import Utils
 from BaseLog import log_debug, log_error, log_warning
+
+if TYPE_CHECKING:
+    import BaseOpts
+
 
 col_ncmeta_map_type = collections.namedtuple(
     "col_ncmeta_map_type", ["nc_var_name", "nc_meta_str"]
@@ -52,13 +60,13 @@ col_ncmeta_map_type = collections.namedtuple(
 
 
 def read_cnf_file(
-    conf_file_name,
-    encode_list=True,
-    ensure_list=None,
-    lower=True,
-    mission_dir=None,
-    results_d=None,
-):
+    conf_file_name: str,
+    encode_list: bool = True,
+    ensure_list: list[str] | None = None,
+    lower: bool = True,
+    mission_dir: pathlib.Path | None = None,
+    results_d: dict | None = None,
+) -> tuple[dict, dict] | tuple[None, None]:
     """Open and read a glider cnf file, returning parameter=value results as a dict.
     (NOTE: These files have a different format from cnf files parsed by ConfigParser)
     Returns None if no file.
@@ -99,7 +107,7 @@ def read_cnf_file(
     if cnf_file_contents is not None:
         if results_d is not None:
             try:
-                BaseNetCDF.nc_var_metadata[nc_conf_file_name]
+                BaseNetCDF.nc_var_metadata[nc_conf_file_name]  # ty: ignore
             except KeyError:
                 BaseNetCDF.form_nc_metadata(nc_conf_file_name, False, "c")
             results_d[nc_conf_file_name] = (
@@ -185,7 +193,7 @@ def read_cnf_file(
     return (cnf_dict, nc_meta_dict)
 
 
-def extract_calib_consts(dive_nc_file):
+def extract_calib_consts(dive_nc_file: netCDF4.Dataset) -> dict[str, str | int | float]:
     """Extracts the calibration constants from the netCDF file
 
     Input:
@@ -213,18 +221,22 @@ def extract_calib_consts(dive_nc_file):
     return calib_consts
 
 
-def get_mission_timeseries_name(base_opts, direc=None, basename="timeseries"):
+def get_mission_timeseries_name(
+    base_opts: BaseOpts.BaseOptions,
+    direc: str | None = None,
+    basename: str = "timeseries",
+) -> pathlib.Path:
     ignore_fm = True
     if base_opts:
         mydir = base_opts.mission_dir
         if hasattr(base_opts, "ignore_flight_model"):
             ignore_fm = base_opts.ignore_flight_model
     elif direc:
-        mydir = direc
+        mydir = pathlib.Path(direc)
     else:
-        mydir = "./"
+        mydir = pathlib.Path("./")
 
-    sg_calib_file_name = os.path.join(mydir, "sg_calib_constants.m")
+    sg_calib_file_name = mydir / "sg_calib_constants.m"
 
     # Read sg_calib_constants file
     calib_consts = CalibConst.getSGCalibrationConstants(
@@ -243,10 +255,7 @@ def get_mission_timeseries_name(base_opts, direc=None, basename="timeseries"):
     # platform_id = "SG%03d" % instrument_id
 
     mission_title = Utils.ensure_basename(calib_consts["mission_title"])
-    return os.path.join(
-        mydir,
-        "sg%03d_%s_%s.nc" % (instrument_id, mission_title, basename),
-    )
+    return mydir / f"sg{instrument_id:03d}_{mission_title}_{basename}.nc"
 
 
 def add_scicon_stats(instrument: str) -> dict:
