@@ -37,6 +37,7 @@ import sys
 import time
 import uuid
 from functools import reduce
+from typing import TYPE_CHECKING, Literal
 
 import netCDF4
 import numpy as np
@@ -47,6 +48,9 @@ import NetCDFUtils
 import QC
 import Utils
 from BaseLog import log_critical, log_debug, log_error, log_info, log_warning
+
+if TYPE_CHECKING:
+    nc_var_metadata: dict[str, bool, Literal["i", "d", True, False], dict, tuple]
 
 nc_inf = np.array([np.inf], dtype=np.float64)[0]  # CF1.4 ensure double
 nc_nan = np.array([np.nan], dtype=np.float64)[0]  # CF1.4 ensure double

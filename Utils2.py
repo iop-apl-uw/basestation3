@@ -107,7 +107,7 @@ def read_cnf_file(
     if cnf_file_contents is not None:
         if results_d is not None:
             try:
-                BaseNetCDF.nc_var_metadata[nc_conf_file_name]  # ty: ignore
+                BaseNetCDF.nc_var_metadata[nc_conf_file_name]
             except KeyError:
                 BaseNetCDF.form_nc_metadata(nc_conf_file_name, False, "c")
             results_d[nc_conf_file_name] = (
@@ -254,7 +254,10 @@ def get_mission_timeseries_name(
 
     # platform_id = "SG%03d" % instrument_id
 
-    mission_title = Utils.ensure_basename(calib_consts["mission_title"])
+    if isinstance(calib_consts["mission_title"], str):
+        mission_title = Utils.ensure_basename(calib_consts["mission_title"])
+    else:
+        mission_title = "UNKNOWN"
     return mydir / f"sg{instrument_id:03d}_{mission_title}_{basename}.nc"
 
 

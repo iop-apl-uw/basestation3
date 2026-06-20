@@ -64,31 +64,35 @@ def DEBUG_PDB_F() -> None:
 
 
 def getSGCalibrationConstants(
-    calib_filename, suppress_required_error=False, ignore_fm_tags=True
-):
-    """Parses a matlab .m file for name = value pairs
-    Returns a dictionary of the constant names and values
+    calib_filename: pathlib.Path,
+    suppress_required_error: bool = False,
+    ignore_fm_tags: bool = True,
+) -> dict[str, str | float | int]:
+    """Parses a MATLAB .m file for name = value pairs.
+
+    Evaluates and processes numeric expressions, strips whitespace and quotes
+    from strings, filters out overrides and bracketed matrices, and converts
+    periods in keys to underscores. It also performs range validation and
+    ensures required keys are present.
+
+    Args:
+        calib_filename: A pathlib.Path object pointing to the MATLAB calibration
+          file.
+        suppress_required_error: Optional; if True, missing required calibration
+          values (`id_str`, `mission_title`, `mass`) will not trigger an error
+          log. Defaults to False.
+        ignore_fm_tags: Optional; if True, skips parsing specific fault
+          management tags based on the comment metadata and logs warnings for
+          unmarked targets. Defaults to True.
+
+    Returns:
+        A dictionary mapping the cleaned constant names as strings to their
+        parsed values, which can be strings, floats, or integers. Required keys
+        not found in the file will map to None.
+
+    Raises:
+        FileNotFoundError: If the specified calib_filename does not exist.
     """
-
-    # helpers
-
-    def rangeCheck(key, value):
-        """Checks to see whether value lies in min/max range for given key.
-        Ranges are hardcoded.
-        Returns given key, value pair if within check; key value=None otherwise.
-
-        Called by getSGCalibrationConstants, expects error(msg) to be defined.
-        """
-        if key == "example_key":
-            if value < 0:  # min
-                log_error(str(key) + ":" + str(value) + " is below minimum value")
-                return None
-            elif value > 10:  # max
-                log_error(str(key) + ":" + str(value) + " is above maximum value")
-                return None
-
-        return value
-
     # constants
     required_keys = [
         "id_str",
@@ -108,95 +112,85 @@ def getSGCalibrationConstants(
     # e.g., override.RHO
 
     # open filename
-    try:
-        calib_file = open(calib_filename, "r")
-    except Exception:
-        log_error("Unable to open file: " + calib_filename)
-        return None
+    with open(calib_filename, "r") as calib_file:
+        # parse file : expect .m with  "name = value; %comment \n" lines
+        eval_locals = {}  # local results from evaluating key = value lines
+        line_count = 0
+        for line in calib_file.readlines():
+            line_count += 1
+            # log_debug("parsing: " + line)
 
-    # parse file : expect .m with  "name = value; %comment \n" lines
-    eval_locals = {}  # local results from evaluating key = value lines
-    line_count = 0
-    for line in calib_file.readlines():
-        line_count += 1
-        # log_debug("parsing: " + line)
+            # remove line comments
+            m = comment.search(line)
+            if m:
+                comment_str = m.group(0)
+                line, _ = comment.split(line)
 
-        # remove line comments
-        m = comment.search(line)
-        if m:
-            comment_str = m.group(0)
-            line, _ = comment.split(line)
+            # Handle lines like hd_a = 4.3e-3; hd_b = 2.4e-5; hd_c = 5.7e-6;
+            for expr in line.split(";"):
+                # handle name=value pairs
 
-        # Handle lines like hd_a = 4.3e-3; hd_b = 2.4e-5; hd_c = 5.7e-6;
-        for expr in line.split(";"):
-            # handle name=value pairs
+                if eq.search(expr):
+                    # log_debug("found pair: " + expr)
+                    _, key, value, _ = eq.split(expr)
+                    key = key.strip()  # remove whitespace
+                    if override.search(key):
+                        # this skips any override struct assignments used for IOP
+                        continue
 
-            if eq.search(expr):
-                # log_debug("found pair: " + expr)
-                _, key, value, _ = eq.split(expr)
-                key = key.strip()  # remove whitespace
-                if override.search(key):
-                    # this skips any override struct assignments used for IOP
-                    continue
-
-                if ignore_fm_tags and key in ignore_tags:
-                    if ignore_tag not in comment_str:
-                        log_warning(
-                            f"{key} value ignored. v3 Flight Model does not use this value. Add '% FM_ignore' to sg_calib_constants.m to suppress this warning.",
-                            alert="FM_IGNORE",
-                            max_count=-1,
-                        )
-                    continue
-                key = key.replace(
-                    ".", "_"
-                )  # CF1.4: Avoid invalid variable names from sg_calib_constants
-                value = value.strip()
-                value = value.strip("'\"")  # remove quotes from edges
-                value.strip()
-                if bracket.search(value):
-                    # this skips even unbalanced []'s deliberately
-                    # log_debug("skipping [] expression: " + expr)
-                    continue
-
-                nc_var_name = BaseNetCDF.nc_sg_cal_prefix + key
-                try:
-                    md = BaseNetCDF.nc_var_metadata[nc_var_name]
-                    (
-                        _,
-                        nc_data_type,
-                        _,
-                        _,
-                    ) = md
-                except KeyError:
-                    # Unknown variable but be silent here; complain when writing
-                    nc_data_type = None
-                if nc_data_type == "c":
-                    pass  # Known string is just fine
-                else:
-                    try:
-                        # We take all numerics, declared or not...
-                        # pylint: disable=eval-used
-                        value = float(eval(value, None, eval_locals))
-                    except SyntaxError as e:
-                        # Only issue warnings if we know what the type supposed to be - that is
-                        # some stripe of float
-                        if nc_data_type is not None:
+                    if ignore_fm_tags and key in ignore_tags:
+                        if ignore_tag not in comment_str:
                             log_warning(
-                                f"Count not process {value} ({e}) (file:{calib_filename}, line:{line_count} - Assuming {key} is a string",
-                                alert="CALIB_COMM_SYNTAX",
+                                f"{key} value ignored. v3 Flight Model does not use this value. Add '% FM_ignore' to sg_calib_constants.m to suppress this warning.",
+                                alert="FM_IGNORE",
+                                max_count=-1,
                             )
-                    except Exception:
-                        # Non-numeric value of an unknown variable
-                        log_debug("Assuming %s is a string" % key)
-                    # Sometimes simple variables are defined that are used in later expressions in the M file...handle them
-                    eval_locals[key] = value
+                        continue
+                    key = key.replace(
+                        ".", "_"
+                    )  # CF1.4: Avoid invalid variable names from sg_calib_constants
+                    value = value.strip()
+                    value = value.strip("'\"")  # remove quotes from edges
+                    value.strip()
+                    if bracket.search(value):
+                        # this skips even unbalanced []'s deliberately
+                        # log_debug("skipping [] expression: " + expr)
+                        continue
 
-                value = rangeCheck(
-                    key, value
-                )  # value will be None if fails range check
-                calib_consts[key] = value
+                    nc_var_name = BaseNetCDF.nc_sg_cal_prefix + key
+                    try:
+                        md = BaseNetCDF.nc_var_metadata[nc_var_name]
+                        (
+                            _,
+                            nc_data_type,
+                            _,
+                            _,
+                        ) = md
+                    except KeyError:
+                        # Unknown variable but be silent here; complain when writing
+                        nc_data_type = None
+                    if nc_data_type == "c":
+                        pass  # Known string is just fine
+                    else:
+                        try:
+                            # We take all numerics, declared or not...
+                            # pylint: disable=eval-used
+                            value = float(eval(value, None, eval_locals))
+                        except SyntaxError as e:
+                            # Only issue warnings if we know what the type supposed to be - that is
+                            # some stripe of float
+                            if nc_data_type is not None:
+                                log_warning(
+                                    f"Count not process {value} ({e}) (file:{calib_filename}, line:{line_count} - Assuming {key} is a string",
+                                    alert="CALIB_COMM_SYNTAX",
+                                )
+                        except Exception:
+                            # Non-numeric value of an unknown variable
+                            log_debug("Assuming %s is a string" % key)
+                        # Sometimes simple variables are defined that are used in later expressions in the M file...handle them
+                        eval_locals[key] = value
 
-    calib_file.close()
+                    calib_consts[key] = value
 
     # Log an error if any of the required keys is missing
 
