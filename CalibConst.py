@@ -114,7 +114,9 @@ def getSGCalibrationConstants(
     # open filename
     with open(calib_filename, "r") as calib_file:
         # parse file : expect .m with  "name = value; %comment \n" lines
-        eval_locals = {}  # local results from evaluating key = value lines
+        eval_locals: dict[
+            str, str | float | int
+        ] = {}  # local results from evaluating key = value lines
         line_count = 0
         for line in calib_file.readlines():
             line_count += 1
@@ -174,8 +176,9 @@ def getSGCalibrationConstants(
                     else:
                         try:
                             # We take all numerics, declared or not...
-                            # pylint: disable=eval-used
-                            value = float(eval(value, None, eval_locals))
+                            value = float(
+                                eval(value, {"__builtins__": None}, eval_locals)
+                            )
                         except SyntaxError as e:
                             # Only issue warnings if we know what the type supposed to be - that is
                             # some stripe of float
