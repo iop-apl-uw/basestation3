@@ -4,21 +4,21 @@
 
 This table outlines all the advertised channels available for a Tridente.
 
-| Channel       | Abbr | Wavelength nm (Excitation) | WaveLength nm (Emission) |
-|:--------------|------|:---------------------------|:-------------------------|
-| Chlorophyll a | chla | 470                        | 695                      |
-| Chlorophyll a | chla | 435                        | 695                      |
-| fDOM          | fdom | 365                        | 450                      |
-| Phycocyanin   | pc   | 590                        | 654                      |
-| Phycoerythrin | pe   | 525                        | 600                      |
-| Rhodamine     | rd   | 550                        | 600                      |
-| Fluorescein   | fitc | 470                        | 660                      |
-| Backscatter   | bb   | 470                        |                          |
-| Backscatter   | bb   | 525                        |                          |
-| Backscatter   | bb   | 650                        |                          |
-| Backscatter   | bb   | 700                        |                          |
-| Turbidity     | tu   | 650                        |                          |
-| Turbidity     | tu   | 700                        |                          |
+| Channel       | Abbr | ChAbbr | Wavelength nm (Excitation) | WaveLength nm (Emission) |
+|:--------------|------|--------|:---------------------------|:-------------------------|
+| Chlorophyll a | chla | c      | 470                        | 695                      |
+| Chlorophyll a | chla | c      | 435                        | 695                      |
+| fDOM          | fdom | f      | 365                        | 450                      |
+| Phycocyanin   | pc   | p      | 590                        | 654                      |
+| Phycoerythrin | pe   | p      | 525                        | 600                      |
+| Rhodamine     | rd   | r      | 550                        | 600                      |
+| Fluorescein   | fitc | f      | 470                        | 660                      |
+| Backscatter   | bb   | b      | 470                        |                          |
+| Backscatter   | bb   | b      | 525                        |                          |
+| Backscatter   | bb   | b      | 650                        |                          |
+| Backscatter   | bb   | b      | 700                        |                          |
+| Turbidity     | tu   | t      | 650                        |                          |
+| Turbidity     | tu   | t      | 700                        |                          |
 
 Notes:
 - Abbreviation are as close to the RBR abbreviations, where available.
@@ -59,6 +59,30 @@ or
 A second instrument of the exact same configuration on the glider would be:
 
 `tridente2bb700bb470chla470`
+
+### Truck (serdev) Instrument name
+
+Both the RevB (TT8) and RevE (STM32) firmware versions have a 14 character maximum size on buffers that handle serdev .cnf file parsing.  As a result, there is more compressed name space that those files must use for the instrument name as such:
+
+`t[instnum]chan1chan2chan3`
+
+where:
+- `[instnum]` is an optional single digit in the range of `1 - 9`.
+- `chan[1-3]` is formed from the `ChAbbr` and the (Excitation) `Wavelength`.
+
+For example, a typical 700nm and 470nm backscatter and 470nm Chlorophyll a would be:
+
+`tb700b470c470`
+
+or
+
+`t1b700b470c470`
+
+A second instrument of the exact same configuration on the glider would be:
+
+`t2b700b470c470`
+
+The trident sensor extension will expand these compressed names to the full name space during the `asc2eng` processing.  
 
 ## Scicon Files
 
@@ -104,8 +128,8 @@ tridente = {
 A `.cnf` file would need to be generated that matched the channel output format. From the above example, 
 
 ```
-prefix = tridentebb700bb470chla470
-name = tridentebb700bb470chla470
+prefix = tb700b470c470
+name = tb700b470c470
 baud = 19200
 timeout = 1000
 warmup = 0
