@@ -76,8 +76,6 @@ ci = [
    #"ruff==0.7.2",
    "ruff==0.15.17",
    ## Static Typing
-   "mypy==1.13.0",
-   "types-PyYAML",
    "ty==0.0.32", ## Latest
 ]
 dev = [
@@ -94,26 +92,6 @@ dev = [
     "flameprof==0.4"
 ]
 
-
-[tool.mypy]
-plugins = ['numpy.typing.mypy_plugin', 'pydantic.mypy']
-files = ['Base.py', 'MakeDiveProfiles.py', "Reprocess.py"]
-#strict = true
-python_version = "3.10"
-
-# # Much of the numerical computing stack doesn't have type annotations yet.
-[[tool.mypy.overrides]]
-ignore_missing_imports = true
-module = [
-    "gsw.*",
-    "seawater.*",
-    "netCDF4.*",
-    "scipy.*",
-    "xarray.*",
-    "matplotlib.*",
-    "scanf.*",
-    "shapely.*",
-]
 
 [tool.pytest.ini_options]
 pythonpath = "."
@@ -170,7 +148,7 @@ ignore = [
   "SIM300",
 ]
 [tool.ruff.lint.per-file-ignores]
-"!{CalibConst.py,Utils.py,Utils2.py}" = ["ANN"]
+"!{BaseLog.py,CalibConst.py,Utils.py,Utils2.py}" = ["ANN"]
 #"!{Utils.py,Base.py}" = ["ANN"]
 [tool.coverage.html]
 directory = "coverage_html_report"
@@ -187,5 +165,5 @@ omit = [
 # TODO - see if this can be scoped to just that class in future releases
 #unresolved-attribute = "ignore"
 [tool.ty.src]
-include = ["CalibConst.py", "Utils.py", "Utils2.py"]
+include = ["BaseLog.py", "CalibConst.py", "Utils.py", "Utils2.py"]
 #include = ["Utils.py", "Base.py"]
