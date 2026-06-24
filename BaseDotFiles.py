@@ -94,25 +94,34 @@ DEBUG_PDB = False
 mail_server = "localhost"
 
 
-def post_slack(base_opts, instrument_id, slack_hook_url, subject_line, message_body):
-    """Posts to slack channel
+def post_slack(
+    base_opts: BaseOpts.BaseOptions,
+    instrument_id: str,
+    slack_hook_url: str,
+    subject_line: str,
+    message_body: str,
+) -> Literal[0, 1]:
+    """Posts a formatted message to a Slack channel via an incoming webhook.
 
-    intput
-        slack_hook_url - full url to the slack incoming hook
-        subject_line - subject line for message
-        message_body - contents of message
+    Args:
+        base_opts: Configuration options for the system runtime.
+        instrument_id: Unique identifier for the logging instrument.
+        slack_hook_url: Full URL to the Slack incoming webhook.
+        subject_line: Subject line prefix for the notification.
+        message_body: Core text contents of the message.
 
-    returns
-        0 - success
-        1 - failure
+    Returns:
+        The execution status code.
+        0: Success.
+        1: Failure.
     """
 
     log_info(
-        "instrument_id:%s slack_hook_url:%s subject_line:%s message_body:%s"
-        % (instrument_id, slack_hook_url, subject_line, message_body)
+        f"instrument_id:{instrument_id} slack_hook_url:{slack_hook_url} "
+        f"subject_line:{subject_line} message_body:{message_body}"
     )
 
-    msg = {"text": "%s:%s" % (subject_line, message_body)}
+    msg = {"text": f"{subject_line}:{message_body}"}
 
     try:
         response = requests.post(
@@ -122,10 +131,11 @@ def post_slack(base_opts, instrument_id, slack_hook_url, subject_line, message_b
         )
         if response.status_code != 200:
             log_error(
-                "Request to slack returned an error %s, the response is:%s"
-                % (response.status_code, response.text)
+                f"Request to slack returned an error {response.status_code}, "
+                f"the response is:{response.text}"
             )
             return 1
+
     except Exception:
         log_error("Error in post", "exc")
         return 1

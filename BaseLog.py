@@ -55,14 +55,14 @@ _stack_options = ["caller", "caller", "caller", "caller", "exc"]  # default
 
 
 class TracebackFilter(logging.Filter):
-    def __init__(self, name=""):
+    def __init__(self, name: str = "") -> None:
         super().__init__(name)
         self.allowed_messages = (
             "Traceback (most recent call last)",
             "Stacktrace (most recent call last)",
         )
 
-    def filter(self, record):
+    def filter(self, record: logging.LogRecord) -> bool:
         return any(msg in record.getMessage() for msg in self.allowed_messages)
 
 
@@ -148,9 +148,7 @@ class BaseLogger:
             log_info("Process id = %d" % os.getpid())  # report our process id
             try:
                 if opts.config_file_not_found:
-                    log_warning(
-                        f"Config file {opts._opts.config_file_name} was not found"  # ty: ignore[possibly-missing-attribute]
-                    )
+                    log_warning(f"Config file {opts.config_file_name} was not found")
             except AttributeError:
                 pass
 
