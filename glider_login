@@ -1,5 +1,5 @@
 #!/usr/bin/tcsh
-## Copyright (c) 2023, 2025  University of Washington.
+## Copyright (c) 2023, 2025, 2026  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -99,6 +99,14 @@ set base_login_time = `date -u +%y%m%d%H%M%S`
 set base_login_cmd_line = "BaseLogin.py --mission_dir `pwd` --verbose --base_log `pwd`/baselog_login_${base_login_time} --config `pwd`/${user}.conf"
 set base_login_log = `pwd`/baselog.log
 
+if ( -f upload_files ) then
+   echo ERROR - upload_files exists from previous session - will remove - `date -u +"%Y-%m-%dT%H:%M:%S.%3NZ"` \(${USER}\) >> comm.log
+   rm -f upload_files
+   if ( -f upload_files ) then
+       echo ERROR- failed to delete upload_files `date -u +"%Y-%m-%dT%H:%M:%S.%3NZ"` \(${USER}\) >> comm.log
+   endif
+endif
+
 if( $?RUNNER_DIR ) then
   set base_login_run_file = ${RUNNER_DIR}/${base_login_time}.run
   echo ${HOME} `pwd` ${base_login_log} ${base_login_cmd_line} > ${base_login_run_file}
@@ -114,16 +122,24 @@ if( $?RUNNER_DIR ) then
   while ( ! -f upload_files )
       sleep 0.2
       if ( `date +%s` >= ${t_now} + ${upload_files_timeout}) then
-          echo ERROR - upload_files timeout at `date -u +"%Y-%m-%dT%H:%M:%SZ"` \(${USER}\) >> comm.log
+          echo ERROR - upload_files timeout at `date -u +"%Y-%m-%dT%H:%M:%S.%3NZ"` \(${USER}\) >> comm.log
           break
       endif
   end
 else
     $PYTHON_BINARY $BASESTATION_PATH/${base_login_cmd_line}  >>&!  ${base_login_log}
 endif
+
 if ( -f upload_files ) then
    source upload_files
    rm -f upload_files
+   if ( -f upload_files ) then
+       echo ERROR - upload_files still there after delete `date -u +"%Y-%m-%dT%H:%M:%S.%3NZ"` \(${USER}\) >> comm.log
+#   else
+#       echo INFO - upload_files deleted `date -u +"%Y-%m-%dT%H:%M:%S.%3NZ"` \(${USER}\) >> comm.log
+   endif
+else
+    echo ERROR - no upload_files generated at `date -u +"%Y-%m-%dT%H:%M:%S.%3NZ"` \(${USER}\) >> comm.log
 endif
 
 # NOTE: Ensure /usr/local/bin is before /usr/bin
