@@ -337,7 +337,7 @@ class GliderEarlyGPSClient:
                 backup_filename = self.__base_opts.mission_dir / filename
                 if backup_filename.exists():
                     if self._commlog_session.dive_num is not None and self._commlog_session.call_cycle is not None:
-                        backup_target_filename = backup_filename.with_suffix(f".{self._commlog_session.dive_num:04d}.{self._commlog_session.call_cycle:04d}")
+                        backup_target_filename = backup_filename.with_suffix(backup_filename.suffix + f".{self._commlog_session.dive_num:04d}.{self._commlog_session.call_cycle:04d}")
                         log_info(
                             f"Backing up {backup_filename} to {backup_target_filename}"
                         )
