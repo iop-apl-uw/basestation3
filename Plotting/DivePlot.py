@@ -36,7 +36,7 @@ from __future__ import annotations
 import contextlib
 import pathlib
 import typing
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 import numpy.typing as npt
@@ -148,8 +148,10 @@ def plot_diveplot(
         class gc_int_sensor_t:
             """Class for returning CTD vars for plotting routines"""
 
-            data: npt.NDArray[np.float64] = np.empty([])
-            valid_i: npt.NDArray[np.float64] = np.empty([])
+            data: npt.NDArray[np.float64] = field(default_factory=lambda: np.empty([]))
+            valid_i: npt.NDArray[np.float64] = field(
+                default_factory=lambda: np.empty([])
+            )
             data_scl: float = 1.0
             color: str = ""
             name: str = ""

@@ -52,9 +52,7 @@ import tarfile
 import threading
 import time
 import traceback
-import urllib.error
-import urllib.parse
-import urllib.request
+from urllib.request import HTTPPasswordMgr
 
 import orjson
 
@@ -165,19 +163,29 @@ def set_globals() -> None:
 set_globals()
 
 
-# urllib override to prevent username/passwd prompting on stdin
-def my_prompt_user_passwd(self, host, realm):
+def my_prompt_user_passwd(
+    self: HTTPPasswordMgr, host: str, realm: str
+) -> tuple[None, None]:
+    """Stub function to prevent interactive username and password prompting.
+
+    This function overrides the default terminal authentication prompting
+    mechanism to ensure that network requests do not block standard input (stdin)
+    when encountering endpoints requiring authentication.
+
+    Args:
+        self: The HTTPPasswordMgr instance context invoking the prompt.
+        host: The network hostname or URL of the server requesting authentication.
+        realm: The specific security realm defined by the target server.
+
+    Returns:
+        A tuple of (None, None) to indicate no credentials will be provided
+        interactively via the terminal.
     """
-    Stub function for user password
-    """
-    # pylint: disable=W0613
     return None, None
 
 
-# GBS 2026/01/06 - FancyURLopener has been depricated forever.  Proposed solution below.  Need to confirm
-# via testcase what the situation where this code is triggered to confirm the fix
-urllib.request.FancyURLopener.prompt_user_passwd = my_prompt_user_passwd
-# urllib.request.urlopen.prompt_user_passwd = my_prompt_user_passwd
+# Apply the stub function
+HTTPPasswordMgr.prompt_user_passwd = my_prompt_user_passwd
 
 
 def load_files_to_skip(base_opts: BaseOpts.BaseOptions) -> list[str]:
@@ -246,7 +254,7 @@ def read_processed_files(
                     pdos_logfiles_dict[raw_parts[0]] = time.mktime(
                         time.strptime(raw_parts[1].lstrip(), "%H:%M:%S %d %b %Y %Z")
                     )
-                except (ValueError, IndexError):
+                except ValueError, IndexError:
                     # Old way - assume the current time
                     pdos_logfiles_dict[raw_parts[0]] = time.time()
             elif fc.is_seaglider() or fc.is_seaglider_selftest() or fc.is_logger():
