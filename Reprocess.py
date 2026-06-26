@@ -156,7 +156,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
 
         dive_list, _ = Utils.expand_dive_spec(base_opts)
         if dive_list:
-            log_info(f"Reprocessing dives {dive_list}")
+            log_info(f"Reprocessing dives {' '.join([dd.name for dd in dive_list])}")
         else:
             log_info(f"Making profiles for all dives in {base_opts.mission_dir}")
             dive_list = full_dive_list
