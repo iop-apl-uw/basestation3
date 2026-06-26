@@ -1290,12 +1290,14 @@ def load_dive_data(base_opts, dive_data):
         good_pts = np.zeros(num_pts)
         good_pts_i_v = list(
             filter(
-                lambda i: np.isfinite(temperature_raw[i])
-                and np.isfinite(salinity_raw[i])
-                and (pressmin <= press[i] <= pressmax)
-                and (not n_velo or np.isfinite(velo_speed[i]))
-                and mdwdt[i] <= limit_to_still_water
-                and abs_w[i] <= max_speed,
+                lambda i: (
+                    np.isfinite(temperature_raw[i])
+                    and np.isfinite(salinity_raw[i])
+                    and (pressmin <= press[i] <= pressmax)
+                    and (not n_velo or np.isfinite(velo_speed[i]))
+                    and mdwdt[i] <= limit_to_still_water
+                    and abs_w[i] <= max_speed
+                ),
                 range(num_pts),
             )
         )
@@ -1375,7 +1377,7 @@ def load_dive_data(base_opts, dive_data):
             delta_t[-1] = delta_t[-2]
             vbddiff = np.zeros(num_pts, np.float64)
             vbddiff[1:num_pts] = np.diff(eng_vbd_cc) / delta_t[1:num_pts]
-            avbddiff = abs(np.fix(vbddiff))
+            avbddiff = abs(np.trunc(vbddiff))
             # TODO replace this with intersect1d calls for speed
             valid_i = [
                 i
@@ -2908,8 +2910,10 @@ def process_dive(
                     # pylint: disable=cell-var-from-loop
                     x_a_i = list(
                         filter(
-                            lambda a: W_misfit_RMS[ib, a] <= ab_tolerance
-                            and hd_a_grid[a] >= predicted_hd_a,
+                            lambda a: (
+                                W_misfit_RMS[ib, a] <= ab_tolerance
+                                and hd_a_grid[a] >= predicted_hd_a
+                            ),
                             range(len(hd_a_grid)),
                         )
                     )

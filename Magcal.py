@@ -469,7 +469,7 @@ def magcal_worker(
             ]
         )
         pqr = np.array([iron[9], iron[10], iron[11]])
-        pqr.shape = (3, 1)
+        pqr = pqr.reshape((3, 1))
         fx_sg = []
         fy_sg = []
         doSG = True
@@ -494,7 +494,7 @@ def magcal_worker(
             ]
         )
         pqr2 = np.array([iron[9], iron[10], iron[11]])
-        pqr2.shape = (3, 1)
+        pqr2 = pqr2.reshape((3, 1))
         fx_mc = []
         fy_mc = []
         mc_cover = iron[12]
@@ -524,16 +524,16 @@ def magcal_worker(
         Rr = np.transpose(Rr)
 
         f = np.array([fxm[i], fym[i], fzm[i]])
-        f.shape = (3, 1)
+        f = f.reshape((3, 1))
         fxyz = Rp @ Rr @ f
 
         f = np.array([fxm[i] - Ph[0], fym[i] - Ph[1], fzm[i] - Ph[2]])
-        f.shape = (3, 1)
+        f = f.reshape((3, 1))
         fxyz_h = Rp @ Rr @ f
         
         if softiron:
             f = np.array([fxm[i] - P[0], fym[i] - P[1], fzm[i] - P[2]])
-            f.shape = (3, 1)
+            f = f.reshape((3, 1))
             fxyz_pqr = Rp @ Rr @ abc0 @ f
 
             fx_pqr.append(fxyz_pqr.item(0))
@@ -560,7 +560,7 @@ def magcal_worker(
 
         if doSG:
             f = np.array([fxm[i] - pqr[0], fym[i] - pqr[1], fzm[i] - pqr[2]])
-            f.shape = (3, 1)
+            f = f.reshape((3, 1))
             fxyz_sg = Rp @ Rr @ abc @ f
             fx_sg.append(fxyz_sg.item(0))
             fy_sg.append(fxyz_sg.item(1))
@@ -571,7 +571,7 @@ def magcal_worker(
 
         if doMAGCAL:
             f = np.array([fxm[i] - pqr2[0], fym[i] - pqr2[1], fzm[i] - pqr2[2]])
-            f.shape = (3, 1)
+            f = f.reshape((3, 1))
             fxyz_mc = Rp @ Rr @ abc2 @ f
             fx_mc.append(fxyz_mc.item(0))
             fy_mc.append(fxyz_mc.item(1))

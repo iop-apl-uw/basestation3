@@ -36,6 +36,7 @@ import os
 import sys
 import time
 import uuid
+import warnings
 from functools import reduce
 from typing import TYPE_CHECKING, Literal
 
@@ -4351,7 +4352,12 @@ def create_nc_var(
             if var_dims == nc_scalar:
                 nc_var.assignValue(value)  # scalar
             else:
-                nc_var[:] = value  # array
+                # netCDF4 is calling shape on the numpy array - which has been deprecated
+                # TODO - this may be fixed wit https://github.com/Unidata/netcdf4-python/pull/1469, once
+                # it gets out into release
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=DeprecationWarning)
+                    nc_var[:] = value  # array
         except ValueError as exception:
             log_error(
                 f"Unable to assign value to nc var {var_name} {var_dims} ({exception.args})"

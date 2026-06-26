@@ -1768,7 +1768,7 @@ def dive_var_trend(
     with warnings.catch_warnings():
         # For very small number of dives, we get
         # RankWarning: Polyfit may be poorly conditioned
-        warnings.simplefilter("ignore", np.RankWarning)  # noqa: NPY201
+        warnings.simplefilter("ignore", np.exceptions.RankWarning)  # noqa: NPY201
         m, b = np.polyfit(dive_col[-p_dives_back:], y_col[-p_dives_back:], 1)
     return (m, b)
 
@@ -1791,7 +1791,7 @@ def estimate_endurance(
     with warnings.catch_warnings():
         # For very small number of dives, we get
         # RankWarning: Polyfit may be poorly conditioned
-        warnings.simplefilter("ignore", np.RankWarning)  # noqa: NPY201
+        warnings.simplefilter("ignore", np.exceptions.RankWarning)  # noqa: NPY201
         m, b = np.polyfit(dive_col[-p_dives_back:], gauge_col[-p_dives_back:], 1)
     log_info(f"m:{m} b:{b}")
     lastdive_num = np.int32((base_opts.mission_energy_reserve_percent - b) / m)

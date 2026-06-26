@@ -776,7 +776,7 @@ def cond_anomaly(
         elapsed_time_s_v
     )  # but we do need to detect thermoclines, so compute dTdt
 
-    itemp_v = np.fix(temp_v)
+    itemp_v = np.trunc(temp_v)
     too_cold_i = [i for i in range(sg_np) if itemp_v[i] < min_sf_temp]
     if len(too_cold_i):
         log_warning(
@@ -3682,7 +3682,7 @@ def make_dive_profile(
                     pitchAD_interp = None
                 else:
                     # For DG - interpolate onto the compass time grid
-                    pitchAD = np.fix(
+                    pitchAD = np.trunc(
                         pitch_ctl * log_f.data["$PITCH_CNV"] + log_f.data["$C_PITCH"]
                     )
                     pitchAD_interp = Utils.interp1d(
@@ -3850,7 +3850,7 @@ def make_dive_profile(
                 if pitch_ctl is None:
                     pitchAD = None
                 else:
-                    pitchAD = np.fix(
+                    pitchAD = np.trunc(
                         pitch_ctl * log_f.data["$PITCH_CNV"] + log_f.data["$C_PITCH"]
                     )
 

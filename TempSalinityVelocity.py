@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -233,7 +233,7 @@ def filter_unsteady(
         # Must do this on velocity COMPONENTS since it is a linear process
         # speed in polar coordinates is sqrt(w^2 + h^2)
 
-        tau_x = np.fix(max(tau_i, 1.0)) / r_dt  # protect trifilt; must be an integer
+        tau_x = np.trunc(max(tau_i, 1.0)) / r_dt  # protect trifilt; must be an integer
         hdm_horizontal_speed_steady_cm_s_v = hdm_speed_steady_cm_s_v * np.cos(
             hdm_glide_angle_steady_rad_v
         )
@@ -1351,7 +1351,7 @@ def TSV_iterative(
                 r_elapsed_time_s_v, sigma_t_v, time_fine_s_v
             )  # interpolate to 1 s
             # BUG ensure fix(tau_wake_avg) is > 1.0
-            tau_wake_avg = np.fix(
+            tau_wake_avg = np.trunc(
                 max(tau_wake_avg, 1.0)
             )  # protect trifilt ANNOTATE THIS?
             sigma_t_fine_filt_v = trifilt(sigma_t_fine_v, tau_wake_avg)  # filter
