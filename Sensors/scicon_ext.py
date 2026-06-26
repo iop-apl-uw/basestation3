@@ -1514,7 +1514,13 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 continue
 
             for col_name in ad2cp_single_value:
-                data_cols[col_name] = float(mf[col_name][0][0])
+                try:
+                    data_cols[col_name] = float(mf[col_name][0][0])
+                except KeyError as exception:
+                    if exception.args[0] == "coordinateSystem":
+                        data_cols[col_name] = 0.0
+                    else:
+                        raise
 
             for col_name in ad2cp_single_dim:
                 if mf[col_name][:, 0].size == 0:
