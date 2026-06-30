@@ -200,7 +200,6 @@ def write_output_files(
                 height=std_height,
                 scale=std_scale,
                 validate=True,
-                engine="kaleido",
             )
         if output_fmt == "webp" and base_opts.thumbnail_webp:
             image = PIL.Image.open(output_stream)
