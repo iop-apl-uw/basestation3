@@ -14,27 +14,41 @@ jobs:
     steps:
     - uses: actions/checkout@v5
 
+    # Plotly6/kaleido1.0
+    # - name: Install chrome requirements
+    #   run: |
+    #         apt update
+    #         apt install -y libnspr4 libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 \
+    #         libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2t64
+
     - name: Install uv
       uses: astral-sh/setup-uv@v5
       with:
         # Install specific version of UV
-        version: "0.9.9"
+        version: "0.9.28"
         enable-cache: true
+        cache-dependency-glob: "uv.lock"
     
-    - name: Set up Python 3.10
+    - name: Set up Python 3.14
       run: uv python install
+      #un: uv python list
       
     - name: Install dependencies
-      run: uv sync --locked --extra ci -q
+      run: uv sync --locked --extra ci --no-progress
+
+    # Plotly6/kaleido1.0
+    # Only install x86 version
+    # - name: Install google-chrome-for-testing
+    #   run: uv run --no-sync kaleido_get_chrome -v
 
     - name: Check with Ruff
-      run: |
-        uv run ruff check --output-format=github
+      run: uv run ruff check --output-format=github
 
     - name: Check with ty
-      run: |
-        uv run ty check --output-format=github
+      run: uv run ty check --output-format=github
+
+    #- name: Setup completed, pausing for debugging
+    #  run: sleep 3600 # Keeps the container alive for 1 hour
         
     - name: Test with pytest
-      run: |
-        uv run pytest -rsx --cov --cov-report term-missing tests/
+      run: uv run pytest -rsx --cov --cov-report term-missing tests

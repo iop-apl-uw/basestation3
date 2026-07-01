@@ -74,6 +74,8 @@ of memory for single glider testing)
 
 ## Installation for post-processing
 
+### TODO - rework this section - need to include new python, uv and chrome
+
 In addition to the usual use of the Seaglider basestation to handle data
 coming in real-time from a Seaglider, the basestation may be installed for
 re-processing of missions.  In this mode, installation location is the users

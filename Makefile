@@ -34,6 +34,8 @@ testhtml:
 # For MacOS
 # brew install act
 # Note: --container-architecture is for ARM mac
+# Plotly6/kaleido1.0 - need to change to amd64 and run container under rosetta because there
+# is no good way to get a ARM64 chrome/chromium browswer install on a ARM64 runner container
 act:
 	-act -j check --container-daemon-socket -  --container-architecture linux/aarch64 push
 

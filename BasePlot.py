@@ -45,7 +45,8 @@ import time
 import traceback
 import types
 
-import kaleido
+# Plotly6/kaleido1.0
+# import kaleido
 import numpy as np
 import plotly
 import plotly.graph_objects
@@ -68,6 +69,7 @@ from BaseLog import (
 )
 from CalibConst import getSGCalibrationConstants
 
+# Plotly6/kaleido1.0
 # This forces the kaleido engine to spin up a chrome instance and cache it (default
 # causes chrome to be started and destroyed between uses)
 # n=1 = single instance (default) (some suggest os.cpu_count() as a better argument,
@@ -143,8 +145,9 @@ def plot_dives(
         con = dbcon
 
     dive_plot_times: dict[str, float] = collections.defaultdict(float)
-    if dive_nc_file_names and generate_plots:
-        kaleido.start_sync_server(n=1)
+    # Plotly6/kaleido1.0
+    # if dive_nc_file_names and generate_plots:
+    #    kaleido.start_sync_server(n=1)
     for dive_nc_file_name in dive_nc_file_names:
         log_info(f"Plotting {dive_nc_file_name}")
         dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
@@ -191,8 +194,9 @@ def plot_dives(
                     signal.alarm(0)
                     signal.signal(signal.SIGALRM, prev_handler)
                 dive_plot_times[plot_name] += time.time() - t0
-    if dive_nc_file_names and generate_plots:
-        kaleido.stop_sync_server()
+    # Plotly6/kaleido1.0
+    # if dive_nc_file_names and generate_plots:
+    #    kaleido.stop_sync_server()
     if len(dive_nc_file_names):
         for plot_name, elapsed_time in dive_plot_times.items():
             log_info(
@@ -240,8 +244,9 @@ def plot_mission(
     figs: list[plotly.graph_objects.Figure] = []
     output_files: list[pathlib.Path] = []
     mission_plot_times: dict[str, float] = {}
-    if generate_plots:
-        kaleido.start_sync_server(n=1)
+    # Plotly6/kaleido1.0
+    # if generate_plots:
+    #    kaleido.start_sync_server(n=1)
     for plot_name, plot_func in mission_plot_dict.items():
         try:
             if (
@@ -285,8 +290,9 @@ def plot_mission(
                 signal.alarm(0)
                 signal.signal(signal.SIGALRM, prev_handler)
             mission_plot_times[plot_name] = time.time() - t0
-    if generate_plots:
-        kaleido.stop_sync_server()
+    # Plotly6/kaleido1.0
+    # if generate_plots:
+    #    kaleido.stop_sync_server()
     for plot_name, elapsed_time in mission_plot_times.items():
         log_info(f"Mission {plot_name} took {elapsed_time:.2f} secs")
     if dbcon is None:
