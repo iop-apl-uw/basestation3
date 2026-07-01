@@ -2,7 +2,9 @@ name: Check In Actions
 
 on:
   push:
-    branches: [ "master" ]
+    branches:
+      - master
+      - 'chore/*'
 
 permissions:
   contents: read
@@ -13,6 +15,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v5
+
+    - name: Install Brave Browser
+      run: |
+        apt install curl
+        curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+        curl -fsSLo /etc/apt/sources.list.d/brave-browser-release.sources https://brave-browser-apt-release.s3.brave.com/brave-browser.sources
+        apt update
+        apt install -y brave-browser
 
     # Plotly6/kaleido1.0
     # - name: Install chrome requirements
@@ -31,7 +41,7 @@ jobs:
     
     - name: Set up Python 3.14
       run: uv python install
-      #un: uv python list
+      #run: uv python list
       
     - name: Install dependencies
       run: uv sync --locked --extra ci --no-progress
