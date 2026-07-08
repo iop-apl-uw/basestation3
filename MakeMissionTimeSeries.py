@@ -183,6 +183,7 @@ def make_mission_timeseries(
         "gsw_sigma0",
         "gsw_sigma3",
         "gsw_sigma4",
+        "sigma_t",
     )
 
     rename_ctd_dim = False
