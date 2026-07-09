@@ -45,7 +45,6 @@ import time
 import traceback
 import types
 
-import kaleido
 import numpy as np
 import plotly
 import plotly.graph_objects
@@ -56,6 +55,7 @@ import CommLog
 import MakeDiveProfiles
 import Plotting
 import PlotUtils
+import PlotUtilsPlotly
 import Sensors
 import Utils
 from BaseLog import (
@@ -67,11 +67,6 @@ from BaseLog import (
     log_warning,
 )
 from CalibConst import getSGCalibrationConstants
-
-# kaleido dropped the __version__ string wtih 1.0.0
-f_start_kaleido = (
-    hasattr(kaleido, "__version__") and kaleido.__version__ >= "1.0.0"
-) or not hasattr(kaleido, "__version__")
 
 # Plotly6/kaleido1.0
 # This forces the kaleido engine to spin up a chrome instance and cache it (default
@@ -149,13 +144,24 @@ def plot_dives(
         con = dbcon
 
     dive_plot_times: dict[str, float] = collections.defaultdict(float)
-    if f_start_kaleido and dive_nc_file_names and generate_plots:
-        kaleido.start_sync_server(n=1)
+
+    if dive_nc_file_names and generate_plots:
+        kaleido_server = PlotUtilsPlotly.KaleidoServer(base_opts)
+        kaleido_server.start_kaleido_global_server()
+
     for dive_nc_file_name in dive_nc_file_names:
         log_info(f"Plotting {dive_nc_file_name}")
         dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
 
         for plot_name, plot_func in dive_plot_dict.items():
+            # if generate_plots and f_static_plot_generation(base_opts):
+            #     status, msg = is_kaleido_global_server_running()
+            #     if not status:
+            #         log_error(
+            #             f"Problem with Chrome for static plot generation ({msg})",
+            #             alert="CHROME_ISSUE",
+            #             max_count=1,
+            #         )
             try:
                 if base_opts.plot_dive_timeout:
                     prev_handler = signal.signal(signal.SIGALRM, _timeout)
@@ -197,8 +203,9 @@ def plot_dives(
                     signal.alarm(0)
                     signal.signal(signal.SIGALRM, prev_handler)
                 dive_plot_times[plot_name] += time.time() - t0
-    if f_start_kaleido and dive_nc_file_names and generate_plots:
-        kaleido.stop_sync_server()
+    if dive_nc_file_names and generate_plots:
+        kaleido_server.stop_kaleido_global_server()
+
     if len(dive_nc_file_names):
         for plot_name, elapsed_time in dive_plot_times.items():
             log_info(
@@ -246,8 +253,10 @@ def plot_mission(
     figs: list[plotly.graph_objects.Figure] = []
     output_files: list[pathlib.Path] = []
     mission_plot_times: dict[str, float] = {}
-    if f_start_kaleido and generate_plots:
-        kaleido.start_sync_server(n=1)
+    if generate_plots:
+        kaleido_server = PlotUtilsPlotly.KaleidoServer(base_opts)
+        kaleido_server.start_kaleido_global_server()
+
     for plot_name, plot_func in mission_plot_dict.items():
         try:
             if (
@@ -291,8 +300,8 @@ def plot_mission(
                 signal.alarm(0)
                 signal.signal(signal.SIGALRM, prev_handler)
             mission_plot_times[plot_name] = time.time() - t0
-    if f_start_kaleido and generate_plots:
-        kaleido.stop_sync_server()
+    if generate_plots:
+        kaleido_server.stop_kaleido_global_server()
     for plot_name, elapsed_time in mission_plot_times.items():
         log_info(f"Mission {plot_name} took {elapsed_time:.2f} secs")
     if dbcon is None:
