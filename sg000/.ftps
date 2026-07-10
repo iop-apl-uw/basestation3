@@ -1,0 +1,44 @@
+## .ftps file
+#
+# This file controls the sending of data products created during basestation
+# processing via ftps (explicit FTP over TLS - AUTH TLS).  The line format and
+# tags are identical to .ftp; the only difference is that the control channel
+# (and, where supported, the data channel) is encrypted.
+#
+# A global copy of this file may be place in
+#
+# /usr/local/basestation3/etc/.ftps
+#
+# If --group_etc is specified on the Base.py command line, then a that directory will
+# also be searched for a version of this file
+#
+# Each line of this file is of the format
+# # Lines are of the form
+# [user[:password]@]host[:port]/path[,[eng| log| pro| bpo| csv| asc| cap| comm| dn_kkyy| up_kkyy| nc| mission_ts| mission_pro]+] | ,all
+# where:
+# user - user name on the ftps server
+# password - password on the ftps server
+# host - ftps server address
+# port - optional override to ftp port on the host
+# path - path to the place the products in (must be / at a minimum)
+#
+# The user and password may be optionally stored in a .netrc file.  To use this feature, do not specify a username
+# password in the line above.
+# These files are of a standard format:
+# machine <host> login <user> password <password>
+# See the .netrc man page for more details.
+#
+# eng, log, pro, bpo, csv, asc, cap , dn_kkyy, up_kkyy, nc - send any newly created files of the specified extension
+# comm - send the comm.log file
+# mission_ts, mission_pro - send the mission timeseries or mission profile, if they have been updated on the processing
+# all - send all the newly created or updated files
+# fnmatch_**** - uses Unix shell-style wildcard **** to match any created/or updated file
+# file_**** - uses Unix shell-style wildcard to match any file in the mission directory, regardless of when it was created
+#
+# If the server does not support or accept a TLS upgrade of the control channel (AUTH TLS),
+# the connection is aborted rather than falling back to sending credentials in the clear.
+#
+## Examples
+#
+## Push out the typical per-dive files
+#someone:passwd@someserver.apl.washington.edu/sg000/data,log,eng,cap,nc,comm
