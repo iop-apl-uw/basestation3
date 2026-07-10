@@ -1,0 +1,24 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Disk Usage Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Disk Usage Plot Help</h1>
+     <p>This plot tracks onboard storage (SD card and any other logger with
+     free-space reporting) over the mission, vs. dive number.</p>
+     <ul>
+       <li><code>SD free kB</code> and any other <code>&lt;sensor&gt;</code>
+       free-space traces (left axis) show remaining free space, one trace
+       per logger/device that reports it.</li>
+       <li><code>SD file count</code> and <code>SD dir count</code> (right
+       axis) track the number of files and directories on the SD card.</li>
+     </ul>
+     <p>The x-axis subtitle projects, from the recent free-space trend, how
+     many dives/days remain before each device fills up and an estimated
+     end date. A steepening slope or an early projected fill date is a
+     signal to trim logged file types/rates for the rest of the mission.</p>
+   </body>
+ </html>

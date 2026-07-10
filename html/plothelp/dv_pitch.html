@@ -1,0 +1,33 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Pitch Control Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Pitch Control Plot Help</h1>
+     <p>This plot is used to check/re-derive the pitch trim calibration
+     parameters (<code>C_PITCH</code>, pitch <code>GAIN</code>) by comparing
+     observed vehicle pitch angle against pitch motor (VBD position)
+     control.</p>
+     <ul>
+       <li><code>Observed pitch</code> points are actual pitch angle vs.
+       pitch control counts seen during the dive; points not used in the fit
+       are shown in a different marker (e.g. taken during a transient right
+       after a pitch move).</li>
+       <li><code>Model as flying on glider</code> is the fit implied by the
+       glider's currently commanded <code>C_PITCH</code>/<code>GAIN</code>/
+       <code>SHIFT</code> parameters.</li>
+       <li><code>Linear fit</code>, <code>Nonlinear fit fixed shift</code>,
+       and <code>Nonlinear fit</code> are alternative fits computed from this
+       dive's data, each reporting its implied <code>C_PITCH</code>/
+       <code>GAIN</code>(/<code>SHIFT</code>) and RMS error (model pitch
+       minus observed pitch, in degrees).</li>
+     </ul>
+     <p>Lower RMS is a better fit; a model trace that tracks the observed
+     points closely across the full pitch-control range indicates good trim.
+     Large, systematic disagreement suggests <code>C_PITCH</code> or
+     <code>GAIN</code> should be updated.</p>
+   </body>
+ </html>

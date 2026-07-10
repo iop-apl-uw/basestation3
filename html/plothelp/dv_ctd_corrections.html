@@ -1,0 +1,28 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>CTD Thermal-Inertia Corrections Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>CTD Thermal-Inertia Corrections Plot Help</h1>
+     <p>This plot compares the raw CTD data as reported by the instrument
+     (Seabird or RBR Legato, shown in the title) against the basestation's
+     thermal-inertia-corrected data, all plotted against time into the
+     dive.</p>
+     <ul>
+       <li><code>Salinity</code> traces (left axis, PSU) and
+       <code>Temperature</code> traces (right axis, C) are each shown in both
+       their raw and corrected forms so the effect of the correction is
+       visible directly.</li>
+       <li>A <code>Depth</code> trace (secondary left axis) gives context for
+       where in the dive/climb profile a given correction is largest -
+       thermal-inertia error is most visible where temperature/conductivity
+       are changing quickly with depth.</li>
+       <li>The buttons above the legend toggle which trace group is shown.</li>
+     </ul>
+     <p>The title includes a QC totals summary, comparing the count of each
+     QC flag between the raw and corrected temperature/salinity data.</p>
+   </body>
+ </html>

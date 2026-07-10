@@ -330,6 +330,8 @@ def mission_int_sensors(
             },
         },
     )
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("eng_int_sensors"))
+
     return (
         [fig],
         PlotUtilsPlotly.write_output_files(

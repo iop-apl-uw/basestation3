@@ -1,0 +1,30 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>CommLog Counter Values Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>CommLog Counter Values Plot Help</h1>
+     <p>This plot tracks the "counter line" telemetry reported at the end of
+     every surfacing in <code>comm.log</code>, across the whole mission vs.
+     call number (the top axis maps calls to dive number).</p>
+     <ul>
+       <li><code>Pitch</code>, <code>Depth</code>, <code>Internal
+       Pressure</code>, <code>Relative Humidity</code>, <code>Internal
+       Temperature</code>, and battery voltages are all shown, most scaled
+       so they share the left <code>AD value</code> axis (the scale factor
+       is in each trace's legend label); a few use the right
+       <code>value</code> axis directly.</li>
+       <li><code>&lt;motor&gt; position</code> traces show VBD/pitch/roll
+       motor position at the end of each surfacing.</li>
+       <li><code>CTD</code> traces (when present) show CTD readings taken
+       during the surface interval.</li>
+     </ul>
+     <p>This is a coarse, mission-wide sanity check on vehicle health (e.g.
+     slowly rising internal humidity/pressure, or drifting battery voltage)
+     using only what's logged every surfacing - it doesn't require
+     processed per-dive netCDF files.</p>
+   </body>
+ </html>

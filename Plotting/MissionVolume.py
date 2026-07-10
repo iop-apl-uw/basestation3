@@ -259,6 +259,8 @@ def mission_volume(
             },
         },
     )
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("eng_volume"))
+
     return (
         [fig],
         PlotUtilsPlotly.write_output_files(

@@ -403,6 +403,8 @@ def mission_commlog(
             },
         },
     )
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("eng_commlog"))
+
     if dbcon is None:
         log_info("mission_commlog db closed")
         conn.close()

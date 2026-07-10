@@ -1,0 +1,25 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Pump and Bleed Diagnostics Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Pump and Bleed Diagnostics Plot Help</h1>
+     <p>This plot tracks VBD (buoyancy engine) motor performance across the
+     mission, vs. dive number - one point per pump or bleed move.</p>
+     <ul>
+       <li><code>Pump Current</code> (left axis, A) is motor current during
+       pump moves (moves above the <code>--max_vbd_pump_rate</code>
+       threshold only).</li>
+       <li><code>Pump Rate</code> and <code>Bleed Rate</code> (right axis,
+       AD/s) are VBD position change rate during pump and bleed moves
+       respectively.</li>
+     </ul>
+     <p>A falling pump rate or rising pump current over the mission can
+     indicate increasing hydraulic resistance (e.g. a fouled or aging pump);
+     compare against the <a href="eng_vbd_effic.html">VBD efficiency
+     plot</a>.</p>
+   </body>
+ </html>

@@ -1,0 +1,25 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>SBE43 Oxygen Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>SBE43 Oxygen Plot Help</h1>
+     <p>This plot shows dissolved oxygen vs. depth from a Seabird SBE43
+     oxygen sensor. The title states whether the data has been corrected for
+     salinity and depth, whether it's restricted to <code>QC_GOOD</code>
+     points, and the depth binning if the data is a binned profile.</p>
+     <ul>
+       <li><code>Corrected O2</code> traces (top axis, umol/kg) are the
+       basestation-corrected dissolved oxygen, dive and climb shown
+       separately. If no correction was available, the uncorrected value is
+       shown instead and the title notes "not corrected".</li>
+       <li><code>Sat O2</code> traces show the instrument's own oxygen
+       saturation percentage output, uncorrected.</li>
+     </ul>
+     <p>The annotation below the plot (when present) reports the instrument
+     calibration comment.</p>
+   </body>
+ </html>

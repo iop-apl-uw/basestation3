@@ -528,6 +528,8 @@ def plot_ctd_corrections(
     )
     # End buttons
 
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_ctd_corrections"))
+
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     title_text = f"{mission_dive_str}<br>{ctd_type} Raw Temp/Salinity and Corrected Temp/Salinity vs Time{qc_line}"
 

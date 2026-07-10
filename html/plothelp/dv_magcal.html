@@ -1,0 +1,32 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Compass Calibration Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Compass Calibration Plot Help</h1>
+     <p>This plot shows the raw and corrected magnetometer readings
+     (<code>X field</code> vs. <code>Y field</code>) used to fit the truck
+     compass's hard-iron/soft-iron calibration. A well-calibrated compass
+     traces out a circle centered on the origin; distortion (an off-center
+     or elliptical shape) indicates uncorrected magnetic interference.</p>
+     <ul>
+       <li><code>uncorrected</code> is the raw magnetometer reading.</li>
+       <li><code>hard corrected</code> applies only the hard-iron (offset)
+       correction.</li>
+       <li><code>corrected</code> (when soft-iron correction is computed)
+       applies both hard- and soft-iron correction.</li>
+       <li><code>onboard</code>/<code>autocal</code> traces (when present)
+       show the correction computed by the glider's onboard/autonomous
+       calibration routine, for comparison against the basestation's fit.</li>
+     </ul>
+     <p>Each trace's legend label includes its circularity value in
+     parentheses - closer to 0 is a better circular fit. The
+     <code>autocal</code> trace also reports its angular
+     <code>cover</code>age (how much of the full rotation was sampled) and
+     how many points were <code>used</code> in the fit. The title reports
+     the fitted hard-iron offset (and soft-iron matrix, if computed).</p>
+   </body>
+ </html>

@@ -1,0 +1,32 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Volmax Estimates Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Volmax Estimates Plot Help</h1>
+     <p>This plot compares several independent estimates of the vehicle's
+     hull volume (<code>volmax</code>, cc) over the mission, vs. dive
+     number. <code>volmax</code> is a core Flight Model parameter - the
+     vehicle's neutrally-buoyant displaced volume - and it can drift over a
+     long deployment (e.g. from hull compression/creep or biofouling).</p>
+     <ul>
+       <li><code>Basestation Volmax</code> is the basestation's per-dive
+       estimate.</li>
+       <li><code>Basestation Regressed Volmax</code> is a regression fit
+       across recent dives rather than a single-dive estimate.</li>
+       <li><code>GSM Volmax</code> is the steady-state (Gliderscope) model's
+       estimate.</li>
+       <li><code>Glider On Board Volmax</code> is the value computed
+       onboard the vehicle itself.</li>
+       <li><code>Flight Model Volmax</code> is the value currently in use by
+       the Flight Model System.</li>
+     </ul>
+     <p>Persistent disagreement between estimates, or a trending value, is
+     worth investigating before it degrades vertical velocity/buoyancy
+     predictions - see the <a href="dv_vert_vel.html">vertical velocity
+     plot</a>.</p>
+   </body>
+ </html>

@@ -1,0 +1,29 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Legato Pressure Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Legato Pressure Plot Help</h1>
+     <p>This plot compares the raw RBR Legato pressure signal against the
+     basestation's smoothed/despiked version and the truck pressure sensor,
+     to diagnose pressure spikes and despiking behavior.</p>
+     <ul>
+       <li><code>legato pressure</code> is the raw pressure as reported by
+       the Legato.</li>
+       <li><code>legato pressure spikes</code> marks points the despiker
+       flagged as bad (<code>QC_INTERPOLATED</code>) and interpolated over.</li>
+       <li><code>legato dp/dt</code> (right axis, hidden by default) is the
+       rate of pressure change, used by the despiker to detect spikes.</li>
+       <li><code>ctd_pressure</code> is the basestation's smoothed/corrected
+       pressure used for the rest of processing.</li>
+       <li><code>truck_pressure</code> is the seaglider's own (non-Legato)
+       pressure sensor, for cross-checking.</li>
+       <li><code>auxB_pressure</code>/<code>auxCompass_pressure</code> (when
+       present) is the pressure channel from an auxiliary compass, another
+       independent cross-check.</li>
+     </ul>
+   </body>
+ </html>

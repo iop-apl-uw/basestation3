@@ -1,0 +1,42 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Mission Energy Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Mission Energy Plot Help</h1>
+     <p>This plot tracks energy consumption over the course of the mission and
+     projects how many dives/days remain before the configured reserve is
+     reached.</p>
+     <h2>Energy traces (left axis, kJ)</h2>
+     <ul>
+       <li><code>Fuel Gauge</code> traces (<code>10V</code>/<code>24V</code>) show energy
+       used as measured directly by the battery pack's fuel gauge hardware, when
+       present.</li>
+       <li><code>Modeled Use</code> traces show energy used as estimated from
+       logged component on-times and their known power draw (see the per-device
+       breakdown further down the plot, which uses the color key in the code
+       for devices such as <code>VBD_pump</code>, <code>Pitch_motor</code>,
+       <code>Roll_motor</code>, <code>Iridium</code>, etc). This is the only
+       estimate available on packs without a fuel gauge.</li>
+     </ul>
+     <h2>Voltage traces (right axis, volts)</h2>
+     <p><code>Min Volts Observed</code> traces show the minimum pack voltage
+     seen each dive, separately for the low-voltage (<code>LV</code>) and
+     high-voltage (<code>HV</code>) packs where the glider has a split-voltage
+     system.</p>
+     <h2>Mission Days (far-right axis)</h2>
+     <p>Elapsed mission time in days, for correlating energy use against
+     calendar time rather than just dive number.</p>
+     <h2>Endurance estimate</h2>
+     <p>The text under the x-axis title reports the projected dives/days
+     remaining before the configured reserve
+     (<code>mission_energy_reserve_percent</code>) is reached, and an
+     estimated end date. Where a fuel gauge is present, one estimate is
+     shown based on fuel-gauge data and a second based on the modeled-use
+     data; the two can diverge if the model's assumed device power draws are
+     off.</p>
+   </body>
+ </html>

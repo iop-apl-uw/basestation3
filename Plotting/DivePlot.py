@@ -1127,6 +1127,8 @@ def plot_diveplot(
         }
     )
 
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_diveplot"))
+
     return (
         [fig],
         PlotUtilsPlotly.write_output_files(

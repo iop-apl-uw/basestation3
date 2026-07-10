@@ -1,0 +1,28 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Roll Control Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Roll Control Plot Help</h1>
+     <p>This plot is used to check/re-derive the roll trim center
+     (<code>C_ROLL_DIVE</code>, <code>C_ROLL_CLIMB</code>) by comparing
+     observed vehicle roll angle against roll motor control counts. Dive and
+     climb are fit and plotted separately, since the roll center can differ
+     between them.</p>
+     <ul>
+       <li><code>Observed roll - dive/climb</code> points are actual roll
+       angle vs. roll control counts seen during that segment.</li>
+       <li><code>Current center - dive/climb</code> marks the roll control
+       value implied by the glider's currently commanded
+       <code>C_ROLL_DIVE</code>/<code>C_ROLL_CLIMB</code>.</li>
+       <li><code>Linear model - dive/climb</code> is a linear fit to this
+       dive's data, reporting its own implied roll center.</li>
+     </ul>
+     <p>Where the linear model's zero-crossing (implied center) differs
+     noticeably from the current center, that's a signal the roll trim
+     parameter should be updated.</p>
+   </body>
+ </html>

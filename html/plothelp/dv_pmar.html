@@ -1,0 +1,27 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>PMAR Channel Statistics Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>PMAR Channel Statistics Plot Help</h1>
+     <p>This is a family of diagnostic plots for a single PMAR (passive
+     acoustic) channel, each showing one summary statistic vs. depth,
+     separately for dive and climb. The channel and statistic are named in
+     the plot title and output file name.</p>
+     <ul>
+       <li><code>Signal StdDev</code> - standard deviation of the raw signal.</li>
+       <li><code>Signal Mean Abs</code> - mean absolute value of the raw signal.</li>
+       <li><code>Clip Count</code> (or <code>Clip Count Normalized</code>,
+       when normalization data is available) - how often the channel's ADC
+       clipped (saturated).</li>
+     </ul>
+     <p>Colored shaded bands mark guidance-computer (GC) moves - pump, pitch,
+     and roll motor actuations - so acoustic noise or clipping caused by the
+     vehicle's own mechanisms can be distinguished from ambient/biological
+     signal. The x-axis subtitle reports summary statistics (min/max/mean)
+     for the dive or climb segment shown.</p>
+   </body>
+ </html>

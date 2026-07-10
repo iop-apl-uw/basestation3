@@ -1,0 +1,34 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Compass Comparison Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Compass Comparison Plot Help</h1>
+     <p>This plot overlays the glider's primary ("truck") compass heading
+     against a secondary compass, to help diagnose disagreement between
+     them. The same layout is used regardless of which secondary compass is
+     being compared - the title and trace names identify which one:</p>
+     <ul>
+       <li><code>auxCompass</code> - an auxiliary compass logger</li>
+       <li><code>auxB</code> - a second auxiliary compass logger</li>
+       <li><code>ADCPCompass</code> (from <code>cp_*</code> variables) - the
+       compass built into a logdev-attached ADCP</li>
+       <li><code>ADCPCompass</code> (from <code>ad2cp_*</code> variables) -
+       the compass built into an AD2CP current profiler</li>
+     </ul>
+     <h2>Traces</h2>
+     <p>For each of <code>Depth</code>, <code>Pitch Up</code>,
+     <code>Roll</code> and <code>Heading</code>, both a <code>truck</code>
+     and a secondary-compass trace are plotted so the two can be compared
+     directly over time. <code>Heading</code> is on the right axis in
+     degrees true; the others share the left axis.</p>
+     <p>The x-axis subtitle reports the RMS heading difference between the
+     two compasses over the dive.</p>
+     <p>Large or growing disagreement usually indicates the secondary
+     compass needs recalibration, or (for the truck compass) a magnetic
+     interference issue near the compass location.</p>
+   </body>
+ </html>

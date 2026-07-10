@@ -1,0 +1,26 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>PMAR Log-Average Spectra Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>PMAR Log-Average Spectra Plot Help</h1>
+     <p>This plot shows the PMAR channel's log-averaged power spectra over
+     the course of the dive, for a single channel (named in the title).</p>
+     <ul>
+       <li>Each <code>CF &lt;freq&gt; Hz</code> trace is the power
+       (counts&sup2;/Hz, log-scale left axis) at one center frequency of the
+       log-averaged spectrum, plotted against time into the dive (bottom
+       x-axis) - the top x-axis shows the same points against GMT time.</li>
+       <li>The right axis shows depth, for correlating spectral power with
+       where in the water column the glider was.</li>
+     </ul>
+     <p>The x-axis subtitle reports summary profile statistics for the
+     segment shown. Use the log-average plot to look for depth- or
+     time-correlated changes in ambient noise across frequency bands, as
+     opposed to the raw per-sample statistics on the
+     <a href="dv_pmar.html">channel statistics plot</a>.</p>
+   </body>
+ </html>

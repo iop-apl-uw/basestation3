@@ -1,0 +1,33 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Download Statistics Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Download Statistics Plot Help</h1>
+     <p>This plot summarizes file transfer activity per call session, parsed
+     from <code>comm.log</code>. Each point on the x-axis is one call
+     (session); the secondary top x-axis maps calls to dive number.</p>
+     <h2>Traces</h2>
+     <ul>
+       <li><code>(bytes)</code> traces (right <code>Bytes</code> axis, solid
+       lines) show total bytes transferred per call, broken out by file type
+       (e.g. compressed log/data/eng files, kkyy files, etc).</li>
+       <li><code>(count)</code> traces (left <code>Count</code> axis, dashed
+       lines) show the number of files of each type transferred per call.</li>
+       <li><code>(secs)</code> traces (<code>Seconds</code> axis, dotted
+       lines) show time spent transferring each file type per call.</li>
+     </ul>
+     <h2>Buttons</h2>
+     <p>The buttons below the plot toggle which trace group is shown:
+     <code>All</code>, <code>Sizes</code>, <code>Counts</code>,
+     <code>Times</code>, <code>Totals</code>, or an individual file type.
+     Toggling a button shows that group and hides the rest (shift/legend
+     click behaves as usual for individual traces).</p>
+     <p>CRC errors (failed/retried packets) reported in <code>comm.log</code>
+     are reflected in the underlying data but are not broken out as a
+     separate trace on this plot.</p>
+   </body>
+ </html>

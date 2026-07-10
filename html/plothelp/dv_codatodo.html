@@ -1,0 +1,31 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>codaTODO Oxygen Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>codaTODO Oxygen Plot Help</h1>
+     <p>This plot shows dissolved oxygen vs. depth from a codaTODO oxygen
+     sensor. The title states whether the data shown has been corrected for
+     salinity and depth, and whether it has been restricted to
+     <code>QC_GOOD</code> points only.</p>
+     <ul>
+       <li><code>Corrected O2</code> traces (top x-axis, umol/kg) are the
+       basestation-corrected dissolved oxygen values, dive and climb shown
+       separately. If no correction was available, the plot instead shows
+       the uncorrected instrument value with the title noting "not
+       corrected".</li>
+       <li><code>Sat O2</code> traces show the instrument's own oxygen
+       saturation percentage output, uncorrected.</li>
+       <li><code>Temperature</code> traces (bottom x-axis, C, hidden by
+       default - toggle on via the legend) show the oxygen sensor's own
+       temperature channel, for comparing against the CTD temperature.</li>
+       <li>Shaded/overlay regions (when present) mark sample timeouts and the
+       commanded sampling range for the instrument, same convention as other
+       science plots - see the <a href="samples.html">sampling traces
+       help</a>.</li>
+     </ul>
+   </body>
+ </html>

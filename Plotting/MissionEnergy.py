@@ -666,12 +666,10 @@ def mission_energy(
                     "x": 1.075,
                     "y": 1,
                 }
-                #"annotations": tuple(l_annotations),
             },
         )
-        l_annotations = []
-        l_annotations.append(PlotUtilsPlotly.add_help_link("eng_mission_energy"))
-        #fig.update_layout({"annotations": tuple(l_annotations)})
+        l_annotations = [PlotUtilsPlotly.add_help_link("eng_mission_energy")]
+        fig.update_layout({"annotations": tuple(l_annotations)})
 
         return (
             [fig],

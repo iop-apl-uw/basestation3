@@ -1,0 +1,36 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Optode Oxygen Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Optode Oxygen Plot Help</h1>
+     <p>This plot shows dissolved oxygen vs. depth from an Aanderaa optode
+     (3830/4330/4831, whichever is installed - shown in the output file
+     name). The title states whether the data has been corrected, whether
+     it's restricted to <code>QC_GOOD</code> points, and the depth binning
+     if the data is a binned profile.</p>
+     <ul>
+       <li><code>Corrected O2</code> (top x-axis, umol/kg) is the
+       basestation-corrected dissolved oxygen, taken from the
+       <code>aanderaa&lt;type&gt;_dissolved_oxygen</code> netCDF variable. If
+       no correction was available, only the instrument-reported trace below
+       is shown and the title notes "not corrected".</li>
+       <li><code>Instrument Reported O2</code> is the raw, uncorrected value
+       as reported by the optode itself, shown alongside the corrected trace
+       for comparison.</li>
+       <li><code>Instrument Reported Temp</code> (bottom x-axis, C, when
+       present) is the optode's own temperature channel.</li>
+       <li><code>Sat O2</code> (when present) is the instrument's oxygen
+       saturation percentage output.</li>
+     </ul>
+     <p>The annotation below the plot reports the instrument calibration
+     comment, drift gain (if set), and count of sample timeouts, when
+     available.</p>
+     <p>Shaded/overlay regions (when present) mark sample timeouts and the
+     commanded sampling range - see the <a href="samples.html">sampling
+     traces help</a>.</p>
+   </body>
+ </html>

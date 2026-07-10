@@ -1,0 +1,27 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>PMAR Stats Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>PMAR Stats Plot Help</h1>
+     <p>This plot tracks PMAR instrument health/operational counters over
+     the mission, vs. dive number, summed across profile segments and
+     reported per channel (<code>ch00</code>, <code>ch01</code>).</p>
+     <ul>
+       <li><code>bufferfull</code>/<code>writeerrors</code> (left axis) -
+       counts of buffer overflow and write-error events.</li>
+       <li><code>num blocks</code> (second left axis) - data blocks
+       recorded.</li>
+       <li><code>clip count</code>/<code>despike count</code> (right axis) -
+       how often the channel's ADC clipped or a despike correction was
+       applied.</li>
+       <li><code>num files</code> (far-right axis) - files written.</li>
+     </ul>
+     <p>A rising trend in <code>bufferfull</code>, <code>writeerrors</code>,
+     or <code>clip count</code> over the mission points to a PMAR hardware
+     or storage problem worth investigating before it gets worse.</p>
+   </body>
+ </html>

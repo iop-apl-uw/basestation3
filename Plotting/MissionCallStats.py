@@ -503,10 +503,7 @@ def mission_callstats(
             }
         ]
     )
-    l_annotations = []
-    l_annotations.append(
-        PlotUtilsPlotly.add_help_link("eng_download_stats", x_pos=1.05)
-    )
+    l_annotations = [PlotUtilsPlotly.add_help_link("eng_download_stats", x_pos=1.05)]
 
     title_text = f"{mission_str}<br>Download Statistics vs Call Num"
     fig.update_layout(
@@ -562,7 +559,7 @@ def mission_callstats(
                 "x": 1.075,
                 "y": 1,
             },
-            # "annotations": tuple(l_annotations),
+            "annotations": tuple(l_annotations),
         },
     )
 

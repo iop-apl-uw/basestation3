@@ -233,6 +233,8 @@ def mission_pmar_stats(
             },
         },
     )
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("eng_pmar_stats"))
+
     return (
         [fig],
         PlotUtilsPlotly.write_output_files(

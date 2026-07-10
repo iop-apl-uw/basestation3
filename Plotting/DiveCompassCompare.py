@@ -470,6 +470,8 @@ def plot_compass_compare(
         }
     )
 
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_compass_compare"))
+
     return (
         [fig],
         PlotUtilsPlotly.write_output_files(

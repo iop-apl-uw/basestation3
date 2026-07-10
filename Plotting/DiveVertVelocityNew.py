@@ -463,6 +463,8 @@ def plot_vert_vel_new(
         }
     )
 
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_vert_vel_new"))
+
     ret_figs: list[plotly.graph_objects.Figure] = [fig]
     ret_list: list[pathlib.Path] = PlotUtilsPlotly.write_output_files(
         base_opts,
@@ -470,6 +472,8 @@ def plot_vert_vel_new(
         fig,
     )
     if fit_fig:
+        fit_fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_vert_vel_regression"))
+
         ret_figs.append(fig)
         ret_list.extend(
             PlotUtilsPlotly.write_output_files(

@@ -367,4 +367,6 @@ def plot_sbe43(
                 )
             }
         )
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_sbe43"))
+
     return ([fig], PlotUtilsPlotly.write_output_files(base_opts, output_name, fig))

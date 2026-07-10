@@ -1,0 +1,23 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Pitch and Roll Motor Diagnostics Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Pitch and Roll Motor Diagnostics Plot Help</h1>
+     <p>This plot tracks pitch and roll motor performance across the
+     mission, vs. dive number - one point per motor move.</p>
+     <ul>
+       <li><code>current</code> traces (left axis, A) show motor current
+       draw per move.</li>
+       <li><code>rate</code> traces (right axis, AD/s) show motor speed per
+       move.</li>
+     </ul>
+     <p>Rising current or falling rate over the mission for either motor can
+     indicate increasing mechanical friction/drag, worth checking against
+     the <a href="eng_mission_energy.html">mission energy plot</a> for a
+     corresponding rise in modeled motor energy use.</p>
+   </body>
+ </html>

@@ -64,6 +64,7 @@ def plot_mag(
 
     hard, soft, cover, circ, fig = Magcal.magcal_worker([dive_nc_file], True, 'html', PlotUtils.get_mission_dive(dive_nc_file))
 
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_magcal"))
 
     return (
         [fig],

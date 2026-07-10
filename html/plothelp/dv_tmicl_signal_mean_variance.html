@@ -1,0 +1,29 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>TMICL Signal Mean/Variance Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>TMICL Signal Mean/Variance Plot Help</h1>
+     <p>This plot shows raw-signal statistics vs. depth for one TMICL
+     microstructure/shear-probe channel (<code>ch0</code>, <code>ch1</code>,
+     <code>shear</code>, <code>temp</code>, <code>temp0</code>, or
+     <code>temp1</code> - named in the title), dive and climb shown
+     separately.</p>
+     <ul>
+       <li><code>Signal Mean</code> (bottom axis, linear) is the channel's
+       raw mean level.</li>
+       <li><code>Signal Variance</code> and <code>Integrated Variance</code>
+       (top axis, log scale, Volts/sec&sup2;) characterize the fluctuating
+       (turbulent) part of the signal - elevated variance vs. depth is the
+       signature of a turbulent layer.</li>
+     </ul>
+     <p>For <code>shear</code> channels, the <code>Signal Mean</code> trace
+     is hidden by default (toggle via the legend) since mean shear level is
+     usually less diagnostic than its variance.</p>
+     <p>See also the <a href="dv_tmicl_logavg.html">log-average spectrum
+     plot</a> for the frequency content of these same channels.</p>
+   </body>
+ </html>

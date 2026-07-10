@@ -233,6 +233,9 @@ def plot_legato_pressure(
             },
         }
     )
+
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_legato_pressure"))
+
     return (
         [fig],
         PlotUtilsPlotly.write_output_files(

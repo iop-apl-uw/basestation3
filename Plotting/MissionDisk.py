@@ -268,6 +268,8 @@ def mission_disk(
             },
         },
     )
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("eng_disk"))
+
     return (
         [fig],
         PlotUtilsPlotly.write_output_files(
@@ -454,6 +456,9 @@ def mission_pmar_disk(
             # "annotations": tuple(l_annotations),
         },
     )
+
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("eng_pmar_disk"))
+
     return (
         [fig],
         PlotUtilsPlotly.write_output_files(

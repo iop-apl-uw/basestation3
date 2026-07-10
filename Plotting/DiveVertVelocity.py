@@ -944,6 +944,8 @@ def plot_vert_vel(
     # ]
     # fig.update_layout({"annotations": tuple(l_annotations)})
 
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_vert_vel"))
+
     return (
         [fig],
         PlotUtilsPlotly.write_output_files(

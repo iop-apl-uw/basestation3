@@ -1,0 +1,24 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Internal Sensors Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Internal Sensors Plot Help</h1>
+     <p>This plot tracks the pressure hull's internal environment over the
+     mission, vs. dive number - the basic vehicle-health check for leaks or
+     desiccant exhaustion.</p>
+     <ul>
+       <li><code>Internal Pressure</code> (left axis, psia) - a rising trend
+       over the mission can indicate a slow leak.</li>
+       <li><code>Relative Humidity</code> (right axis) - a rising trend can
+       indicate desiccant exhaustion or a leak.</li>
+       <li><code>Temperature</code> (far-right axis, C) - internal
+       temperature, for context when interpreting the other two.</li>
+     </ul>
+     <p>Additional traces may appear here if a logger/sensor extension
+     registers its own internal-sensor plot.</p>
+   </body>
+ </html>

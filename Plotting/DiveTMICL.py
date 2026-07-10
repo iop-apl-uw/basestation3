@@ -317,6 +317,8 @@ def plot_TMICL(
 
         fig.update_layout(update_dict)
 
+        fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_tmicl_signal_mean_variance"))
+
         ret_figs.append(fig)
         ret_plots.extend(
             PlotUtilsPlotly.write_output_files(
@@ -429,6 +431,8 @@ def plot_TMICL(
                     },
                 }
             )
+
+            fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_tmicl_logavg"))
 
             ret_figs.append(fig)
             ret_plots.extend(

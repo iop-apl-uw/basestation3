@@ -1,0 +1,34 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Vertical Velocity (New Model) Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Vertical Velocity (New Model) Plot Help</h1>
+     <p>This is the newer hydrodynamic-regression version of the
+     <a href="dv_vert_vel.html">vertical velocity plot</a>, comparing
+     observed vertical speed against several flight-model predictions vs.
+     depth.</p>
+     <ul>
+       <li><code>Vert Speed observed from pressure</code> (solid black line)
+       is the measured vertical speed - the reference all model traces are
+       compared against.</li>
+       <li><code>Vert Speed Desired (dive/climb)</code> is the commanded
+       target speed.</li>
+       <li><code>Model as flying on glider</code> uses the currently
+       commanded <code>C_VBD</code> and hydrodynamic drag coefficients
+       (<code>HD_A</code>, <code>HD_B</code>), no correction applied.</li>
+       <li><code>Buoyancy only corrected model</code> applies just a
+       buoyancy/<code>C_VBD</code> bias fit to this dive's data.</li>
+       <li>Additional model traces (when present) come from the full
+       hydrodynamic regression fit - see the
+       <a href="dv_vert_vel_regression.html">regression fit plot</a> for
+       that fit's own diagnostics.</li>
+     </ul>
+     <p>Each model trace's legend label reports its implied parameters and
+     RMS error (model minus observed vertical speed) - lower RMS is a
+     better-fitting model.</p>
+   </body>
+ </html>

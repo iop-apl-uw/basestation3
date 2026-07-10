@@ -1,0 +1,23 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Vertical Velocity Regression Fit Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Vertical Velocity Regression Fit Plot Help</h1>
+     <p>This is the fit-quality diagnostic produced by the hydrodynamic
+     regression (<code>RegressVBD</code>) used to derive buoyancy bias and
+     drag coefficients (<code>HD_A</code>, <code>HD_B</code>) for the
+     <a href="dv_vert_vel_new.html">vertical velocity plot</a>. Depending on
+     the <code>--regress_dives</code> setting, the regression is fit either
+     to just this dive or to a rolling window of recent dives, in which case
+     this plot reflects the multi-dive fit rather than this dive alone.</p>
+     <p>Use it to judge whether the fitted hydrodynamic parameters are
+     well-constrained by the data (a tight, consistent fit) or noisy/poorly
+     determined (scattered residuals), before trusting the implied
+     <code>C_VBD</code>/drag coefficient updates reported on the vertical
+     velocity plot.</p>
+   </body>
+ </html>

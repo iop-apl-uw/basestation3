@@ -576,4 +576,6 @@ def plot_optode(
                 )
             }
         )
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_optode"))
+
     return ([fig], PlotUtilsPlotly.write_output_files(base_opts, output_name, fig))

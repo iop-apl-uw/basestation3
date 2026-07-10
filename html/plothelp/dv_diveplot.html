@@ -1,0 +1,36 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Dive Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Dive Plot Help</h1>
+     <p>This is the primary engineering "everything" plot for a dive - most
+     flight-control and vehicle-state channels overlaid vs. time into the
+     dive, on a shared depth-scaled left axis (many traces are scaled/offset
+     so they share the depth axis; the scale factor is given in each trace's
+     legend label). Use the legend to toggle traces on/off.</p>
+     <ul>
+       <li><code>Depth</code> traces (truck, and Legato/aux CTD when
+       present).</li>
+       <li><code>Vert Speed</code>/<code>Horiz Speed</code>/<code>Glide
+       Angle</code> - both flight-model (<code>GSM</code>/<code>HDM</code>)
+       estimates and desired/commanded values.</li>
+       <li><code>Pitch Up</code>/<code>Vehicle Roll</code> - measured
+       attitude, alongside desired attitude and raw motor position
+       (<code>Pitch pos</code>/<code>Roll pos</code>).</li>
+       <li><code>VBD pos</code>/<code>Buoyancy</code> - VBD (buoyancy
+       engine) position and the resulting modeled buoyancy.</li>
+       <li><code>sigma_t</code>/<code>Buoyancy Frequency</code> - derived
+       water-column properties along the track.</li>
+       <li><code>Heading</code> (right axis, degrees true) - measured vs.
+       desired heading, with the +/- error band.</li>
+     </ul>
+     <p>This plot is the general-purpose starting point for diagnosing
+     flight behavior; the more focused
+     <a href="dv_pitch.html">pitch</a>/<a href="dv_roll.html">roll</a>
+     control plots are better for trim calibration specifically.</p>
+   </body>
+ </html>

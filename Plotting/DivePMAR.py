@@ -588,6 +588,8 @@ def plot_PMAR(
                 ch_tag,
             )
 
+            fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_pmar"))
+
             ret_figs.append(fig)
             ret_plots.extend(
                 PlotUtilsPlotly.write_output_files(base_opts, output_name, fig)
@@ -880,6 +882,8 @@ def plot_PMAR(
                 },
             }
         )
+
+        fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_pmar_logavg_spectra"))
 
         ret_figs.append(fig)
         ret_plots.extend(

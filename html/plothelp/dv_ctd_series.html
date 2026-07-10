@@ -1,0 +1,24 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>CTD Series Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>CTD Series Plot Help</h1>
+     <p>This is an animated version of the <a href="dv_ctd.html">CTD
+     plot</a>, stepping through a rolling window of recent dives (controlled
+     by the <code>ctd_series_divesback</code> option) rather than showing a
+     single dive. It is only generated when
+     <code>--enable_ctd_series</code> is set.</p>
+     <p>Use the <code>Play</code>/<code>Pause</code> buttons or drag the
+     <code>Dive:</code> slider below the plot to step through dives. Each
+     frame shows the same salinity/temperature/conductivity traces vs. depth
+     as the single-dive CTD plot, for that dive.</p>
+     <p>As with the single-dive plot, a separate <b>RAW</b> version is
+     generated for Seabird CTDs (uncorrected data) alongside the corrected
+     version, unless the glider carries an RBR Legato or
+     <code>--plot_ctd_raw</code> is set to skip it.</p>
+   </body>
+ </html>

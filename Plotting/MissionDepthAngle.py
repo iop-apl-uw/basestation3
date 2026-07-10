@@ -160,6 +160,8 @@ def mission_depthangle(
             },
         },
     )
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("eng_depth_angle"))
+
     return (
         [fig],
         PlotUtilsPlotly.write_output_files(

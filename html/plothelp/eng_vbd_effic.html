@@ -1,0 +1,21 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>VBD Efficiency Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>VBD Efficiency Plot Help</h1>
+     <p>This plot tracks VBD pump efficiency across the mission, vs. dive
+     number. Only pump moves are shown (bleed moves are excluded), and
+     points above the <code>--max_vbd_effic</code> threshold are dropped as
+     outliers.</p>
+     <p>Each point is colored by the depth the pump move occurred at, so you
+     can see whether efficiency depends on ambient pressure as well as on
+     dive number. A steady downward trend in efficiency over the mission can
+     indicate pump wear or an accumulating hydraulic issue - compare against
+     the <a href="eng_vbd_motors.html">pump and bleed diagnostics plot</a>
+     for the underlying current/rate data.</p>
+   </body>
+ </html>

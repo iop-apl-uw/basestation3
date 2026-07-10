@@ -342,6 +342,8 @@ def plot_wetlabs(
                             }
                         )
 
+                    fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_wetlabs_fluor"))
+
                     ret_figs.append(fig)
                     ret_plots.extend(
                         PlotUtilsPlotly.write_output_files(
@@ -536,6 +538,8 @@ def plot_wetlabs(
                     )
                 }
             )
+
+        fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_wetlabs_backscatter"))
 
         ret_figs.append(fig)
         ret_plots.extend(

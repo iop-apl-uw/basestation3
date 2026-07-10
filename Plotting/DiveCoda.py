@@ -538,4 +538,6 @@ def plot_coda(
                 )
             }
         )
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_codatodo"))
+
     return ([fig], PlotUtilsPlotly.write_output_files(base_opts, output_name, fig))

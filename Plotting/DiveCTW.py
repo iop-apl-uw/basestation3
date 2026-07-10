@@ -452,6 +452,8 @@ def plot_CTW(
     # Needed to get the origin for the lines to be 0,0 on the plot
     # fig.update_shapes(dict(xref="x", yref="y"))
 
+    fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_ctw"))
+
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     title_text = f"{mission_dive_str}<br>Course through water and over ground"
 

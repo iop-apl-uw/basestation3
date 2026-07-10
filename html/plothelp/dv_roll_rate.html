@@ -1,0 +1,31 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Roll Control vs Turn Rate Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Roll Control vs Turn Rate Plot Help</h1>
+     <p>This is an alternate way to derive the roll trim center
+     (<code>C_ROLL_DIVE</code>/<code>C_ROLL_CLIMB</code>), using observed
+     heading turn rate instead of raw roll angle - turn rate is less
+     sensitive to compass noise than the roll angle itself. Dive and climb
+     are shown separately.</p>
+     <ul>
+       <li><code>Observed turn rate - dive/climb</code> is turn rate
+       (deg/sec) vs. roll control counts for all points in the segment.</li>
+       <li><code>Observed turn rate while centered</code> restricts to
+       points near the currently commanded roll center, where the
+       relationship is closest to linear.</li>
+       <li><code>Current center</code> marks the roll control value implied
+       by the currently commanded roll center.</li>
+       <li><code>All data linear model</code> and <code>Centered data linear
+       model</code> are linear fits to, respectively, all points and just
+       the near-center points, each reporting its own implied roll center.</li>
+     </ul>
+     <p>Compare against the <a href="dv_roll.html">roll control plot</a>,
+     which derives the same parameter directly from roll angle rather than
+     turn rate.</p>
+   </body>
+ </html>

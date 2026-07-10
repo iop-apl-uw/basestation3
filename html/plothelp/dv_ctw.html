@@ -1,0 +1,33 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>Course Through Water Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>Course Through Water Plot Help</h1>
+     <p>This plot shows the glider's track relative to the water
+     (<b>Course Through Water</b>, computed from the flight/hydrodynamic
+     model) alongside its track relative to the ground
+     (<b>Course Over Ground</b>, which includes the effect of ocean
+     current), in meters of northward/eastward displacement from the start
+     of the dive.</p>
+     <ul>
+       <li><code>HDM</code> traces use the basestation's Hydrodynamic Model.</li>
+       <li><code>GSM</code> traces use the Gliderscope/steady-state model;
+       these are shown by default when no CTD-timebase HDM solution is
+       available for the dive.</li>
+       <li><code>AD2CP</code> traces (when present) use velocities measured
+       directly by an AD2CP current profiler rather than a flight model -
+       both the through-water and (adding the profiler's measured ocean
+       velocity) over-ground versions are shown.</li>
+       <li><code>GPS2</code>/<code>GPSEND</code> mark the surface GPS fixes
+       bracketing the dive.</li>
+       <li>The colored line segments radiating from the origin show the
+       commanded heading and the +/- heading error band
+       (<code>log_HEAD_ERRBAND</code>) used by the pilot's steering
+       target.</li>
+     </ul>
+   </body>
+ </html>

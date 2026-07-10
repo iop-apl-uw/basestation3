@@ -637,6 +637,8 @@ def plot_pitch_roll(
             }
         )
 
+        fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_pitch"))
+
         figs_list.append(fig)
         file_list.append(
             PlotUtilsPlotly.write_output_files(
@@ -872,6 +874,8 @@ def plot_pitch_roll(
                 },
             }
         )
+
+        fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_roll"))
 
         figs_list.append(fig)
         file_list.append(
@@ -1283,6 +1287,8 @@ def plot_pitch_roll(
                 },
             }
         )
+
+        fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_roll_rate"))
 
         figs_list.append(fig)
         file_list.append(

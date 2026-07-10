@@ -1455,6 +1455,8 @@ def plot_CTD_series(
 
             fig.update_layout({"annotations": tuple(l_annotations)})
 
+        fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_ctd_series"))
+
         fig.update_xaxes(automargin=True)
 
         fig.update(frames=frames)
