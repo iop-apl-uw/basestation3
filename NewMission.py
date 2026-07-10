@@ -227,6 +227,7 @@ def main():
         ".mailer",
         ".ftp",
         ".sftp",
+        ".ftps",
         ".extensions",
         ".pre_login",
         ".post_dive",

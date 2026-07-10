@@ -203,6 +203,8 @@ def main():
         ".hushlogin",
         ".extensions",
         ".ftp",
+        ".sftp",
+        ".ftps",
         ".mailer",
         ".pre_extensions",
         "sections.yml",

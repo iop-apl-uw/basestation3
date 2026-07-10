@@ -38,8 +38,8 @@ which in turn runs the `/usr/local/basestation3/glider_logout` script
 which in turn runs the `Base.py` script.  The `Base.py` script processes any new or
 updated dive files received from the glider and processes any directives in the
 `.pagers/.urls` in the `/usr/local/basestation3/etc` directory, then
-`.pagers/.mailer/.ftp/.urls` files located in the Seagliders home directory. 
-Consult the comments at the top of the `.pagers`/`.mailer`/`.urls/.ftp` file 
+`.pagers/.mailer/.ftp/.sftp/.ftps/.urls` files located in the Seagliders home directory. 
+Consult the comments at the top of the `.pagers`/`.mailer`/`.urls`/`.ftp`/`.sftp`/`.ftps` file 
 in the `/usr/local/basestation3/sg000` directory for documentation on each of
 these files.
 
@@ -505,6 +505,8 @@ files located in the sg000 sub-directory
 - [Pagers](sg000/.pagers?raw=true)
 - [Mailer](sg000/.mailer?raw=true)
 - [FTP](sg000/.ftp?raw=true)
+- [SFTP](sg000/.sftp?raw=true)
+- [FTPS](sg000/.ftps?raw=true)
 - [URLS](sg000/.urls?raw=true)
 - [Extensions](sg000/.extensions?raw=true)
 - [Early Extensions](sg000/.pre_extensions?raw=true)
@@ -663,6 +665,28 @@ a new deployment.
 ```
 /opt/basestation/bin/python /usr/local/basestation3/MoveData.py \
  --mission_dir <seaglider_home_directory> -t <target_directory> --verbose
+```
+
+## FTPPush.py
+
+```FTPPush.py``` pushes a set of files from a Seaglider's home directory to the
+site(s) configured in that glider's ```.ftp```, ```.sftp``` and/or ```.ftps```
+files, outside of the normal per-dive processing done by ```Base.py```.  This
+is useful for backfilling a remote site after adding a new destination to a
+```.ftp```/```.sftp```/```.ftps``` file, or after a push failure.
+
+To push every file matching a glob spec via all three configured file transfer
+methods:
+```
+/opt/basestation/bin/python /usr/local/basestation3/FTPPush.py \
+ --mission_dir <seaglider_home_directory> 'p*.nc'
+```
+
+To restrict the push to just one of the three, add ```--ftp_type```
+(```ftp```, ```sftp```, or ```ftps```; defaults to ```all```):
+```
+/opt/basestation/bin/python /usr/local/basestation3/FTPPush.py \
+ --mission_dir <seaglider_home_directory> --ftp_type sftp 'p*.nc'
 ```
 
 ## BaseCtrlFiles.py

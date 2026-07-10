@@ -3350,6 +3350,15 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             ftp_type=".sftp",
         )
 
+        BaseDotFiles.process_ftp(
+            base_opts,
+            processed_file_names,
+            mission_timeseries_name,
+            mission_profile_name,
+            known_ftp_tags,
+            ftp_type=".ftps",
+        )
+
         BaseDotFiles.process_mailer(
             base_opts,
             instrument_id,

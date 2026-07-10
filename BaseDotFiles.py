@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import configparser
 import fnmatch
+import functools
 import itertools
 import json
 import netrc
@@ -53,10 +54,8 @@ from email.mime.multipart import MIMEBase, MIMEMultipart
 from email.mime.nonmultipart import MIMENonMultipart
 from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
-from ftplib import FTP
+from ftplib import FTP, FTP_TLS
 from typing import TYPE_CHECKING, Literal
-
-# from ftplib import FTP_TLS
 from urllib.parse import urlencode
 
 import requests
@@ -777,6 +776,7 @@ def process_ftp_line(
     mission_profile_name,
     ftp_line,
     known_ftp_tags,
+    use_ftps=False,
 ):
     """Sends indicated files to the ftp site indicated in ftp_line.
     Always sends nc files but can send others according to known_ftp_tags
@@ -787,6 +787,7 @@ def process_ftp_line(
        mission_profile_name - name or None
        ftp_line - ftp specification of the form [user[:password]@]host[:port]/path
        known_ftp_tags - list of acceptable tags as a filter (e.g., comm, mission_ts, mission_pro, or explicit extensions)
+       use_ftps - if True, negotiate FTPS (explicit TLS) instead of plain FTP
 
     Returns
       0 - success
@@ -860,17 +861,26 @@ def process_ftp_line(
     try:
         # Some hosts - gliders.ioos.us for example - don't want to login when the
         # host is specified in the FTP object creation - and then only when running from Base.py
-        ftp = FTP(timeout=30)
-        connect_response = ftp.connect(host=host)
-        # ftp = FTP_TLS(host)
+        if use_ftps:
+            ftp = FTP_TLS(timeout=30)
+        else:
+            ftp = FTP(timeout=30)
+        connect_response = ftp.connect(host=host)  # port defaults to 21
     except Exception:
         log_error("Unable to connect", "exc")
         return 1  # give up
     log_info(connect_response)
-    # try:
-    #     ftp.prot_p()
-    # except Exception:
-    #     log_warning("Could not go to secure - continuing", "exc")
+
+    if use_ftps:
+        try:
+            ftp.auth()  # upgrade control channel to TLS, on port 21
+        except Exception:
+            log_error(
+                "Unable to negotiate TLS - aborting rather than send credentials insecurely",
+                "exc",
+            )
+            return 1  # give up
+
     try:
         # ftp.set_debuglevel(2) # 2 is max level - all to stdout
         ftp.set_pasv(True)
@@ -880,6 +890,12 @@ def process_ftp_line(
         return 1  # give up
 
     log_info(login_response)
+
+    if use_ftps:
+        try:
+            ftp.prot_p()  # secure the data channel too, after login
+        except Exception:
+            log_warning("Could not secure data channel - continuing", "exc")
 
     for i in path.split("/"):
         try:
@@ -1041,7 +1057,7 @@ def process_ftp(
     ftp_type=".ftp",
 ):
     def process_one_ftp(ftp_file, process_line):
-        """Process the .ftp/.sftp file and push the data to a ftp/sftp server"""
+        """Process the .ftp/.sftp/.ftps file and push the data to a ftp/sftp/ftps server"""
 
         for ftp_line in ftp_file:
             try:
@@ -1056,12 +1072,14 @@ def process_ftp(
             except Exception:
                 log_error(f"Could not process {ftp_line} - skipping", "exc")
 
-    if ftp_type not in (".ftp", ".sftp"):
+    if ftp_type not in (".ftp", ".sftp", ".ftps"):
         log_error(f"Unsupported ftp type {ftp_type}")
         return 1
 
     if ftp_type == ".ftp":
         process_line = process_ftp_line
+    elif ftp_type == ".ftps":
+        process_line = functools.partial(process_ftp_line, use_ftps=True)
     else:
         process_line = process_sftp_line
 
@@ -1686,7 +1704,7 @@ def main():
                 str,
                 {
                     "help": "Which action to run",
-                    "choices": ("gps", "drift", "ftp", "sftp", "urls"),
+                    "choices": ("gps", "drift", "ftp", "sftp", "ftps", "urls"),
                 },
             ),
             "ftp_files": BaseOptsType.options_t(
@@ -1758,6 +1776,15 @@ def main():
             None,
             Globals.known_ftp_tags,
             ftp_type=".sftp",
+        )
+    elif base_opts.basedotfiles_action == "ftps":
+        process_ftp(
+            base_opts,
+            [os.path.join(base_opts.mission_dir, ii) for ii in base_opts.ftp_files],
+            Utils2.get_mission_timeseries_name(base_opts),
+            None,
+            Globals.known_ftp_tags,
+            ftp_type=".ftps",
         )
     elif base_opts.basedotfiles_action == "urls":
         process_urls(
