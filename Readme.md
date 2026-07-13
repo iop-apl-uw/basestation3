@@ -65,8 +65,7 @@ The basestation has been tested on Ubuntu 22.04.
 For post processing, MacOS 13.3 has been tested.  It has not been
 tested on Microsoft Windows.
 
-The installation instructions assume python 3.10.10.  3.9 might still work,
-3.8 and earlier likely won't work.
+The installation instructions assume python 3.14.2.  
 
 No explicit hardware requirements are stated, but just about anything fairly
 modern should work.  (The basestation is regularly run on raspberry pi4 with 4G
@@ -74,20 +73,14 @@ of memory for single glider testing)
 
 ## Installation for post-processing
 
-### TODO - rework this section - need to include new python, uv and chrome
-
-In addition to the usual use of the Seaglider basestation to handle data
-coming in real-time from a Seaglider, the basestation may be installed for
-re-processing of missions.  In this mode, installation location is the users
-choice.  
-
-In addition to an appropriate version of python, 
-such a use only requires the required python packages be installed.
-
-    pip install -r requirements.txt
+To use this package for post processing: 
+- Download or clone the source
+- If not already, install [uv](https://github.com/astral-sh/uv).  
+- `cd` to the root of the source tree
+- Use `uv` to run.  Test out with `uv run Base.py --help`
 
 See the section [Common Commands](#common-commands) for useful post processing
-commands
+commands.  Where commands reference `/opt/basestation/bin/python`, substitute `uv run`
 
 ## Installation for a realtime basestation
 
@@ -165,85 +158,21 @@ A word of caution - the HEAD revision may not be stable and any given point in
 time.  It also may contain features or changes that are experimental on subject
 to change or removal.
 
-## Installation - two approaches
+## Installation
 
-There are now two approaches to installing python and the required packages.  The first is the "traditional" basestation3 approach - which involves building python from scratch and installing packages via the python package installer - ```pip```.  The second (alternative) approach involves the package/project manager [uv](https://github.com/astral-sh/uv).  For now, either approach will work, but in future releases, the ``uv`` approach will be on the only one documented/supported.  If you want to give the ``uv`` approach a try, jump to [Install python and the basestation packages with UV](#install-python-and-the-basestation-packages-with-uv)
+These instructions are tailored to setting up python on a basestation server (where gliders are calling in and
+there are multiple users that need access to the python installation.  If you are interested in running the baseation3 code 
+on a personal machine for post processing, set the section above [Installation for post-processing](#installation-for-post-processing)
 
-## Installing python
+*CAUTION!!!* 
 
-This section applies if the required version of python has changed since the last install of 
-basestation3.  If not, skip to [Install the basestation python packages](#install-the-basestation-python-packages)
+This version of the basestation3 code only supports installation with the package/project manager [uv](https://github.com/astral-sh/uv).  Follow directions at that link to install `uv` first.
 
-It is recommended that version 3.10.10 of python be installed along the a specific set of
-python support libraries.  The process is as follows:
+If you had previously setup the python without using `uv`, it is recommended that you start from a blank slate:
 
-### Install preliminaries
+```rm -rf /opt/basestation```
 
-```
-sudo apt-get install -y build-essential checkinstall libreadline-dev libncursesw5-dev \
-libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev zlib1g-dev openssl libffi-dev libgeos-dev \
-python3-dev python3-setuptools wget libgdbm-compat-dev uuid-dev liblzma-dev tcsh
-```
-
-Further details on build pre-requisites are available here:
-```
-https://devguide.python.org/getting-started/setup-building/#build-dependencies
-```
-
-### Prepare to build
-
-```
-mkdir /tmp/Python3.10
-cd /tmp/Python3.10
-```
-
-Download python source distribution and build.  Depending on your machine, this can take a while
-
-```
-wget https://www.python.org/ftp/python/3.10.10/Python-3.10.10.tar.xz
-tar xvf Python-3.10.10.tar.xz
-cd Python-3.10.10
-./configure --enable-optimizations --prefix /opt/python/3.10.10
-make
-
-sudo mkdir -p /opt/python
-sudo chown -R <user>:gliders /opt/python
-make install
-```
-
-Replace ```<user>``` in the above your username.
-
-### Check build and install
-
-``` bash
-/opt/python/3.10.10/bin/python3 --version
-```
-
-### Install the basestation python packages
-
-```
-rm -rf /opt/basestation
-```
-then
-```
-sudo mkdir -p /opt/basestation
-sudo chown -R <user>:gliders /opt/basestation
-```
-Replace ```<user>``` in the above your username. Then
-
-```
-/opt/python/3.10.10/bin/python3 -m venv /opt/basestation
-/opt/basestation/bin/pip install -r /usr/local/basestation3/requirements.txt
-```
-Now, jump to [login/logout scripts](#loginlogout-scripts)
-
-## Install python and the basestation packages with UV
-
-This alternate (and eventually only) method of setting up python and the supporting packages uses the ``uv`` package manager.
-
-First step is to install [uv](https://github.com/astral-sh/uv).  More detailed instructions can be found in the [uv documentation](https://docs.astral.sh/uv/).
-
-Second, create the virtual environment:
+Next, create the virtual environment:
 
 ```
 sudo mkdir -p /opt/basestation
@@ -276,6 +205,33 @@ To test that all is working:
 ```/opt/basestation/bin/python Base.py --help```
 
 and you should see the help message for ```Base.py```
+
+
+### Installing Chromium
+
+```
+sudo mkdir -p /opt/playwright-browsers
+sudo chown -R <user>:gliders /opt/playwright-browsers
+export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
+playwright install chromium
+sudo chmod -R o+rx /opt/playwright-browsers
+```
+Next, setup the site sitecustomize.py script in the virtual env
+```
+python3 -c "import site; print(site.getsitepackages()[0])" | xargs -I{} sh -c 'cat >> {}/sitecustomize.py << "EOF"
+import os, glob
+_matches = sorted(glob.glob("/opt/playwright-browsers/chromium-*/chrome-linux/chrome"))
+if _matches:
+    os.environ.setdefault("BROWSER_PATH", _matches[-1])
+EOF'
+```
+Finally, confirm that the browser cache is set correctly
+``` 
+python3 -c "import os; print(os.environ.get('BROWSER_PATH'))"
+```
+You should see something like:
+```
+```
 
 ### login/logout scripts
 
