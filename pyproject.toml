@@ -69,6 +69,7 @@ dependencies = [
     "h5py==3.16.0",
     "q2netcdf", #Rockland Q file to netcdf convertor
     "playwright>=1.61.0",
+    "pillow",  # Used it image verification on the CI pipeline
 ]
 [project.optional-dependencies]
 ci = [

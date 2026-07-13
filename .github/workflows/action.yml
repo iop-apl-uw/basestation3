@@ -16,13 +16,13 @@ jobs:
     steps:
     - uses: actions/checkout@v5
 
-    - name: Install Brave Browser
-      run: |
-        sudo apt install -y curl
-        sudo curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
-        sudo curl -fsSLo /etc/apt/sources.list.d/brave-browser-release.sources https://brave-browser-apt-release.s3.brave.com/brave-browser.sources
-        sudo apt update
-        sudo apt install -y brave-browser
+    # - name: Install Brave Browser
+    #   run: |
+    #     sudo apt install -y curl
+    #     sudo curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+    #     sudo curl -fsSLo /etc/apt/sources.list.d/brave-browser-release.sources https://brave-browser-apt-release.s3.brave.com/brave-browser.sources
+    #     sudo apt update
+    #     sudo apt install -y brave-browser
 
     # Plotly6/kaleido1.0
     # - name: Install chrome requirements
@@ -31,6 +31,11 @@ jobs:
     #         apt install -y libnspr4 libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 \
     #         libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2t64
 
+    - name: Update dependencies for playwright browser install
+      run: |
+        sudo apt update
+        sudo apt install -y libnspr4 libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libxkbcommon0 libasound2t64 libgbm1 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libatspi2.0-0t64
+        
     - name: Install uv
       uses: astral-sh/setup-uv@v5
       with:
@@ -38,13 +43,147 @@ jobs:
         version: "0.9.28"
         enable-cache: true
         cache-dependency-glob: "uv.lock"
-    
+
+    # Start test for ACT supporting modern GITHUB_ENV managagement
+    - name: Test GITHUB_ENV propagation
+      run: echo "TEST_VAR=hello" >> "$GITHUB_ENV"
+
+    - name: Verify it propagated
+      run: |
+        if [ "$TEST_VAR" != "hello" ]; then
+          echo "::error::GITHUB_ENV not honored in this environment"
+          exit 1
+        fi
+        echo "GITHUB_ENV propagation confirmed"
+    # End for ACT supporting modern GITHUB_ENV managagement
+
     - name: Set up Python 3.14
       run: uv python install
       #run: uv python list
-      
+
     - name: Install dependencies
       run: uv sync --locked --extra ci --no-progress
+
+    - name: Cache Playwright browsers
+      uses: actions/cache@v4
+      id: playwright-cache
+      with:
+        path: /opt/playwright-browsers
+        key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('uv.lock') }}
+
+    - name: Install Chromium (if not cached)
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      env:
+        PLAYWRIGHT_BROWSERS_PATH: /opt/playwright-browsers
+      run: |
+        sudo mkdir -p /opt/playwright-browsers
+        sudo chown $(whoami) /opt/playwright-browsers
+        uv run playwright install chromium
+        sudo chmod -R o+rx /opt/playwright-browsers
+
+    - name: Resolve and export BROWSER_PATH
+      env:
+        PLAYWRIGHT_BROWSERS_PATH: /opt/playwright-browsers
+      run: |
+        CHROME_BIN=$(find /opt/playwright-browsers -iname "chrome" -type f -executable | sort | tail -1)
+        if [ -z "$CHROME_BIN" ]; then
+          echo "::error::Chromium binary not found under /opt/playwright-browsers"
+          exit 1
+        fi
+        echo "BROWSER_PATH=$CHROME_BIN" >> "$GITHUB_ENV"
+        echo "Resolved BROWSER_PATH: $CHROME_BIN"
+
+    - name: Verify Chromium launches
+      run: |
+        "$BROWSER_PATH" --headless --disable-gpu --no-sandbox --dump-dom https://example.com > /dev/null
+        echo "Chromium launch OK"
+
+    - name: Create test figure generation script
+      run: |
+        cat > /tmp/generate_test_figure.py << 'PYEOF'
+        import sys
+        from pathlib import Path
+
+        import plotly.graph_objects as go
+
+        output_dir = Path("output")
+        output_dir.mkdir(exist_ok=True)
+
+        fig = go.Figure(
+            data=[go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17], mode="lines+markers")]
+        )
+        fig.update_layout(title="CI Smoke Test Figure")
+
+        out_path = output_dir / "smoke_test.png"
+
+        try:
+            fig.write_image(str(out_path), width=800, height=600)
+        except Exception as e:
+            print(f"::error::Figure export failed: {e}", file=sys.stderr)
+            sys.exit(1)
+
+        print(f"Wrote {out_path}")
+        PYEOF
+
+    - name: Run test figure generation
+      run: uv run python /tmp/generate_test_figure.py
+
+    - name: Verify figures were actually generated
+      run: |
+        set -e
+        OUTPUT_DIR="output"
+        EXPECTED_COUNT=1
+
+        FOUND=$(find "$OUTPUT_DIR" -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.svg" \) | wc -l)
+        echo "Found $FOUND image file(s) in $OUTPUT_DIR"
+
+        if [ "$FOUND" -lt "$EXPECTED_COUNT" ]; then
+          echo "::error::Expected at least $EXPECTED_COUNT image(s), found $FOUND"
+          exit 1
+        fi
+
+        find "$OUTPUT_DIR" -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.svg" \) -print0 | \
+          while IFS= read -r -d '' f; do
+            SIZE=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f")
+            echo "  $f: ${SIZE} bytes"
+            if [ "$SIZE" -lt 1000 ]; then
+              echo "::error::$f is suspiciously small (${SIZE} bytes) — likely a blank/failed render"
+              exit 1
+            fi
+          done
+
+    - name: Verify image content is valid (not corrupted)
+      run: |
+        uv run python -c "
+        import sys
+        from pathlib import Path
+        from PIL import Image
+
+        output_dir = Path('output')
+        files = list(output_dir.glob('*.png')) + list(output_dir.glob('*.jpg'))
+
+        if not files:
+            print('::error::No raster image files found to verify')
+            sys.exit(1)
+
+        failed = False
+        for f in files:
+            try:
+                with Image.open(f) as img:
+                    img.verify()
+                with Image.open(f) as img:
+                    w, h = img.size
+                    print(f'{f.name}: {w}x{h}, mode={img.mode} — OK')
+                    if w < 10 or h < 10:
+                        print(f'::error::{f.name} has suspicious dimensions {w}x{h}')
+                        failed = True
+            except Exception as e:
+                print(f'::error::{f.name} failed to open/verify: {e}')
+                failed = True
+
+        sys.exit(1 if failed else 0)
+        "
+    # End verification that static image content is created
 
     # Plotly6/kaleido1.0
     # Only install x86 version
@@ -59,6 +198,6 @@ jobs:
 
     #- name: Setup completed, pausing for debugging
     #  run: sleep 3600 # Keeps the container alive for 1 hour
-        
+
     - name: Test with pytest
       run: uv run pytest -rsx --cov --cov-report term-missing tests
