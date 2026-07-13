@@ -243,8 +243,6 @@ def plot_COG(
                 }
             )
 
-    fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_cog"))
-
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     title_text = "%s<br>Course over Ground" % (mission_dive_str,)
 
