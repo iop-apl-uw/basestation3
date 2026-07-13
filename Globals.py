@@ -41,17 +41,17 @@ mission_profile_nc_fileversion = "2.71"
 mission_timeseries_nc_fileversion = "2.71"
 mission_per_dive_nc_fileversion = "2.71"
 # These document level of functionality
-basestation_version = "3.0.8"
+basestation_version = "3.0.9"
 quality_control_version = "1.12"
 
 # The oldest format version this code supports
 required_nc_fileversion = "2.7"  #  (August, 2011)
 
 # Version stamps for various packages
-required_python_version = (3, 10, 9)
-recommended_python_version = (3, 10, 10)
-required_numpy_version = "1.26.0"
-required_scipy_version = "1.14.0"
+required_python_version = (3, 14, 2)
+recommended_python_version = (3, 14, 2)
+required_numpy_version = "2.5.0"
+required_scipy_version = "1.18.0"
 
 
 # pylint: disable=E0239
