@@ -98,6 +98,26 @@
         width: 20px;
       }
     }
+
+    /* Styles applied ONLY when JavaScript detects a broken image */
+    img.broken-img {
+      /* Convert to a flex container to center child text nodes */
+      content: attr(alt);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      
+      /* Visual styling for the fallback container */
+      background-color: #f3f4f6;
+      color: #374151;
+      font-family: sans-serif;
+      font-size: 24px;
+      padding: 24px;
+      box-sizing: border-box;
+      border: 1px dashed #d1d5db;
+    }
+
 </style>
 
 <script>
@@ -3194,16 +3214,18 @@ parms[p]
             resp = JSON.parse(data);
             var links = [];
             clearPlots();
-            var plots = resp['dvplots'];
+            var dvplots = resp['dvplots'];
             var plotly = resp['plotlyplots'];
             // var engplots = resp['engplots'];
             var eplots = [...engplots];
 
-            var ab = plots.indexOf('ab');
+            var ab = dvplots.indexOf('ab');
             if (ab > -1 && !priority.includes('ab')) {
-                plots.splice(ab, 1);
+                dvplots.splice(ab, 1);
             }
 
+            var plots = [... new Set([...dvplots, ...plotly])];
+ 
             for (p of priority) {
                 if (plots.includes(p)) {
                     addPlot('dv', p, x, plotly.includes(p));
@@ -4001,6 +4023,14 @@ parms[p]
             glider = path[path.length - 1]
             console.log(glider);
         }
+
+        window.addEventListener('error', function (e) {
+            // Check if the error target is an image
+            if (e.target.tagName.toLowerCase() === 'img') {
+                // Add a class to apply centering styles
+                e.target.classList.add('broken-img');
+            }
+        }, true); // Use capturing phase to catch errors early
 
         let params = new URLSearchParams(window.location.search);
         if (params.has('dive')) {
