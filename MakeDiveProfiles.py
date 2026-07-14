@@ -144,10 +144,10 @@ sb_ct_type_map = {
 
 # This are all overwritten in sg_config_constants via the exec call - these
 # are here to satisfy static linters
-sg_ct_type = None
-sg_vehicle_geometry = None
-sg_sensor_geometry = None
-sg_ct_geometry = None
+# sg_ct_type = None
+# sg_vehicle_geometry = None
+# sg_sensor_geometry = None
+# sg_ct_geometry = None
 
 
 def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=False):
@@ -170,7 +170,18 @@ def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=Fal
     # easy mix-and-match and targetted override to the individiaul parameter
     # basis.  These overrides should be defined in the sg_calib_constants
     # file.
+    #
+    # NOTE(2026-07-14): sg_ct_type/sg_vehicle_geometry/sg_sensor_geometry/sg_ct_geometry
+    # used to be set via `exec(..., locals(), globals())` below, which leaked them as
+    # MakeDiveProfiles module globals rather than scoping them to this call. That's
+    # fine as long as a process only ever handles one glider, but when multiple
+    # missions are processed in the same process (e.g. the test suite), a later
+    # mission can silently inherit an earlier mission's values. Left commented out
+    # rather than deleted since this may need revisiting.
+    sg_ct_type = sg_vehicle_geometry = sg_sensor_geometry = sg_ct_geometry = None
+
     def update_calib_consts(config, assert_in_globals=False):
+        nonlocal sg_ct_type, sg_vehicle_geometry, sg_sensor_geometry, sg_ct_geometry
         for var, default_value in list(config.items()):
             try:
                 previous_value = calib_consts[var]  # override?
@@ -186,7 +197,21 @@ def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=Fal
                 calib_consts[var] = default_value
             if assert_in_globals:
                 # This use of exec is ok since the values are small integers and precision is irrelevant
-                exec("%s = %g" % (var, default_value), locals(), globals())
+                # exec("%s = %g" % (var, default_value), locals(), globals())
+                if var == "sg_ct_type":
+                    sg_ct_type = default_value
+                elif var == "sg_vehicle_geometry":
+                    sg_vehicle_geometry = default_value
+                elif var == "sg_sensor_geometry":
+                    sg_sensor_geometry = default_value
+                elif var == "sg_ct_geometry":
+                    sg_ct_geometry = default_value
+                else:
+                    raise ValueError(
+                        f"Unexpected assert_in_globals variable {var!r} in sg_config_constants - "
+                        "add it to the sg_ct_type/sg_vehicle_geometry/sg_sensor_geometry/sg_ct_geometry "
+                        "handling above (see NOTE above update_calib_consts)"
+                    )
 
     sbect_r_n = 0.002  # radius of narrow portion of cell [m]
     # Note: SBE9 u_f is 1.75m/s (see Morison d'Asaro)
@@ -7034,18 +7059,39 @@ def make_dive_profile(
             TraceArray.trace_comment("z_displacement = %f" % z_displacement_m)
 
             # TODO CCE suggests that since hspd can vary that we find each gap and interpolate then average n/e components of local hspd
-            avg_speed_dive = np.mean(
-                z_hdm_horizontal_speed_cm_s_v[Utils.setdiff(dive_i_v, bad_speed_i_v)]
-            )
-            z_hdm_horizontal_speed_cm_s_v[Utils.intersect(bad_speed_i_v, dive_i_v)] = (
-                avg_speed_dive
-            )
-            avg_speed_climb = np.mean(
-                z_hdm_horizontal_speed_cm_s_v[Utils.setdiff(climb_i_v, bad_speed_i_v)]
-            )
-            z_hdm_horizontal_speed_cm_s_v[Utils.intersect(bad_speed_i_v, climb_i_v)] = (
-                avg_speed_climb
-            )
+            dive_good_speed_i_v = Utils.setdiff(dive_i_v, bad_speed_i_v)
+            if len(dive_good_speed_i_v):
+                avg_speed_dive = np.mean(
+                    z_hdm_horizontal_speed_cm_s_v[dive_good_speed_i_v]
+                )
+                z_hdm_horizontal_speed_cm_s_v[
+                    Utils.intersect(bad_speed_i_v, dive_i_v)
+                ] = avg_speed_dive
+            else:
+                # No good speed estimates to average over - leave the bad points at
+                # the 0 they were set to above rather than poisoning them (and the
+                # displacement sum below) with a mean-of-empty-slice nan.
+                log_warning(
+                    "No good speed estimates during dive phase; DAC suspect."
+                )
+                DAC_qc = QC.QC_BAD
+                avg_speed_dive = np.nan
+
+            climb_good_speed_i_v = Utils.setdiff(climb_i_v, bad_speed_i_v)
+            if len(climb_good_speed_i_v):
+                avg_speed_climb = np.mean(
+                    z_hdm_horizontal_speed_cm_s_v[climb_good_speed_i_v]
+                )
+                z_hdm_horizontal_speed_cm_s_v[
+                    Utils.intersect(bad_speed_i_v, climb_i_v)
+                ] = avg_speed_climb
+            else:
+                log_warning(
+                    "No good speed estimates during climb phase; DAC suspect."
+                )
+                DAC_qc = QC.QC_BAD
+                avg_speed_climb = np.nan
+
             z_hdm_horizontal_speed_cm_s_v[slow_apogee_climb_pump_i_v] = 0
             avg_displacement_m = (
                 sum(z_hdm_horizontal_speed_cm_s_v * ctd_delta_time_s_v) / m2cm
