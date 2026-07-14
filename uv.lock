@@ -1,6 +1,6 @@
 version = 1
 revision = 3
-requires-python = "==3.14.2"
+requires-python = "==3.14.*"
 resolution-markers = [
     "platform_machine == 'ARM64' and sys_platform == 'win32'",
     "platform_machine != 'ARM64' or sys_platform != 'win32'",
