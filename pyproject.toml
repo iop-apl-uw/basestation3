@@ -32,7 +32,7 @@ dependencies = [
     # For SlackPost and InReachSend
     "requests>=2.31.0",
     # For GliderDAC and BaseNetwork support
-    "xarray==2026.4.0",
+    "xarray==2026.7.0",
     "netCDF4==1.7.4",
     # For sftp support in BaseDotFiles
     "paramiko>=2.10.4",
@@ -101,6 +101,12 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = "."
 testpaths = ["tests"]
+filterwarnings = [
+    # netCDF4 1.7.4 (latest as of this writing) internally reshapes arrays via
+    # `data.shape = ...` on a view, which NumPy 2.5 deprecated in favor of
+    # np.reshape(copy=False). This is upstream (Unidata/netcdf4-python), not our code.
+    "ignore:Setting the shape on a NumPy array has been deprecated:DeprecationWarning",
+]
 
 [tool.ruff]
 # Turn this on and do a pass through the code base
