@@ -367,6 +367,15 @@ def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=Fal
         "use_auxpressure": 1,  # Use aux pressure over truck pressure (if present)
         "use_auxcompass": 0,  # Use aux compass over truck compass (if present)
         "use_adcppressure": 0,  # Use adcp pressure over truck pressure (if present)
+        "smooth_truck_pressure": 0,  # Smooth the truck pressure/depth signal (non-zero to enable)
+        "smooth_truck_pressure_window_secs": 42.0,  # Savitzky-Golay window length, seconds
+        "smooth_truck_pressure_polyorder": 3,  # Savitzky-Golay polynomial order
+        # NOTE: depth_slope_correction_gold_standard is deliberately NOT defaulted here.
+        # It's a string-valued calib const; netCDF can't store an empty string (see
+        # BaseNetCDF.create_nc_var's "Must supply a non-empty value" guard), so giving it a
+        # "" default would make every mission attempt (and fail) to write it. Left absent,
+        # it's simply missing from calib_consts unless the user actually sets it -
+        # process_truck_pressure reads it via calib_consts.get(..., "") instead.
         # CONSIDER add tau_i, the unsteady delay [s] used by TSV (default 20, 0 for IOP)
     }
 
@@ -1360,6 +1369,83 @@ def compute_kistler_pressure(kistler_cnf, log_f, counts_v, temp_v):
 
     # deliberately NOT adding PRESSURE_YINT
     return press_v  # [psi]
+
+
+# The default value of the "depth_slope_correction" calib const (see the defaults dict
+# in sg_config_constants()). depth_slope_correction_gold_standard auto-correction only
+# applies when depth_slope_correction is still at this default - an explicitly-tuned
+# depth_slope_correction always wins. (Note: calib_consts["depth_slope_correction"] is
+# already merged with defaults by the time process_truck_pressure runs, including when
+# reprocessing from an existing netCDF file, so there is no reliable way to distinguish
+# "user explicitly set it to the default value" from "never set it" - that narrow edge
+# case is treated as "not set", which is harmless since 1.0 is a no-op multiplier anyway.)
+DEPTH_SLOPE_CORRECTION_DEFAULT = 1.0
+
+
+def process_truck_pressure(
+    calib_consts: dict,
+    epoch_time_s_v: npt.NDArray[np.float64],
+    press_v: npt.NDArray[np.float64],
+    results_d: dict,
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64] | None]:
+    """Applies optional truck-pressure smoothing, then optional slope auto-correction.
+
+    Order matters: smoothing (if enabled) runs first, then slope correction (if
+    applicable) runs on the (possibly smoothed) result - matching the
+    sg_calib_constants.m-documented processing order.
+
+    Args:
+        calib_consts: calibration constants, with defaults already merged in.
+        epoch_time_s_v: truck sample times, epoch seconds, for press_v.
+        press_v: truck pressure (dbar) to process.
+        results_d: the in-progress results dict, consulted for the gold-standard
+            reference variable (e.g. "ad2cp_pressure"/"ad2cp_time") if
+            depth_slope_correction_gold_standard is set.
+
+    Returns:
+        (press_v, press_raw_v): press_v is the (possibly smoothed/slope-corrected)
+        pressure; press_raw_v is a copy of the original input, or None if neither step
+        changed anything (so callers can skip adding a redundant pressure_raw result).
+    """
+    press_raw_v = press_v.copy()
+    changed = False
+
+    if calib_consts["smooth_truck_pressure"]:
+        press_v = Utils.smooth_pressure(
+            epoch_time_s_v,
+            press_v,
+            window_secs=calib_consts["smooth_truck_pressure_window_secs"],
+            polyorder=int(calib_consts["smooth_truck_pressure_polyorder"]),
+        )
+        changed = True
+
+    gold_standard = calib_consts.get("depth_slope_correction_gold_standard", "")
+    if (
+        gold_standard
+        and calib_consts["depth_slope_correction"] == DEPTH_SLOPE_CORRECTION_DEFAULT
+    ):
+        gold_standard_time = gold_standard.replace("_pressure", "_time")
+        if gold_standard in results_d and gold_standard_time in results_d:
+            slope = Utils.fit_pressure_slope(
+                epoch_time_s_v,
+                press_v,
+                results_d[gold_standard_time],
+                results_d[gold_standard],
+            )
+            if slope is not None:
+                log_info(
+                    "Applying auto-computed depth_slope_correction=%.5f from %s"
+                    % (slope, gold_standard)
+                )
+                press_v = press_v * slope
+                changed = True
+        else:
+            log_warning(
+                "depth_slope_correction_gold_standard=%s specified, but %s/%s not found"
+                % (gold_standard, gold_standard, gold_standard_time)
+            )
+
+    return press_v, (press_raw_v if changed else None)
 
 
 def correct_heading(
@@ -4247,17 +4333,18 @@ def make_dive_profile(
                     - calib_consts["depth_bias"]
                 ) * psi_per_meter
                 sg_press_v *= dbar_per_psi  # convert to dbar
+                sg_press_v, sg_press_raw_v = process_truck_pressure(
+                    calib_consts, sg_epoch_time_s_v, sg_press_v, results_d
+                )
                 if not base_opts.use_gsw:
                     sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
                 else:
                     sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
 
-                results_d.update(
-                    {
-                        "pressure": sg_press_v,
-                        "depth": sg_depth_m_v,
-                    }
-                )
+                result_vars = {"pressure": sg_press_v, "depth": sg_depth_m_v}
+                if sg_press_raw_v is not None:
+                    result_vars["pressure_raw"] = sg_press_raw_v
+                results_d.update(result_vars)
 
                 # Handle pressure spikes in legato pressure signal
                 if tmp_press_v is None or calib_consts["legato_use_truck_pressure"]:
@@ -4578,6 +4665,9 @@ def make_dive_profile(
                         sg_press_v += log_f.data["$PRESSURE_YINT"]
 
                 sg_press_v *= dbar_per_psi  # convert to dbar
+                sg_press_v, sg_press_raw_v = process_truck_pressure(
+                    calib_consts, sg_epoch_time_s_v, sg_press_v, results_d
+                )
                 # Done with these variables
                 del press_counts_v, sg_temp_raw_v
                 # DEBUG ONLY
@@ -4604,12 +4694,10 @@ def make_dive_profile(
                     sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
                 else:
                     sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
-                results_d.update(
-                    {
-                        "pressure": sg_press_v,
-                        "depth": sg_depth_m_v,
-                    }
-                )
+                result_vars = {"pressure": sg_press_v, "depth": sg_depth_m_v}
+                if sg_press_raw_v is not None:
+                    result_vars["pressure_raw"] = sg_press_raw_v
+                results_d.update(result_vars)
 
                 # There are two other possible 'depth' measurements from scicon
                 # Both are based on the same pressure sensor used by the glider.
@@ -4831,16 +4919,17 @@ def make_dive_profile(
                     - calib_consts["depth_bias"]
                 ) * psi_per_meter
                 sg_press_v *= dbar_per_psi  # convert to dbar
+                sg_press_v, sg_press_raw_v = process_truck_pressure(
+                    calib_consts, sg_epoch_time_s_v, sg_press_v, results_d
+                )
                 if not base_opts.use_gsw:
                     sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
                 else:
                     sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
-                results_d.update(
-                    {
-                        "pressure": sg_press_v,
-                        "depth": sg_depth_m_v,
-                    }
-                )
+                result_vars = {"pressure": sg_press_v, "depth": sg_depth_m_v}
+                if sg_press_raw_v is not None:
+                    result_vars["pressure_raw"] = sg_press_raw_v
+                results_d.update(result_vars)
 
                 # MDP automatically asserts instrument when writing
                 # DEAD results_d['gpctd'] = 'pumped Seabird SBE41 (gpctd)' # record the instrument used for CTD
@@ -5006,17 +5095,18 @@ def make_dive_profile(
                     - calib_consts["depth_bias"]
                 ) * psi_per_meter
                 sg_press_v *= dbar_per_psi  # convert to dbar
+                sg_press_v, sg_press_raw_v = process_truck_pressure(
+                    calib_consts, sg_epoch_time_s_v, sg_press_v, results_d
+                )
                 if not base_opts.use_gsw:
                     sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
                 else:
                     sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
 
-                results_d.update(
-                    {
-                        "pressure": sg_press_v,
-                        "depth": sg_depth_m_v,
-                    }
-                )
+                result_vars = {"pressure": sg_press_v, "depth": sg_depth_m_v}
+                if sg_press_raw_v is not None:
+                    result_vars["pressure_raw"] = sg_press_raw_v
+                results_d.update(result_vars)
 
                 compute_GSM_simple(
                     vehicle_heading_mag_degrees_v,

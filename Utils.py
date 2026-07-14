@@ -74,6 +74,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import scipy
+import scipy.signal
 import seawater
 import yaml
 import zmq
@@ -813,6 +814,133 @@ def medfilt1(x: NDArray, L: int) -> NDArray | None:
             xout[i] = np.median(xin[i - Lwing : i + Lwing + 1])  # (i-Lwing to i+Lwing)
 
     return xout
+
+
+def smooth_pressure(
+    epoch_time_s_v: NDArray[np.float64],
+    press_v: NDArray[np.float64],
+    window_secs: float = 42.0,
+    polyorder: int = 3,
+) -> NDArray[np.float64]:
+    """Smooths a pressure time series with a median-filter + Savitzky-Golay hybrid.
+
+    Based on the padding/median/savgol approach prototyped in dive_smooth10.py, adapted
+    to operate on a seconds time base rather than minutes: the raw signal is padded on
+    both ends via linear extrapolation (to avoid edge artifacts), passed through a median
+    filter to remove pressure spikes, then smoothed with a Savitzky-Golay filter.
+
+    Args:
+        epoch_time_s_v: sample times, seconds since epoch.
+        press_v: pressure samples (dbar), same length as epoch_time_s_v.
+        window_secs: Savitzky-Golay window length, in seconds.
+        polyorder: Savitzky-Golay polynomial order.
+
+    Returns:
+        Smoothed pressure array, same shape as press_v. Returns press_v.copy() unchanged
+        (with a logged warning) if the profile is too short for the requested window or
+        contains NaNs.
+    """
+    n = len(press_v)
+    if n < 3 or np.any(np.isnan(press_v)):
+        log_warning(
+            "smooth_pressure: profile too short or contains NaNs (n=%d) - returning unsmoothed"
+            % n
+        )
+        return press_v.copy()
+
+    dt = np.median(np.diff(epoch_time_s_v))
+    if dt <= 0:
+        log_warning(
+            "smooth_pressure: non-positive median sample interval - returning unsmoothed"
+        )
+        return press_v.copy()
+
+    def _to_odd_points(seconds: float) -> int:
+        pts = int(round(seconds / dt))
+        return max(3, pts if pts % 2 != 0 else pts + 1)
+
+    window_pts = _to_odd_points(window_secs)
+    median_pts = _to_odd_points(window_secs / 3.0)
+
+    if n <= window_pts or polyorder >= window_pts:
+        log_warning(
+            "smooth_pressure: profile too short (n=%d) for window_secs=%.1f (%d pts) - returning unsmoothed"
+            % (n, window_secs, window_pts)
+        )
+        return press_v.copy()
+
+    pad = window_pts
+    slope_pts = min(max(2, median_pts // 2), n)
+    start_slope = np.mean(np.diff(press_v[:slope_pts]))
+    end_slope = np.mean(np.diff(press_v[-slope_pts:]))
+    pad_left = press_v[0] - np.arange(pad, 0, -1) * start_slope
+    pad_right = press_v[-1] + np.arange(1, pad + 1) * end_slope
+    padded = np.concatenate([pad_left, press_v, pad_right])
+
+    median_padded = scipy.signal.medfilt(padded, kernel_size=median_pts)
+    smoothed_padded = scipy.signal.savgol_filter(
+        median_padded, window_length=window_pts, polyorder=polyorder, mode="constant"
+    )
+    return smoothed_padded[pad:-pad]
+
+
+def fit_pressure_slope(
+    time_a_s_v: NDArray[np.float64],
+    press_a_v: NDArray[np.float64],
+    time_b_s_v: NDArray[np.float64],
+    press_b_v: NDArray[np.float64],
+) -> float | None:
+    """Fits a multiplicative slope correction between two pressure time series.
+
+    Interpolates press_b onto time_a's grid (restricted to the overlapping time range),
+    then fits press_b_interp = slope * press_a + intercept via np.polyfit (matching the
+    linear-fit idiom already used elsewhere in this repo, e.g. QC.py/TempSalinityVelocity.py),
+    keeping only the slope (an intercept/offset is depth_bias's job, not this feature's).
+
+    Args:
+        time_a_s_v: epoch seconds for press_a_v (the signal to be corrected).
+        press_a_v: pressure (dbar) to be corrected.
+        time_b_s_v: epoch seconds for press_b_v (the "gold standard" reference).
+        press_b_v: reference pressure (dbar).
+
+    Returns:
+        The fitted slope, or None if there's insufficient time overlap to fit (logs a
+        warning in that case).
+    """
+    # Reference variables reloaded from an existing netCDF file (e.g. during a
+    # reprocess-from-netCDF run) commonly arrive as masked arrays, which
+    # scipy.interpolate.interp1d rejects outright - normalize to plain float arrays
+    # (with masked/missing values as NaN) up front.
+    time_a_s_v = np.ma.filled(time_a_s_v, np.nan)
+    press_a_v = np.ma.filled(press_a_v, np.nan)
+    time_b_s_v = np.ma.filled(time_b_s_v, np.nan)
+    press_b_v = np.ma.filled(press_b_v, np.nan)
+
+    if len(time_a_s_v) < 2 or len(time_b_s_v) < 2:
+        log_warning("fit_pressure_slope: insufficient samples to fit a slope")
+        return None
+
+    t_min = max(time_a_s_v[0], time_b_s_v[0])
+    t_max = min(time_a_s_v[-1], time_b_s_v[-1])
+    overlap_i = np.nonzero((time_a_s_v >= t_min) & (time_a_s_v <= t_max))[0]
+    if t_max <= t_min or len(overlap_i) < 2:
+        log_warning("fit_pressure_slope: insufficient time overlap to fit a slope")
+        return None
+
+    press_b_interp = interp1d(
+        time_b_s_v, press_b_v, time_a_s_v[overlap_i], kind="linear"
+    )
+    valid_i = np.logical_not(
+        np.isnan(press_a_v[overlap_i]) | np.isnan(press_b_interp)
+    )
+    if np.sum(valid_i) < 2:
+        log_warning("fit_pressure_slope: insufficient valid overlapping samples to fit a slope")
+        return None
+
+    slope, _intercept = np.polyfit(
+        press_a_v[overlap_i][valid_i], press_b_interp[valid_i], 1
+    )
+    return float(slope)
 
 
 def intersect(list1: list, list2: list) -> list:

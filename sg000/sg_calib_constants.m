@@ -20,6 +20,22 @@ mass = 52.173; % (kg) scale weight
 % Only change this if you are sure your dataset has this issue
 %PARAM depth_slope_correction = 1.0;
 
+% Smooth the truck (main pressure sensor) pressure/depth signal using a
+% median + Savitzky-Golay hybrid filter. Set to 1 to enable. This also feeds
+% forward into salinity/density/sound-velocity corrections and FlightModel
+% fits, not just the displayed depth/pressure - the pre-processing signal is
+% preserved as the pressure_raw netCDF variable.
+%PARAM smooth_truck_pressure = 0;
+%PARAM smooth_truck_pressure_window_secs = 42.0;
+%PARAM smooth_truck_pressure_polyorder = 3;
+
+% Rather than hand-tuning depth_slope_correction, name an existing netCDF
+% pressure variable here (e.g. ad2cp_pressure, from an AD2CP ADCP) to treat as
+% ground truth; a depth_slope_correction will be auto-fit against it (applied
+% after smooth_truck_pressure, if that is also enabled). Ignored if
+% depth_slope_correction is explicitly set above - that always wins.
+%PARAM depth_slope_correction_gold_standard = 'ad2cp_pressure';
+
 % NOTE:
 % FlightModel will supply
 %

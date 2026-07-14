@@ -1532,6 +1532,38 @@ def set_globals() -> None:
             },
             nc_scalar,
         ],
+        "sg_cal_smooth_truck_pressure": [
+            False,
+            "d",
+            {
+                "description": "Enable median+Savitzky-Golay smoothing of the truck pressure/depth signal (non-zero to enable; default 0/off). This also affects downstream salinity/density/sound-velocity corrections and FlightModel fits, not just the displayed depth/pressure - the pre-processing signal is preserved as pressure_raw."
+            },
+            nc_scalar,
+        ],
+        "sg_cal_smooth_truck_pressure_window_secs": [
+            False,
+            "d",
+            {
+                "description": "Savitzky-Golay smoothing window length, in seconds, used when smooth_truck_pressure is enabled (default 42)."
+            },
+            nc_scalar,
+        ],
+        "sg_cal_smooth_truck_pressure_polyorder": [
+            False,
+            "d",
+            {
+                "description": "Savitzky-Golay polynomial order used when smooth_truck_pressure is enabled (default 3)."
+            },
+            nc_scalar,
+        ],
+        "sg_cal_depth_slope_correction_gold_standard": [
+            False,
+            "c",
+            {
+                "description": "Name of a netCDF pressure variable (e.g. ad2cp_pressure) to treat as ground truth and auto-fit a depth_slope_correction against (applied after smooth_truck_pressure, if also enabled). Ignored if depth_slope_correction is explicitly set - that always wins."
+            },
+            nc_scalar,
+        ],
         # log file header values
         "log_version": [
             False,
@@ -2921,6 +2953,20 @@ def set_globals() -> None:
             {
                 "units": "dbar",
                 "description": "Uncorrected sea-water pressure at pressure sensor",
+            },
+            (nc_sg_data_info,),
+        ],
+        "pressure_raw": [
+            "f",
+            "d",
+            {
+                "units": "dbar",
+                "description": "Uncorrected sea-water pressure at pressure sensor, prior to "
+                "smooth_truck_pressure/depth_slope_correction_gold_standard processing "
+                "(present only when one of those was applied). Note: when either is "
+                "enabled, the primary pressure/depth variables (and downstream salinity, "
+                "density, sound-velocity corrections and FlightModel fits) reflect the "
+                "processed signal, not this raw one.",
             },
             (nc_sg_data_info,),
         ],

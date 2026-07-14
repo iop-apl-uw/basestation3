@@ -330,6 +330,13 @@ def plot_diveplot(
         # dive trace as accurate as possible
 
         depth_time = dive_nc_file.variables["time"][:]
+
+        # Raw (pre-smoothing/slope-correction) pressure, treated as an approximate depth
+        # (dbar ~= m) for comparison purposes only - see smooth_truck_pressure/
+        # depth_slope_correction_gold_standard in sg_calib_constants.m
+        depth_raw = None
+        if "pressure_raw" in dive_nc_file.variables:
+            depth_raw = dive_nc_file.variables["pressure_raw"][:]
     except Exception:
         log_error("Could not process diveplot", "exc")
         return ([], [])
@@ -339,6 +346,9 @@ def plot_diveplot(
 
     # Data conversions
     dz_dt = Utils.ctr_1st_diff(-depth * 100, depth_time - start_time)
+    dz_dt_raw = None
+    if depth_raw is not None:
+        dz_dt_raw = Utils.ctr_1st_diff(-depth_raw * 100, depth_time - start_time)
     if max(depth) > 5000:
         zscl = 100
     elif max(depth) > 2000:
@@ -359,6 +369,8 @@ def plot_diveplot(
     depth = (depth * -1.0) / zscl
     if ctd_depth is not None:
         ctd_depth = (ctd_depth * -1.0) / zscl
+    if depth_raw is not None:
+        depth_raw = (depth_raw * -1.0) / zscl
     depth_time = (depth_time - start_time) / 60.0
 
     if aux_depth_name:
@@ -430,6 +442,26 @@ def plot_diveplot(
             }
         )
 
+    if depth_raw is not None:
+        valid_i = np.logical_not(np.isnan(depth_raw))
+        fig.add_trace(
+            {
+                "y": depth_raw[valid_i],
+                "x": depth_time[valid_i],
+                "meta": (depth_raw * zscl)[valid_i],
+                "name": f"Depth raw, pre-processing ({zscl:.0f}m)",
+                "type": "scatter",
+                "xaxis": "x1",
+                "yaxis": "y1",
+                "visible": "legendonly",
+                "mode": "lines+markers",
+                "marker": {"symbol": "cross", "size": 3},
+                "line": {"dash": "solid", "color": "Gray"},
+                "hovertemplate": "Depth raw (pre-smoothing/slope-correction)"
+                + "<br>%{meta:.1f} meters<br>%{x:.2f} mins<br><extra></extra>",
+            }
+        )
+
     # End Depth traces
 
     # Vehicle attitude from compass and pressure
@@ -448,6 +480,23 @@ def plot_diveplot(
             "hovertemplate": "Vert Speed dz/dt<br>%{y:.2f} cm/sec<br>%{x:.2f} mins<br><extra></extra>",
         }
     )
+
+    if dz_dt_raw is not None:
+        valid_i = np.logical_not(np.isnan(dz_dt_raw))
+        fig.add_trace(
+            {
+                "y": dz_dt_raw[valid_i],
+                "x": depth_time[valid_i],
+                "name": "Vert Speed dz/dt raw (cm/s)",
+                "type": "scatter",
+                "xaxis": "x1",
+                "yaxis": "y1",
+                "visible": "legendonly",
+                "mode": "lines",
+                "line": {"dash": "solid", "color": "CadetBlue"},
+                "hovertemplate": "Vert Speed dz/dt raw<br>%{y:.2f} cm/sec<br>%{x:.2f} mins<br><extra></extra>",
+            }
+        )
 
     fig.add_trace(
         {
