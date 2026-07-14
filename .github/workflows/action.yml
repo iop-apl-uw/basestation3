@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - 'chore/*'
+      - 'feature/*'
 
 permissions:
   contents: read
