@@ -453,7 +453,6 @@ def plot_diveplot(
                 "type": "scatter",
                 "xaxis": "x1",
                 "yaxis": "y1",
-                "visible": "legendonly",
                 "mode": "lines+markers",
                 "marker": {"symbol": "cross", "size": 3},
                 "line": {"dash": "solid", "color": "Gray"},
