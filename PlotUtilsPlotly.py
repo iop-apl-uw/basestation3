@@ -117,7 +117,10 @@ def plotlyfromjson(fpath):
 
 
 def write_output_files(
-    base_opts: BaseOptions, base_file_name: str, fig: plotly.graph_objects.Figure
+    base_opts: BaseOptions,
+    base_file_name: str,
+    fig: plotly.graph_objects.Figure,
+    post_script: str | list[str] | None = None,
 ) -> list[pathlib.Path]:
     """
     Helper routine to output various file formats - .png and .div all the time
@@ -127,6 +130,16 @@ def write_output_files(
         base_opts - all options
         base_file_name - file name base for the output file names (i.e. no extension)
         fig - plotly figure object
+        post_script - optional raw JS (str or list of str) run after the plot
+            renders, passed straight through to plotly's fig.write_html.
+            Unused by default; only plots that need it (e.g. a custom
+            copy-to-clipboard button) pass it. Applied to both the
+            standalone .html and the .div fragment output, since vis.py
+            embeds .div fragments (possibly several per page) - any script
+            passed here must target only its own plot (e.g. via plotly's
+            "{plot_id}" post_script placeholder, substituted with that
+            plot's own div id) rather than assuming it's the only plot on
+            the page.
     Returns:
         List of fully qualified filenames that have been generated.
     """
@@ -156,6 +169,7 @@ def write_output_files(
             config=std_config_dict,
             include_mathjax="cdn",
             auto_play=False,
+            post_script=post_script,
         )
         ret_list.append(output_name)
 
@@ -176,6 +190,7 @@ def write_output_files(
             config=std_config_dict,
             include_mathjax="cdn",
             auto_play=False,
+            post_script=post_script,
         )
 
         if base_opts.compress_div:

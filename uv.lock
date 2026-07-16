@@ -6,6 +6,12 @@ resolution-markers = [
     "platform_machine != 'ARM64' or sys_platform != 'win32'",
 ]
 
+[manifest]
+members = [
+    "basestation3",
+    "ctd-sampling",
+]
+
 [[package]]
 name = "aiofiles"
 version = "25.1.0"
@@ -256,6 +262,7 @@ dependencies = [
     { name = "brotlipy" },
     { name = "cartopy" },
     { name = "cmocean" },
+    { name = "ctd-sampling" },
     { name = "gsw" },
     { name = "h5py" },
     { name = "inotify-simple" },
@@ -326,6 +333,7 @@ requires-dist = [
     { name = "brotlipy" },
     { name = "cartopy", specifier = "==0.24.1" },
     { name = "cmocean", specifier = "==4.0.3" },
+    { name = "ctd-sampling", editable = "ctd_sampling" },
     { name = "flameprof", marker = "extra == 'dev'", specifier = "==0.4" },
     { name = "flynt", marker = "extra == 'dev'" },
     { name = "gsw", specifier = "==3.6.19" },
@@ -745,6 +753,66 @@ wheels = [
 ]
 
 [[package]]
+name = "ctd-sampling"
+version = "0.0.1"
+source = { editable = "ctd_sampling" }
+dependencies = [
+    { name = "cmocean" },
+    { name = "gsw" },
+    { name = "isodate" },
+    { name = "netcdf4" },
+    { name = "numpy" },
+    { name = "plotly" },
+    { name = "pydantic" },
+    { name = "pyyaml" },
+    { name = "scipy" },
+    { name = "xarray" },
+]
+
+[package.optional-dependencies]
+ci = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "ty" },
+    { name = "types-pyyaml" },
+]
+dev = [
+    { name = "flynt" },
+    { name = "ipython" },
+    { name = "markdown-include" },
+    { name = "mkdocs" },
+    { name = "mkdocs-material" },
+    { name = "mkdocstrings", extra = ["python"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cmocean", specifier = "==4.0.3" },
+    { name = "flynt", marker = "extra == 'dev'" },
+    { name = "gsw", specifier = "==3.6.19" },
+    { name = "ipython", marker = "extra == 'dev'" },
+    { name = "isodate", specifier = "==0.7.2" },
+    { name = "markdown-include", marker = "extra == 'dev'", specifier = "==0.8.1" },
+    { name = "mkdocs", marker = "extra == 'dev'", specifier = "==1.6.1" },
+    { name = "mkdocs-material", marker = "extra == 'dev'", specifier = "==9.5.46" },
+    { name = "mkdocstrings", extras = ["python"], marker = "extra == 'dev'", specifier = "==0.27.0" },
+    { name = "netcdf4", specifier = "==1.7.4" },
+    { name = "numpy", specifier = "==2.5.0" },
+    { name = "plotly", specifier = "==6.8.0" },
+    { name = "pydantic", specifier = "==2.13.4" },
+    { name = "pytest", marker = "extra == 'ci'", specifier = "==8.3.3" },
+    { name = "pytest-cov", marker = "extra == 'ci'", specifier = "==6.0.0" },
+    { name = "pyyaml", specifier = "==6.0.2" },
+    { name = "ruff", marker = "extra == 'ci'", specifier = "==0.15.17" },
+    { name = "scipy", specifier = "==1.18.0" },
+    { name = "ty", marker = "extra == 'ci'", specifier = "==0.0.32" },
+    { name = "types-pyyaml", marker = "extra == 'ci'" },
+    { name = "xarray", specifier = "==2026.4.0" },
+]
+provides-extras = ["ci", "dev"]
+
+[[package]]
 name = "cycler"
 version = "0.12.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1145,6 +1213,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ef/4c/5dd1d8af08107f88c7f741ead7a40854b8ac24ddf9ae850afbcf698aa552/ipython_pygments_lexers-1.1.1.tar.gz", hash = "sha256:09c0138009e56b6854f9535736f4171d855c8c08a563a0dcd8022f78355c7e81", size = 8393, upload-time = "2025-01-17T11:24:34.505Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d9/33/1f075bf72b0b747cb3288d011319aaf64083cf2efef8354174e3ed4540e2/ipython_pygments_lexers-1.1.1-py3-none-any.whl", hash = "sha256:a9462224a505ade19a605f71f8fa63c2048833ce50abc86768a0d81d876dc81c", size = 8074, upload-time = "2025-01-17T11:24:33.271Z" },
+]
+
+[[package]]
+name = "isodate"
+version = "0.7.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/54/4d/e940025e2ce31a8ce1202635910747e5a87cc3a6a6bb2d00973375014749/isodate-0.7.2.tar.gz", hash = "sha256:4cd1aa0f43ca76f4a6c6c0292a85f40b35ec2e43e315b59f06e6d32171a953e6", size = 29705, upload-time = "2024-10-08T23:04:11.5Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/15/aa/0aca39a37d3c7eb941ba736ede56d689e7be91cab5d9ca846bde3999eba6/isodate-0.7.2-py3-none-any.whl", hash = "sha256:28009937d8031054830160fce6d409ed342816b543597cece116d966c6d99e15", size = 22320, upload-time = "2024-10-08T23:04:09.501Z" },
 ]
 
 [[package]]
@@ -3090,6 +3167,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/df/92/be9abf4d3e589ad5023e2ea965b93e204ec856420d46adf73c5c36c04678/ty-0.0.32-py3-none-win32.whl", hash = "sha256:2ff2ebb4986b24aebcf1444db7db5ca41b36086040e95eea9f8fb851c11e805c", size = 10260689, upload-time = "2026-04-20T19:28:56.541Z" },
     { url = "https://files.pythonhosted.org/packages/14/61/dc86acea899349d2579cb8419aecedd83dc504d7d6a10df65eef546c8300/ty-0.0.32-py3-none-win_amd64.whl", hash = "sha256:ba7284a4a954b598c1b31500352b3ec1f89bff533825592b5958848226fdc7ee", size = 11255371, upload-time = "2026-04-20T19:28:39.917Z" },
     { url = "https://files.pythonhosted.org/packages/43/01/beffec56d71ca25b343ede63adb076456b5b3e211f1c066452a44cd120b3/ty-0.0.32-py3-none-win_arm64.whl", hash = "sha256:7e10aadbdbda989a7d567ee6a37f8b98d4d542e31e3b190a2879fd581f75d658", size = 10658087, upload-time = "2026-04-20T19:28:59.286Z" },
+]
+
+[[package]]
+name = "types-pyyaml"
+version = "6.0.12.20260518"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b8/83/4a1afc3fbfcf5b8d46fc390cd95ed6b0dc9010a265f4e9f46314efffa37a/types_pyyaml-6.0.12.20260518.tar.gz", hash = "sha256:d917f83fb38462550338c1297faedd860b3ec83912b96b1e3d73255f7473e466", size = 17850, upload-time = "2026-05-18T06:01:58.675Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/06/a2/c01db32be2ae7d6a1689972f3c492b149ee4e164b12fdfd9f64b50888215/types_pyyaml-6.0.12.20260518-py3-none-any.whl", hash = "sha256:d2150f75a231c9fe9c7463bd29487d93e60bac90400287351384bc2284eba7cd", size = 20312, upload-time = "2026-05-18T06:01:57.368Z" },
 ]
 
 [[package]]

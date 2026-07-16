@@ -70,7 +70,16 @@ dependencies = [
     "q2netcdf", #Rockland Q file to netcdf convertor
     "playwright>=1.61.0",
     "pillow",  # Used it image verification on the CI pipeline
+    # WKB-stretched CTD sampling schedule dive plot
+    "ctd_sampling",
 ]
+
+[tool.uv.sources]
+ctd_sampling = { workspace = true }
+
+[tool.uv.workspace]
+members = ["ctd_sampling"]
+
 [project.optional-dependencies]
 ci = [
    ## Testing
