@@ -456,10 +456,12 @@ Same as <span class="bold">$COMPASS_DEVICE</span> for an optional second compass
  <p><span class="bold"><a name="D_ABORT">$D_ABORT</a></span><br>The maximum depth (meters) for Seaglider operations. If this depth is reached, the dive is aborted and the glider immediately enters the recovery phase. [1090]</p>
  
 <div class="med"></div>
+ <p><span class="bold"><a name="D_BATHY_OFFSET">$D_BATHY_OFFSET</a></span><br>Offset (meters) to apply to grid depth from bathymetry (- shallower, + deeper). [0]</p> 
+
+<div class="med"></div>
  <p><span class="bold"><a name="D_BOOST">$D_BOOST</a></span><br>The depth (meters) above which only the boost pump will be run.[0]</p>
 
 <div class="med"></div>
-
 <p><span class="bold"><a name="D_CALL">$D_CALL</a></span><br>
 For non-zero values, require a depth shallower than this value before initiating
   the GPS and phone call portions of a surface maneuver. If this depth is not reached, a subsurface finish is executed.<br>
@@ -722,6 +724,10 @@ The minimum allowable observed voltage on the 24 volt battery pack before the gl
 <p style="padding: 0px 0px 0px 24px;">6. If <span class="bold">$NAV_MODE</span> = 2 (calculate set/ferry angle correction) and we have calculated a valid DAC, we apply <span class="bold"><a href="#SPEED_FACTOR">$SPEED_FACTOR</a></span> to the speed limits to account for the fact that the Seaglider actually won't achieve its ideal speed over the entire dive.  We then iteratively calculate set corrections as a function of our horizontal speed through the water so that we optimize the Seaglider's travel toward the target (just as we chose our slope above). At each speed setting, the code uses a nonlinear solver to solve for ferry angle.  First guess at speed is maximum. If the predicted distance over ground (DOG) with the set correction is less than the range to target (typical case) then the computation is complete. Otherwise we try the minimum speed. If the resulting DOG is greater than the range to target then the computation can't do any better and it is complete.  If neither limit applies, we iterate via bisection to settle on the best speed. At convergence, the Seaglider has a ferry angle to steer and a horizontal speed to apply. The predicted horizontal speed is used to calculate a new value for glide slope.</p>
  
 <div class="med"></div>
+ <p><span class="bold"><a name="N_CYCLES">$N_CYCLES</a></span><br>
+The number of call cycles to perform at each surfacing. Used to force multiple calls (or call cycles) without going into recovery. Glider sleeps <span class="bold"><a href="#T_GPS">$T_RSLEEP</a></span> between cycles (as in recovery). 0 and 1 result in the same behavior. [0]</p>
+
+<div class="med"></div>
  <p><span class="bold"><a name="N_DIVES">$N_DIVES</a></span><br>
 The absolute number of dives (the maximum value of <span class="bold"><a href="#DIVE">$DIVE</a></span>) to complete before entering recovery. A value of zero
 (default) means dive until stopped by pilot command ($QUIT) or some
@@ -740,6 +746,9 @@ value (0 <= <span class="bold">$N_FILEKB</span> <= 128), which is the size
 <div class="med"></div>
  <p><span class="bold"><a name="N_NOCOMM">$N_NOCOMM</a></span><br>The number of dives that are allowed to occur without a complete and successful data communication session before actions are taken to improve communications, enter recovery, or navigate to a rescue position according to the value of <span class="bold"><a href="#NOCOMM_ACTION">$NOCOMM_ACTION</a></span>. The default (and traditional) behavior with a value for <span class="bold"><a href="#NOCOMM_ACTION">$NOCOMM_ACTION</a></span> of 0 is for the surface buoyancy parameter <span class="bold"><a href="#SM_CC">$SM_CC</a></span> to be set to the maximum allowed by the software limits.  This is a safety provision in the event <span class="bold"><a href="#SM_CC">$SM_CC</a></span> is not sufficient to allow for a good antenna position. [1]</p>
   
+<div class="med"></div>
+ <p><span class="bold"><a name="N_NOCOMM_RESUME">$N_NOCOMM_RESUME</a></span><br>The number of call cycles without communications in recovery that are allowed to occur before resuming diving. Intended as a safety while recovering vehicles in (partially) ice covered environments. A value of zero tells the glider to always stay in recovery, regardless of communication state. [0]</p>
+
 <div class="med"></div>
  <p><span class="bold"><a name="N_NOSURFACE">$N_NOSURFACE</a></span><br>An integer value that determines when the glider will finish the dive at <span class="bold"><a href="#D_FINISH">$D_FINISH</a></span> and when it will finish at the actual surface. For values greater than 1, the rule is that when the remainder of <span class="bold"><a href="#DIVE">$DIVE</a></span> divided by <span class="bold">$N_NOSURFACE</span> is zero, the glider will finish the dive at depth <span class="bold"><a href="#D_FINISH">$D_FINISH</a></span>. Other dives will finish at the surface. For negative values less than -1, this logic is reversed, and values of <span class="bold"><a href="#DIVE">$DIVE</a></span> divisible by <span class="bold">$N_NOSURFACE</span> will finish at the surface; all others will be subsurface finishes. Values of 1 and -1 are not allowed. A value of 0 disables this behavior. [0] </p>
  
@@ -981,6 +990,9 @@ Sea-Bird Electronics-provided calibration coefficients for their conductivity an
   
 <div class="med"></div>
  <p><span class="bold"><a name="SIM_W">$SIM_W</a></span><br>Simulated Seaglider desired vertical velocity (m/s). If non-zero, this value is used to generate depths so that the Seaglider can do simulated dives in the lab or on the deck. A value of 0 disables this feature. This parameter is automatically zeroed during the Sea Launch procedure. [0.1]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="SIMULATE">$SIMULATE</a></span><br>Which subsystems to software simulate during deck dives. This is a bitmask parameter. 1: phone, 2: GPS, 4: pressure, 8: compass, 16: surface logic, 32: motors, 64: CT. A common use case is to set to 3 to simulate phone and GPS while doing deck dives inside without access to a view of the sky for the antenna. [0]</p>
   
 <div class="med"></div>
  <p><span class="bold"><a name="SM_CC">$SM_CC</a></span><br>The specified minimum-buoyancy position of the VBD (cm<sup>3</sup>) the Seaglider attains at the surface. If the Seaglider enters the surface maneuver with less than this value of VBD, it pumps to this value. If the Seaglider enters the surface maneuver with more than this value of VBD, it does not change the value of VBD and continues to the next part of the surface maneuver. [350]</p>
