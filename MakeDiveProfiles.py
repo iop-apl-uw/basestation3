@@ -2279,7 +2279,7 @@ def load_dive_profile_data(
                 # now see if we need to update the nc data from raw files
 
         # reload from original data or update nc data
-        if sgc_file_exists and sgc_file_time > ncf_file_time:
+        if sgc_file_exists and sgc_file_time >= ncf_file_time:
             if ncf_file_time:
                 log_debug("Updating variables from %s" % sg_calib_file_name)
             local_calib_consts = CalibConst.getSGCalibrationConstants(
@@ -2302,7 +2302,7 @@ def load_dive_profile_data(
                     calib_consts[key] = value
             status = 2  # raw data changed; results need updating
 
-        if log_file_exists and log_file_time > ncf_file_time:
+        if log_file_exists and log_file_time >= ncf_file_time:
             if ncf_file_time:
                 log_debug("Updating data from %s" % log_file_name)
             log_f = LogFile.parse_log_file(log_file_name)
@@ -2385,7 +2385,7 @@ def load_dive_profile_data(
                 ("gpctd_time" in results_d),
             )  # supply defaults, calib_consts updated by side effect
 
-        if eng_file_exists and eng_file_time > ncf_file_time:
+        if eng_file_exists and eng_file_time >= ncf_file_time:
             if ncf_file_time:
                 log_debug("Updating data from %s" % eng_file_name)
             eng_f = DataFiles.process_data_file(eng_file_name, "eng", calib_consts)
@@ -2424,7 +2424,7 @@ def load_dive_profile_data(
             if mdp_dim_info[0] not in nc_info_d:
                 BaseNetCDF.assign_dim_info_size(nc_info_d, mdp_dim_info[0], sg_np)
 
-        if drv_file_exists and drv_file_time > ncf_file_time:
+        if drv_file_exists and drv_file_time >= ncf_file_time:
             if ncf_file_time:
                 log_debug("Updating directives from %s" % drv_file_name)
             directives = QC.ProfileDirectives(
@@ -2442,7 +2442,7 @@ def load_dive_profile_data(
                 eng_file_reader,
                 required_for_reload,
             ) = file_info
-            if eng_file_reader and file_time > ncf_file_time:
+            if eng_file_reader and file_exists and file_time >= ncf_file_time:
                 if ncf_file_time:
                     log_info("Updating logger data from %s" % file_type)
                 try:
