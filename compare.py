@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2026  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -64,7 +64,18 @@ def parse_param_file(filename: str | Path) -> dict[str, float] | None:
         print("could not open input file %s" % filename)
         return None
 
+    try:
+        canon = open(canonname)
+    except:
+        print("could not open canonical file %s" % canonname)
+        return None
+
+    canonmin = {}
+    canonmax = {}
+    canonopt = {}
+    canonvars = {}
     logdata: dict[str, float] = {}
+    canonerrors = []
 
     line_count = 0
     for raw_line in log:
@@ -141,8 +152,9 @@ def compare(canonname, logname):
                     v = columns[i].split('=')
                     canonvars[key][v[0]] = float(v[1])
 
-        except IndexError:
+        except: #  IndexError:
             sys.stderr.write("Could not handle %s (%s)\n" %(key, columns))
+            canonerrors.append(key)
      
     canon.close()
 
@@ -174,14 +186,16 @@ def compare(canonname, logname):
                 if not found:
                     x.append( { "param": key, "status": "inf", "value": logdata[key], "set": None } )
 
+    for key in canonerrors:
+        x.append( {"param": key, "status": "error", "missing": "error" } )
 
     for key in keys:
-        if not key in canonmin:
+        if not key in canonmin and not key in canonerrors:
             x.append( { "param": key, "status": "unknown", "missing":  "canon" } )
 
     keys = sorted(canonmin.keys())
     for key in keys:
-        if not key in logdata and canonopt[key] == False:
+        if not key in logdata and canonopt[key] == False and not key in canonerrors:
             x.append( { "param": key, "status": "unknown", "missing": "log" } )
 
     return x
@@ -203,7 +217,7 @@ def renderTable(x, pcolors, rcolors):
             print("</tr>")
             trow = trow + 1
 
-        elif p['status'] != 'unknown':
+        elif p['status'] != 'unknown' and p['status'] != 'error':
             print('<tr style="background-color:%s;">' % rcolors[trow % 2])
             print('<td style="background-color:%s;">[%s]</td>' % (pcolors[p['status']], p['status']))
             print('<td><a href="../parms#%s">%s</a> &nbsp;</td>' % (p['param'], p['param']))
@@ -211,6 +225,14 @@ def renderTable(x, pcolors, rcolors):
             print("<td>%s</td>" % p['min'])
             print("<td>%s</td>" % p['max'])
             print("</tr>")
+            trow = trow + 1
+
+    for p in x:
+        if p['status'] == 'error':
+            print('<tr style="background-color:%s;">' % rcolors[trow % 2])
+            print('<td style="background-color:red;">[error]</td><td>%s</td>' % p['param'])
+            print('<td colspan=3>error in canonical reference</td>')
+            print('</tr>')
             trow = trow + 1
 
     for p in x:
