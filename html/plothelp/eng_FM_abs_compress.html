@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>FM Compressibility Plot Help</title>
+    <meta name="viewport" content="width=device-width"></meta>
+    <link rel="stylesheet" href="style.css?v="></link>
+  </head>
+  <body>
+    <h1>FM Compressibility Plot Help</h1>
+    <p>This plot is a FlightModel mission-summary plot, not a per-dive science plot. It shows
+    the vehicle's estimated absolute compressibility (<code>abs_compress</code>, units
+    1/dbar) as computed per dive over the course of a mission, and the mean value FlightModel
+    has adopted from the deeper, more reliable dives.</p>
+
+    <br></br>
+    <h2>Raw abs_compress</h2>
+    <p>The per-dive <code>abs_compress</code> estimate, as solved by FlightModel for that
+    dive.</p>
+
+    <br></br>
+    <h2>Deep abs_compress</h2>
+    <p>The subset of dives whose bottom pressure exceeded the <code>ac_min_press</code>
+    threshold - deep dives give a more reliable compressibility estimate, so these are marked
+    separately from the full "Raw abs_compress" series.</p>
+
+    <br></br>
+    <h2>Mean (deep) abs_compress</h2>
+    <p>The running mean of the deep dives' <code>abs_compress</code> values - this is the
+    value FlightModel actually adopts as the mission's compressibility constant.</p>
+  </body>
+</html>

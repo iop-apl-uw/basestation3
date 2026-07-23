@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>FM VBD Bias Plot Help</title>
+    <meta name="viewport" content="width=device-width"></meta>
+    <link rel="stylesheet" href="style.css?v="></link>
+  </head>
+  <body>
+    <h1>FM VBD Bias Plot Help</h1>
+    <p>This plot is a FlightModel mission-summary plot, not a per-dive science plot. It shows,
+    for each dive processed by FlightModel, how much the vehicle's apparent buoyancy-engine
+    volume (<code>vbdbias</code>) differs from the assumed maximum volume
+    (<code>volmax</code>) - a sanity check on FlightModel's core buoyancy assumption over the
+    course of a mission.</p>
+
+    <br></br>
+    <h2>Per-dive volume change</h2>
+    <p>The per-dive <code>vbdbias</code> value FlightModel solved for that dive (volume
+    decrease, in cc, from the assumed <code>volmax</code>). Dives where no solution could be
+    found are marked separately (see "No solution" below) rather than plotted here.</p>
+
+    <br></br>
+    <h2>Median volume change</h2>
+    <p>A running median of the per-dive <code>vbdbias</code> values over the most recent
+    dives (window size controlled by the <code>vbdbias_filter</code> parameter), used to
+    smooth out per-dive noise and show the underlying trend.</p>
+
+    <br></br>
+    <h2>min w_rms*10 (cm/s)</h2>
+    <p>The minimum vertical-velocity RMS misfit found while solving for that dive's
+    <code>vbdbias</code>, scaled by 10 so it's visible on the same axis as the volume traces -
+    a lower value indicates a better-constrained solution for that dive.</p>
+
+    <br></br>
+    <h2>No solution</h2>
+    <p>Marks dives (at y=0) where FlightModel could not resolve a <code>vbdbias</code> value at
+    all, for example due to insufficient or noisy dive data.</p>
+
+    <br></br>
+    <h2>Implied C_VBD (AD counts)</h2>
+    <p>An optional secondary y-axis, only shown when the pilot has declared a reference
+    <code>C_VBD</code> value. Converts the volume-change traces into the equivalent buoyancy
+    pump (VBD) AD-count offset, using the glider's <code>VBD_CNV</code> conversion factor -
+    helps judge whether the reference <code>C_VBD</code> (the buoyancy engine's assumed
+    neutral point) needs to be re-tared.</p>
+  </body>
+</html>

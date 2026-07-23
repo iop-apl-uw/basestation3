@@ -49,8 +49,10 @@ import stat
 import sys
 import time
 import traceback
+from dataclasses import dataclass
 
 import numpy as np
+import numpy.typing as npt
 import scipy.io as sio  # for savemat
 import scipy.optimize  # fminbound
 import seawater
@@ -407,7 +409,11 @@ if generate_figures:
 
     # from pylab import *
     import matplotlib.pyplot as plt
+    import plotly.figure_factory
+    import plotly.graph_objects as go
     from matplotlib.font_manager import FontProperties
+
+    import PlotUtilsPlotly
 
 
 class flight_data:  # deliberately no (object) so we can pickle these puppies
@@ -511,6 +517,1432 @@ def write_figure(basename, delete=False):
                 log_warning(
                     f"Failed to copy {figure_output_name} to {plots_figure_output_name}"
                 )
+
+
+def write_figure_plotly(
+    base_opts: BaseOpts.BaseOptions,
+    basename: str,
+    fig: plotly.graph_objects.Figure | None,
+    delete: bool = False,
+) -> None:
+    """Writes (or deletes) a plotly version of an FM figure.
+
+    Plotly counterpart to write_figure() above - same flight_directory /
+    plots_directory destinations, but delegates the actual file writing to
+    PlotUtilsPlotly.write_output_files(), which may emit several extensions
+    (.div always, plus .webp/.png/.jpg/.svg/.html depending on base_opts)
+    rather than write_figure()'s single hardcoded .webp.
+
+    Args:
+        base_opts: Options object. base_opts.plot_directory is temporarily
+            pointed at the FM flight directory and restored afterwards, since
+            base_opts is shared with other pipeline stages (e.g. Reprocess.py)
+            that expect it to mean mission_dir/plots.
+        basename: Output file basename, without extension.
+        fig: The plotly figure to save. May be None when delete is True.
+        delete: If True, remove any previously written files for basename
+            instead of writing new ones.
+
+    Returns:
+        None
+
+    Raises:
+        None
+    """
+    global flight_directory, plots_directory
+    flight_dir_path = pathlib.Path(flight_directory)
+    saved_plot_directory = base_opts.plot_directory
+    try:
+        base_opts.plot_directory = flight_dir_path
+        if delete:
+            for f in flight_dir_path.glob(f"{basename}.*"):
+                f.unlink(missing_ok=True)
+            if plots_directory:
+                for f in pathlib.Path(plots_directory).glob(f"{basename}.*"):
+                    f.unlink(missing_ok=True)
+        else:
+            assert fig is not None  # only None is ever passed together with delete=True
+            output_files = PlotUtilsPlotly.write_output_files(base_opts, basename, fig)
+            if plots_directory:
+                for f in output_files:
+                    try:
+                        shutil.copyfile(f, pathlib.Path(plots_directory) / f.name)
+                    except Exception:
+                        log_warning(f"Failed to copy {f} to {plots_directory}", "exc")
+    finally:
+        base_opts.plot_directory = saved_plot_directory
+
+
+def _plotly_title_layout(title_text: str) -> dict[str, object]:
+    """Builds the standard plot title layout dict shared by all FM plotly figures.
+
+    Matches the title placement convention used across Plotting/ modules
+    (e.g. Plotting/MissionEnergy.py, Plotting/MissionProfiles.py).
+
+    Args:
+        title_text: Title text; may contain "<br>" for multi-line titles.
+
+    Returns:
+        A dict to merge into fig.update_layout(...).
+
+    Raises:
+        None
+    """
+    return {
+        "title": {
+            "text": title_text,
+            "xanchor": "center",
+            "yanchor": "top",
+            "x": 0.5,
+            "y": 0.95,
+        }
+    }
+
+
+def _plotly_footer_annotation(timelabel: str) -> dict[str, object]:
+    """Builds a figtext-equivalent annotation anchored below the plot's bottom-left corner.
+
+    Loosely replicates the position matplotlib's plt.figtext(0.08, 0.02, ...)
+    used throughout FlightModel.py's plots - but plotly's yref="paper" is
+    relative to the *plotting area*, not the figure canvas (0 is the bottom
+    of the axes, not the bottom of the image), so a small positive y (as
+    matplotlib's figure-fraction convention would suggest) lands inside the
+    plot instead of below it. y=-0.15 here, paired with the "margin": {"b":
+    140} every caller adds to fig.update_layout(...), places it in the
+    reserved margin band below the x-axis/tick labels instead.
+
+    Args:
+        timelabel: Text to display; may contain "<br>" for multiple lines.
+
+    Returns:
+        An annotation dict for use in fig.update_layout({"annotations": [...]}).
+
+    Raises:
+        None
+    """
+    return {
+        "text": timelabel,
+        "showarrow": False,
+        "xref": "paper",
+        "yref": "paper",
+        "x": 0.08,
+        "y": -0.15,
+        "xanchor": "left",
+        "yanchor": "bottom",
+        "font": {"size": 9},
+    }
+
+
+def _contour_levels_to_plotly(levels: npt.NDArray[np.float64]) -> dict[str, float]:
+    """Approximates an explicit matplotlib contour level array as plotly's start/end/size.
+
+    plotly.graph_objects.Contour has no equivalent of matplotlib's arbitrary
+    ascending level array passed to plt.contour() - only a uniform
+    "start"/"end"/"size" step. This uses the smallest gap between consecutive
+    levels as the step, which reproduces every level exactly when they are
+    evenly spaced (as w_misfit_rms_levels is) and only approximates unevenly
+    spaced arrays (as the DACm levels in the DAC plot are), adding a few extra
+    intermediate contour lines rather than dropping any of the original ones.
+
+    Args:
+        levels: Explicit, ascending contour level values.
+
+    Returns:
+        A dict with "start", "end", "size" keys for go.Contour(contours=...).
+
+    Raises:
+        None
+    """
+    levels = np.asarray(levels, dtype=np.float64)
+    size = float(np.min(np.diff(levels))) if len(levels) > 1 else 1.0
+    return {"start": float(levels[0]), "end": float(levels[-1]), "size": size}
+
+
+@dataclass
+class DACPlotData:
+    """Inputs needed to render the per-dive DAC plot, independent of FM's internal state."""
+
+    dive_num: int
+    glider_mission_string: str
+    min_misfit: float
+    compare_velo: float
+    hd_a_c: float
+    hd_b_c: float
+    DACmm: float
+    pHD_A: npt.NDArray[np.float64]
+    pHD_B: npt.NDArray[np.float64]
+    DAC_u: npt.NDArray[np.float64]
+    DAC_v: npt.NDArray[np.float64]
+    DACm: npt.NDArray[np.float64]
+    W_misfit_RMS: npt.NDArray[np.float64]
+    w_misfit_rms_levels: npt.NDArray[np.float64]
+    mass_comp: float | None
+    pressmin: float
+    pressmax: float
+    volmax: float
+    abs_compress: float
+    hd_c: float
+    hd_s: float
+    therm_expan: float
+    glider_length: float
+
+
+def render_dac_plot(
+    base_opts: BaseOpts.BaseOptions,
+    data: DACPlotData,
+    font: FontProperties | None = None,
+) -> plotly.graph_objects.Figure | None:
+    """Renders the per-dive DAC (depth-averaged current) residual plot.
+
+    Args:
+        base_opts: Options object - only base_opts.fm_plot_engine is read.
+        data: All values needed to draw the plot.
+        font: matplotlib font to use for text (matplotlib engine only); a
+            default is constructed if not provided.
+
+    Returns:
+        A plotly Figure for the "plotly" engine, or None for the "matplotlib"
+        engine (which draws into the current pyplot figure instead).
+
+    Raises:
+        None
+    """
+    # Plain text, not LaTeX/mathtext: kaleido's static image export (plotly
+    # engine) silently drops multiple mixed LaTeX segments in one annotation
+    # instead of rendering them - see the same fix in render_abs_compress_plot.
+    timelabel = (
+        "%s\n"
+        "vol_max=%.0f"
+        "\nc = %.4g; s = %.4g;\n"
+        "κ = %.4g; α = %.4g;"
+        "\nl = %.4g; press=%d/%d"
+    )
+    timelabel = timelabel % (
+        time.strftime("%d %b %Y %H:%M:%S", time.gmtime(time.time())),
+        data.volmax,
+        data.hd_c,
+        data.hd_s,
+        data.abs_compress,
+        data.therm_expan,
+        data.glider_length,
+        data.pressmin,
+        data.pressmax,
+    )
+    if data.mass_comp:
+        timelabel += "; mass_comp = %.2fkg" % data.mass_comp
+
+    titlestring = "%s\nDive %d " + r"${w}_{rms}=%.2fcm/s$" "(%d) a=%.6g b=%.6g %.2fcm/s"
+    titlestring = titlestring % (
+        data.glider_mission_string,
+        data.dive_num,
+        data.min_misfit,
+        data.compare_velo,
+        data.hd_a_c,
+        data.hd_b_c,
+        data.DACmm * cm_per_m,
+    )
+
+    # eliminate very large DAC values so the quiver/vector display scales nicely
+    DAC_limit = 7  # PARAMETER cm/s
+    DAC_limit_cm_s = DAC_limit / cm_per_m
+    DAC_u = data.DAC_u.copy()
+    DAC_v = data.DAC_v.copy()
+    too_big_i = np.where(data.DACm > DAC_limit_cm_s)
+    DAC_u[too_big_i[0], too_big_i[1]] = np.nan
+    DAC_v[too_big_i[0], too_big_i[1]] = np.nan
+
+    if base_opts.fm_plot_engine == "plotly":
+        dacm_levels = _contour_levels_to_plotly(
+            np.array([0, 0.005, 0.01, 0.02, 0.03, 0.04]) * cm_per_m
+        )
+        wrms_levels = _contour_levels_to_plotly(np.asarray(data.w_misfit_rms_levels))
+
+        valid_i = ~(np.isnan(DAC_u) | np.isnan(DAC_v))
+        fig = plotly.figure_factory.create_quiver(
+            data.pHD_A[valid_i],
+            data.pHD_B[valid_i],
+            DAC_u[valid_i],
+            DAC_v[valid_i],
+            scale=0.1,
+            arrow_scale=0.3,
+            line={"color": "blue", "width": 1},
+        )
+        fig.data[0].name = "DAC residual vectors (cm/s)"
+        fig.data[0].showlegend = True
+        fig.data[0].hovertemplate = (
+            "Lift (a) ratio to best: %{x:.3f}, Drag (b) ratio to best: %{y:.3f}"
+            "<br>DAC residual vectors (cm/s)<extra></extra>"
+        )
+
+        fig.add_trace(
+            go.Contour(
+                x=data.pHD_A[0, :],
+                y=data.pHD_B[:, 0],
+                z=data.DACm * cm_per_m,
+                contours={**dacm_levels, "coloring": "lines", "showlabels": True},
+                line={"color": "cyan"},
+                colorscale=[[0, "cyan"], [1, "cyan"]],
+                showscale=False,
+                name="DAC difference magnitude (cm/s)",
+                hovertemplate="Lift (a) ratio to best: %{x:.3f}, Drag (b) ratio to best: %{y:.3f}<br>DAC difference magnitude: %{z:.3f} cm/s<extra></extra>",
+            )
+        )
+        fig.add_trace(
+            go.Contour(
+                x=data.pHD_A[0, :],
+                y=data.pHD_B[:, 0],
+                z=data.W_misfit_RMS,
+                contours={**wrms_levels, "coloring": "lines", "showlabels": True},
+                line={"color": "magenta"},
+                colorscale=[[0, "magenta"], [1, "magenta"]],
+                showscale=False,
+                name="w_rms difference from min (cm/s)",
+                hovertemplate="Lift (a) ratio to best: %{x:.3f}, Drag (b) ratio to best: %{y:.3f}<br>w_rms difference from min: %{z:.3f} cm/s<extra></extra>",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=[data.hd_a_c / data.hd_a_c],
+                y=[data.hd_b_c / data.hd_b_c],
+                mode="markers",
+                marker={"symbol": "star", "size": 12, "color": "green"},
+                name="Best fit w_rms",
+                hovertemplate="Lift (a) ratio to best: %{x:.3f}, Drag (b) ratio to best: %{y:.3f}<br>Best fit w_rms<extra></extra>",
+            )
+        )
+        fig.update_layout(_plotly_title_layout(titlestring.replace("\n", "<br>")))
+        fig.update_layout(
+            {
+                "xaxis": {"title": "Lift (a) ratio to best", "range": [0.5, 1.5]},
+                "yaxis": {"title": "Drag (b) ratio to best", "range": [0.5, 1.5]},
+                "margin": {"b": 140},
+                "annotations": [
+                    _plotly_footer_annotation(timelabel.replace("\n", "<br>")),
+                    PlotUtilsPlotly.add_help_link("dv_DAC", y_pos=-0.05),
+                ],
+            }
+        )
+        return fig
+
+    if font is None:
+        font = FontProperties(size="x-small")
+    plt.xlabel("Lift (a) ratio to best")
+    plt.ylabel("Drag (b) ratio to best")
+    plt.suptitle(titlestring)
+    plt.figtext(0.08, 0.02, timelabel, fontproperties=font)  # was 0.4 for y
+
+    # Show ratios between 1/2x and 1.5x of min a/b
+    plt.xlim(xmin=0.5, xmax=1.5)
+    plt.ylim(ymin=0.5, ymax=1.5)
+    p_q = plt.quiver(
+        data.pHD_A, data.pHD_B, DAC_u, DAC_v, color="b", angles="xy"
+    )  # angles='uv'?
+    plt.quiverkey(
+        p_q,
+        0.9,
+        0.9,
+        DAC_limit_cm_s,
+        "%d cm/s" % DAC_limit,
+        labelpos="E",
+        fontproperties={"size": "xx-small"},
+    )
+
+    Cd = plt.contour(
+        data.pHD_A,
+        data.pHD_B,
+        data.DACm * cm_per_m,
+        np.array([0, 0.005, 0.01, 0.02, 0.03, 0.04]) * cm_per_m,
+        colors="c",
+        linewidths=1.0,
+        linestyles="solid",
+    )
+    plt.clabel(Cd, inline=True, inline_spacing=-1, fontsize=9, fmt="%2.1f", colors="c")
+    dacm_h, _ = Cd.legend_elements()
+
+    Cd = plt.contour(
+        data.pHD_A,
+        data.pHD_B,
+        data.W_misfit_RMS,
+        data.w_misfit_rms_levels,
+        colors="m",
+        linewidths=1.0,
+        linestyles="solid",
+    )
+    plt.clabel(Cd, inline=True, inline_spacing=-1, fontsize=9, fmt="%2.1f", colors="m")
+    wrms_h, _ = Cd.legend_elements()
+
+    (p_b,) = plt.plot(
+        data.hd_a_c / data.hd_a_c,
+        data.hd_b_c / data.hd_b_c,
+        "g*",
+        markersize=fig_markersize,
+    )  # 1,1
+
+    lg = plt.legend(
+        [dacm_h[0], wrms_h[0], p_b],
+        [
+            "DAC difference magnitude (cm/s)",
+            r"${w}_{rms}$ difference from min (cm/s)",
+            r"Best fit ${w}_{rms}$",
+        ],
+        loc="upper right",
+        fancybox=True,
+        prop=font,
+        numpoints=1,
+    )
+    lg.get_frame().set_alpha(0.5)
+    return None
+
+
+@dataclass
+class ABGridPlotData:
+    """Inputs needed to render the per-dive a/b grid plot, independent of FM's internal state."""
+
+    dive_num: int
+    ia: int
+    ib: int
+    min_misfit: float
+    W_misfit_RMS: npt.NDArray[np.float64]
+    last_W_misfit_RMS: npt.NDArray[np.float64] | None
+    hd_a_grid: npt.NDArray[np.float64]
+    hd_b_grid: npt.NDArray[np.float64]
+    HD_A: npt.NDArray[np.float64]
+    HD_B: npt.NDArray[np.float64]
+    w_misfit_rms_levels: npt.NDArray[np.float64]
+    prev_w_misfit_rms_levels: npt.NDArray[np.float64] | None
+    ab_tolerance: float
+    w_rms_func_bad: float
+    mass_comp: float | None
+    pressmin: float
+    pressmax: float
+    dive_set: list[int]
+    pitch_diff: float
+    compare_velo: float
+    glider_mission_string: str
+    show_previous_ab_solution: bool
+    committed_hd_a: float
+    committed_hd_b: float
+    volmax: float
+    abs_compress: float
+    hd_c: float
+    hd_s: float
+    therm_expan: float
+    glider_length: float
+
+
+def render_ab_grid_plot(
+    base_opts: BaseOpts.BaseOptions,
+    data: ABGridPlotData,
+    font: FontProperties | None = None,
+) -> plotly.graph_objects.Figure | None:
+    """Renders the per-dive a/b grid solution plot.
+
+    Args:
+        base_opts: Options object - only base_opts.fm_plot_engine is read.
+        data: All values needed to draw the plot.
+        font: matplotlib font to use for text (matplotlib engine only); a
+            default is constructed if not provided.
+
+    Returns:
+        A plotly Figure for the "plotly" engine, or None for the "matplotlib"
+        engine (which draws into the current pyplot figure instead).
+
+    Raises:
+        None
+    """
+    hd_a_c = data.hd_a_grid[data.ia]
+    hd_b_c = data.hd_b_grid[data.ib]
+    # make sure all uses of \n are in normal, not r'' strings
+    # Plain text, not LaTeX/mathtext: kaleido's static image export (plotly
+    # engine) silently drops multiple mixed LaTeX segments in one annotation
+    # instead of rendering them - see the same fix in render_abs_compress_plot.
+    timelabel = (
+        "%s\n"
+        "vol_max=%.0f"
+        "\nc = %.4g; s = %.4g;\n"
+        "κ = %.4g; α = %.4g;"
+        "\nl = %.4g; press=%d/%d"
+    )
+    timelabel = timelabel % (
+        time.strftime("%d %b %Y %H:%M:%S", time.gmtime(time.time())),
+        data.volmax,
+        data.hd_c,
+        data.hd_s,
+        data.abs_compress,
+        data.therm_expan,
+        data.glider_length,
+        data.pressmin,
+        data.pressmax,
+    )
+    if data.mass_comp:
+        timelabel += "; mass_comp = %.2fkg" % data.mass_comp
+
+    titlestring = (
+        "%s\n"
+        r"${w}_{rms}=%.2fcm/s$"
+        " [%s](%d)"
+        r" %d$\circ$"
+        "\na=%.6g b=%.6g"
+    )
+    titlestring = titlestring % (
+        data.glider_mission_string,
+        data.min_misfit,
+        Utils.succinct_elts(data.dive_set, matlab_offset=0),
+        data.compare_velo,
+        data.pitch_diff,
+        hd_a_c,
+        hd_b_c,
+    )
+
+    # show errorbar locations used below to show 'span' of currently acceptable a/b
+    x_a_i = np.where(data.W_misfit_RMS[data.ib, :] <= data.ab_tolerance)[0]
+    x_b_i = np.where(data.W_misfit_RMS[:, data.ia] <= data.ab_tolerance)[0]
+    # Mark stall (no solution) points
+    stall_value = data.w_rms_func_bad - data.min_misfit
+    x_i = np.where(data.W_misfit_RMS == stall_value)
+
+    if base_opts.fm_plot_engine == "plotly":
+        hd_a_mesh = np.asarray(data.HD_A)
+        hd_b_mesh = np.asarray(data.HD_B)
+        wrms_levels = _contour_levels_to_plotly(np.asarray(data.w_misfit_rms_levels))
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=hd_a_mesh.ravel(),
+                y=hd_b_mesh.ravel(),
+                mode="markers",
+                marker={"size": 3, "color": "black"},
+                name="grid",
+                hoverinfo="skip",
+            )
+        )
+        fig.add_trace(
+            go.Contour(
+                x=hd_a_mesh[0, :],
+                y=hd_b_mesh[:, 0],
+                z=data.W_misfit_RMS,
+                contours={
+                    **wrms_levels,
+                    "coloring": "lines",
+                    "showlabels": True,
+                },
+                line={"color": "blue"},
+                colorscale=[[0, "blue"], [1, "blue"]],
+                showscale=False,
+                name="w_rms (current)",
+                hovertemplate="Lift (a): %{x:.4g}, Drag (b): %{y:.4g}<br>w_rms (current): %{z:.3f} cm/s<extra></extra>",
+            )
+        )
+        if data.show_previous_ab_solution and data.last_W_misfit_RMS is not None:
+            # show what the previous 'good' values were; if they overlap around the current min, no change needed
+            prev_levels = _contour_levels_to_plotly(
+                np.asarray(data.prev_w_misfit_rms_levels)
+            )
+            fig.add_trace(
+                go.Contour(
+                    x=hd_a_mesh[0, :],
+                    y=hd_b_mesh[:, 0],
+                    z=data.last_W_misfit_RMS,
+                    contours={
+                        **prev_levels,
+                        "coloring": "lines",
+                        "showlabels": True,
+                    },
+                    line={"color": "cyan"},
+                    colorscale=[[0, "cyan"], [1, "cyan"]],
+                    showscale=False,
+                    name="w_rms (previous)",
+                    hovertemplate="Lift (a): %{x:.4g}, Drag (b): %{y:.4g}<br>w_rms (previous): %{z:.3f} cm/s<extra></extra>",
+                )
+            )
+            # Would be nice to change color to show if it exceeded tolerance but that code is below
+            # and it resets last_W_misfit_RMS in the process so we won't show the change
+            fig.add_trace(
+                go.Scatter(
+                    x=[data.committed_hd_a],
+                    y=[data.committed_hd_b],
+                    mode="markers",
+                    marker={
+                        "symbol": "circle",
+                        "size": fig_markersize,
+                        "color": "magenta",
+                    },
+                    name="Current assumed value",
+                    hovertemplate="Lift (a): %{x:.4g}, Drag (b): %{y:.4g}<br>Current assumed value<extra></extra>",
+                )
+            )
+
+        fig.add_trace(
+            go.Scatter(
+                x=[hd_a_c],
+                y=[hd_b_c],
+                mode="markers",
+                marker={
+                    "symbol": "star",
+                    "size": fig_markersize,
+                    "color": "green",
+                },
+                error_x={
+                    "type": "data",
+                    "symmetric": False,
+                    "array": [data.hd_a_grid[x_a_i[-1]] - hd_a_c],
+                    "arrayminus": [hd_a_c - data.hd_a_grid[x_a_i[0]]],
+                    "color": "blue",
+                },
+                error_y={
+                    "type": "data",
+                    "symmetric": False,
+                    "array": [data.hd_b_grid[x_b_i[-1]] - hd_b_c],
+                    "arrayminus": [hd_b_c - data.hd_b_grid[x_b_i[0]]],
+                    "color": "red",
+                },
+                name="New min a/b (with tolerance span)",
+                hovertemplate="Lift (a): %{x:.4g}, Drag (b): %{y:.4g}<br>New min a/b (with tolerance span)<extra></extra>",
+            )
+        )
+        if len(x_i[0]):
+            fig.add_trace(
+                go.Scatter(
+                    x=data.hd_a_grid[x_i[1]],
+                    y=data.hd_b_grid[x_i[0]],
+                    mode="markers",
+                    marker={
+                        "symbol": "x",
+                        "size": fig_markersize,
+                        "color": "black",
+                    },
+                    name="Stall (no solution)",
+                    hovertemplate="Lift (a): %{x:.4g}, Drag (b): %{y:.4g}<br>Stall (no solution)<extra></extra>",
+                )
+            )
+
+        fig.update_layout(_plotly_title_layout(titlestring.replace("\n", "<br>")))
+        fig.update_layout(
+            {
+                "xaxis": {
+                    "title": "Lift (a)",
+                    "range": [data.hd_a_grid[0], data.hd_a_grid[-1]],
+                },
+                "yaxis": {
+                    "title": "Drag (b)",
+                    "range": [data.hd_b_grid[0], data.hd_b_grid[-1]],
+                },
+                "showlegend": False,
+                # showlegend=False means no legend to auto-reserve right margin
+                # space (unlike the other 4 plots), so the help link needs an
+                # explicit one to avoid clipping.
+                "margin": {"b": 140, "r": 140},
+                "annotations": [
+                    _plotly_footer_annotation(timelabel.replace("\n", "<br>")),
+                    PlotUtilsPlotly.add_help_link("dv_ab", y_pos=-0.05),
+                ],
+            }
+        )
+        return fig
+
+    if font is None:
+        font = FontProperties(size="x-small")
+    # fig_c = figure implicit
+    # hold on
+    plt.xlabel("Lift (a)")
+    plt.ylabel("Drag (b)")
+    plt.suptitle(titlestring)
+    # axis(view_bounds)
+    plt.xlim(xmin=data.hd_a_grid[0], xmax=data.hd_a_grid[-1])
+    plt.ylim(ymin=data.hd_b_grid[0], ymax=data.hd_b_grid[-1])
+    plt.figtext(0.08, 0.02, timelabel, fontproperties=font)  # was 0.4 for y
+
+    plt.plot(data.HD_A, data.HD_B, "k.", markersize=3)  # show (small) grid marks
+    Cd = plt.contour(
+        data.HD_A,
+        data.HD_B,
+        data.W_misfit_RMS,
+        data.w_misfit_rms_levels,
+        colors="b",
+        linewidths=1.0,
+        linestyles="solid",
+    )
+    plt.clabel(
+        Cd,
+        inline=True,
+        inline_spacing=-1,
+        fontsize=9,
+        fmt="%2.1f",
+        colors="k",
+    )
+
+    if data.show_previous_ab_solution and data.last_W_misfit_RMS is not None:
+        # show what the previous 'good' values were; if they overlap around the current min, no change needed
+        Cd = plt.contour(
+            data.HD_A,
+            data.HD_B,
+            data.last_W_misfit_RMS,
+            data.prev_w_misfit_rms_levels,
+            colors="c",
+            linewidths=1.0,
+            linestyles="solid",
+        )
+        # Would be nice to change color to show if it exceeded tolerance but that code is below
+        # and it resets last_W_misfit_RMS in the process so we won't show the change
+        plt.plot(
+            data.committed_hd_a,
+            data.committed_hd_b,
+            "mo",
+            markersize=fig_markersize,
+        )  # show current assumed value
+
+    current_tag = "g*"
+    plt.plot(
+        hd_a_c,
+        hd_b_c,
+        current_tag,
+        markersize=fig_markersize,
+    )  # show new min location
+    # show hd_a span with xerr
+    plt.errorbar(
+        hd_a_c,
+        hd_b_c,
+        None,
+        np.array(
+            [
+                [hd_a_c - data.hd_a_grid[x_a_i[0]]],
+                [data.hd_a_grid[x_a_i[-1]] - hd_a_c],
+            ]
+        ),
+        current_tag,
+        elinewidth=0.5,
+        ecolor="b",
+        capsize=5,
+        capthick=0.5,
+    )  # these line colors match FM_ab_dives below
+    plt.errorbar(
+        hd_a_c,
+        hd_b_c,
+        np.array(
+            [
+                [hd_b_c - data.hd_b_grid[x_b_i[0]]],
+                [data.hd_b_grid[x_b_i[-1]] - hd_b_c],
+            ]
+        ),
+        None,
+        current_tag,
+        elinewidth=0.5,
+        ecolor="r",
+        capsize=5,
+        capthick=0.5,
+    )  # these line colors match FM_ab_dives below
+    for a_i, b_i in zip(x_i[1], x_i[0], strict=True):
+        plt.plot(
+            data.hd_a_grid[a_i],
+            data.hd_b_grid[b_i],
+            "kx",
+            markersize=fig_markersize,
+        )
+    return None
+
+
+def render_vbdbias_plot(
+    base_opts: BaseOpts.BaseOptions,
+    flight_dive_nums: list[int],
+    flight_dive_data_d: dict,
+    glider_mission_string: str,
+    timestamp: str,
+    vbdbias_filter: int,
+    show_implied_c_vbd,
+    font: FontProperties | None = None,
+) -> plotly.graph_objects.Figure | None:
+    """Renders the mission-summary vbdbias (volume change) plot.
+
+    Args:
+        base_opts: Options object - only base_opts.fm_plot_engine is read.
+        flight_dive_nums: Dive numbers to plot, in order.
+        flight_dive_data_d: FM's per-mission dict (also holds a `flight_data`
+            instance per dive, keyed by dive number).
+        glider_mission_string: Mission title used in the plot title.
+        timestamp: Timestamp string for the footer annotation.
+        vbdbias_filter: Number of dives used for the median-volume-change
+            filter (only used for its label text).
+        show_implied_c_vbd: Falsy to skip the implied-C_VBD secondary axis, or
+            the reference C_VBD (AD counts) to show it.
+        font: matplotlib font to use for text (matplotlib engine only); a
+            default is constructed if not provided.
+
+    Returns:
+        A plotly Figure for the "plotly" engine, or None for the "matplotlib"
+        engine (which draws into the current pyplot figure instead).
+
+    Raises:
+        None
+    """
+    aflight_dive_nums = np.array(flight_dive_nums)
+    n_dives = len(aflight_dive_nums)
+    dds = np.array([flight_dive_data_d[d_n] for d_n in aflight_dive_nums])
+
+    dives_vbdbias = np.array([dd.vbdbias for dd in dds])
+    dives_median_vbdbias = np.array([dd.median_vbdbias for dd in dds])
+    dives_w_rms_vbdbias = np.array([dd.w_rms_vbdbias for dd in dds])
+
+    timelabel = f"{timestamp}\nmass = {flight_dive_data_d['mass']:.2f}kg"
+    mass_comp = flight_dive_data_d["mass_comp"]
+    if mass_comp:
+        timelabel += "; mass_comp = %.2fkg" % mass_comp
+
+    no_soln_i = np.where(np.isnan(dives_vbdbias))[0]
+    n_no_soln = len(no_soln_i)
+    ylabel_text = f"Volume decrease (cc) from {flight_dive_data_d['volmax']:.2f}cc"
+
+    if base_opts.fm_plot_engine == "plotly":
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=aflight_dive_nums,
+                y=dives_vbdbias,
+                mode="markers",
+                marker={"color": "blue", "size": 4},
+                name="Per-dive volume change (%d bad)" % n_no_soln,
+                hovertemplate="Dive %{x}<br>Volume change: %{y:.2f} cc<extra></extra>",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=aflight_dive_nums,
+                y=dives_median_vbdbias,
+                mode="markers",
+                marker={"color": "red", "size": 4},
+                name="Median volume change (%d dives)" % vbdbias_filter,
+                hovertemplate="Dive %{x}<br>Median volume change: %{y:.2f} cc<extra></extra>",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=aflight_dive_nums,
+                y=dives_w_rms_vbdbias * 10,
+                mode="markers",
+                marker={"color": "cyan", "size": 4},
+                name="min w_rms*10 (cm/s)",
+                hovertemplate="Dive %{x}<br>min w_rms*10: %{y:.2f} cm/s<extra></extra>",
+            )
+        )
+        if n_no_soln:
+            fig.add_trace(
+                go.Scatter(
+                    x=aflight_dive_nums[no_soln_i],
+                    y=np.zeros(n_no_soln, np.float64),
+                    mode="markers",
+                    marker={"symbol": "x", "color": "black", "size": 6},
+                    name="No solution",
+                    hovertemplate="Dive %{x}<br>No solution<extra></extra>",
+                )
+            )
+
+        # We expect most of the vbdbias figures to be greater than zero if our estimated volmax is close
+        # but things can happen like sg221/ORBIS with sloughing ice, etc.
+        # Use a NaN-safe copy for the scale calculation so no-solution dives (NaN) don't
+        # spuriously appear as zero-valued points in the traces above.
+        delta_vbdbias = np.abs(np.nan_to_num(dives_vbdbias, nan=0.0))
+        for vbdbias_scale in range(100, 1000, 100):
+            n_bad = len(np.where(delta_vbdbias > vbdbias_scale)[0])
+            if n_bad < 0.1 * n_dives:
+                break
+
+        layout = {
+            "xaxis": {
+                "title": "Dive",
+                "range": [aflight_dive_nums[0], aflight_dive_nums[-1]],
+            },
+            "yaxis": {
+                "title": ylabel_text,
+                "range": [-vbdbias_scale, vbdbias_scale],
+                "showgrid": True,
+            },
+            "margin": {"b": 140},
+            "annotations": [
+                _plotly_footer_annotation(timelabel.replace("\n", "<br>")),
+                PlotUtilsPlotly.add_help_link("eng_FM_vbdbias", y_pos=-0.05),
+            ],
+        }
+        # An attempt to estimate implied C_VBD given apparent volume changes
+        # via vbdbias To a first approximation, assuming C_VBD is tuned
+        # properly for apogee in the first early_volmax_adjust dives then
+        # vbdbias changes after that must reflect effects that need
+        # compensation.  However, if you are not running at your nominal
+        # service density (because you haven't gone deep or you are
+        # transiting, etc) then C_VBD might not yet be set properly.  So we
+        # tare the reference C_VBD prematurely and our recommendations are
+        # off. See DG046 BATS 2019 where it took several 10's of dives
+        # before we started going deep.  So we probably need to track bottom
+        # densities and large changes imply re-taring the reference C_VBD.
+        if show_implied_c_vbd and flight_dive_data_d["VBD_CNV"] is not None:
+            c_vbd = show_implied_c_vbd
+            vbdbias_scale_AD = vbdbias_scale * flight_dive_data_d["VBD_CNV"]  # AD counts
+            layout["yaxis2"] = {
+                "title": "Implied C_VBD (AD counts)",
+                "overlaying": "y",
+                "side": "right",
+                "range": [c_vbd - vbdbias_scale_AD, c_vbd + vbdbias_scale_AD],
+            }
+        fig.update_layout(_plotly_title_layout(str(glider_mission_string)))
+        fig.update_layout(layout)
+        return fig
+
+    if font is None:
+        font = FontProperties(size="x-small")
+    plt.xlabel("Dive")
+    plt.ylabel(ylabel_text)
+    plt.suptitle(glider_mission_string)
+    plt.figtext(0.08, 0.02, timelabel, fontproperties=font)  # was 0.4 for y
+
+    # TODO set limit on vbdbias scale??
+
+    (p_v,) = plt.plot(
+        aflight_dive_nums, dives_vbdbias, "b.", markersize=fig_markersize
+    )
+    (p_mv,) = plt.plot(
+        aflight_dive_nums,
+        dives_median_vbdbias,
+        "r.",
+        markersize=fig_markersize,
+    )
+    (p_w_rms,) = plt.plot(
+        aflight_dive_nums,
+        dives_w_rms_vbdbias * 10,
+        "c.",
+        markersize=fig_markersize,
+    )
+    if n_no_soln:
+        plt.plot(
+            aflight_dive_nums[no_soln_i],
+            np.zeros(n_no_soln, np.float64),
+            "xk",
+            markersize=fig_markersize,
+        )
+        dives_vbdbias[no_soln_i] = 0  # avoid nan in scaling below
+    lg = plt.legend(
+        [p_v, p_mv, p_w_rms],
+        [
+            "Per-dive volume change (%d bad)" % n_no_soln,
+            "Median volume change (%d dives)" % vbdbias_filter,
+            r"min ${w}_{rms}$*10 (cm/s)",
+        ],
+        loc="lower right",
+        fancybox=True,
+        prop=font,
+        numpoints=1,
+    )
+    lg.get_frame().set_alpha(0.5)
+    # TODO warning from matplotlib when there is only one dive so xmin/xmax are the same
+    # TODO see below as well
+    plt.xlim(xmin=aflight_dive_nums[0], xmax=aflight_dive_nums[-1])
+    # We expect most of the vbdbias figures to be greater than zero if our estimated volmax is close
+    # but things can happen like sg221/ORBIS with sloughing ice, etc.
+    delta_vbdbias = abs(dives_vbdbias)
+    # ALT: vbdbias_scale = round(max(delta_vbdbias),-1) + 10 # round to the nearest 10
+    for vbdbias_scale in range(100, 1000, 100):
+        n_bad = len(np.where(delta_vbdbias > vbdbias_scale)[0])
+        if n_bad < 0.1 * n_dives:
+            break
+    plt.ylim(ymin=-vbdbias_scale, ymax=vbdbias_scale)
+    ax = plt.gca()
+    ax.grid(True)
+
+    # An attempt to estimate implied C_VBD given apparent volume changes
+    # via vbdbias To a first approximation, assuming C_VBD is tuned
+    # properly for apogee in the first early_volmax_adjust dives then
+    # vbdbias changes after that must reflect effects that need
+    # compensation.  However, if you are not running at your nominal
+    # service density (because you haven't gone deep or you are
+    # transiting, etc) then C_VBD might not yet be set properly.  So we
+    # tare the reference C_VBD prematurely and our recommendations are
+    # off. See DG046 BATS 2019 where it took several 10's of dives
+    # before we started going deep.  So we probably need to track bottom
+    # densities and large changes imply re-taring the reference C_VBD.
+    if show_implied_c_vbd and flight_dive_data_d["VBD_CNV"] is not None:
+        # DEAD c_vbd = flight_dive_data_d['C_VBD'] # our inital C_VBD
+        c_vbd = show_implied_c_vbd
+        # given vbdbias_scale compute AD range on 2nd axis
+        vbdbias_scale_AD = vbdbias_scale * flight_dive_data_d["VBD_CNV"]  # AD counts
+        ax2 = plt.twinx()  # 2nd y axis that shares the same x axis (dives)
+        ax2.yaxis.set_major_locator(plt.MultipleLocator(50.0))  # AD counts
+        # Applies to the prevailing y axis, hence ax2
+        plt.ylim(c_vbd - vbdbias_scale_AD, c_vbd + vbdbias_scale_AD)
+        plt.ylabel("Implied C_VBD (AD counts)")
+    return None
+
+
+def render_abs_compress_plot(
+    base_opts: BaseOpts.BaseOptions,
+    flight_dive_nums: list[int],
+    flight_dive_data_d: dict,
+    glider_mission_string: str,
+    timestamp: str,
+    font: FontProperties | None = None,
+) -> plotly.graph_objects.Figure | None:
+    """Renders the mission-summary abs_compress (compressibility) plot.
+
+    Args:
+        base_opts: Options object - only base_opts.fm_plot_engine is read.
+        flight_dive_nums: Dive numbers to plot, in order.
+        flight_dive_data_d: FM's per-mission dict (also holds a `flight_data`
+            instance per dive, keyed by dive number).
+        glider_mission_string: Mission title used in the plot title.
+        timestamp: Timestamp string for the footer annotation.
+        font: matplotlib font to use for text (matplotlib engine only); a
+            default is constructed if not provided.
+
+    Returns:
+        A plotly Figure for the "plotly" engine, or None for the "matplotlib"
+        engine (which draws into the current pyplot figure instead).
+
+    Raises:
+        None
+    """
+    aflight_dive_nums = np.array(flight_dive_nums)
+    dds = np.array([flight_dive_data_d[d_n] for d_n in aflight_dive_nums])
+    dives_bottom_press = np.array([dd.bottom_press for dd in dds])
+    dives_abs_compress = np.array([dd.abs_compress for dd in dds])
+    mean_abs_compress = flight_dive_data_d["abs_compress"]
+    ac_min_press = flight_dive_data_d["ac_min_press"]
+    # Plain unicode kappa, not "$\kappa$" LaTeX/mathtext: kaleido's static image
+    # export (used for the plotly engine) has no network access to load MathJax,
+    # so LaTeX notation renders as a broken, disconnected glyph instead of text.
+    timelabel = f"{timestamp}\nκ = {mean_abs_compress:.4g}"
+    deep_dives_i = [
+        i for i in range(len(aflight_dive_nums)) if dives_bottom_press[i] > ac_min_press
+    ]
+
+    if base_opts.fm_plot_engine == "plotly":
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=aflight_dive_nums,
+                y=dives_abs_compress,
+                mode="markers",
+                marker={"color": "blue", "size": 4},
+                name="Raw abs_compress",
+                hovertemplate="Dive %{x}<br>abs_compress: %{y:.4g} 1/dbar<extra></extra>",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=aflight_dive_nums[deep_dives_i],
+                y=dives_abs_compress[deep_dives_i],
+                mode="markers",
+                marker={"symbol": "x", "color": "black", "size": 6},
+                name=f"Deep (>{ac_min_press:.0f}psi) abs_compress",
+                hovertemplate="Dive %{x}<br>Deep abs_compress: %{y:.4g} 1/dbar<extra></extra>",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=[aflight_dive_nums[0], aflight_dive_nums[-1]],
+                y=[mean_abs_compress, mean_abs_compress],
+                mode="lines",
+                line={"color": "red"},
+                name="Mean (deep) abs_compress",
+                hovertemplate="Dive %{x}<br>Mean abs_compress: %{y:.4g} 1/dbar<extra></extra>",
+            )
+        )
+        fig.update_layout(_plotly_title_layout(str(glider_mission_string)))
+        fig.update_layout(
+            {
+                "xaxis": {
+                    "title": "Dive",
+                    "range": [aflight_dive_nums[0], aflight_dive_nums[-1]],
+                },
+                "yaxis": {
+                    "title": "Compressibility (1/dbar)",
+                    "range": [
+                        flight_dive_data_d["ac_min"],
+                        flight_dive_data_d["ac_max"],
+                    ],
+                    "showgrid": True,
+                },
+                "margin": {"b": 140},
+                "annotations": [
+                    _plotly_footer_annotation(timelabel.replace("\n", "<br>")),
+                    PlotUtilsPlotly.add_help_link("eng_FM_abs_compress", y_pos=-0.05),
+                ],
+            }
+        )
+        return fig
+
+    if font is None:
+        font = FontProperties(size="x-small")
+    plt.xlabel("Dive")
+    plt.ylabel("Compressibility (1/dbar)")
+    plt.suptitle(glider_mission_string)
+    plt.figtext(0.08, 0.02, timelabel, fontproperties=font)  # was 0.4 for y
+    (p_ac,) = plt.plot(
+        aflight_dive_nums,
+        dives_abs_compress,
+        "b.",
+        markersize=fig_markersize,
+    )
+    (p_dac,) = plt.plot(
+        aflight_dive_nums[deep_dives_i],
+        dives_abs_compress[deep_dives_i],
+        "kx",
+        markersize=fig_markersize,
+    )
+    (p_mac,) = plt.plot(
+        [aflight_dive_nums[0], aflight_dive_nums[-1]],
+        [mean_abs_compress, mean_abs_compress],
+        "r-",
+        markersize=fig_markersize,
+    )
+    lg = plt.legend(
+        [p_ac, p_dac, p_mac],
+        [
+            "Raw abs_compress",
+            f"Deep (>{ac_min_press:.0f}psi) abs_compress",
+            "Mean (deep) abs_compress",
+        ],
+        loc="upper right",
+        fancybox=True,
+        prop=font,
+        numpoints=1,
+    )
+    lg.get_frame().set_alpha(0.5)
+    plt.xlim(xmin=aflight_dive_nums[0], xmax=aflight_dive_nums[-1])
+    plt.ylim(
+        ymin=flight_dive_data_d["ac_min"],
+        ymax=flight_dive_data_d["ac_max"],
+    )
+    ax = plt.gca()
+    ax.grid(True)
+    return None
+
+
+def render_ab_dives_plot(
+    base_opts: BaseOpts.BaseOptions,
+    flight_dive_nums: list[int],
+    flight_dive_data_d: dict,
+    ab_grid_cache_d: dict,
+    hd_a_grid: npt.NDArray[np.float64],
+    hd_b_grid: npt.NDArray[np.float64],
+    glider_mission_string: str,
+    timestamp: str,
+    font: FontProperties | None = None,
+) -> plotly.graph_objects.Figure | None:
+    """Renders the mission-summary a/b history plot.
+
+    Args:
+        base_opts: Options object - only base_opts.fm_plot_engine is read.
+        flight_dive_nums: Dive numbers to plot, in order.
+        flight_dive_data_d: FM's per-mission dict (also holds a `flight_data`
+            instance per dive, keyed by dive number).
+        ab_grid_cache_d: Per-dive grid-solution cache -
+            dive_num -> (W_misfit_RMS, ia, ib, min_misfit, dive_set, pitch_diff).
+        hd_a_grid: Lift (a) search grid values.
+        hd_b_grid: Drag (b) search grid values.
+        glider_mission_string: Mission title used in the plot title.
+        timestamp: Timestamp string for the footer annotation.
+        font: matplotlib font to use for text (matplotlib engine only); a
+            default is constructed if not provided.
+
+    Returns:
+        A plotly Figure for the "plotly" engine, or None for the "matplotlib"
+        engine (which draws into the current pyplot figure instead).
+
+    Raises:
+        None
+    """
+    aflight_dive_nums = np.array(flight_dive_nums)
+    # Use diamonds to distinguish the grid solution at a dive (with error bars) from the selected solution
+    # a is never 'trusted' (unless we use a velocometer but then aren't all grids trusted?) so always display those as c
+    display_trusted_a = False  # CONTROL
+    if display_trusted_a:
+        trusted_colors = ("b", "r", "b.", "r.", "bd", "rd")
+    else:
+        trusted_colors = ("c", "r", "c.", "r.", "cd", "rd")
+    untrusted_colors = ("c", "m", "c.", "m.", "cd", "md")
+
+    if base_opts.fm_plot_engine == "plotly":
+        # NOTE: unlike the matplotlib branch below, this does not special-case
+        # display_trusted_a=True - "a" is always rendered as a single, untrusted-style
+        # (cyan) series here, matching today's real output since that CONTROL constant
+        # is hardcoded False.
+        grid_a = {"x": [], "y": [], "err_lo": [], "err_hi": []}
+        grid_b = {
+            "trusted": {"x": [], "y": [], "err_lo": [], "err_hi": []},
+            "untrusted": {"x": [], "y": [], "err_lo": [], "err_hi": []},
+        }
+        committed_a = {"x": [], "y": []}
+        committed_b = {
+            "trusted": {"x": [], "y": []},
+            "untrusted": {"x": [], "y": []},
+        }
+
+        for d_n in flight_dive_nums:
+            try:
+                (
+                    W_misfit_RMS,
+                    ia,
+                    ib,
+                    min_misfit,
+                    prev_dive_set,
+                    prev_pitch_diff,
+                ) = ab_grid_cache_d[d_n]
+                # We performed a grid solution at this point
+                cat = "trusted" if trusted_drag(prev_pitch_diff) else "untrusted"
+                hd_a = hd_a_grid[ia]
+                hd_b = hd_b_grid[ib]
+                # show extent of tolerable a and b around the computed value (BUT NOT the committed value)
+                x_a_i = np.where(W_misfit_RMS[ib, :] <= ab_tolerance)[0]
+                x_b_i = np.where(W_misfit_RMS[:, ia] <= ab_tolerance)[0]
+                grid_a["x"].append(d_n)
+                grid_a["y"].append(hd_a * 10)
+                grid_a["err_lo"].append((hd_a - hd_a_grid[x_a_i[0]]) * 10)
+                grid_a["err_hi"].append((hd_a_grid[x_a_i[-1]] - hd_a) * 10)
+                grid_b[cat]["x"].append(d_n)
+                grid_b[cat]["y"].append(hd_b)
+                grid_b[cat]["err_lo"].append(hd_b - hd_b_grid[x_b_i[0]])
+                grid_b[cat]["err_hi"].append(hd_b_grid[x_b_i[-1]] - hd_b)
+            except KeyError:
+                pass
+            dd = flight_dive_data_d[d_n]  # ensured
+            cat = "trusted" if dd.hd_ab_trusted else "untrusted"
+            committed_a["x"].append(d_n)
+            committed_a["y"].append(dd.hd_a * 10)
+            committed_b[cat]["x"].append(d_n)
+            committed_b[cat]["y"].append(dd.hd_b)
+
+        fig = go.Figure()
+        if grid_a["x"]:
+            fig.add_trace(
+                go.Scatter(
+                    x=grid_a["x"],
+                    y=grid_a["y"],
+                    mode="markers",
+                    marker={
+                        "symbol": "diamond",
+                        "size": fig_markersize,
+                        "color": "cyan",
+                    },
+                    error_y={
+                        "type": "data",
+                        "symmetric": False,
+                        "array": grid_a["err_hi"],
+                        "arrayminus": grid_a["err_lo"],
+                    },
+                    name="a grid solution",
+                    showlegend=False,
+                    hovertemplate="Dive %{x}<br>a grid solution (×10): %{y:.4g}<extra></extra>",
+                )
+            )
+        for cat, color in (("untrusted", "cyan"), ("trusted", "red")):
+            gb = grid_b[cat]
+            if gb["x"]:
+                fig.add_trace(
+                    go.Scatter(
+                        x=gb["x"],
+                        y=gb["y"],
+                        mode="markers",
+                        marker={
+                            "symbol": "diamond",
+                            "size": fig_markersize,
+                            "color": color,
+                        },
+                        error_y={
+                            "type": "data",
+                            "symmetric": False,
+                            "array": gb["err_hi"],
+                            "arrayminus": gb["err_lo"],
+                        },
+                        name=f"b grid solution ({cat})",
+                        showlegend=False,
+                        hovertemplate=f"Dive %{{x}}<br>b grid solution ({cat}): %{{y:.4g}}<extra></extra>",
+                    )
+                )
+        fig.add_trace(
+            go.Scatter(
+                x=committed_a["x"],
+                y=committed_a["y"],
+                mode="markers",
+                marker={"color": "cyan", "size": 5},
+                name="a*10",
+                hovertemplate="Dive %{x}<br>a×10: %{y:.4g}<extra></extra>",
+            )
+        )
+        for cat, color in (("untrusted", "magenta"), ("trusted", "red")):
+            cb = committed_b[cat]
+            if cb["x"]:
+                fig.add_trace(
+                    go.Scatter(
+                        x=cb["x"],
+                        y=cb["y"],
+                        mode="markers",
+                        marker={"color": color, "size": 5},
+                        name="Trusted b" if cat == "trusted" else "b",
+                        hovertemplate="Dive %{x}<br>"
+                        + ("Trusted b" if cat == "trusted" else "b")
+                        + ": %{y:.4g}<extra></extra>",
+                    )
+                )
+
+        fig.update_layout(_plotly_title_layout(str(glider_mission_string)))
+        fig.update_layout(
+            {
+                "xaxis": {
+                    "title": "Dive",
+                    "range": [aflight_dive_nums[0], aflight_dive_nums[-1]],
+                },
+                "yaxis": {
+                    # Explicitly NO ylabel, matching the matplotlib branch
+                    "range": [
+                        min(hd_a_grid[0] * 10, hd_b_grid[0]),
+                        max(hd_a_grid[-1] * 10, hd_b_grid[-1]),
+                    ],
+                    "showgrid": True,
+                },
+                "margin": {"b": 140},
+                "annotations": [
+                    _plotly_footer_annotation(timestamp),
+                    PlotUtilsPlotly.add_help_link("eng_FM_ab_dives", y_pos=-0.05),
+                ],
+            }
+        )
+        return fig
+
+    if font is None:
+        font = FontProperties(size="x-small")
+    plt.xlabel("Dive")
+    # Explicitly NO ylabel
+    plt.suptitle(glider_mission_string)
+    plt.figtext(0.08, 0.02, timestamp, fontproperties=font)  # was 0.4 for y
+    # generate handles
+    lg_handles = []
+    d_n = flight_dive_nums[0]
+    dd = flight_dive_data_d[d_n]
+    # Setup legend display using the first dive; its hd_a/b values will be overwritten with the proper narker below
+    (
+        a_color,
+        b_color,
+        a_marker,
+        b_marker,
+        a_grid_marker,
+        b_grid_marker,
+    ) = untrusted_colors
+    (p_a,) = plt.plot(d_n, dd.hd_a * 10, a_marker, markersize=fig_markersize)
+    lg_handles.append(p_a)
+    (p_b,) = plt.plot(d_n, dd.hd_b, b_marker, markersize=fig_markersize)
+    lg_handles.append(p_b)
+    display_legend = ["a*10", "b"]
+    if flight_dive_data_d["any_hd_ab_trusted"]:
+        if display_trusted_a:
+            (
+                a_color,
+                b_color,
+                a_marker,
+                b_marker,
+                a_grid_marker,
+                b_grid_marker,
+            ) = trusted_colors
+            (p_a,) = plt.plot(d_n, dd.hd_a * 10, a_marker, markersize=fig_markersize)
+            lg_handles.append(p_a)
+            (p_b,) = plt.plot(d_n, dd.hd_b, b_marker, markersize=fig_markersize)
+            lg_handles.append(p_b)
+            display_legend.extend(["Trusted a*10", "Trusted b"])
+        else:
+            (
+                a_color,
+                b_color,
+                a_marker,
+                b_marker,
+                a_grid_marker,
+                b_grid_marker,
+            ) = trusted_colors
+            (p_b,) = plt.plot(d_n, dd.hd_b, b_marker, markersize=fig_markersize)
+            lg_handles.append(p_b)
+            display_legend.extend(["Trusted b"])
+
+    for d_n in flight_dive_nums:
+        try:
+            (
+                W_misfit_RMS,
+                ia,
+                ib,
+                min_misfit,
+                prev_dive_set,
+                prev_pitch_diff,
+            ) = ab_grid_cache_d[d_n]
+            # We performed a grid solution at this point
+            (
+                a_color,
+                b_color,
+                a_marker,
+                b_marker,
+                a_grid_marker,
+                b_grid_marker,
+            ) = trusted_colors if trusted_drag(prev_pitch_diff) else untrusted_colors
+            hd_a = hd_a_grid[ia]
+            hd_b = hd_b_grid[ib]
+            # show extent of tolerable a and b around the computed value (BUT NOT the committed value)
+            x_a_i = np.where(W_misfit_RMS[ib, :] <= ab_tolerance)[0]
+            x_b_i = np.where(W_misfit_RMS[:, ia] <= ab_tolerance)[0]
+            p_a = plt.errorbar(
+                d_n,
+                hd_a * 10,
+                np.array(
+                    [
+                        [(hd_a - hd_a_grid[x_a_i[0]]) * 10],
+                        [(hd_a_grid[x_a_i[-1]] - hd_a) * 10],
+                    ]
+                ),
+                None,
+                a_grid_marker,
+                elinewidth=0.5,
+                ecolor=a_color,
+                capsize=5,
+                capthick=0.5,
+            )
+            p_b = plt.errorbar(
+                d_n,
+                hd_b,
+                np.array(
+                    [
+                        [(hd_b - hd_b_grid[x_b_i[0]])],
+                        [(hd_b_grid[x_b_i[-1]] - hd_b)],
+                    ]
+                ),
+                None,
+                b_grid_marker,
+                elinewidth=0.5,
+                ecolor=b_color,
+                capsize=5,
+                capthick=0.5,
+            )
+        except KeyError:
+            pass
+        dd = flight_dive_data_d[d_n]  # ensured
+        (
+            a_color,
+            b_color,
+            a_marker,
+            b_marker,
+            a_grid_marker,
+            b_grid_marker,
+        ) = trusted_colors if dd.hd_ab_trusted else untrusted_colors
+        (p_a,) = plt.plot(d_n, dd.hd_a * 10, a_marker, markersize=fig_markersize)
+        (p_b,) = plt.plot(d_n, dd.hd_b, b_marker, markersize=fig_markersize)
+
+    lg = plt.legend(
+        lg_handles,
+        display_legend,
+        loc="upper right",
+        fancybox=True,
+        prop=font,
+        numpoints=1,
+    )
+    lg.get_frame().set_alpha(0.5)
+    plt.xlim(xmin=aflight_dive_nums[0], xmax=aflight_dive_nums[-1])
+    plt.ylim(
+        ymin=min(hd_a_grid[0] * 10, hd_b_grid[0]),
+        ymax=max(hd_a_grid[-1] * 10, hd_b_grid[-1]),
+    )
+    ax = plt.gca()
+    ax.grid(True)
+    return None
 
 
 # The memory burden of the various caches can grow large, especially when we were caching results from load_dive_data()
@@ -2150,125 +3582,53 @@ def solve_ab_DAC(base_opts, dive_num, W_misfit_RMS, min_ia, min_ib, min_misfit):
         pHD_A = HD_A / hd_a_c
         pHD_B = HD_B / hd_b_c
 
-        timelabel = (
-            "%s\n"
-            r"${vol}_{max}$=%.0f"
-            "\nc = %.4g; s = %.4g;\n"
-            r"$\kappa$ = %.4g; $\alpha$ = %.4g;"
-            "\nl = %.4g; press=%d/%d"
+        dac_plot_data = DACPlotData(
+            dive_num=dive_num,
+            glider_mission_string=str(glider_mission_string),
+            min_misfit=min_misfit,
+            compare_velo=compare_velo,
+            hd_a_c=hd_a_c,
+            hd_b_c=hd_b_c,
+            DACmm=DACmm,
+            pHD_A=pHD_A,
+            pHD_B=pHD_B,
+            DAC_u=DAC_u,
+            DAC_v=DAC_v,
+            DACm=DACm,
+            W_misfit_RMS=W_misfit_RMS,
+            w_misfit_rms_levels=np.asarray(w_misfit_rms_levels),
+            mass_comp=flight_consts_d["mass_comp"],
+            pressmin=pressmin,
+            pressmax=pressmax,
+            volmax=flight_dive_data_d["volmax"],
+            abs_compress=flight_dive_data_d["abs_compress"],
+            hd_c=flight_consts_d["hd_c"],
+            hd_s=flight_consts_d["hd_s"],
+            therm_expan=flight_consts_d["therm_expan"],
+            glider_length=flight_consts_d["glider_length"],
         )
-        timelabel = timelabel % (
-            time.strftime("%d %b %Y %H:%M:%S", time.gmtime(time.time())),
-            flight_dive_data_d["volmax"],
-            flight_consts_d["hd_c"],
-            flight_consts_d["hd_s"],
-            flight_dive_data_d["abs_compress"],
-            flight_consts_d["therm_expan"],
-            flight_consts_d["glider_length"],
-            pressmin,
-            pressmax,
-        )
-        mass_comp = flight_consts_d["mass_comp"]
-        if mass_comp:
-            timelabel += r"; ${mass}_{comp}$ = %.2fkg" % mass_comp
-
-        plt.xlabel("Lift (a) ratio to best")
-        plt.ylabel("Drag (b) ratio to best")
-        titlestring = (
-            "%s\nDive %d " + r"${w}_{rms}=%.2fcm/s$" "(%d) a=%.6g b=%.6g %.2fcm/s"
-        )
-        titlestring = titlestring % (
-            glider_mission_string,
-            dive_num,
-            min_misfit,
-            compare_velo,
-            hd_a_c,
-            hd_b_c,
-            DACmm * cm_per_m,
-        )
-        plt.suptitle(titlestring)
-        plt.figtext(0.08, 0.02, timelabel, fontproperties=font)  # was 0.4 for y
-
-        # Show ratios between 1/2x and 1.5x of min a/b
-        plt.xlim(xmin=0.5, xmax=1.5)
-        plt.ylim(ymin=0.5, ymax=1.5)
-        # eliminate very large DAC values so the quiver values scale nicely
-        DAC_limit = 7  # PARAMETER cm/s
-        DAC_limit_cm_s = DAC_limit / cm_per_m
-        too_big_i = np.where(DACm > DAC_limit_cm_s)
-        DAC_u[too_big_i[0], too_big_i[1]] = np.nan
-        DAC_v[too_big_i[0], too_big_i[1]] = np.nan
-        p_q = plt.quiver(
-            pHD_A, pHD_B, DAC_u, DAC_v, color="b", angles="xy"
-        )  # angles='uv'?
-        plt.quiverkey(
-            p_q,
-            0.9,
-            0.9,
-            DAC_limit_cm_s,
-            "%d cm/s" % DAC_limit,
-            labelpos="E",
-            fontproperties={"size": "xx-small"},
-        )
-
-        Cd = plt.contour(
-            pHD_A,
-            pHD_B,
-            DACm * cm_per_m,
-            np.array([0, 0.005, 0.01, 0.02, 0.03, 0.04]) * cm_per_m,
-            colors="c",
-            linewidths=1.0,
-            linestyles="solid",
-        )
-        plt.clabel(
-            Cd, inline=True, inline_spacing=-1, fontsize=9, fmt="%2.1f", colors="c"
-        )
-        dacm_h, _ = Cd.legend_elements()
-
-        Cd = plt.contour(
-            pHD_A,
-            pHD_B,
-            W_misfit_RMS,
-            w_misfit_rms_levels,
-            colors="m",
-            linewidths=1.0,
-            linestyles="solid",
-        )
-        plt.clabel(
-            Cd, inline=True, inline_spacing=-1, fontsize=9, fmt="%2.1f", colors="m"
-        )
-        wrms_h, _ = Cd.legend_elements()
-
-        (p_b,) = plt.plot(
-            hd_a_c / hd_a_c, hd_b_c / hd_b_c, "g*", markersize=fig_markersize
-        )  # 1,1
-
-        lg = plt.legend(
-            [dacm_h[0], wrms_h[0], p_b],
-            [
-                "DAC difference magnitude (cm/s)",
-                r"${w}_{rms}$ difference from min (cm/s)",
-                r"Best fit ${w}_{rms}$",
-            ],
-            loc="upper right",
-            fancybox=True,
-            prop=font,
-            numpoints=1,
-        )
-        lg.get_frame().set_alpha(0.5)
-        write_figure("dv%04d_DAC.webp" % dive_num)
-        plt.clf()
+        fig = render_dac_plot(base_opts, dac_plot_data, font=font)
+        if base_opts.fm_plot_engine == "plotly":
+            write_figure_plotly(base_opts, "dv%04d_DAC" % dive_num, fig)
+        else:
+            write_figure("dv%04d_DAC.webp" % dive_num)
+            plt.clf()
     return True
 
 
 # If dive_num was used in any grid search, flush those entries so those grids are recomputed
-def flush_ab_grid_cache(dive_num, ab_grid_cache_d):
+def flush_ab_grid_cache(base_opts, dive_num, ab_grid_cache_d):
     for ab_grid_cache_dive, cache_entry in list(ab_grid_cache_d.items()):
         # If this is not a reprocessed dive then we need only flush cached results that involve the dive
         W_misfit_RMS, ia, ib, min_misfit, prev_dive_set, prev_pitch_d_diff = cache_entry
         if dive_num in prev_dive_set:
             del ab_grid_cache_d[ab_grid_cache_dive]
-            write_figure("dv%04d_ab.webp" % ab_grid_cache_dive, delete=True)
+            if base_opts.fm_plot_engine == "plotly":
+                write_figure_plotly(
+                    base_opts, "dv%04d_ab" % ab_grid_cache_dive, None, delete=True
+                )
+            else:
+                write_figure("dv%04d_ab.webp" % ab_grid_cache_dive, delete=True)
 
 
 def update_restart_cache(
@@ -2351,7 +3711,6 @@ def process_dive(
 
     # unpack some operational constants
     ac_min_press = flight_dive_data_d["ac_min_press"]
-    mass_comp = flight_dive_data_d["mass_comp"]
 
     if generate_figures and font is None:
         # compute these variables once
@@ -2734,7 +4093,7 @@ def process_dive(
                 save_flight_database(base_opts)  # checkpoint updated dive data
                 # if dives come in out of order (comms problems, yoyo dives, under ice, etc)
                 # we need to flush grid cache entries involving this reprocessed dive, if any, to recompute the grids going forward
-                flush_ab_grid_cache(dive_num, ab_grid_cache_d)
+                flush_ab_grid_cache(base_opts, dive_num, ab_grid_cache_d)
 
             except KeyError:
                 # no update required
@@ -2847,7 +4206,7 @@ def process_dive(
                 # but now we don't think that is a good idea and will choose another dive_num
                 # flush old result we won't use again (unless another out of order dive thinks better of it)
                 if dive_num in list(ab_grid_cache_d.keys()):
-                    flush_ab_grid_cache(dive_num, ab_grid_cache_d)
+                    flush_ab_grid_cache(base_opts, dive_num, ab_grid_cache_d)
                 continue  # not yet time to compute a new grid solution
 
             # if we make it here we (might) need to recompute the ab rms grid using dive_set; check against cache first
@@ -2939,152 +4298,49 @@ def process_dive(
             if (
                 generate_figures and compute_ab_grid
             ):  # only generate this plot when we have a new grid solution
-                hd_a_c = hd_a_grid[ia]
-                hd_b_c = hd_b_grid[ib]
-                # make sure all uses of \n are in normal, not r'' strings
-                timelabel = (
-                    "%s\n"
-                    r"${vol}_{max}$=%.0f"
-                    "\nc = %.4g; s = %.4g;\n"
-                    r"$\kappa$ = %.4g; $\alpha$ = %.4g;"
-                    "\nl = %.4g; press=%d/%d"
+                ab_grid_plot_data = ABGridPlotData(
+                    dive_num=dive_num,
+                    ia=ia,
+                    ib=ib,
+                    min_misfit=min_misfit,
+                    W_misfit_RMS=W_misfit_RMS,
+                    last_W_misfit_RMS=last_W_misfit_RMS,
+                    hd_a_grid=hd_a_grid,
+                    hd_b_grid=hd_b_grid,
+                    HD_A=np.asarray(HD_A),
+                    HD_B=np.asarray(HD_B),
+                    w_misfit_rms_levels=np.asarray(w_misfit_rms_levels),
+                    prev_w_misfit_rms_levels=(
+                        np.asarray(prev_w_misfit_rms_levels)
+                        if prev_w_misfit_rms_levels is not None
+                        else None
+                    ),
+                    ab_tolerance=ab_tolerance,
+                    w_rms_func_bad=w_rms_func_bad,
+                    mass_comp=flight_consts_d["mass_comp"],
+                    pressmin=pressmin,
+                    pressmax=pressmax,
+                    dive_set=dive_set,
+                    pitch_diff=pitch_diff,
+                    compare_velo=compare_velo,
+                    glider_mission_string=str(glider_mission_string),
+                    show_previous_ab_solution=show_previous_ab_solution,
+                    committed_hd_a=flight_dive_data_d["hd_a"],
+                    committed_hd_b=flight_dive_data_d["hd_b"],
+                    volmax=flight_dive_data_d["volmax"],
+                    abs_compress=flight_dive_data_d["abs_compress"],
+                    hd_c=flight_consts_d["hd_c"],
+                    hd_s=flight_consts_d["hd_s"],
+                    therm_expan=flight_consts_d["therm_expan"],
+                    glider_length=flight_consts_d["glider_length"],
                 )
-                timelabel = timelabel % (
-                    time.strftime("%d %b %Y %H:%M:%S", time.gmtime(time.time())),
-                    flight_dive_data_d["volmax"],
-                    flight_consts_d["hd_c"],
-                    flight_consts_d["hd_s"],
-                    flight_dive_data_d["abs_compress"],
-                    flight_consts_d["therm_expan"],
-                    flight_consts_d["glider_length"],
-                    pressmin,
-                    pressmax,
-                )
-                if mass_comp:
-                    timelabel += r"; ${mass}_{comp}$ = %.2fkg" % mass_comp
-
-                # fig_c = figure implicit
-                # hold on
-                plt.xlabel("Lift (a)")
-                plt.ylabel("Drag (b)")
-
-                titlestring = (
-                    "%s\n"
-                    r"${w}_{rms}=%.2fcm/s$"
-                    " [%s](%d)"
-                    r" %d$\circ$"
-                    "\na=%.6g b=%.6g"
-                )
-                titlestring = titlestring % (
-                    glider_mission_string,
-                    min_misfit,
-                    Utils.succinct_elts(dive_set, matlab_offset=0),
-                    compare_velo,
-                    pitch_diff,
-                    hd_a_c,
-                    hd_b_c,
-                )
-                plt.suptitle(titlestring)
-                # axis(view_bounds)
-                plt.xlim(xmin=hd_a_grid[0], xmax=hd_a_grid[-1])
-                plt.ylim(ymin=hd_b_grid[0], ymax=hd_b_grid[-1])
-                plt.figtext(0.08, 0.02, timelabel, fontproperties=font)  # was 0.4 for y
-
-                plt.plot(HD_A, HD_B, "k.", markersize=3)  # show (small) grid marks
-                Cd = plt.contour(
-                    HD_A,
-                    HD_B,
-                    W_misfit_RMS,
-                    w_misfit_rms_levels,
-                    colors="b",
-                    linewidths=1.0,
-                    linestyles="solid",
-                )
-                plt.clabel(
-                    Cd,
-                    inline=True,
-                    inline_spacing=-1,
-                    fontsize=9,
-                    fmt="%2.1f",
-                    colors="k",
-                )
-
-                if show_previous_ab_solution and last_W_misfit_RMS is not None:
-                    # show what the previous 'good' values were; if they overlap around the current min, no change needed
-                    Cd = plt.contour(
-                        HD_A,
-                        HD_B,
-                        last_W_misfit_RMS,
-                        prev_w_misfit_rms_levels,
-                        colors="c",
-                        linewidths=1.0,
-                        linestyles="solid",
-                    )
-                    # Would be nice to change color to show if it exceeded tolerance but that code is below
-                    # and it resets last_W_misfit_RMS in the process so we won't show the change
-                    plt.plot(
-                        flight_dive_data_d["hd_a"],
-                        flight_dive_data_d["hd_b"],
-                        "mo",
-                        markersize=fig_markersize,
-                    )  # show current assumed value
-
-                current_tag = "g*"
-                plt.plot(
-                    hd_a_grid[ia], hd_b_grid[ib], current_tag, markersize=fig_markersize
-                )  # show new min location
-                if True:
-                    # show errorbar locations used below to show 'span' of currently acceptable a/b
-                    x_a_i = np.where(W_misfit_RMS[ib, :] <= ab_tolerance)[0]
-                    x_b_i = np.where(W_misfit_RMS[:, ia] <= ab_tolerance)[0]
-                    # show hd_a span with xerr
-                    plt.errorbar(
-                        hd_a_c,
-                        hd_b_c,
-                        None,
-                        np.array(
-                            [
-                                [hd_a_c - hd_a_grid[x_a_i[0]]],
-                                [hd_a_grid[x_a_i[-1]] - hd_a_c],
-                            ]
-                        ),
-                        current_tag,
-                        elinewidth=0.5,
-                        ecolor="b",
-                        capsize=5,
-                        capthick=0.5,
-                    )  # these line colors match FM_ab_dives below
-                    plt.errorbar(
-                        hd_a_c,
-                        hd_b_c,
-                        np.array(
-                            [
-                                [hd_b_c - hd_b_grid[x_b_i[0]]],
-                                [hd_b_grid[x_b_i[-1]] - hd_b_c],
-                            ]
-                        ),
-                        None,
-                        current_tag,
-                        elinewidth=0.5,
-                        ecolor="r",
-                        capsize=5,
-                        capthick=0.5,
-                    )  # these line colors match FM_ab_dives below
-                if True:
-                    # Mark stall (no solution) points
-                    stall_value = w_rms_func_bad - min_misfit
-                    x_i = np.where(W_misfit_RMS == stall_value)
-                    for a_i, b_i in zip(x_i[1], x_i[0], strict=True):
-                        plt.plot(
-                            hd_a_grid[a_i],
-                            hd_b_grid[b_i],
-                            "kx",
-                            markersize=fig_markersize,
-                        )
-
-                # Add pitch_diff as an indication of constraint?
-                write_figure("dv%04d_ab.webp" % dive_num)
-                plt.clf()
+                fig = render_ab_grid_plot(base_opts, ab_grid_plot_data, font=font)
+                if base_opts.fm_plot_engine == "plotly":
+                    write_figure_plotly(base_opts, "dv%04d_ab" % dive_num, fig)
+                else:
+                    # Add pitch_diff as an indication of constraint?
+                    write_figure("dv%04d_ab.webp" % dive_num)
+                    plt.clf()
 
                 # BUG: we compute DAC for dives in the dive set under the assumption that the current ia/ib will be their minimum
                 # but this could be false if we assign the dive to the previous min a/b below
@@ -3270,315 +4526,53 @@ def process_dive(
         ):  # wait until you have 2 dives so xlim/ylim don't complain
             timestamp = time.strftime("%d %b %Y %H:%M:%S", time.gmtime(time.time()))
 
-            aflight_dive_nums = np.array(flight_dive_nums)
-            n_dives = len(aflight_dive_nums)
-
-            dds = np.array([flight_dive_data_d[d_n] for d_n in aflight_dive_nums])
-
-            # vbdbias figure
-            dives_vbdbias = np.array([dd.vbdbias for dd in dds])
-            dives_median_vbdbias = np.array([dd.median_vbdbias for dd in dds])
-            dives_w_rms_vbdbias = np.array([dd.w_rms_vbdbias for dd in dds])
-
-            timelabel = f"{timestamp}\nmass = {flight_dive_data_d['mass']:.2f}kg"
-            if mass_comp:
-                timelabel += r"; ${mass}_{comp}$ = %.2fkg" % mass_comp
-
-            plt.xlabel("Dive")
-            plt.ylabel(
-                f"Volume decrease (cc) from {flight_dive_data_d['volmax']:.2f}cc"
+            fig = render_vbdbias_plot(
+                base_opts,
+                flight_dive_nums,
+                flight_dive_data_d,
+                str(glider_mission_string),
+                timestamp,
+                vbdbias_filter,
+                show_implied_c_vbd,
+                font=font,
             )
-            plt.suptitle(glider_mission_string)
-            plt.figtext(0.08, 0.02, timelabel, fontproperties=font)  # was 0.4 for y
-
-            # TODO set limit on vbdbias scale??
-
-            (p_v,) = plt.plot(
-                aflight_dive_nums, dives_vbdbias, "b.", markersize=fig_markersize
-            )
-            (p_mv,) = plt.plot(
-                aflight_dive_nums, dives_median_vbdbias, "r.", markersize=fig_markersize
-            )
-            (p_w_rms,) = plt.plot(
-                aflight_dive_nums,
-                dives_w_rms_vbdbias * 10,
-                "c.",
-                markersize=fig_markersize,
-            )
-            no_soln_i = np.where(np.isnan(dives_vbdbias))[0]
-            n_no_soln = len(no_soln_i)
-            if n_no_soln:
-                plt.plot(
-                    aflight_dive_nums[no_soln_i],
-                    np.zeros(n_no_soln, np.float64),
-                    "xk",
-                    markersize=fig_markersize,
-                )
-                dives_vbdbias[no_soln_i] = 0  # avoid nan in scaling below
-            lg = plt.legend(
-                [p_v, p_mv, p_w_rms],
-                [
-                    "Per-dive volume change (%d bad)" % n_no_soln,
-                    "Median volume change (%d dives)" % vbdbias_filter,
-                    r"min ${w}_{rms}$*10 (cm/s)",
-                ],
-                loc="lower right",
-                fancybox=True,
-                prop=font,
-                numpoints=1,
-            )
-            lg.get_frame().set_alpha(0.5)
-            # TODO warning from matplotlib when there is only one dive so xmin/xmax are the same
-            # TODO see below as well
-            plt.xlim(xmin=aflight_dive_nums[0], xmax=aflight_dive_nums[-1])
-            # We expect most of the vbdbias figures to be greater than zero if our estimated volmax is close
-            # but things can happen like sg221/ORBIS with sloughing ice, etc.
-            delta_vbdbias = abs(dives_vbdbias)
-            # ALT: vbdbias_scale = round(max(delta_vbdbias),-1) + 10 # round to the nearest 10
-            for vbdbias_scale in range(100, 1000, 100):
-                n_bad = len(np.where(delta_vbdbias > vbdbias_scale)[0])
-                if n_bad < 0.1 * n_dives:
-                    break
-            plt.ylim(ymin=-vbdbias_scale, ymax=vbdbias_scale)
-            ax = plt.gca()
-            ax.grid(True)
-
-            # An attempt to estimate implied C_VBD given apparent volume changes
-            # via vbdbias To a first approximation, assuming C_VBD is tuned
-            # properly for apogee in the first early_volmax_adjust dives then
-            # vbdbias changes after that must reflect effects that need
-            # compensation.  However, if you are not running at your nominal
-            # service density (because you haven't gone deep or you are
-            # transiting, etc) then C_VBD might not yet be set properly.  So we
-            # tare the reference C_VBD prematurely and our recommendations are
-            # off. See DG046 BATS 2019 where it took several 10's of dives
-            # before we started going deep.  So we probably need to track bottom
-            # densities and large changes imply re-taring the reference C_VBD.
-            if show_implied_c_vbd and flight_dive_data_d["VBD_CNV"] is not None:
-                # DEAD c_vbd = flight_dive_data_d['C_VBD'] # our inital C_VBD
-                c_vbd = show_implied_c_vbd
-                # given vbdbias_scale compute AD range on 2nd axis
-                vbdbias_scale_AD = (
-                    vbdbias_scale * flight_dive_data_d["VBD_CNV"]
-                )  # AD counts
-                ax2 = plt.twinx()  # 2nd y axis that shares the same x axis (dives)
-                ax2.yaxis.set_major_locator(plt.MultipleLocator(50.0))  # AD counts
-                # Applies to the prevailing y axis, hence ax2
-                plt.ylim(c_vbd - vbdbias_scale_AD, c_vbd + vbdbias_scale_AD)
-                plt.ylabel("Implied C_VBD (AD counts)")
-
-            write_figure("eng_FM_vbdbias.webp")
-            plt.clf()
-
-            if glider_type is not OCULUS:  # No reason to plot this figure for OCULUS
-                # abs_compress figure
-                dives_bottom_press = np.array([dd.bottom_press for dd in dds])
-                dives_abs_compress = np.array([dd.abs_compress for dd in dds])
-                mean_abs_compress = flight_dive_data_d["abs_compress"]
-                timelabel = f"{timestamp}\n$\\kappa$ = {mean_abs_compress:.4g}"
-
-                plt.xlabel("Dive")
-                plt.ylabel("Compressibility (1/dbar)")
-                plt.suptitle(glider_mission_string)
-                plt.figtext(0.08, 0.02, timelabel, fontproperties=font)  # was 0.4 for y
-                (p_ac,) = plt.plot(
-                    aflight_dive_nums,
-                    dives_abs_compress,
-                    "b.",
-                    markersize=fig_markersize,
-                )
-                deep_dives_i = [
-                    i
-                    for i in range(len(aflight_dive_nums))
-                    if dives_bottom_press[i] > ac_min_press
-                ]
-                (p_dac,) = plt.plot(
-                    aflight_dive_nums[deep_dives_i],
-                    dives_abs_compress[deep_dives_i],
-                    "kx",
-                    markersize=fig_markersize,
-                )
-                (p_mac,) = plt.plot(
-                    [aflight_dive_nums[0], aflight_dive_nums[-1]],
-                    [mean_abs_compress, mean_abs_compress],
-                    "r-",
-                    markersize=fig_markersize,
-                )
-                lg = plt.legend(
-                    [p_ac, p_dac, p_mac],
-                    [
-                        "Raw abs_compress",
-                        f"Deep (>{ac_min_press:.0f}psi) abs_compress",
-                        "Mean (deep) abs_compress",
-                    ],
-                    loc="upper right",
-                    fancybox=True,
-                    prop=font,
-                    numpoints=1,
-                )
-                lg.get_frame().set_alpha(0.5)
-                plt.xlim(xmin=aflight_dive_nums[0], xmax=aflight_dive_nums[-1])
-                plt.ylim(
-                    ymin=flight_dive_data_d["ac_min"], ymax=flight_dive_data_d["ac_max"]
-                )
-                ax = plt.gca()
-                ax.grid(True)
-
-                write_figure("eng_FM_abs_compress.webp")
+            if base_opts.fm_plot_engine == "plotly":
+                write_figure_plotly(base_opts, "eng_FM_vbdbias", fig)
+            else:
+                write_figure("eng_FM_vbdbias.webp")
                 plt.clf()
 
-            # a/b history figure based on ab_grid_cache entries
-            # trusted and untrusted display
-            plt.xlabel("Dive")
-            # Explicitly NO ylabel
-            plt.suptitle(glider_mission_string)
-            plt.figtext(0.08, 0.02, timestamp, fontproperties=font)  # was 0.4 for y
-            # Use diamonds to distinguish the grid solution at a dive (with error bars) from the selected solution
-            # a is never 'trusted' (unless we use a velocometer but then aren't all grids trusted?) so always display those as c
-            display_trusted_a = False  # CONTROL
-            if display_trusted_a:
-                trusted_colors = ("b", "r", "b.", "r.", "bd", "rd")
-            else:
-                trusted_colors = ("c", "r", "c.", "r.", "cd", "rd")
-            untrusted_colors = ("c", "m", "c.", "m.", "cd", "md")
-            # generate handles
-            lg_handles = []
-            d_n = flight_dive_nums[0]
-            dd = flight_dive_data_d[d_n]
-            # Setup legend display using the first dive; its hd_a/b values will be overwritten with the proper narker below
-            (
-                a_color,
-                b_color,
-                a_marker,
-                b_marker,
-                a_grid_marker,
-                b_grid_marker,
-            ) = untrusted_colors
-            (p_a,) = plt.plot(d_n, dd.hd_a * 10, a_marker, markersize=fig_markersize)
-            lg_handles.append(p_a)
-            (p_b,) = plt.plot(d_n, dd.hd_b, b_marker, markersize=fig_markersize)
-            lg_handles.append(p_b)
-            display_legend = ["a*10", "b"]
-            if flight_dive_data_d["any_hd_ab_trusted"]:
-                if display_trusted_a:
-                    (
-                        a_color,
-                        b_color,
-                        a_marker,
-                        b_marker,
-                        a_grid_marker,
-                        b_grid_marker,
-                    ) = trusted_colors
-                    (p_a,) = plt.plot(
-                        d_n, dd.hd_a * 10, a_marker, markersize=fig_markersize
-                    )
-                    lg_handles.append(p_a)
-                    (p_b,) = plt.plot(d_n, dd.hd_b, b_marker, markersize=fig_markersize)
-                    lg_handles.append(p_b)
-                    display_legend.extend(["Trusted a*10", "Trusted b"])
+            if glider_type is not OCULUS:  # No reason to plot this figure for OCULUS
+                fig = render_abs_compress_plot(
+                    base_opts,
+                    flight_dive_nums,
+                    flight_dive_data_d,
+                    str(glider_mission_string),
+                    timestamp,
+                    font=font,
+                )
+                if base_opts.fm_plot_engine == "plotly":
+                    write_figure_plotly(base_opts, "eng_FM_abs_compress", fig)
                 else:
-                    (
-                        a_color,
-                        b_color,
-                        a_marker,
-                        b_marker,
-                        a_grid_marker,
-                        b_grid_marker,
-                    ) = trusted_colors
-                    (p_b,) = plt.plot(d_n, dd.hd_b, b_marker, markersize=fig_markersize)
-                    lg_handles.append(p_b)
-                    display_legend.extend(["Trusted b"])
+                    write_figure("eng_FM_abs_compress.webp")
+                    plt.clf()
 
-            for d_n in flight_dive_nums:
-                try:
-                    (
-                        W_misfit_RMS,
-                        ia,
-                        ib,
-                        min_misfit,
-                        prev_dive_set,
-                        prev_pitch_diff,
-                    ) = ab_grid_cache_d[d_n]
-                    # We performed a grid solution at this point
-                    (
-                        a_color,
-                        b_color,
-                        a_marker,
-                        b_marker,
-                        a_grid_marker,
-                        b_grid_marker,
-                    ) = (
-                        trusted_colors
-                        if trusted_drag(prev_pitch_diff)
-                        else untrusted_colors
-                    )
-                    hd_a = hd_a_grid[ia]
-                    hd_b = hd_b_grid[ib]
-                    # show extent of tolerable a and b around the computed value (BUT NOT the committed value)
-                    x_a_i = np.where(W_misfit_RMS[ib, :] <= ab_tolerance)[0]
-                    x_b_i = np.where(W_misfit_RMS[:, ia] <= ab_tolerance)[0]
-                    p_a = plt.errorbar(
-                        d_n,
-                        hd_a * 10,
-                        np.array(
-                            [
-                                [(hd_a - hd_a_grid[x_a_i[0]]) * 10],
-                                [(hd_a_grid[x_a_i[-1]] - hd_a) * 10],
-                            ]
-                        ),
-                        None,
-                        a_grid_marker,
-                        elinewidth=0.5,
-                        ecolor=a_color,
-                        capsize=5,
-                        capthick=0.5,
-                    )
-                    p_b = plt.errorbar(
-                        d_n,
-                        hd_b,
-                        np.array(
-                            [
-                                [(hd_b - hd_b_grid[x_b_i[0]])],
-                                [(hd_b_grid[x_b_i[-1]] - hd_b)],
-                            ]
-                        ),
-                        None,
-                        b_grid_marker,
-                        elinewidth=0.5,
-                        ecolor=b_color,
-                        capsize=5,
-                        capthick=0.5,
-                    )
-                except KeyError:
-                    pass
-                dd = flight_dive_data_d[d_n]  # ensured
-                a_color, b_color, a_marker, b_marker, a_grid_marker, b_grid_marker = (
-                    trusted_colors if dd.hd_ab_trusted else untrusted_colors
-                )
-                (p_a,) = plt.plot(
-                    d_n, dd.hd_a * 10, a_marker, markersize=fig_markersize
-                )
-                (p_b,) = plt.plot(d_n, dd.hd_b, b_marker, markersize=fig_markersize)
-
-            lg = plt.legend(
-                lg_handles,
-                display_legend,
-                loc="upper right",
-                fancybox=True,
-                prop=font,
-                numpoints=1,
+            fig = render_ab_dives_plot(
+                base_opts,
+                flight_dive_nums,
+                flight_dive_data_d,
+                ab_grid_cache_d,
+                hd_a_grid,
+                hd_b_grid,
+                str(glider_mission_string),
+                timestamp,
+                font=font,
             )
-            lg.get_frame().set_alpha(0.5)
-            plt.xlim(xmin=aflight_dive_nums[0], xmax=aflight_dive_nums[-1])
-            plt.ylim(
-                ymin=min(hd_a_grid[0] * 10, hd_b_grid[0]),
-                ymax=max(hd_a_grid[-1] * 10, hd_b_grid[-1]),
-            )
-            ax = plt.gca()
-            ax.grid(True)
-
-            write_figure("eng_FM_ab_dives.webp")
-            plt.clf()
+            if base_opts.fm_plot_engine == "plotly":
+                write_figure_plotly(base_opts, "eng_FM_ab_dives", fig)
+            else:
+                write_figure("eng_FM_ab_dives.webp")
+                plt.clf()
 
         # Determine which dives need to be reprocessed because of flight parameter changes
         # EXPLICITLY not update_flight_dive_nums because we might have updated dives back to last_ab_committed_dive_num
@@ -4301,3 +5295,258 @@ def process_directory(base_opts):
     except RuntimeError as exception:
         log_error(exception.args[0])
         return 1
+
+
+def _load_replay_state(base_opts: BaseOpts.BaseOptions) -> bool:
+    """Loads an existing flight/flight.pkl and derives the module state needed
+    to replay FM plots (or call solve_ab_DAC() directly) without re-running
+    the flight model's numeric pipeline.
+
+    Args:
+        base_opts: Options object; base_opts.mission_dir is read.
+
+    Returns:
+        True if flight_dive_data_d was loaded successfully. False if
+        flight/flight.pkl is missing, or its stored fm_version doesn't match
+        this build's fm_version (load_flight_database() silently discards the
+        pickle in that case) - callers should log an error and bail out.
+
+    Raises:
+        None
+    """
+    global \
+        mission_directory, \
+        flight_dive_data_d, \
+        plots_directory, \
+        flight_consts_d, \
+        ab_grid_cache_d, \
+        hd_a_grid, \
+        hd_b_grid, \
+        flight_dive_nums, \
+        HD_A, \
+        HD_B, \
+        w_misfit_rms_levels, \
+        prev_w_misfit_rms_levels, \
+        glider_mission_string, \
+        glider_type, \
+        compare_velo, \
+        nc_path_format
+
+    mission_directory = base_opts.mission_dir
+    load_flight_database(base_opts, {}, verify=False, create_db=False)
+    if flight_dive_data_d is None:
+        log_error(
+            "Could not load flight/flight.pkl - either it doesn't exist or "
+            f"its fm_version doesn't match this build's (fm_version {fm_version})"
+        )
+        return False
+
+    if generate_figures and copy_figures_to_plots:
+        plots_directory = os.path.join(mission_directory, "plots")
+        if not os.path.exists(plots_directory):
+            plots_directory = None
+
+    glider_type = flight_dive_data_d.get("glider_type")
+    compare_velo = flight_dive_data_d.get("compare_velo", 0)
+    # Needed by load_dive_data_DAC() (via solve_ab_DAC()) to find a dive's netCDF
+    # file - normally derived from sg_calib_constants_d["id_str"] in main(), but
+    # flight_dive_data_d["glider"] is set from that exact same value (FlightModel.py:2045)
+    nc_path_format = os.path.join(
+        str(mission_directory), "p%03d%%04d.nc" % int(flight_dive_data_d["glider"])
+    )
+
+    flight_consts_d = {}
+    for fv in assumption_variables:
+        flight_consts_d[fv] = flight_dive_data_d[fv]
+    for fv in flight_variables:
+        flight_consts_d[fv] = flight_dive_data_d[fv]
+
+    ab_grid_cache_d = flight_dive_data_d["ab_grid_cache"]
+    hd_a_grid = flight_dive_data_d["hd_a_grid"]
+    hd_b_grid = flight_dive_data_d["hd_b_grid"]
+    # Ensure that the hd_b_grid contains no zero values - those cause
+    # the hydro model to blow up (matches the same fixup in main())
+    hd_b_grid[hd_b_grid == 0.0] = 0.001
+    flight_dive_nums = flight_dive_data_d["dives"]
+
+    (HD_A, HD_B) = np.meshgrid(hd_a_grid, hd_b_grid)
+    w_misfit_rms_levels = ab_tolerance * np.array([1.0, 2.0, 3.0, 4.0])
+    prev_w_misfit_rms_levels = [ab_tolerance]
+    glider_mission_string = "%s%03d %s" % (
+        flight_dive_data_d["glider_type_string"],
+        flight_dive_data_d["glider"],
+        flight_dive_data_d["mission_title"],
+    )
+    return True
+
+
+def replot_from_flight_database(base_opts: BaseOpts.BaseOptions) -> int:
+    """Regenerates FlightModel plots from an existing, already-processed
+    flight/ directory - no live recomputation.
+
+    Re-renders the per-dive a/b grid plot for every dive in the cached
+    ab_grid_cache_d, plus the 3 mission-summary plots, using
+    base_opts.fm_plot_engine. The DAC plot is skipped - its inputs are
+    computed fresh from live dive nc files and never persisted; use
+    generate_dac_plots()/dive_specs for that instead.
+
+    Args:
+        base_opts: Options object; base_opts.mission_dir and
+            base_opts.fm_plot_engine are read.
+
+    Returns:
+        0 on success, 1 if flight/flight.pkl could not be loaded.
+
+    Raises:
+        None
+    """
+    if not _load_replay_state(base_opts):
+        return 1
+
+    log_info(
+        "replot: skipping DAC plots (never cached - see generate_dac_plots())"
+    )
+
+    last_W_misfit_RMS = None
+    for dive_num in sorted(ab_grid_cache_d.keys()):
+        W_misfit_RMS, ia, ib, min_misfit, dive_set, pitch_diff = ab_grid_cache_d[
+            dive_num
+        ]
+        dd = flight_dive_data_d[dive_num]
+        ab_grid_plot_data = ABGridPlotData(
+            dive_num=dive_num,
+            ia=ia,
+            ib=ib,
+            min_misfit=min_misfit,
+            W_misfit_RMS=W_misfit_RMS,
+            last_W_misfit_RMS=last_W_misfit_RMS,
+            hd_a_grid=hd_a_grid,
+            hd_b_grid=hd_b_grid,
+            HD_A=np.asarray(HD_A),
+            HD_B=np.asarray(HD_B),
+            w_misfit_rms_levels=np.asarray(w_misfit_rms_levels),
+            prev_w_misfit_rms_levels=(
+                np.asarray(prev_w_misfit_rms_levels)
+                if prev_w_misfit_rms_levels is not None
+                else None
+            ),
+            ab_tolerance=ab_tolerance,
+            w_rms_func_bad=w_rms_func_bad,
+            mass_comp=flight_consts_d["mass_comp"],
+            pressmin=pressmin,
+            pressmax=pressmax,
+            dive_set=dive_set,
+            pitch_diff=pitch_diff,
+            compare_velo=compare_velo,
+            glider_mission_string=str(glider_mission_string),
+            show_previous_ab_solution=last_W_misfit_RMS is not None,
+            committed_hd_a=dd.hd_a,
+            committed_hd_b=dd.hd_b,
+            volmax=flight_dive_data_d["volmax"],
+            abs_compress=flight_dive_data_d["abs_compress"],
+            hd_c=flight_consts_d["hd_c"],
+            hd_s=flight_consts_d["hd_s"],
+            therm_expan=flight_consts_d["therm_expan"],
+            glider_length=flight_consts_d["glider_length"],
+        )
+        fig = render_ab_grid_plot(base_opts, ab_grid_plot_data, font=font)
+        if base_opts.fm_plot_engine == "plotly":
+            write_figure_plotly(base_opts, "dv%04d_ab" % dive_num, fig)
+        else:
+            write_figure("dv%04d_ab.webp" % dive_num)
+            plt.clf()
+        last_W_misfit_RMS = W_misfit_RMS
+
+    if len(flight_dive_nums) > 1:
+        timestamp = time.strftime(
+            "%d %b %Y %H:%M:%S", time.gmtime(flight_dive_data_d["last_updated"])
+        )
+
+        fig = render_vbdbias_plot(
+            base_opts,
+            flight_dive_nums,
+            flight_dive_data_d,
+            str(glider_mission_string),
+            timestamp,
+            vbdbias_filter,
+            show_implied_c_vbd,
+            font=font,
+        )
+        if base_opts.fm_plot_engine == "plotly":
+            write_figure_plotly(base_opts, "eng_FM_vbdbias", fig)
+        else:
+            write_figure("eng_FM_vbdbias.webp")
+            plt.clf()
+
+        if glider_type is not OCULUS:  # No reason to plot this figure for OCULUS
+            fig = render_abs_compress_plot(
+                base_opts,
+                flight_dive_nums,
+                flight_dive_data_d,
+                str(glider_mission_string),
+                timestamp,
+                font=font,
+            )
+            if base_opts.fm_plot_engine == "plotly":
+                write_figure_plotly(base_opts, "eng_FM_abs_compress", fig)
+            else:
+                write_figure("eng_FM_abs_compress.webp")
+                plt.clf()
+
+        fig = render_ab_dives_plot(
+            base_opts,
+            flight_dive_nums,
+            flight_dive_data_d,
+            ab_grid_cache_d,
+            hd_a_grid,
+            hd_b_grid,
+            str(glider_mission_string),
+            timestamp,
+            font=font,
+        )
+        if base_opts.fm_plot_engine == "plotly":
+            write_figure_plotly(base_opts, "eng_FM_ab_dives", fig)
+        else:
+            write_figure("eng_FM_ab_dives.webp")
+            plt.clf()
+
+    return 0
+
+
+def generate_dac_plots(base_opts: BaseOpts.BaseOptions, dive_nums: list[int]) -> int:
+    """Generates the DAC plot for one or more already-processed dives, by
+    calling the existing solve_ab_DAC() directly against their cached a/b
+    grid solution - no live grid re-solve needed, unlike replot_from_flight_database()
+    this is the one plot that IS worth reaching this way since its inputs
+    can't be replayed from the pickle alone (solve_ab_DAC() still reads the
+    dive's live netCDF file for the DAC computation itself).
+
+    Args:
+        base_opts: Options object; base_opts.mission_dir and
+            base_opts.fm_plot_engine are read.
+        dive_nums: Dive numbers to generate DAC plots for.
+
+    Returns:
+        0 on success (individual dives lacking a cached grid solution are
+        logged and skipped, not treated as a fatal error), 1 if
+        flight/flight.pkl could not be loaded.
+
+    Raises:
+        None
+    """
+    if not _load_replay_state(base_opts):
+        return 1
+
+    for dive_num in dive_nums:
+        if dive_num not in ab_grid_cache_d:
+            log_warning(
+                f"No cached a/b grid solution for dive {dive_num} - "
+                "run FlightModel normally first; skipping DAC plot"
+            )
+            continue
+        W_misfit_RMS, ia, ib, min_misfit, dive_set, pitch_diff = ab_grid_cache_d[
+            dive_num
+        ]
+        solve_ab_DAC(base_opts, dive_num, W_misfit_RMS, ia, ib, min_misfit)
+
+    return 0

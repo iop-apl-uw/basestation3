@@ -609,6 +609,7 @@ global_options_dict: dict[str, options_t] = {
         "",
         {
             "Base",
+            "FlightModelCLI",
             "MakeDiveProfiles",
             "Reprocess",
         },
@@ -1045,6 +1046,28 @@ global_options_dict: dict[str, options_t] = {
             "action": argparse.BooleanOptionalAction,
         },
     ),
+    "fm_plot_engine": options_t(
+        "matplotlib",
+        {"Base", "FlightModelCLI", "Reprocess"},
+        ("--fm_plot_engine",),
+        str,
+        {
+            "help": "Plotting engine used for FlightModel calibration plots",
+            "section": "plotting",
+            "option_group": "plotting",
+            "choices": ["matplotlib", "plotly"],
+        },
+    ),
+    "replot": options_t(
+        False,
+        {"FlightModelCLI"},
+        ("--replot",),
+        bool,
+        {
+            "help": "Regenerate FlightModel plots from an existing flight/flight.pkl instead of running the flight model",
+            "action": "store_true",
+        },
+    ),
     "skip_kml": options_t(
         False,
         {"Base", "Reprocess"},
@@ -1139,6 +1162,7 @@ global_options_dict: dict[str, options_t] = {
             "BasePlot",
             "Reprocess",
             "MakeMissionEngPlot",
+            "FlightModelCLI",
         },
         ("--save_svg",),
         bool,
@@ -1155,6 +1179,7 @@ global_options_dict: dict[str, options_t] = {
             "Base",
             "BasePlot",
             "Reprocess",
+            "FlightModelCLI",
         },
         ("--save_png",),
         bool,
@@ -1167,7 +1192,7 @@ global_options_dict: dict[str, options_t] = {
     ),
     "save_jpg": options_t(
         False,
-        {"Base", "BasePlot", "Reprocess"},
+        {"Base", "BasePlot", "Reprocess", "FlightModelCLI"},
         ("--save_jpg",),
         bool,
         {
@@ -1179,7 +1204,7 @@ global_options_dict: dict[str, options_t] = {
     ),
     "save_webp": options_t(
         True,
-        {"Base", "BasePlot", "Reprocess"},
+        {"Base", "BasePlot", "Reprocess", "FlightModelCLI"},
         ("--save_webp",),
         bool,
         {
@@ -1191,7 +1216,7 @@ global_options_dict: dict[str, options_t] = {
     ),
     "thumbnail_webp": options_t(
         True,
-        {"Base", "BasePlot", "Reprocess"},
+        {"Base", "BasePlot", "Reprocess", "FlightModelCLI"},
         ("--thumbnail_webp",),
         bool,
         {
@@ -1203,7 +1228,7 @@ global_options_dict: dict[str, options_t] = {
     ),
     "compress_div": options_t(
         True,
-        {"Base", "BasePlot", "Reprocess"},
+        {"Base", "BasePlot", "Reprocess", "FlightModelCLI"},
         ("--compress_div",),
         bool,
         {
@@ -1220,6 +1245,7 @@ global_options_dict: dict[str, options_t] = {
             "Base",
             "BasePlot",
             "Reprocess",
+            "FlightModelCLI",
         },
         ("--full_html",),
         bool,
@@ -1260,6 +1286,7 @@ global_options_dict: dict[str, options_t] = {
             "Base",
             "BaseDB",
             "BasePlot",
+            "FlightModelCLI",
             "MakeMissionEngPlots",
             "Reprocess",
         },

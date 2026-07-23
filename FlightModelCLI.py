@@ -82,6 +82,13 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
 
     FlightModel.mission_directory = base_opts.mission_dir
 
+    _, expanded_dive_nums = Utils.expand_dive_spec(base_opts)
+    if expanded_dive_nums:
+        return FlightModel.generate_dac_plots(base_opts, expanded_dive_nums)
+
+    if base_opts.replot:
+        return FlightModel.replot_from_flight_database(base_opts)
+
     return FlightModel.process_directory(base_opts)
 
 

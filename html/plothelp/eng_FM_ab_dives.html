@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>FM a/b History Plot Help</title>
+    <meta name="viewport" content="width=device-width"></meta>
+    <link rel="stylesheet" href="style.css?v="></link>
+  </head>
+  <body>
+    <h1>FM a/b History Plot Help</h1>
+    <p>This plot is a FlightModel mission-summary plot, not a per-dive science plot. It shows
+    the history of the hydrodynamic lift (<code>a</code>) and drag (<code>b</code>)
+    coefficients FlightModel has committed to, dive by dive, over the course of a mission.
+    <code>a</code> is scaled by 10 so it shares a sensible range with <code>b</code> on the
+    same axis.</p>
+
+    <br></br>
+    <h2>a*10</h2>
+    <p>The lift coefficient FlightModel has committed to for that dive
+    (<code>flight_data.hd_a</code>), scaled by 10. Lift is never considered independently
+    "trusted" or "untrusted" the way drag is (see below), so it's always shown in the same
+    color.</p>
+
+    <br></br>
+    <h2>b / Trusted b</h2>
+    <p>The drag coefficient FlightModel has committed to for that dive
+    (<code>flight_data.hd_b</code>). Colored differently depending on whether the dive's
+    grid-search solution is considered "trusted" - i.e. whether a direct velocity comparison
+    instrument was available, or the dive/climb pitch difference was large enough to
+    well-constrain the drag estimate (see <code>trusted_drag()</code>).</p>
+
+    <br></br>
+    <h2>Grid solution markers (diamonds, with error bars)</h2>
+    <p>On dives where FlightModel actually performed a fresh a/b grid search (not every dive
+    triggers one - some dives reuse a previously-committed solution), a diamond marker with
+    error bars shows the raw grid solution and the span of a/b values still within tolerance
+    of the minimum misfit, for both <code>a</code> and <code>b</code>.</p>
+  </body>
+</html>
