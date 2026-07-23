@@ -169,9 +169,9 @@ def parseMagCal(contents):
             abc[i] = float(abc_pqr[i])
         for i in range(3):
             pqr[i] = float(abc_pqr[i + 9])
-        return (abc, pqr)
         # Create the stock closure that ignores pitchAD values
-        # pqrc = lambda p: pqr  # noqa: E731
+        pqrc = lambda p: pqr  # noqa: E731
+        return (abc, pqrc)
 
         # # DG correction has five lines exactly.  SG with second compass
         # # has a second compass definition right after the first

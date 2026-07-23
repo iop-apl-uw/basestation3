@@ -1,0 +1,8 @@
+version: 67.01
+glider: 261
+mission: 1
+selftest: 3
+start: 7 17 126 14 14 14
+data:
+$TEL_NUM,881600005296
+$ALT_TEL_NUM,881600005296

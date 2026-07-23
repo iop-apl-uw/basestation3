@@ -64,6 +64,9 @@ RUN addgroup --gid $GROUP_ID $BASERUNNER
 RUN adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID $BASERUNNER
 
 RUN apt-get update && apt-get -y dist-upgrade
+# Runtime dependencies for selftest.sh (tcsh itself, plus bc and dos2unix which
+# it shells out to - none are part of a minimal Ubuntu install)
+RUN apt-get install -y tcsh bc dos2unix
 RUN apt-get install -y build-essential checkinstall libreadline-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev zlib1g-dev openssl libffi-dev libgeos-dev python3-dev python3-setuptools wget libgdbm-compat-dev uuid-dev liblzma-dev
 # Build python
 WORKDIR /tmp

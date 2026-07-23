@@ -29,10 +29,12 @@
 
 import pathlib
 
+import numpy as np
 import pytest
 import testutils
 
 import Base
+import BaseMagCal
 import MakeDiveProfiles
 
 test_cases = (
@@ -40,6 +42,34 @@ test_cases = (
     ("search", ["tcm2mat.cal.0001.0004 to correct heading"], [""]),
     ("tcm2mat.cal", [""], ["tcm2mat.cal does not exist"]),
 )
+
+# Real old-style (plain, non-DG) tcm2mat.cal content, as produced for a regular
+# Seaglider - e.g. sg203_WA_coast_Jul17/tcm2mat.cal. Distinct from the
+# tcm2mat.cal.0001.0004 fixture used above, which is the newer key=value format
+# parsed by parseNewMagCalFile - a different function with its own (working) closure.
+OLD_STYLE_CAL_CONTENTS = (
+    '"dive 7 result"\n'
+    "0 1 0 0\n"
+    "0 1 0 0\n"
+    "1.000 0.007 0.004 0.005 1.039 -0.029 0.003 0.007 1.025 17.67 -11.43 19.15\n"
+)
+
+
+def test_parse_mag_cal_returns_callable_pqrc() -> None:
+    """parseMagCal's second return value must be callable (compassTransform calls it as
+    pqrc(pitchAD)) - regression test for a bug where it returned the raw pqr ndarray
+    instead, breaking heading correction for every dive on any mission using an
+    old-style plain tcm2mat.cal file (e.g. sg203_WA_coast_Jul17/sg204_WA_coast_Jul17
+    hit `TypeError: 'numpy.ndarray' object is not callable` in compassTransform on
+    every dive as a result).
+    """
+    abc, pqrc = BaseMagCal.parseMagCal(OLD_STYLE_CAL_CONTENTS)
+
+    assert abc is not None
+    assert callable(pqrc)
+    # compassTransform must not raise when given parseMagCal's own output.
+    heading = BaseMagCal.compassTransform(abc, pqrc, pitchAD=100.0, roll_deg=0.0, pitch_deg=10.0, mag=np.zeros(3))
+    assert heading is not None
 
 
 @pytest.mark.parametrize(

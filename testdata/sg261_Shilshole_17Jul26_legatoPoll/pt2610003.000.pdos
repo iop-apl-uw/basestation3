@@ -1,0 +1,10 @@
+4682.295,SSURF,N,Executing commands in pdoscmds.bat
+4682.391,SEPDOS,N,executing pdoscmds.bat
+Executing menu shutdown confirm=261
+4682.483,SSYS,N,online, sending [shutdown Thu Jul 16 18:08:02 202] to comm.log
+4684.047,HSUPER,N,shutting down ... Thu Jul 16 18:08:02 202
+4684.656,HSUPER,N,accum time 1126 sec/0.313 hours/0.013 days
+4684.696,HTT8,N,Updating parameter $FG_AHR_24V to 0.8650043
+4684.745,HSUPER,N,adding 55428.245 mA-s to 24V FG: 0.8650043 A-hr (count=1432, dt=1126.00)
+4684.787,HTT8,N,Updating parameter $FG_AHR_10V to 0.21861035
+4684.840,HSUPER,N,adding 8365.917 mA-s to 10V FG: 0.2186103 A-hr

@@ -1,0 +1,8 @@
+24662.086,SSURF,N,Executing commands in pdoscmds.bat
+24662.173,SEPDOS,N,executing pdoscmds.bat
+Executing menu shutdown confirm=283
+24662.254,SSYS,N,online, sending [shutdown Fri May  8 07:02:16 202] to comm.log
+24663.690,HSUPER,N,shutting down ... Fri May  8 07:02:16 202
+24664.287,HSUPER,N,accum time 21476 sec/5.966 hours/0.249 days
+24664.321,HSUPER,N,24V FG use 401387.724 mA-s not added to NVRAM FG
+24664.355,HSUPER,N,10V FG use 152174.190 mA-s not added to NVRAM FG

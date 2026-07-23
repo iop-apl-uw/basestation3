@@ -1,0 +1,10 @@
+version: 66.12
+revision: DORADO
+glider: 654
+mission: 10
+selftest: 82
+start: 3 26 126 3 6 3
+data:
+$PASSWD,Hieh9ui5
+$TEL_NUM,88160000581
+$ALT_TEL_NUM,88160000581

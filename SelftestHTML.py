@@ -1,5 +1,5 @@
 # !/usr/bin/python3
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2026  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -31,17 +31,19 @@ import glob
 import io
 import math
 import os.path
+import pathlib
 import re
 import sys
 from contextlib import redirect_stdout
 
 import plotly.graph_objects
 
+import CalibConstCheck
 import capture
 import compare
 import parms
 
-shortcuts = ["top", "capture", "parameters", "pitch", "roll", "VBD", "GPS", "SciCon", "pressure", "compass", "bathymetry", "software", "hardware"]
+shortcuts = ["top", "capture", "parameters", "calibconstants", "pitch", "roll", "VBD", "GPS", "SciCon", "pressure", "compass", "bathymetry", "software", "hardware"]
 
 helpDict = { "Failed to send sms message": "Iridium SMS sending is a good backup communications method. An SMS failure could be lack of a satellite connection or your SMS email may not be configured.",
              "No SMS email address": "Iridium SMS sending is a good backup communications method and is already configured for SIM cards. Set an email from epdos with 'writenv SMSemail foo@foo.com'. Consult your technical support for more info.",
@@ -49,7 +51,6 @@ helpDict = { "Failed to send sms message": "Iridium SMS sending is a good backup
             "max-min=": "Observed spread between min and max AD counts on axis that should not have moved was more than 10 counts.",
             "AD values outside": "Observed min and/or max AD counts on axis that should not have moved exceeded the set software limits by more than 10 counts.",
             "Setting LOGGERS": "Your current $LOGGERS value does not match the configured devices.",
-            "Cal value=0.000": "<b>set sbe_cond_freq_C0 in sg_calib_constants.m</b>",
             "CREG failed": "This could be a sign of antenna or signal problems or could just have been a temporary inability of the phone to see the satellite.",
             "stat on CREG?": "This could be a sign of antenna or signal problems or could just have been a temporary inability of the phone to register with the satellite.",
             "COMPASS_USE,0": "Best practice: set COMPASS_USE to at least 4 to save magnetometer data in eng file for in situ and post-mission compass calibration",
@@ -602,11 +603,27 @@ function reload() {
         printNav('parameters')
         compare.renderTable(x, pcolors, rcolors)
        
-    if y: 
+    if y:
         print('<h2 id="parameters" style="margin-bottom:0px;">Parameter comparison to %s</h2>' % yname)
         if not x:
             printNav('parameters')
         compare.renderTable(y, pcolors, rcolors)
+
+    calib_filename = os.path.join(base, 'sg_calib_constants.m')
+    if os.path.exists(calib_filename):
+        if os.path.exists(capname):
+            capture_source = capname
+        elif os.path.exists(logname):
+            capture_source = logname
+        else:
+            capture_source = None
+        calib_findings = CalibConstCheck.check_calib_constants(
+            pathlib.Path(calib_filename),
+            pathlib.Path(capture_source) if capture_source else None,
+        )
+        print('<h2 id="calibconstants" style="margin-bottom:0px;">sg_calib_constants.m validation</h2>')
+        printNav('calibconstants')
+        CalibConstCheck.render_findings_table(calib_findings, pcolors, rcolors)
 
     print("</body></html>")
 

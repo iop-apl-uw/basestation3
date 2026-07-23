@@ -44,24 +44,27 @@ def availableCanons():
 
     return f
 
-def compare(canonname, logname):
+def parse_param_file(filename: str | Path) -> dict[str, float] | None:
+    """Extracts $PARAM,value pairs from a Seaglider .log or selftest .cap file.
+
+    Handles both the two-column .log format ($PARAM,value) and the
+    five-column .cap format (epoch,SUBSYS,N,$PARAM,value). Lines that fail to
+    parse or contain a checksum marker ('*') are skipped.
+
+    Args:
+        filename: Path to a .log or .cap file.
+
+    Returns:
+        Mapping of parameter name (without the leading '$') to its float
+        value, or None if filename could not be opened.
+    """
     try:
-        log = open(logname, "rb")
+        log = open(filename, "rb")
     except IOError:
-        print("could not open input file %s" % logname)
+        print("could not open input file %s" % filename)
         return None
 
-    try:
-        canon = open(canonname)
-    except:
-        print("could not open canonical file %s" % canonname)
-        return None
-
-    canonmin = {}
-    canonmax = {}
-    canonopt = {}
-    canonvars = {}
-    logdata = {}
+    logdata: dict[str, float] = {}
 
     line_count = 0
     for raw_line in log:
@@ -69,7 +72,7 @@ def compare(canonname, logname):
         try:
             line = raw_line.decode()
         except UnicodeDecodeError:
-            # print("[error] Could not process line %d of %s" % (line_count, logname))
+            # print("[error] Could not process line %d of %s" % (line_count, filename))
             continue
 
         columns = line.split(",")
@@ -90,9 +93,28 @@ def compare(canonname, logname):
 
     log.close()
 
+    return logdata
+
+
+def compare(canonname, logname):
+    logdata = parse_param_file(logname)
+    if logdata is None:
+        return None
+
+    try:
+        canon = open(canonname)
+    except:
+        print("could not open canonical file %s" % canonname)
+        return None
+
+    canonmin = {}
+    canonmax = {}
+    canonopt = {}
+    canonvars = {}
+
     if len(logdata.keys()) == 0:
         print("no log data present")
-        return None 
+        return None
 
     opt = False
 

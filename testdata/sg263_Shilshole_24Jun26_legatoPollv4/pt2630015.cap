@@ -1,0 +1,2795 @@
+5.800,SUSR,N,Beginning selftest #15 on glider SG263
+5.859,HTT8,N,Updating parameter $LOGGERS to 1
+5.886,SUSR,N,WARNING: Setting LOGGERS to 1 to match configured devices
+0.911,SUSR,N,Tue Jun  2 15:15:21 2026
+0.929,SUSR,N,---- Audible pings to mark start of tests ----
+1.372,HXPDR,N,range was 2.273250 m
+4.106,HXPDR,N,range was 999.000000 m
+6.839,HXPDR,N,range was 999.000000 m
+8.852,SUSR,N,clearing tranponder ping count, prev count=0
+8.873,SUSR,N,xpdr/ranging can be tested while other tests proceed
+8.895,SUSR,N,---- Checking GPS ----
+9.048,HGPS,N,$GNTXT,01,01,02,u-blox AG - www.u-blox.com*4E
+9.091,HGPS,N,$GNTXT,01,01,02,HW UBX-M8030 00080000*60
+9.136,HGPS,N,$GNTXT,01,01,02,ROM CORE 3.01 (107888)*2B
+9.173,HGPS,N,$GNTXT,01,01,02,FWVER=SPG 3.01*46
+9.208,HGPS,N,$GNTXT,01,01,02,PROTVER=18.00*11
+9.246,HGPS,N,$GNTXT,01,01,02,GPS;GLO;GAL;BDS*77
+9.282,HGPS,N,$GNTXT,01,01,02,SBAS;IMES;QZSS*49
+9.321,HGPS,N,$GNTXT,01,01,02,GNSS OTP=GPS;GLO*37
+9.393,HGPS,N,$GNTXT,01,01,02,LLC=FFFFFFFF-FFFFFFED-FFFFFFFF-FFFFFFFF-FFFFFF69*23
+9.438,HGPS,N,$GNTXT,01,01,02,ANTSUPERV=AC SD PDoS SR*3E
+9.479,HGPS,N,$GNTXT,01,01,02,ANTSTATUS=DONTKNOW*2D
+9.507,HGPS,N,$GNTXT,01,01,02,PF=3FF*4B
+10.045,HGPS,N,$GNTXT,01,01,02,ANTSTATUS=INIT*3B
+11.041,HGPS,N,$GNTXT,01,01,02,ANTSTATUS=OK*25
+13.045,HGPS,N,Obtaining GPS fix
+13.153,HGPS,N,reset GPS, flags=1
+14.254,HGPS,N,Acquiring GPS fix (10,4,40)
+15.284,HGPS,N,VVVVVVVVVVVVVVVVVVVVVVVVVAA
+50.000,HGPS,N,sync sentence $GNRMC,151610.00,A,4740.80210,N,12224.40730,W,0.013,,020626,,,A*77
+ (k=282871), was_high=0, spin=0set 2026/06/02 15:16:11
+50.121,HSUPER,N,0,0,time set to (1780413371)
+50.185,HSUPER,N,RTC time Tue Jun  2 15:16:11 2026
+50.224,HGPS,N,decl=15.1
+50.247,HGPS,N,020626 151602 4740.8027 -12224.4072 hdop=1.6 cog=0.0 sog=0.0 hpe=7.2 n=6 26/27 seconds
+50.819,SUSR,N,---- Checking Iridium phone ----
+61.421,HPHONE,N,model: 9523N
+63.461,HPHONE,N,IMEI: 300125061595630
+65.502,HPHONE,N,NUM: +CNUM:"","",129
+67.547,HPHONE,N,SIM: 8988169224001047555
+76.352,HPHONE,N,signal strength 4
+80.672,HPHONE,N,signal strength 4
+89.312,HPHONE,N,signal strength 5
+89.367,HPHONE,N,-MSGEO: -2300,-3636,4688,17f98c4f
+89.390,HPHONE,N,lat: 47.647804, lon: -122.315941, time: Sat Jul  4 14:09:26 2015
+89.435,HPHONE,N,WARNING: Phone reported 4 stat on CREG?
+89.457,HPHONE,N,CREG failed - phone not registered
+91.867,HPHONE,N,phone on 41601 ms, avg mA=36.0, max mA=94.4
+91.888,SUSR,N,---- Checking bathymetry data ----
+97.399,SBATHY,N,Loaded bathymap.006 [156 100] 100m (LL) 47.6800,-122.5000 (UR) 47.8204,-122.3663
+100.132,SBATHY,N,Loaded bathymap.007 [ 56  75] 100m (LL) 47.6500,-122.5000 (UR) 47.7004,-122.3998
+112.079,SBATHY,N,Loaded bathymap.002 [167 108] 1000m (LL) 45.5000,-125.3000 (UR) 47.0029,-123.9133
+125.129,SBATHY,N,Loaded bathymap.003 [178 111] 1000m (LL) 44.0000,-125.3000 (UR) 45.6019,-123.9113
+144.387,SBATHY,N,Loaded bathymap.009 [208 138] 1000m (LL) 46.7860,-126.0000 (UR) 48.6578,-124.1863
+144.419,SBATHY,N,Current location (4740.802734,-12224.407227) is covered by at least one bathymetry file
+144.446,SBATHY,N,NOTE: $USE_BATHY (-1.000000) does not correspond to a loaded, valid bathymetry file; This may or may not be corrected automatically.
+144.479,SUSR,N,---- Checking icemap data ----
+144.957,SBATHY,N,WARNING: There are NO ice map files on board!
+144.984,SBATHY,N,NOTE: $USE_ICE (0.000000) does not correspond to a loaded, valid ice file; This may or may not be corrected automatically.
+145.013,SUSR,N,---- Checking compass and calibration files ----
+145.035,HCOMPASS,N,tcm2mat.cal:
+hard0="-614.3 -1514.9 710.9"
+soft0="1.000 -0.003 -0.072 -0.016 1.056 0.0550.048 0.085 1.122"
+145.609,HCOMPASS,N,marking as read
+145.627,HCOMPASS,N,Compass 1, aux-B
+145.648,HCOMPASS,N,pitch A,B,C,D: 0.000000 1.000000 0.000000 0.000000
+145.671,HCOMPASS,N,roll A,B,C,D:  0.000000 1.000000 0.000000 0.000000
+145.696,HCOMPASS,N,hard iron P,Q,R: -614.299988 -1514.900024 710.900024
+145.720,HCOMPASS,N,soft iron: 1.000000 -0.003000 -0.072000
+145.743,HCOMPASS,N,           -0.016000 1.056000 0.055000
+145.766,HCOMPASS,N,           0.048000 0.085000 1.122000
+145.798,HCOMPASS,N,marking as read
+145.822,HCOMPASS,N,Compass 3, motor
+145.842,HCOMPASS,N,pitch A,B,C,D: 0.000000 1.000000 0.000000 0.000000
+145.866,HCOMPASS,N,roll A,B,C,D:  0.000000 1.000000 0.000000 0.000000
+145.888,HCOMPASS,N,hard iron P,Q,R: 0.000000 0.000000 0.000000
+145.911,HCOMPASS,N,soft iron: 1.000000 0.000000 0.000000
+145.933,HCOMPASS,N,           0.000000 1.000000 0.000000
+145.955,HCOMPASS,N,           0.000000 0.000000 1.000000
+146.898,HCOMPASS,N,1, aux-B, Hdg: 333.10 deg Rol: 1.59 deg Pit: -1.36 deg Tmp: 31.67 C
+146.923,HCOMPASS,N,1, aux-B, X: 115.0 Y: 1853.0 Z: 1159.0
+148.182,HCOMPASS,N,version: 7218, compiled 2026-03-26 18:45
+148.204,HCOMPASS,N,config: G0 X4 O6 N599b825102002b00 K23
+148.227,HCOMPASS,N,accel scale:  0.000061297 0.000000611 0.000000035  00EF71 000263 000023
+148.253,HCOMPASS,N,              -0.000000428 0.000061272 -0.000000088  FFFE54 00EF58 FFFFA8
+148.281,HCOMPASS,N,              -0.000000312 0.000000002 0.000061056  FFFEC8 000002 00EE80
+148.307,HCOMPASS,N,accel offset: -0.044783149 0.002675200 0.034510951  BBAA95 041500 34A8D7
+148.335,HCOMPASS,N,Tslope: 12340, Toffset: 0
+148.355,SUSR,N,---- Checking supervisor configuration ----
+148.420,HSUPER,N,fuel gauge     = 2 (2.000000 Hz)
+148.441,HSUPER,N,aux monitoring = 0 (0 seconds)
+148.461,HSUPER,N,heartbeat      = 0 (0 seconds)
+148.481,HSUPER,N,watchdog period= 7 (600 seconds)
+148.501,HSUPER,N,pressure gain  = 0 (1)
+148.522,HSUPER,N,reed switch    = 1 (enabled)
+148.584,HSUPER,N,super FW ver 3
+148.648,HSUPER,N,status P0=19,P1=71,P2=254,7302=1,FORCED=0,RESET=0,ERRORS=0
+148.740,HSUPER,N,ADCO = 17, ADCG = 1.2917908430
+148.804,HSUPER,N,offset counts = 103, 145 (1.620267 mA, 11.084792 ma)
+148.915,HSUPER,N,0: 187343 26368
+148.934,HSUPER,N,1: 29672 37120
+148.953,HSUPER,N,instantaneous measured current 0: 9.89 mA
+148.975,HSUPER,N,instantaneous measured current 1: 8.86 mA
+148.996,SUSR,N,---- Reporting hardware configuration ----
+149.017,SUSR,N,Sensor in slot 1 is not installed
+149.045,SUSR,N,Sensor in slot 2 is not installed
+149.066,SUSR,N,Sensor in slot 3 is not installed
+149.086,SUSR,N,Sensor in slot 4 is not installed
+149.110,SUSR,N,Sensor in slot 5 is not installed
+149.130,SUSR,N,Sensor in slot 6 is not installed
+149.152,SUSR,N,Logger sensor in logger slot 1 is SciCon on USART5C (pwr GPIO F10) ()
+149.175,SUSR,N,Logger Sensor in logger slot 2 is not installed
+149.197,SUSR,N,Logger Sensor in logger slot 3 is not installed
+149.218,SUSR,N,Logger Sensor in logger slot 4 is not installed
+149.240,SUSR,N,Motherboard is Rev.E
+149.259,SUSR,N,Phone is Iridium9522
+149.278,SUSR,N,    Phone is configured for flow control and carrier detect
+149.304,SUSR,N,    Phone supply is battery 2
+149.325,SUSR,N,GPS is UBlox
+149.343,SUSR,N,Compass is aux-B on USART3C (pwr GPIO E5) (compass)
+149.366,SUSR,N,    Spare compass is not installed on nil
+149.387,SUSR,N,XPDR is AAE_955_3.08 on USART5A (pwr GPIO F8) ()
+149.410,SUSR,N,network is not installed on nil
+149.429,SUSR,N,RAFOS is not installed
+149.449,SUSR,N,nav[0] is not installed on nil
+149.469,SUSR,N,nav[1] is not installed on nil
+149.490,SUSR,N,nav[2] is not installed on nil
+149.513,SUSR,N,nav[3] is not installed on nil
+149.577,SUSR,N,External pressure sensor ADC gain=1
+149.598,SUSR,N,Current pressure is aux serial on USART3C (pwr GPIO E5) (compass)
+149.621,SUSR,N,---- Reporting serdev and logdev cnf files ----
+149.642,SUSR,N,.cnf files on disk:
+      318 04-10-2026 23:25:42 legato.cnf                      
+      921 12-27-2023 12:06:24 ncp.cnf                         
+1239 bytes used; 2 files
+150.167,SUSR,N,
+150.185,SUSR,N,.cnf files registered in serlib:
+150.209,SUSR,N,== legato.cnf ==
+name=legato
+prefix=rbr
+timeout=2000
+baud=19200
+warmup=12000
+voltage=10
+headerlines=0
+current=0.02
+format="%d-%d-%d %d:%d:%f %00 %01 %02 %f %f %f %f %03"
+query="%F%r%5%F%r%[ready: ]poll%r%nsleep%r%n"
+column=conduc(10000,0)
+column=temp(10000,0)
+column=pressure(1000,0)
+column=conducTemp(10000,0)
+power-policy=1
+cycles=0
+151.059,SUSR,N,
+== ncp.cnf ==
+name=NCP
+prefix=cp
+timeout=15000
+baud=38400
+warmup=400
+voltage=15
+current=0.025
+wakeup=%F@@@@@%(200)@@@@@%(200)K1W%%!Q%(400)K1W%%!Q%(1000)%r%nMC%r%n%[OK]%F%(1000)%F
+cmdprefix=$CP_
+powerup-timeout=0
+prompt=OK
+datatype=u
+start=%X
+stop=%FMC%r%n%[OK]
+profiles-download=merged
+dive-start=%FMC%r%n%[OK]%(500)ERASETM,CODE=9999%r%n%[OK]%(500)
+cleanup=%FMC%r%[OK]%(500)ERASETM,CODE=9999%r%n%[OK]%(500)
+download="telemetryfile.bin"
+downloader=ad2cp
+metadata=%FMC%r%n%[OK]GETALL%r%n%[OK]
+selftest=%FMC%r%n%[OK]GETALL%r%n%[OK]
+clock-set=%FMC%r%n%[OK]SETCLOCK,YEAR=20%{%y,MONTH=%m,DAY=%d,HOUR=%H,MINUTE=%M,SECOND=%S}%r%n%[OK]
+clock-read=%FMC%r%n%[OK]GETCLOCK%r%n%[OK]
+clock-sync=gps2  
+post-clock=off
+post-transfer=off
+post-stop=off
+script-x=NCP_GO
+log-cmd-0=%FMC%r%n%[OK]RECSTAT,FC%r%n%[OK]
+log-resp-0=%00
+log-param-0=FREE
+log-cmd-1=%FMC%r%n%[OK]GETPWR%r%n%[OK]
+log-resp-1=%01,%f,%f,%02,%f,%f,%f
+log-param-1=POWER
+log-param-2=POWER1
+152.429,SUSR,N,---- Reporting exec configuation ----
+152.887,SUSR,N,---- Reporting currents file ----
+153.373,SUSR,N,---- Reporting software version and processor info ----
+153.405,SSYS,N,Version 67.01/7468M (trunk) Apr 22 2026 15:56:26
+153.412,SSYS,N,Cortex-M4 GCC 13.3.1 
+153.416,SSYS,N,Rev E
+153.419,SSYS,N,IAP v1.7 
+153.422,SSYS,N,Super v3
+153.425,SSYS,N,Seaglider operating software developed and maintained
+153.433,SSYS,N,by Integrative Observational Platforms Group, APL-UW
+153.440,SSYS,N,Copyright 2003-2025, University of Washington. UW and
+153.448,SSYS,N,the developers expressly disclaim any and all warranties
+153.456,SSYS,N,pertaining to non-infringement, merchantability or fitness
+153.463,SSYS,N,for a particular purpose. User assumes and accepts all
+153.470,SSYS,N,risks associated with installation and operation of this
+153.478,SSYS,N,software.
+153.482,SSYS,N,o OLD KHH motor and supervisor support
+153.488,SSYS,N,x ICE, x RAFOS, x SciCon, o DG, o LUA
+153.494,SSYS,N,Chip ID F4xx(0x413), revision 0x100f
+153.530,SSYS,N,flash size 1024 kB
+153.553,SSYS,N,serial 003d 0039 4711 3431 3131 3838 
+153.583,SSYS,N,Core ID 410fc241
+153.698,SSYS,N,serial: 0
+153.808,SSYS,N,BOM: 
+153.917,SSYS,N,lot: 
+153.964,SUSR,N,oscillator actual 8000266 Hz
+154.003,SUSR,N,---- Reporting utility storage ----
+154.028,HTT8,N,targetName = WESTPORT
+154.086,HTT8,N,selftest = 15
+154.105,HTT8,N,boot = 120
+154.125,HTT8,N,lastLat = 47.680046
+154.145,HTT8,N,lastLon = -122.406784
+154.165,HTT8,N,fixTime = 1780413371
+154.184,HTT8,N,magvar = 15.050397
+154.204,HTT8,N,escapeRoute = 0
+154.222,HTT8,N,escapeDepth = 0
+154.242,HTT8,N,deviceCnf0 = legato.cnf
+154.261,HTT8,N,deviceCnf1 = 
+154.280,HTT8,N,deviceCnf2 = 
+154.302,HTT8,N,deviceCnf3 = 
+154.321,HTT8,N,deviceCnf4 = 
+154.339,HTT8,N,loggerCnf0 = ncp.cnf
+154.359,HTT8,N,loggerCnf1 = 
+154.377,HTT8,N,loggerCnf2 = 
+154.396,HTT8,N,loggerCnf3 = 
+154.416,HTT8,N,loggerCnf4 = 
+154.434,HTT8,N,SMSemail = iopsggw@uw.edu
+154.461,HTT8,N,networkSessionID = 0
+154.481,HTT8,N,SMSinbox = 0
+154.500,HTT8,N,intPLatch = 8.559066
+154.520,HTT8,N,humidityLeak = 60.000000
+154.540,HTT8,N,intPLeak = 0.500000
+154.560,HTT8,N,rollAdjMaxDeg = 10.000000
+154.580,HTT8,N,CTslot = 1
+154.599,HTT8,N,CTparam = 120.000000
+154.622,SUSR,N,---- Reporting directory contents and uSD card info ----
+    11357 06-02-2026 15:17:54 THISDIVE.KAP                    
+    54653 12-27-2023 12:06:22 bathymap.006                    
+    14815 12-27-2023 12:06:24 bathymap.007                    
+      233 04-09-2026 18:00:14 cmdfile                         
+      318 04-10-2026 23:25:42 legato.cnf                      
+      921 12-27-2023 12:06:24 ncp.cnf                         
+      454 12-27-2023 12:06:26 ncp_go                          
+      232 04-06-2026 19:03:34 science                         
+      324 12-27-2023 12:06:26 setup.bat                       
+      285 12-11-2025 19:24:24 targets                         
+       93 03-07-2025 21:05:42 tcm2mat.cal                     
+      364 06-01-2026 23:44:08 BATTERY                         
+     4518 04-09-2026 17:43:24 THISDIVE.LOG                    
+      261 02-13-2025 16:27:48 BG021325                        
+        0 04-09-2026 17:35:28 dirtmp.txt                      
+      573 04-09-2026 17:43:12 THISDIVE.DAT                    
+        0 04-09-2026 18:00:50 THISDIVE.WRK                    
+      236 04-23-2024 17:05:52 BG042324                        
+      237 05-15-2024 14:27:52 BG051524                        
+      348 04-06-2026 18:38:36 pdoslog.gz                      
+       73 04-09-2026 18:00:14 loggers.cmd                     
+        0 04-03-2026 13:42:50 dv1133/                         
+       4438 04-03-2026 13:42:50   sg1133lz.x                      
+        303 04-03-2026 13:42:50   sg1133en.x                      
+      746 05-12-2025 18:00:04 CAPVEC                          
+    61656 01-08-2025 18:27:54 motor.bin                       
+      246 10-02-2024 22:11:12 BG100224                        
+    60368 10-02-2024 22:31:32 motorold.bin                    
+      248 10-08-2024 15:36:16 BG100824                        
+        0 04-06-2026 18:38:40 pdoslog                         
+      248 10-17-2024 23:02:08 BG101724                        
+     4082 03-07-2025 14:27:08 sg0000kl.a                      
+      246 10-03-2024 18:29:56 BG100324                        
+      358 04-06-2026 18:36:30 BG040626                        
+      362 04-09-2026 17:43:20 BG040926                        
+     2030 04-06-2026 18:37:28 st0013lz.a                      
+      248 10-21-2024 14:32:16 BG102124                        
+    70646 10-03-2024 19:39:40 bathymap.002                    
+    76596 10-03-2024 19:40:20 bathymap.003                    
+      246 10-07-2024 14:50:02 BG100724                        
+      367 04-06-2026 18:37:30 st0013dz.a                      
+      248 11-26-2024 17:00:14 BG112624                        
+    34017 04-06-2026 18:39:04 st0013kz.a                      
+   326840 06-01-2026 23:36:38 gnicl.bin                       
+     2001 04-09-2026 17:44:26 st0014lz.a                      
+      261 03-07-2025 14:11:16 BG030725                        
+      324 04-09-2026 17:44:26 st0014dz.a                      
+    30987 04-09-2026 17:52:36 st0014kz.a                      
+       37 01-08-2025 18:29:54 foo.bat                         
+     8192 09-08-2025 22:13:24 CHUNK.U01                       
+     3874 09-08-2025 22:34:24 CHUNK.U02                       
+    20258 09-08-2025 22:38:50 CHUNK.GZ                        
+      261 02-12-2025 22:02:14 BG021225                        
+       56 05-15-2025 21:40:58 d200.bat                        
+       56 05-16-2025 04:23:16 d300.bat                        
+       56 05-16-2025 04:23:24 d500.bat                        
+       56 05-16-2025 04:23:34 d600.bat                        
+     8192 09-08-2025 22:12:16 CHUNK.U00                       
+   112024 09-09-2025 05:28:24 bathymap.009                    
+155.695,SSYS,N,devicesize:7591,capacity:3887104 kbytes,blocksize:512 bytes,type:2
+155.708,SSYS,N,manuf:58,oem:DD,name:DDINC,rev:30
+155.718,SSYS,N,date:2007/3,sn:3664216825
+155.727,SSYS,N,3876384 kB free
+155.736,SFATFS,I,Starting check -1
+155.815,SFATFS,I,2 dirs, 58 files
+155.824,SFATFS,I,Total time:81 ms, Open time 0 ms, Check time 0 ms, Close time 0
+155.838,SUSR,N,---- Checking pressure sensor ----
+156.420,HCOMPASS,N,version: 7218, compiled 2026-03-26 18:45
+156.443,HCOMPASS,N,config: G0 X4 O6 N599b825102002b00 K23
+156.463,HPRES,N,pfilter=3
+172.007,HPRES,N,                A/D         mVolts     Meters
+172.031,HPRES,N, Mean:          16727.7    2.487640   0.03    
+172.054,HPRES,N, Sigma:         0.4        0.000066   -507.12 
+172.078,HPRES,N, RMS:           16727.7    2.487640   0.03    
+172.104,HPRES,N, Min:           16727      2.487532   0.03    
+172.126,HPRES,N, Max:           16728      2.487681   0.06    
+172.149,HPRES,N, Peak-to-peak:  1          0.148714   uV
+
+172.170,HPRES,N, Volts per bit: 1.487136e-07
+
+172.191,HPRES,N,Y-intercept is set correctly
+174.243,HSCICON,N,rst=3, exception=0, PC=0, wd=0, vee=1, LSI=0, safeboot=0
+ready: legatoPollv4.ct.P0 stored 10163
+
+>117.8 mAs
+189.390,SMOTOR,N,motor offset=0, slope=11.331072
+189.414,SUSR,N,---- Checking SciCon ----
+189.442,HSCICON,N,waiting 4910 ms before powering up
+196.341,HSCICON,N,rst=3, exception=0, PC=0, wd=0, vee=1, LSI=0, safeboot=0
+ààver long
+
+GNICL Version 0.3/7518:7522M (trunk) May 13 2026 11:28:09
+Cortex-M4 GCC 13.3.1 
+Chip ID F4xx(0x413), revision 0x1007
+flash size 1024 kB
+serial 002a 003f 5112 3331 3833 3238 
+Core ID 410fc241
+serial: 224
+BOM: B.0 May 2023
+lot: B.0 Lot 3 Build of 32 
+
+>cardinfo
+devicesize:7591,capacity:3887104 kbytes,blocksize:512 bytes,type:2
+manuf:1,oem:PA,name:S04AG,rev:13
+date:2004/5,sn:3672139979
+open files      = 0/0
+free kB         = 3878496
+free clusters   = 121203
+fat entries     = 121218
+sec per cluster = 64
+vol start sec   = 8192
+fat start sec   = 14488
+root dir start  = 2
+data start sec  = 16384
+
+>free
+3878496 kB free
+
+>fgwd config
+WDvalue idx = 2 (60 s)
+ADrate idx  = 2 (6.000000 Hz)
+Measure = 0
+Flags   = 1
+Offset  = 32715
+Slope   = 2727
+
+>fgwd read
+acc=3250 ov=0 N=34 slope=2727 i=32735 V=0 temp=0 mAs=19 vlo=11851 wd=1
+
+>flash status
+WRPR = 0xfff, OB = 57
+
+>batt
+temp: 11.75 C (902)
+ref: 1.198 V (1486) (nominal 1.21 implies VDDA=3.334)
+batt: 0.464 V (288)
+
+>clock
+01/01/2000 00:00:04 554
+
+>vee dump
+end addr = 256
+build.serial (4@8) = 224 0.000000
+build.BOM (64@40) = B.0 May 2023
+build.lot (64@132) = B.0 Lot 3 Build of 32 
+legatoPoll.ct.P0 (4@224) = 10033 0.000000
+legatoPollv4.ct.P0 (4@256) = 10163 0.000000
+
+>compass init
+no compass attached
+
+>compass coeff
+no compass attached
+
+>prop
+
+sbect = {
+ prefix = ct
+ baud = 0
+ cycles = 255
+ timeout = 2000
+ warmup = 700
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 0
+ min-power-cycle = 0
+#query = nil
+#query-ready = nil
+#query-finish = nil
+#post-query = nil
+#format = nil
+#meta = nil
+#start = nil
+#stop = nil
+#output = nil
+#status = nil
+ column = condFreq(1000,0)
+ column = tempFreq(1000,0)
+}
+legatoPollv4 = {
+ prefix = fb
+ baud = 19200
+ cycles = 0
+ timeout = 1500
+ warmup = 12000
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 10
+ min-power-cycle = 0
+ query = %F%n%3%F%n%[ready: ]poll%r%nsleep%r%n
+#query-ready = nil
+#query-finish = nil
+#post-query = nil
+ format = %d-%d-%d %d:%d:%f %00 %01 %02 %f %f %f %f %03
+ meta = %F%n%1%F%n%[ready: ]instrument dump%r%n%[ready:]
+ start = %F%n%1%F%n%[ready: ]disable%r%n%[ready: ]
+ stop = %F%n%1%F%n%[ready: ]%9%9instrument power external used%r%n%[%n]
+#output = nil
+#status = nil
+ column = conduc(10000,0)
+ column = temp(10000,0)
+ column = pressure(1000,0)
+ column = conducTemp(10000,0)
+}
+aa4831 = {
+ prefix = aa4831
+ baud = 9600
+ cycles = 0
+ timeout = 5000
+ warmup = 1000
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 10
+ min-power-cycle = 0
+#query = nil
+#query-ready = nil
+#query-finish = nil
+#post-query = nil
+ format = %s %d %00 %01 %02 %03 %04
+ meta = %[4831]%n%$11%9get all%r%n%[Reference]%[%$23]
+#start = nil
+#stop = nil
+#output = nil
+#status = nil
+ column = O2(1000,0)
+ column = airsat(1000,0)
+ column = temp(1000,0)
+ column = calphase(1000,0)
+ column = tcphase(1000,0)
+}
+aa4330 = {
+ prefix = aa4330
+ baud = 9600
+ cycles = 0
+ timeout = 5000
+ warmup = 1000
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 10
+ min-power-cycle = 0
+#query = nil
+#query-ready = nil
+#query-finish = nil
+#post-query = nil
+ format = %s %d %00 %01 %02 %03 %04
+ meta = %[4330]%n%$11%9get all%r%n%[Wipe]%[%$23]
+#start = nil
+#stop = nil
+#output = nil
+#status = nil
+ column = O2(1000,0)
+ column = airsat(1000,0)
+ column = temp(1000,0)
+ column = calphase(1000,0)
+ column = tcphase(1000,0)
+}
+aa3830 = {
+ prefix = aa3830
+ baud = 9600
+ cycles = 0
+ timeout = 5000
+ warmup = 1000
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 10
+ min-power-cycle = 0
+#query = nil
+#query-ready = nil
+#query-finish = nil
+#post-query = nil
+ format = %s %d %d %00 %f %01 %02
+ meta = %[5013]%n%$11%9get_all%r%n%[%$23]
+#start = nil
+#stop = nil
+#output = nil
+#status = nil
+ column = O2(100,0)
+ column = temp(100,-10)
+ column = dphase(100,0)
+}
+wlbb2fvmg = {
+ prefix = wl
+ baud = 4800
+ cycles = 0
+ timeout = 2500
+ warmup = 1200
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 10
+ min-power-cycle = 0
+#query = nil
+#query-ready = nil
+#query-finish = nil
+#post-query = nil
+ format = %d %00 %d %01 %d %02 %03
+ meta = %[%n]!%9!%9!%9!%9!%9%[pkt]%[%n]
+#start = nil
+#stop = nil
+#output = nil
+#status = nil
+ column = redCount(1,0)
+ column = blueCount(1,0)
+ column = fluorCount(1,0)
+ column = VFtemp(1,0)
+}
+wlbbfl2vmt = {
+ prefix = bbfl2
+ baud = 4800
+ cycles = 0
+ timeout = 2500
+ warmup = 1200
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 10
+ min-power-cycle = 0
+#query = nil
+#query-ready = nil
+#query-finish = nil
+#post-query = nil
+ format = %d %00 %d %01 %d %02 %03
+ meta = %[%n]!%9!%9!%9!%9!%9%[Pkt]%[%n]
+#start = nil
+#stop = nil
+#output = nil
+#status = nil
+ column = 600sig(1,0)
+ column = Chlsig(1,0)
+ column = Cdomsig(1,0)
+ column = temp(1,0)
+}
+wlbb2flvmt = {
+ prefix = bb2fl
+ baud = 4800
+ cycles = 0
+ timeout = 2500
+ warmup = 1200
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 10
+ min-power-cycle = 0
+#query = nil
+#query-ready = nil
+#query-finish = nil
+#post-query = nil
+ format = %d %00 %d %01 %d %02 %03
+ meta = %[%n]!%9!%9!%9!%9!%9%[Pkt]%[%n]
+#start = nil
+#stop = nil
+#output = nil
+#status = nil
+ column = 470sig(1,0)
+ column = 700sig(1,0)
+ column = Chlsig(1,0)
+ column = temp(1,0)
+}
+ad2cp = {
+ driver = ad2cp
+ prefix = cp
+ baud = 38400
+ cycles = 0
+ timeout = 12000
+ warmup = 0
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 0
+ min-power-cycle = 0
+#query = nil
+#query-ready = nil
+#query-finish = nil
+#post-query = nil
+#format = nil
+ meta = %(2000)@@@@@%(200)@@@@@%(200)K1W%%!Q%(400)K1W%%!Q%(1000)MC%rMC%r%[OK]%(1000)%F%(1000)GETALL%r%[OK]
+#start = nil
+#stop = nil
+#output = nil
+#status = nil
+ column = pressure(1000,0)
+ column = temperature(100,0)
+ column = heading(100,0)
+ column = pitch(100,0)
+ column = roll(100,0)
+ column = battery(1,0)
+ conf = SETDEFAULT,ALL%r%n%[OK]
+ conf = SETPLAN,MIAVG=1,AVG=1,BURST=0,MIBURST=0,FN="",SO=1%r%n%[OK]
+ conf = SETAVG,NC=15,NB=3,CS=2.0,CY="BEAM",NPING=4,ALTI=0,DF=3,PL=0.0,AI=1%r%n%[OK]
+}
+ocr504i = {
+ prefix = ocr504i
+ baud = 57600
+ cycles = 0
+ timeout = 3000
+ warmup = 0
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 10
+ min-power-cycle = 0
+#query = nil
+#query-ready = nil
+#query-finish = nil
+#post-query = nil
+ format = %s %00 %01 %02 %03
+ meta = %[SAT]%[%n]%$03%[$]%1s%1h%1o%1w%1 %1a%1l%1l%1%r%1%n%[$]
+#start = nil
+#stop = nil
+#output = nil
+#status = nil
+ column = chan1(10000,0)
+ column = chan2(10000,0)
+ column = chan3(10000,0)
+ column = chan4(10000,0)
+}
+legatoFast = {
+ prefix = rb
+ baud = 19200
+ cycles = 0
+ timeout = 20000
+ warmup = 8000
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 10
+ min-power-cycle = 0
+#query = nil
+#query-ready = nil
+#query-finish = nil
+#post-query = nil
+ format = %d-%d-%d %d:%d:%f, %00, %01, %02, %03
+ meta = %F%n%3%F%n%[Ready: ]getall%r%n%[Ready:]
+ start = %F%n%3%F%n%[Ready: ]enable erasememory=true%r%n%[Ready:]
+ stop = %F%n%3%F%n%[Ready: ]%9%9powerexternal used%r%n%[%n]
+#output = nil
+#status = nil
+ column = conduc(10000,0)
+ column = temp(10000,0)
+ column = pressure(1000,0)
+ column = conducTemp(10000,0)
+}
+sbe43 = {
+ prefix = sbe43
+ baud = 0
+ cycles = 255
+ timeout = 3000
+ warmup = 500
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 0
+ min-power-cycle = 0
+#query = nil
+#query-ready = nil
+#query-finish = nil
+#post-query = nil
+#format = nil
+#meta = nil
+#start = nil
+#stop = nil
+#output = nil
+#status = nil
+ column = o2Freq(1000,0)
+}
+qsp2150a = {
+ prefix = qsp
+ baud = 9600
+ cycles = 0
+ timeout = 500
+ warmup = 200
+ pumptime = 0
+ skip = 0
+ bufflen = 0
+ avg = 0
+ dec = 0
+ multiline = 0
+ power = 0
+ terminator = 10
+ min-power-cycle = 0
+#query = nil
+#query-ready = nil
+#query-finish = nil
+#post-query = nil
+ format = %00
+#meta = nil
+#start = nil
+#stop = nil
+#output = nil
+#status = nil
+ column = PARuE(1000,0)
+}
+
+>attach
+
+ct = {
+ type = legatoPollv4
+ hwchan = 3
+ verbose = 2
+}
+wl = {
+ type = wlbb2flvmt
+ hwchan = 0
+ verbose = 2
+}
+optode = {
+ type = aa4831
+ hwchan = 1
+ verbose = 2
+}
+
+>scheme
+# (active)
+ct = {
+ 200,5.000000
+ 1000,10.000000
+}
+# (active)
+wl = {
+ 200,15.000000
+ 1000,30.000000
+}
+# (active)
+optode = {
+ 1000,20.000000
+}
+
+>sysclk
+
+sysclk src  = hse
+hclk freq   = 8000000
+sysclk freq = 8000000
+PCLK1 freq  = 8000000
+PCLK2 freq  = 8000000
+USBCLK freq = 0
+SPI1 baud   = 4000000
+SPI2 baud   = 4000000
+PLL src     = hsi
+HSI state   = 0
+HSE state   = 1
+PLL state   = 0
+RTC src     = LSE
+LSE state   = 1
+LSI state   = 0
+
+>hscal
+count = 19531
+HCLK freq = 7999897.600
+
+>cat startup.scr
+prop scicon.ins
+attach scicon.att
+scheme scicon.sch
+
+>log test
+
+--checking ct legatoPollv4
+ct: 0.001 27.472 10.163 28.786 
+avg mA=5.87, J=2.2
+--checking wl wlbb2flvmt
+wl: 4130.000 4130.000 1656.000 541.000 
+avg mA=42.13, J=1.4
+--checking optode aa4831
+optode: 210.724 95.719 34.106 26.690 29.424 
+avg mA=32.78, J=0.6
+
+>log meta
+
+*** legatoPollv4 * ct
+ready: instrument dump lines=50
+calibration conductivity_00 datetime=20260326203337 equation=corr_cond4 offset=0.0000000e+000 slope=1.0000000e+000 c0=20.794798e-003 c1=168.43769e+000 c2=1.0008660e+000 x0=329.20806e-006 x1=-8.6244090e-006 x2=1.1539999e-006 x3=2.0697000e-009 x4=-2.5541999e-012 x5=840.23572e-018 x6=15.384662e+000 x7=10.000000e+000 n0=conductivitycelltemperature_00 n1=pressure_00
+calibration temperature_00 datetime=20260207160316 equation=tmp offset=0.0000000e+000 slope=1.0000000e+000 c0=3.4533786e-003 c1=-251.98244e-006 c2=2.3764624e-006 c3=-82.245130e-009
+calibration pressure_00 datetime=20000401000000 equation=cub offset=0.0000000e+000 slope=1.0000000e+000 c0=0.0000000e-009 c1=8.3886084e+003 c2=0.0000000e-009 c3=0.0000000e-009
+calibration seapressure_00 datetime=20000401000000 equation=deri_seapres offset=0.0000000e+000 slope=1.0000000e+000 n0=pressure_00 n1=value
+calibration depth_00 datetime=20000401000000 equation=deri_depth offset=0.0000000e+000 slope=1.0000000e+000 n0=pressure_00 n1=value
+calibration salinity_00 datetime=20000401000000 equation=deri_salinity offset=0.0000000e+000 slope=1.0000000e+000 n0=temperature_00 n1=pressure_00 n2=conductivity_00 n3=value
+calibration count_00 datetime=20000401000000 equation=none offset=0.0000000e+000 slope=1.0000000e+000 n0=value
+calibration conductivitycelltemperature_00 datetime=20260207160329 equation=tmp offset=0.0000000e+000 slope=1.0000000e+000 c0=3.1235379e-003 c1=-280.14814e-006 c2=3.7067168e-006 c3=-300.43352e-009
+channel count=8 list=conductivity_00|temperature_00|pressure_00|seapressure_00|depth_00|salinity_00|count_00|conductivitycelltemperature_00
+channel conductivity_00 type=cond29 address=32 settlingtime=70 readtime=300 guardtime=10 equation=corr_cond4 userunits=mS/cm factoryunits=none gain=none availablegains=none sensor=FE-cond3_32 derived=off grouplist=gr_default|gr_sg
+channel temperature_00 type=temp53 address=1 settlingtime=60 readtime=260 guardtime=10 equation=tmp userunits=C factoryunits=none gain=none availablegains=none sensor=L3-CPU_1 derived=off grouplist=gr_default|gr_sg
+channel pressure_00 type=pres32 address=152 settlingtime=60 readtime=55 guardtime=10 equation=cub userunits=dbar factoryunits=none gain=none availablegains=none sensor=RBR_PA-10L_86749 derived=off grouplist=gr_default|gr_sg
+channel seapressure_00 type=pres08 address=240 settlingtime=0 readtime=0 guardtime=0 equation=deri_seapres userunits=dbar factoryunits=none gain=none availablegains=none sensor=RBR_PA-10L_86749 derived=on grouplist=none
+channel depth_00 type=dpth01 address=241 settlingtime=0 readtime=0 guardtime=0 equation=deri_depth userunits=m factoryunits=none gain=none availablegains=none sensor=RBR_PA-10L_86749 derived=on grouplist=none
+channel salinity_00 type=sal_00 address=242 settlingtime=0 readtime=0 guardtime=0 equation=deri_salinity userunits=PSU factoryunits=none gain=none availablegains=none sensor=FE-cond3_32 derived=on grouplist=none
+channel count_00 type=cnt_00 address=243 settlingtime=0 readtime=0 guardtime=0 equation=none userunits=counts factoryunits=none gain=none availablegains=none sensor=derived_243 derived=on grouplist=none
+channel conductivitycelltemperature_00 type=temp54 address=33 settlingtime=70 readtime=290 guardtime=10 equation=tmp userunits=C factoryunits=none gain=none availablegains=none sensor=FE-cond3_32 derived=off grouplist=gr_default|gr_sg
+clock datetime=20260404000109 offsetfromutc=+0.00
+config count=1 maxcount=16 list=cf_default
+config cf_default schedulelist=sch_default
+dataset count=1 maxcount=1 list=241431_20260327_0752
+deployment status=inactive gate=none simulation=off
+group count=2 maxcount=16 list=gr_default|gr_sg
+group gr_default channellist=conductivity_00|temperature_00|pressure_00|conductivitycelltemperature_00 schedulelist=sch_default|sch_sg
+group gr_sg channellist=conductivity_00|temperature_00|pressure_00|conductivitycelltemperature_00 schedulelist=none
+id4 model=RBRlegato4 fwversion=2.4.0 sn=241431 fwtype=120
+instrument state=disabled sn=241431 model=RBRlegato4 pn=0019709revA fwversion=2.4.0 fwtype=120 fwlock=on datatype=float32
+instrument outputformat sn=off schedulelabel=off datetime=on crc=off encoding=ascii datatype=float32
+instrument power source=external
+instrument power external voltage=14.76 batterytype=other capacity=0.000e+000 used=0.000e+000
+instrument power internal voltage=0.01 batterytype=none capacity=0.000e+000 used=0.000e+000
+link type=serial
+link serial baudrate=19200 mode=rs232
+simulation state=off period=3600000 channellist=conductivity_00|temperature_00|pressure_00|conductivitycelltemperature_00
+parameters altitude=0.0000 atmosphere=10.1325000 avgsoundspeed=1550.7440 density=1.0260208 pressure=10.1325000 salinity=35.0000 speccondtempco=0.0191 temperature=15.0000
+pcba count=4 list=0015755_00|0008556_00|0015765_00|259799
+pcba 0015755_00 sn=256907 pn=0015755revB fw=10.043 hw=0 address=32
+pcba 0008556_00 sn=257337 pn=0008556revE fw=2.4.0 hw=0 address=1
+pcba 0015765_00 sn=258963 pn=0015765revA fw=1.008 hw=0 address=128
+pcba 259799 sn=259799 pn=0014862revB fw=na hw=0 address=0
+settings prompt=on confirmation=on
+schedule count=2 maxcount=16 list=sch_default|sch_sg availablemodes=continuous|regimes availablefastperiods=500
+schedule sch_default grouplist=gr_default configlist=cf_default stream=serial storage=on mode=continuous period=500 castdetection=off
+schedule sch_sg grouplist=gr_default configlist=none stream=off storage=on mode=continuous period=1000 castdetection=off
+sensor count=4 list=FE-cond3_32|L3-CPU_1|derived_243|RBR_PA-10L_86749
+sensor FE-cond3_32 sn=na pn=na hw=0 fw=na channellist=conductivity_00|salinity_00|conductivitycelltemperature_00
+sensor L3-CPU_1 sn=na pn=na hw=0 fw=na channellist=temperature_00
+sensor derived_243 sn=na pn=na hw=0 fw=na channellist=count_00
+sensor RBR_PA-10L_86749 sn=86749 pn=na hw=0 fw=na channellist=pressure_00|seapressure_00|depth_00
+storage used=26473 remaining=1057003655 size=1057030128
+ready:
+*** wlbb2flvmt * wl
+470	4130	700	4130	695	1659	541
+
+Ser BB2FLIRB2-6732
+Ver Triplet VMT 4.07
+Ave 19
+Pkt 0
+
+*** aa4831 * optode
+ÿ%4831	940	211.376	95.878	34.019	26.687	29.421	35.843	6.422	1085.9	966.1	-206.0
+!Product Name	4831	940	Oxygen Optode
+Product Number	4831	940	4831
+Serial Number	4831	940	940
+SW ID	4831	940	1940031
+SW Version	4831	940	5	3	1
+Node Description	4831	940	Oxygen Optode #940
+Owner	4831	940	
+Salinity[PSU]	4831	940	0.00
+PhaseCoef	4831	940	-2.734000E+00	1.000000E+00	0.000000E+00	0.000000E+00
+FoilID	4831	940	1824M
+FoilCoefA	4831	940	-2.679283E-06	-7.483597E-06	1.960006E-03	-2.072853E-01	6.012464E-04	-6.604266E-07	1.118020E+01	-5.148064E-02	6.898503E-05	8.465012E-07	-3.143506E+02	2.051116E+00	-2.987026E-03	-4.449771E-06
+FoilCoefB	4831	940	-1.861349E-06	3.814899E+03	-3.222806E+01	-1.678000E-01	1.894820E-02	-6.901433E-04	1.042693E-05	0.000000E+00	0.000000E+00	0.000000E+00	0.000000E+00	0.000000E+00	0.000000E+00	0.000000E+00
+FoilPolyDegT	4831	940	1	0	0	0	1	2	0	1	2	3	0	1	2	3	4	0	1	2	3	4	5	0	0	0	0	0	0	0
+FoilPolyDegO	4831	940	4	5	4	3	3	3	2	2	2	2	1	1	1	1	1	0	0	0	0	0	0	0	0	0	0	0	0	0
+SVUFoilCoef	4831	940	2.763877E-03	1.138899E-04	2.478650E-06	1.663470E+02	-2.632232E-01	-3.786074E+01	3.378357E+00
+ConcCoef	4831	940	0.000000E+00	1.000000E+00
+NomAirPress[hPa]	4831	940	1013.25
+NomAirMix	4831	940	0.20946
+CalDataSat[Deg]	4831	940	0.00	0.00
+CalDataAPress[hPa]	4831	940	1013.250
+CalDataZero[Deg]	4831	940	0.000	0.000
+Mode	4831	940	Smart Sensor Terminal
+Enable Sleep	4831	940	No
+Enable Polled Mode	4831	940	No
+Enable Text	4831	940	No
+Enable Decimalformat	4831	940	Yes
+Analog TempLimit[Deg.C]	4831	940	-5.00	35.00
+Analog ConcLimit[uM]	4831	940	0.00	800.00
+Analog SatLimit[%]	4831	940	0.00	200.00
+Analog PhaseLimit[Deg.]	4831	940	10.00	70.00
+Analog Output	4831	940	O2Concentration
+Analog1 Coef	4831	940	0.000000E+00	1.000000E+00
+Analog2 Coef	4831	940	0.000000E+00	1.000000E+00
+Enable AirSaturation	4831	940	Yes
+Enable O2Content	4831	940	No
+Enable Rawdata	4831	940	Yes
+Enable Temperature	4831	940	Yes
+Enable HumidityComp	4831	940	Yes
+Enable SVUformula	4831	940	Yes
+Interval[s]	4831	940	1.000
+Location	4831	940	
+Geographic Position	4831	940	60.323605,5.37225
+Vertical Position	4831	940	
+Reference	4831	940	
+#
+>£1139.6 mAs
+271.702,SUSR,N,Resetting LOGGERS to pre-test value 0 
+271.735,HTT8,N,Updating parameter $LOGGERS to 0
+271.775,SUSR,N,---- Checking alternate sensor config ----
+271.808,SUSR,N,testing to see whether an SBE CT sensor can be connected
+271.843,SSENSOR,N,assigned SBE_CT to sensor slot 1 (p = 10) [index 0; ch 10])
+271.878,SSENSOR,N,SBE_CT is calMaster
+271.919,SUSR,N,SBE_CT on port named CT (timer 1), calMaster=1
+278.485,SUSR,N,4 timeouts during sampling!
+278.517,SUSR,N,
+278.546,SUSR,N,     Freq1      Freq2    | Temp      Salinity  density
+278.582,SUSR,N,         0.000 |     0.000 |  0.00000   0.00000     0.000
+278.617,SUSR,N,         0.000 |     0.000 |  0.00000   0.00000     0.000
+278.653,SUSR,N,         0.000 |     0.000 |  0.00000   0.00000     0.000
+278.689,SUSR,N, -------------------------------------------------------
+278.749,SUSR,N,min      0.000 |     0.000
+278.781,SUSR,N,max      0.000 |     0.000
+278.813,SUSR,N,mean     0.000 |     0.000
+278.845,SUSR,N, std     0.000 |     0.000
+278.877,SUSR,N,
+If you see freq of 0, it means there is no signal and
+the counter timed out !
+278.915,SUSR,N,testing to see whether a serial CTD can be connected
+278.950,SSENSOR,N,assigned legato to sensor slot 1 (p = 120) [index 7; ch 8])
+292.268,HLEGATO,N,conduc:9 temp:267086 
+292.300,HLEGATO,N,pressure:10165 conducTemp:290289 
+292.333,SUSR,N,---- Checking motors and controller ----
+292.378,SMOTOR,N,version 7111, built 2025-01-08 18:27:17
+292.421,SMOTOR,N,pwm p = 0.000000
+292.453,SMOTOR,N,pwm i = 0.000000
+292.484,SMOTOR,N,pwm d = 0.000000
+292.515,SMOTOR,N,pitch p = 1.000000
+292.547,SMOTOR,N,pitch i = 0.000000
+292.579,SMOTOR,N,pitch d = 5.000000
+292.611,SMOTOR,N,PWM min speed = 100.000000
+292.679,SMOTOR,N,hard iron P,Q,R: 0.000000 0.000000 0.000000
+292.712,SMOTOR,N,soft iron:
+292.744,SMOTOR,N,       1.000000 0.000000 0.000000
+292.777,SMOTOR,N,       0.000000 1.000000 0.000000
+292.816,SMOTOR,N,       0.000000 0.000000 1.000000
+292.849,SMOTOR,N,accel scale:
+292.883,SMOTOR,N,       -0.000000 -0.000000 -0.000000
+292.917,SMOTOR,N,       -0.000000 -0.000000 -0.000000
+292.953,SMOTOR,N,       -0.000000 -0.000000 -0.000000
+292.987,SMOTOR,N,accel offset:
+       -0.000000 -0.000000 -0.000000
+293.031,SMOTOR,N,pressure: offset=0, slope=11.331072
+293.064,SUSR,N,---- Checking pitch motor ----
+293.096,SUSR,N,Pitching up... (aft)
+293.209,HPITCH,N,+ move commanded from -1.71 cm (1708.38) to 7.15 cm (3855.00)...
+293.424,SMOTOR,N,roll limits on
+293.978,HPITCH,N,-1.4 cm (ad: 1775.81) mA=87 V=15.70 D=0.00
+304.082,HPITCH,N,5.0 cm (ad: 3325.94) mA=77 V=15.69 D=0.00done.
+307.766,SMOTOR,N,new min V reading 15.703 (was 50.000)
+307.810,HPITCH,N,Pitch completed from -1.71 cm (1708.38) to 7.18 cm (3860.56) dest 3855.00 took 13.9 sec 80mA (551mA peak) 15.7V (15.6Vmin) 154.33 AD/sec 2789 ticks
+307.862,SMOTOR,N,3962.500000,3994.500000,3930.500000,3860.562500,1720.250000
+3995.2 3931.2 1709.9 1721.1   31.5   16.4    0.0 304.2 -35.3 -135.0
+3995.3 3932.0 1721.3 1721.2   44.2   16.0    0.0 304.5 -35.3 -135.0
+3995.2 3931.3 1736.8 1721.4   85.8   15.9    0.0 305.6 -35.3 -135.0
+3995.0 3931.4 1751.8 1721.5   87.0   15.8    0.0 305.5 -35.3 -135.0
+3995.1 3931.2 1765.6 1721.4   97.0   15.7    0.0 304.7 -35.3 -135.0
+3994.4 3932.4 1784.0 1721.9   89.3   15.7    0.0 304.6 -35.3 -135.0
+3995.6 3931.6 1798.8 1721.3   84.7   15.7    0.0 305.5 -35.3 -135.0
+3995.2 3930.9 1814.5 1721.2   87.6   15.7    0.0 305.0 -35.3 -135.0
+3995.1 3931.4 1828.4 1721.3   85.8   15.7    0.0 304.4 -35.3 -135.0
+3994.9 3931.6 1844.0 1721.5   81.2   15.7    0.0 305.1 -35.3 -135.0
+3995.1 3931.5 1858.3 1721.4   89.8   15.7    0.0 305.4 -35.3 -135.0
+3995.1 3931.4 1872.5 1721.5   77.9   15.7    0.0 304.9 -35.3 -135.0
+3995.2 3931.4 1888.2 1721.4   80.3   15.7    0.0 304.9 -35.3 -135.0
+3995.0 3931.4 1903.6 1721.6   91.0   15.7    0.0 305.5 -35.3 -135.0
+3994.9 3931.9 1919.1 1721.5   83.1   15.7    0.0 304.7 -35.3 -135.0
+3994.8 3931.2 1933.0 1721.6   84.8   15.7    0.0 304.4 -35.3 -135.0
+3995.6 3931.1 1947.9 1721.1   69.4   15.7    0.0 305.2 -35.3 -135.0
+3995.1 3931.1 1964.0 1721.7   73.9   15.7    0.0 304.9 -35.3 -135.0
+3995.0 3931.0 1979.3 1721.2   85.7   15.7    0.0 305.4 -35.3 -135.0
+3995.1 3931.7 1993.9 1721.3   77.2   15.7    0.0 305.4 -35.3 -135.0
+3995.2 3931.9 2009.2 1721.5   85.0   15.7    0.0 305.4 -35.3 -135.0
+3995.5 3931.1 2023.9 1721.8   84.5   15.7    0.0 304.7 -35.3 -135.0
+3994.6 3931.8 2039.2 1721.7   83.1   15.7    0.0 305.1 -35.3 -135.0
+3994.9 3931.0 2054.6 1721.2   79.5   15.7    0.0 305.4 -35.3 -135.0
+3995.1 3931.1 2069.9 1721.7   74.5   15.7    0.0 305.3 -35.3 -135.0
+3995.7 3931.2 2085.1 1721.3   75.3   15.7    0.0 305.1 -35.3 -135.0
+3995.9 3931.4 2099.6 1721.5   77.0   15.7    0.0 304.9 -35.3 -135.0
+3995.7 3931.2 2115.2 1721.1   79.6   15.7    0.0 305.0 -35.3 -135.0
+3994.9 3931.3 2129.8 1721.2   82.6   15.7    0.0 305.1 -35.3 -135.0
+3995.4 3930.9 2143.9 1721.6   77.6   15.7    0.0 305.0 -35.3 -135.0
+3995.0 3931.1 2159.4 1721.8   75.4   15.7    0.0 305.1 -35.3 -135.0
+3995.0 3930.8 2174.4 1721.1   82.1   15.7    0.0 304.9 -35.3 -135.0
+3994.9 3931.0 2190.4 1721.3   81.5   15.7    0.0 305.2 -35.3 -135.0
+3995.2 3930.6 2206.1 1721.4   83.4   15.7    0.0 304.9 -35.3 -135.0
+3995.1 3931.1 2221.3 1721.2   75.3   15.7    0.0 305.4 -35.3 -135.0
+3995.4 3931.8 2236.6 1721.5   74.8   15.7    0.0 305.3 -35.3 -135.0
+3994.9 3931.8 2251.9 1721.9   76.4   15.7    0.0 304.7 -35.3 -135.0
+3995.2 3930.8 2268.0 1721.4   78.1   15.7    0.0 305.3 -35.3 -135.0
+3995.2 3931.2 2284.0 1721.5   76.0   15.7    0.0 304.9 -35.3 -135.0
+3995.5 3931.6 2299.6 1721.4   76.3   15.7    0.0 305.3 -35.3 -135.0
+3995.4 3931.4 2314.4 1721.4   76.1   15.7    0.0 304.9 -35.3 -135.0
+3994.9 3931.4 2330.4 1721.4   78.9   15.7    0.0 305.7 -35.3 -135.0
+3994.8 3931.3 2346.9 1721.5   76.0   15.7    0.0 304.8 -35.3 -135.0
+3994.9 3931.4 2362.8 1721.6   78.8   15.7    0.0 305.1 -35.3 -135.0
+3995.1 3931.2 2378.4 1721.4   79.9   15.7    0.0 304.6 -35.3 -135.0
+3995.0 3931.9 2394.8 1721.4   75.3   15.7    0.0 304.9 -35.3 -135.0
+3995.6 3931.2 2409.0 1721.2   76.2   15.7    0.0 305.3 -35.3 -135.0
+3994.9 3931.1 2424.4 1721.4   76.3   15.7    0.0 305.1 -35.3 -135.0
+3994.9 3931.2 2440.8 1721.4   77.2   15.7    0.0 305.1 -35.3 -135.0
+3995.1 3931.8 2456.0 1721.2   71.6   15.7    0.0 305.2 -35.3 -135.0
+3995.5 3931.6 2471.8 1721.2   72.5   15.7    0.0 304.4 -35.3 -135.0
+3995.0 3931.2 2487.1 1721.9   74.9   15.7    0.0 305.1 -35.3 -135.0
+3995.1 3931.6 2501.5 1721.6   75.2   15.7    0.0 305.0 -35.3 -135.0
+3995.2 3931.1 2517.4 1721.5   72.2   15.7    0.0 305.4 -35.3 -135.0
+3995.2 3931.4 2533.0 1721.1   73.2   15.7    0.0 305.1 -35.3 -135.0
+3995.6 3931.8 2548.1 1721.4   75.1   15.7    0.0 305.1 -35.3 -135.0
+3995.2 3931.6 2564.1 1721.4   77.4   15.7    0.0 305.6 -35.3 -135.0
+3995.2 3931.3 2578.5 1721.4   78.4   15.7    0.0 305.4 -35.3 -135.0
+3995.4 3931.2 2594.1 1720.9   79.8   15.7    0.0 305.3 -35.3 -135.0
+3995.3 3932.1 2609.4 1721.3   75.6   15.7    0.0 305.2 -35.3 -135.0
+3994.8 3930.5 2626.1 1721.3   77.2   15.7    0.0 305.0 -35.3 -135.0
+3995.1 3931.6 2641.2 1721.4   78.8   15.7    0.0 305.7 -35.3 -135.0
+3995.0 3931.4 2657.0 1721.1   80.8   15.7    0.0 305.8 -35.3 -135.0
+3995.4 3931.4 2672.8 1721.4   79.4   15.7    0.0 305.4 -35.3 -135.0
+3994.1 3931.5 2688.9 1720.9   71.9   15.7    0.0 304.9 -35.3 -135.0
+3995.1 3931.5 2704.4 1721.3   70.8   15.7    0.0 304.9 -35.3 -135.0
+3994.6 3931.9 2719.8 1721.2   68.8   15.7    0.0 305.1 -35.3 -135.0
+3995.1 3931.3 2735.1 1721.3   74.6   15.7    0.0 305.0 -35.3 -135.0
+3995.1 3931.2 2749.8 1721.4   77.4   15.7    0.0 305.3 -35.3 -135.0
+3994.6 3930.9 2765.8 1721.1   70.6   15.7    0.0 305.4 -35.3 -135.0
+3995.4 3931.1 2781.3 1721.6   71.4   15.7    0.0 305.7 -35.3 -135.0
+3995.0 3930.9 2796.8 1721.7   75.4   15.7    0.0 305.2 -35.3 -135.0
+3995.0 3931.2 2811.5 1721.2   77.9   15.7    0.0 304.9 -35.3 -135.0
+3994.6 3931.5 2826.6 1721.4   80.9   15.7    0.0 305.1 -35.3 -135.0
+3995.1 3931.6 2841.9 1721.5   81.8   15.7    0.0 305.3 -35.3 -135.0
+3995.0 3931.1 2857.1 1721.4   78.2   15.7    0.0 305.1 -35.3 -135.0
+3994.8 3931.5 2872.4 1721.2   78.1   15.7    0.0 304.6 -35.3 -135.0
+3995.9 3931.2 2887.4 1721.5   82.6   15.7    0.0 305.4 -35.3 -135.0
+3995.1 3931.5 2902.9 1721.4   83.6   15.7    0.0 305.4 -35.3 -135.0
+3995.2 3931.4 2918.2 1721.6   77.7   15.7    0.0 304.5 -35.3 -135.0
+3994.9 3930.8 2933.5 1721.5   69.1   15.7    0.0 305.5 -35.3 -135.0
+3995.4 3930.8 2949.0 1721.4   69.1   15.7    0.0 305.4 -35.3 -135.0
+3995.1 3931.3 2965.0 1721.1   74.9   15.7    0.0 305.6 -35.3 -135.0
+3995.1 3931.3 2979.8 1721.4   79.8   15.7    0.0 305.3 -35.3 -135.0
+3995.3 3932.1 2995.7 1721.4   75.4   15.7    0.0 305.1 -35.3 -135.0
+3994.7 3931.1 3011.1 1721.2   71.7   15.7    0.0 305.4 -35.3 -135.0
+3995.1 3931.0 3026.2 1721.3   75.5   15.7    0.0 304.9 -35.3 -135.0
+3995.1 3931.4 3042.4 1721.4   79.9   15.7    0.0 305.1 -35.3 -135.0
+3995.0 3931.3 3058.0 1721.9   81.1   15.7    0.0 305.4 -35.3 -135.0
+3995.1 3931.1 3073.6 1721.5   82.2   15.7    0.0 305.6 -35.3 -135.0
+3994.6 3931.1 3089.3 1721.2   80.3   15.7    0.0 304.6 -35.3 -135.0
+3995.1 3931.4 3103.8 1721.5   80.7   15.7    0.0 305.4 -35.3 -135.0
+3995.1 3931.9 3120.3 1721.6   83.9   15.7    0.0 305.6 -35.3 -135.0
+3995.2 3931.4 3135.2 1721.3   86.2   15.7    0.0 305.9 -35.3 -135.0
+3995.5 3931.4 3152.2 1721.4   72.7   15.7    0.0 305.6 -35.3 -135.0
+3994.8 3931.1 3167.0 1721.2   73.3   15.7    0.0 304.8 -35.3 -135.0
+3994.8 3931.2 3183.5 1721.1   70.3   15.7    0.0 305.3 -35.3 -135.0
+3995.3 3931.3 3198.9 1721.4   77.4   15.7    0.0 305.3 -35.3 -135.0
+3994.9 3931.4 3214.4 1721.2   78.8   15.7    0.0 306.1 -35.3 -135.0
+3995.3 3930.8 3230.7 1721.4   80.0   15.7    0.0 305.7 -35.3 -135.0
+3994.6 3931.2 3246.1 1721.7   77.0   15.7    0.0 305.2 -35.3 -135.0
+3995.8 3931.1 3261.2 1721.6   77.2   15.7    0.0 305.6 -35.3 -135.0
+3994.9 3931.7 3277.4 1721.3   83.1   15.7    0.0 304.8 -35.3 -135.0
+3994.9 3931.4 3292.7 1721.8   82.4   15.7    0.0 306.1 -35.3 -135.0
+3994.9 3931.4 3308.7 1721.5   80.2   15.7    0.0 305.3 -35.3 -135.0
+3994.8 3931.6 3324.9 1721.8   82.8   15.7    0.0 305.7 -35.3 -135.0
+3995.6 3932.0 3343.8 1720.7   80.3   15.7    0.0 305.9 -35.3 -135.0
+3995.2 3931.1 3358.6 1721.5   83.3   15.7    0.0 305.4 -35.3 -135.0
+3994.8 3931.1 3375.6 1721.3   79.7   15.7    0.0 305.5 -35.3 -135.0
+3995.2 3931.4 3390.4 1721.4   79.1   15.7    0.0 305.6 -35.3 -135.0
+3995.5 3931.1 3404.8 1721.9   78.1   15.7    0.0 305.4 -35.3 -135.0
+3994.9 3931.6 3421.8 1721.2   81.4   15.7    0.0 305.4 -35.3 -135.0
+3995.4 3931.3 3436.4 1721.3   89.2   15.7    0.0 305.7 -35.3 -135.0
+3994.5 3931.4 3451.3 1721.3   84.5   15.7    0.0 305.1 -35.3 -135.0
+3994.6 3931.5 3466.2 1721.8   86.5   15.7    0.0 305.8 -35.3 -135.0
+3994.8 3931.4 3483.1 1721.4   85.4   15.7    0.0 305.7 -35.3 -135.0
+3994.8 3930.8 3498.5 1721.4   87.5   15.7    0.0 305.8 -35.3 -135.0
+3994.4 3930.9 3512.9 1721.4   96.4   15.7    0.0 306.0 -35.3 -135.0
+3995.4 3931.6 3528.2 1721.4   99.9   15.6    0.0 305.3 -35.3 -135.0
+3995.8 3931.3 3543.1 1721.4   89.7   15.6    0.0 306.1 -35.3 -135.0
+3995.1 3931.4 3559.1 1721.4   81.6   15.7    0.0 305.7 -35.3 -135.0
+3994.5 3931.4 3574.9 1721.5   82.8   15.7    0.0 305.6 -35.3 -135.0
+3995.2 3931.2 3590.0 1721.6   79.2   15.7    0.0 304.9 -35.3 -135.0
+3995.1 3931.8 3605.0 1721.2   83.9   15.7    0.0 305.7 -35.3 -135.0
+3995.0 3931.8 3621.1 1721.5   88.4   15.6    0.0 305.1 -35.3 -135.0
+3995.0 3931.3 3636.8 1721.3   90.9   15.6    0.0 305.1 -35.3 -135.0
+3995.1 3930.7 3652.6 1721.9   94.1   15.7    0.0 305.4 -35.3 -135.0
+3995.3 3931.2 3667.0 1721.2   92.3   15.7    0.0 305.0 -35.3 -135.0
+3995.1 3931.5 3682.3 1721.4   89.0   15.7    0.0 305.1 -35.3 -135.0
+3994.9 3931.4 3697.1 1721.5   78.0   15.7    0.0 305.8 -35.3 -135.0
+3995.2 3931.1 3712.3 1721.1   79.3   15.7    0.0 305.6 -35.3 -135.0
+3995.4 3930.5 3727.4 1721.8   73.3   15.7    0.0 305.5 -35.3 -135.0
+3994.8 3930.8 3742.8 1721.5   78.7   15.7    0.0 305.4 -35.3 -135.0
+3994.8 3931.4 3757.9 1721.2   84.9   15.7    0.0 305.6 -35.3 -135.0
+3995.0 3931.4 3772.4 1721.9   77.3   15.7    0.0 306.1 -35.3 -135.0
+3994.6 3931.0 3787.6 1721.3   81.3   15.7    0.0 305.6 -35.3 -135.0
+3994.1 3932.3 3802.8 1721.2   85.4   15.7    0.0 305.3 -35.3 -135.0
+3995.2 3931.4 3818.2 1721.4   90.8   15.7    0.0 305.3 -35.3 -135.0
+3995.1 3931.6 3834.1 1721.6  102.8   15.6    0.0 305.5 -35.3 -135.0
+3995.2 3931.2 3846.7 1721.6  101.3   15.6    0.0 306.2 -35.3 -135.0
+310.591,SUSR,N,Pitching down... (fwd)
+310.713,HPITCH,N,- move commanded from 7.18 cm (3860.94) to -7.48 cm (311.00)...
+310.923,SMOTOR,N,roll limits on
+311.478,HPITCH,N,6.9 cm (ad: 3800.88) mA=74 V=15.85 D=0.00
+321.581,HPITCH,N,0.2 cm (ad: 2176.69) mA=64 V=15.84 D=0.00
+331.688,HPITCH,N,-6.7 cm (ad: 509.19) mA=75 V=15.80 D=0.00done.
+333.384,HPITCH,N,Pitch completed from 7.18 cm (3860.94) to -7.53 cm (298.62) dest 311.00 took 21.8 sec 65mA (590mA peak) 15.8V (15.8Vmin) 163.63 AD/sec 4354 ticks
+333.435,SMOTOR,N,3961.937500,3994.062500,3929.812500,298.625000,1720.250000
+3995.4 3930.8 3862.2 1721.6   34.8   16.3    0.0 304.7 -35.3 -135.0
+3995.6 3931.0 3856.8 1721.7   44.6   16.0    0.0 305.1 -35.3 -135.0
+3994.9 3931.4 3842.4 1721.1   61.2   15.9    0.0 305.5 -35.3 -135.0
+3995.4 3931.0 3827.2 1721.5   65.5   15.9    0.0 305.2 -35.3 -135.0
+3995.6 3931.6 3812.4 1721.4   71.9   15.9    0.0 305.4 -35.3 -135.0
+3995.2 3932.2 3793.2 1721.6   71.9   15.8    0.0 305.5 -35.3 -135.0
+3995.0 3931.2 3777.0 1721.5   67.7   15.8    0.0 305.2 -35.3 -135.0
+3995.2 3931.1 3762.2 1721.9   64.2   15.9    0.0 305.1 -35.3 -135.0
+3995.4 3931.1 3747.3 1722.0   61.8   15.9    0.0 305.1 -35.3 -135.0
+3995.6 3931.2 3731.4 1721.6   64.8   15.9    0.0 305.2 -35.3 -135.0
+3994.6 3931.6 3716.1 1721.8   63.5   15.9    0.0 305.0 -35.3 -135.0
+3994.6 3930.8 3701.4 1721.7   65.8   15.8    0.0 305.1 -35.3 -135.0
+3995.0 3931.4 3686.4 1721.1   66.9   15.8    0.0 305.8 -35.3 -135.0
+3995.1 3931.4 3670.2 1721.5   66.9   15.8    0.0 305.5 -35.3 -135.0
+3995.2 3931.6 3655.9 1721.3   63.5   15.8    0.0 305.3 -35.3 -135.0
+3995.0 3931.4 3638.8 1721.5   66.4   15.8    0.0 305.8 -35.3 -135.0
+3995.6 3931.2 3623.1 1721.4   68.6   15.8    0.0 305.5 -35.3 -135.0
+3995.4 3931.4 3607.6 1721.5   67.2   15.8    0.0 305.3 -35.3 -135.0
+3995.4 3931.0 3592.4 1721.6   66.7   15.8    0.0 305.3 -35.3 -135.0
+3995.3 3932.1 3575.6 1721.6   65.9   15.8    0.0 305.5 -35.3 -135.0
+3994.7 3931.8 3560.9 1721.7   71.3   15.8    0.0 305.1 -35.3 -135.0
+3995.1 3931.9 3545.0 1721.7   67.7   15.8    0.0 304.8 -35.3 -135.0
+3994.9 3931.8 3529.9 1721.5   71.0   15.8    0.0 305.2 -35.3 -135.0
+3994.8 3931.7 3513.8 1721.7   66.3   15.8    0.0 304.9 -35.3 -135.0
+3994.8 3931.6 3498.1 1721.2   65.6   15.8    0.0 304.8 -35.3 -135.0
+3994.6 3931.2 3482.6 1721.7   68.1   15.8    0.0 305.7 -35.3 -135.0
+3994.8 3931.6 3465.8 1721.1   66.7   15.8    0.0 305.2 -35.3 -135.0
+3995.2 3931.9 3450.4 1721.3   68.1   15.8    0.0 305.4 -35.3 -135.0
+3995.4 3931.4 3434.8 1721.4   67.1   15.8    0.0 305.1 -35.3 -135.0
+3995.6 3931.2 3419.3 1721.8   74.2   15.8    0.0 305.1 -35.3 -135.0
+3994.6 3931.5 3402.6 1721.2   71.1   15.8    0.0 304.9 -35.3 -135.0
+3995.6 3931.5 3386.8 1721.4   63.1   15.8    0.0 305.1 -35.3 -135.0
+3994.6 3931.6 3370.8 1721.4   64.3   15.8    0.0 304.9 -35.3 -135.0
+3995.2 3931.2 3354.6 1721.4   61.3   15.8    0.0 305.2 -35.3 -135.0
+3994.5 3931.3 3339.9 1721.4   64.4   15.8    0.0 304.9 -35.3 -135.0
+3995.2 3931.4 3322.7 1721.2   68.5   15.8    0.0 305.5 -35.3 -135.0
+3995.6 3931.6 3306.6 1721.1   66.7   15.8    0.0 304.9 -35.3 -135.0
+3995.7 3931.2 3291.8 1721.2   64.9   15.8    0.0 304.9 -35.3 -135.0
+3995.1 3931.3 3276.7 1721.4   65.4   15.8    0.0 305.7 -35.3 -135.0
+3995.4 3930.8 3259.8 1721.6   63.2   15.8    0.0 305.1 -35.3 -135.0
+3994.9 3931.4 3242.8 1721.3   60.8   15.8    0.0 305.5 -35.3 -135.0
+3995.2 3931.9 3226.9 1721.4   65.8   15.8    0.0 305.6 -35.3 -135.0
+3994.6 3931.4 3210.3 1721.2   63.3   15.8    0.0 304.9 -35.3 -135.0
+3995.6 3930.9 3194.9 1721.6   62.3   15.8    0.0 305.7 -35.3 -135.0
+3994.9 3931.9 3177.4 1721.6   62.6   15.8    0.0 305.1 -35.3 -135.0
+3995.4 3931.3 3162.4 1721.6   64.4   15.8    0.0 305.2 -35.3 -135.0
+3995.4 3931.9 3145.2 1721.2   59.6   15.8    0.0 305.0 -35.3 -135.0
+3995.3 3930.9 3129.6 1721.7   62.6   15.8    0.0 305.5 -35.3 -135.0
+3994.8 3931.2 3113.2 1721.6   61.4   15.9    0.0 305.7 -35.3 -135.0
+3995.1 3931.3 3097.2 1721.6   59.4   15.9    0.0 305.1 -35.3 -135.0
+3995.2 3931.7 3079.9 1721.5   61.2   15.9    0.0 305.2 -35.3 -135.0
+3995.3 3931.5 3063.6 1721.0   59.4   15.9    0.0 305.4 -35.3 -135.0
+3995.5 3931.4 3047.6 1721.3   61.7   15.9    0.0 305.2 -35.3 -135.0
+3995.2 3932.1 3030.6 1721.3   64.5   15.9    0.0 305.1 -35.3 -135.0
+3995.7 3930.8 3013.7 1721.5   61.4   15.9    0.0 305.1 -35.3 -135.0
+3995.1 3931.7 2998.2 1721.2   61.5   15.9    0.0 304.8 -35.3 -135.0
+3994.9 3930.8 2982.0 1721.4   58.3   15.9    0.0 305.5 -35.3 -135.0
+3995.1 3930.6 2966.1 1721.9   62.1   15.9    0.0 305.1 -35.3 -135.0
+3995.2 3931.2 2950.9 1721.4   59.1   15.9    0.0 305.3 -35.3 -135.0
+3995.1 3931.1 2933.9 1721.3   59.6   15.9    0.0 305.3 -35.3 -135.0
+3995.2 3931.7 2917.9 1721.3   58.0   15.9    0.0 305.2 -35.3 -135.0
+3994.8 3931.6 2902.5 1721.1   61.1   15.9    0.0 305.1 -35.3 -135.0
+3994.9 3931.0 2885.9 1721.6   60.1   15.9    0.0 305.3 -35.3 -135.0
+3995.1 3931.0 2869.5 1721.6   61.5   15.9    0.0 305.1 -35.3 -135.0
+3994.8 3931.4 2853.5 1721.2   64.7   15.9    0.0 305.1 -35.3 -135.0
+3995.6 3931.2 2837.6 1721.4   61.7   15.9    0.0 304.7 -35.3 -135.0
+3995.3 3931.5 2821.1 1721.7   59.4   15.9    0.0 305.6 -35.3 -135.0
+3995.1 3931.1 2804.9 1721.4   60.8   15.9    0.0 304.8 -35.3 -135.0
+3995.3 3931.4 2789.4 1721.3   62.3   15.9    0.0 305.3 -35.3 -135.0
+3994.8 3931.6 2772.6 1721.4   64.2   15.8    0.0 304.4 -35.3 -135.0
+3994.8 3931.3 2756.9 1721.4   57.2   15.9    0.0 305.2 -35.3 -135.0
+3994.6 3931.3 2740.1 1721.9   59.9   15.9    0.0 305.3 -35.3 -135.0
+3995.0 3931.4 2724.4 1721.4   62.2   15.9    0.0 304.5 -35.3 -135.0
+3995.1 3931.6 2708.1 1721.2   59.4   15.9    0.0 305.4 -35.3 -135.0
+3995.2 3931.1 2690.7 1721.2   63.1   15.8    0.0 305.0 -35.3 -135.0
+3994.9 3931.6 2674.3 1721.5   62.2   15.9    0.0 305.1 -35.3 -135.0
+3995.1 3930.9 2658.5 1721.2   56.9   15.9    0.0 304.9 -35.3 -135.0
+3995.5 3931.7 2642.0 1721.6   59.0   15.9    0.0 305.1 -35.3 -135.0
+3995.0 3931.4 2625.3 1721.5   59.9   15.9    0.0 305.4 -35.3 -135.0
+3995.6 3931.9 2608.3 1721.8   63.5   15.8    0.0 304.7 -35.3 -135.0
+3995.6 3931.3 2592.5 1721.6   61.5   15.8    0.0 304.5 -35.3 -135.0
+3994.9 3932.1 2576.2 1721.4   57.5   15.9    0.0 305.1 -35.3 -135.0
+3994.9 3931.2 2560.1 1721.4   61.6   15.9    0.0 304.7 -35.3 -135.0
+3995.4 3930.9 2543.3 1721.4   63.9   15.9    0.0 305.1 -35.3 -135.0
+3995.1 3931.4 2527.3 1721.2   60.2   15.9    0.0 304.7 -35.3 -135.0
+3995.1 3931.2 2510.2 1721.0   59.3   15.9    0.0 304.9 -35.3 -135.0
+3995.4 3931.7 2493.8 1721.6   61.3   15.9    0.0 304.6 -35.3 -135.0
+3994.8 3931.6 2478.2 1721.6   60.4   15.9    0.0 304.6 -35.3 -135.0
+3995.4 3931.1 2462.3 1721.4   60.6   15.9    0.0 305.1 -35.3 -135.0
+3994.9 3931.7 2445.2 1721.8   59.4   15.9    0.0 304.4 -35.3 -135.0
+3995.3 3931.3 2427.4 1721.4   57.8   15.9    0.0 304.4 -35.3 -135.0
+3995.1 3931.2 2411.3 1721.7   58.3   15.9    0.0 304.7 -35.3 -135.0
+3995.3 3931.6 2395.1 1721.3   60.6   15.9    0.0 304.7 -35.3 -135.0
+3995.2 3931.4 2377.6 1721.8   61.2   15.9    0.0 305.0 -35.3 -135.0
+3994.9 3931.1 2361.4 1721.3   60.3   15.9    0.0 304.8 -35.3 -135.0
+3995.1 3931.3 2344.1 1721.2   60.3   15.9    0.0 305.0 -35.3 -135.0
+3995.1 3930.9 2326.8 1721.4   60.3   15.9    0.0 305.0 -35.3 -135.0
+3994.9 3931.2 2310.5 1721.2   61.4   15.9    0.0 304.3 -35.3 -135.0
+3995.6 3930.9 2295.5 1721.4   61.7   15.9    0.0 304.8 -35.3 -135.0
+3995.4 3931.5 2277.0 1721.7   62.3   15.9    0.0 305.2 -35.3 -135.0
+3994.8 3931.0 2260.5 1721.0   62.9   15.9    0.0 304.4 -35.3 -135.0
+3995.0 3931.4 2244.1 1721.3   61.7   15.9    0.0 304.9 -35.3 -135.0
+3995.1 3931.2 2227.6 1721.4   62.2   15.8    0.0 304.8 -35.3 -135.0
+3995.1 3931.2 2210.4 1721.4   62.2   15.8    0.0 304.9 -35.3 -135.0
+3995.4 3931.6 2193.9 1721.2   60.4   15.8    0.0 305.0 -35.3 -135.0
+3995.1 3931.2 2177.9 1721.6   61.4   15.9    0.0 305.0 -35.3 -135.0
+3995.4 3931.8 2156.8 1721.1   62.2   15.8    0.0 304.7 -35.3 -135.0
+3994.7 3931.4 2140.5 1721.5   65.2   15.8    0.0 305.2 -35.3 -135.0
+3995.4 3931.0 2125.0 1721.9   62.6   15.8    0.0 305.2 -35.3 -135.0
+3995.1 3931.6 2108.6 1721.6   64.1   15.8    0.0 305.0 -35.3 -135.0
+3994.7 3931.8 2092.2 1721.5   62.6   15.9    0.0 304.9 -35.3 -135.0
+3994.6 3930.9 2075.8 1721.6   63.1   15.9    0.0 304.8 -35.3 -135.0
+3995.4 3930.8 2059.9 1721.7   64.2   15.8    0.0 304.6 -35.3 -135.0
+3994.9 3930.9 2042.6 1721.7   62.2   15.8    0.0 304.2 -35.3 -135.0
+3994.9 3931.4 2026.4 1721.9   60.7   15.9    0.0 304.7 -35.3 -135.0
+3995.4 3931.2 2010.5 1721.6   61.0   15.9    0.0 304.8 -35.3 -135.0
+3994.8 3931.0 1993.6 1721.2   64.0   15.9    0.0 304.7 -35.3 -135.0
+3995.4 3931.0 1977.4 1721.4   66.7   15.8    0.0 304.4 -35.3 -135.0
+3995.2 3932.1 1961.1 1721.4   61.9   15.8    0.0 304.8 -35.3 -135.0
+3995.3 3930.8 1944.8 1721.5   62.2   15.8    0.0 304.4 -35.3 -135.0
+3995.2 3931.6 1928.3 1721.5   61.4   15.8    0.0 304.3 -35.3 -135.0
+3994.7 3931.2 1912.9 1721.2   63.5   15.8    0.0 304.6 -35.3 -135.0
+3994.9 3931.4 1895.3 1721.8   65.7   15.8    0.0 304.6 -35.3 -135.0
+3994.8 3931.4 1878.2 1721.4   65.7   15.8    0.0 304.7 -35.3 -135.0
+3995.4 3931.3 1863.6 1721.2   65.8   15.8    0.0 304.9 -35.3 -135.0
+3995.2 3931.1 1846.7 1721.5   63.5   15.8    0.0 305.3 -35.3 -135.0
+3995.2 3931.8 1829.9 1721.8   60.8   15.8    0.0 304.4 -35.3 -135.0
+3994.7 3931.0 1814.1 1721.5   64.4   15.8    0.0 305.3 -35.3 -135.0
+3995.4 3931.4 1796.9 1721.3   65.3   15.8    0.0 304.6 -35.3 -135.0
+3995.2 3931.4 1780.1 1721.6   65.9   15.8    0.0 304.8 -35.3 -135.0
+3995.4 3931.3 1763.4 1721.5   67.2   15.8    0.0 304.5 -35.3 -135.0
+3994.8 3931.4 1746.8 1721.6   65.1   15.8    0.0 305.2 -35.3 -135.0
+3995.1 3931.2 1730.8 1721.4   69.8   15.8    0.0 305.0 -35.3 -135.0
+3994.8 3931.4 1713.1 1721.2   63.7   15.8    0.0 304.7 -35.3 -135.0
+3995.3 3931.1 1697.2 1721.1   67.0   15.8    0.0 305.3 -35.3 -135.0
+3995.4 3931.7 1680.9 1721.5   63.1   15.8    0.0 304.7 -35.3 -135.0
+3994.9 3931.0 1664.6 1721.6   65.8   15.8    0.0 304.4 -35.3 -135.0
+3995.1 3931.1 1648.7 1721.6   74.2   15.8    0.0 304.8 -35.3 -135.0
+3995.4 3931.2 1631.6 1721.4   69.4   15.8    0.0 304.7 -35.3 -135.0
+3995.6 3931.6 1614.6 1721.7   72.2   15.8    0.0 304.8 -35.3 -135.0
+3995.2 3931.8 1599.4 1721.5   73.6   15.8    0.0 304.9 -35.3 -135.0
+3994.8 3931.2 1581.8 1721.5   71.7   15.8    0.0 305.2 -35.3 -135.0
+3995.1 3931.4 1564.4 1721.6   71.0   15.8    0.0 304.9 -35.3 -135.0
+3995.6 3931.8 1548.6 1721.6   71.0   15.8    0.0 304.7 -35.3 -135.0
+3995.3 3931.2 1532.9 1721.2   71.0   15.8    0.0 304.7 -35.3 -135.0
+3994.9 3931.3 1515.4 1720.9   72.2   15.8    0.0 305.1 -35.3 -135.0
+3995.4 3931.6 1499.1 1721.8   74.2   15.8    0.0 304.7 -35.3 -135.0
+3995.3 3931.4 1482.9 1721.8   71.6   15.8    0.0 304.3 -35.3 -135.0
+3995.3 3931.7 1465.4 1721.6   72.4   15.8    0.0 305.0 -35.3 -135.0
+3994.9 3931.2 1448.8 1721.6   68.1   15.8    0.0 304.3 -35.3 -135.0
+3994.9 3931.1 1432.3 1721.4   64.8   15.8    0.0 304.5 -35.3 -135.0
+3995.1 3930.9 1415.2 1721.3   68.4   15.8    0.0 304.1 -35.3 -135.0
+3995.1 3931.4 1398.8 1721.3   68.1   15.8    0.0 304.5 -35.3 -135.0
+3994.7 3931.9 1382.1 1721.6   68.4   15.8    0.0 304.5 -35.3 -135.0
+3995.2 3930.9 1365.2 1721.3   67.9   15.8    0.0 304.4 -35.3 -135.0
+3994.9 3931.4 1347.8 1721.6   68.3   15.8    0.0 304.4 -35.3 -135.0
+3994.8 3931.0 1331.5 1721.3   68.0   15.8    0.0 304.3 -35.3 -135.0
+3995.9 3931.5 1315.6 1721.3   65.0   15.8    0.0 304.6 -35.3 -135.0
+3994.8 3931.1 1299.1 1721.2   65.0   15.8    0.0 305.0 -35.3 -135.0
+3995.0 3931.8 1283.0 1721.8   69.0   15.8    0.0 304.6 -35.3 -135.0
+3995.0 3931.5 1266.9 1721.4   65.0   15.8    0.0 304.7 -35.3 -135.0
+3995.2 3930.9 1251.0 1721.3   68.0   15.8    0.0 304.1 -35.3 -135.0
+3995.1 3931.6 1235.1 1721.4   68.7   15.8    0.0 304.5 -35.3 -135.0
+3994.9 3931.6 1219.1 1721.6   65.9   15.8    0.0 304.4 -35.3 -135.0
+3994.8 3931.3 1202.6 1721.2   66.7   15.8    0.0 304.6 -35.3 -135.0
+3995.4 3931.5 1186.8 1721.5   65.8   15.8    0.0 304.2 -35.3 -135.0
+3994.8 3931.2 1170.2 1721.2   64.9   15.8    0.0 304.4 -35.3 -135.0
+3996.0 3931.6 1153.1 1721.3   67.2   15.8    0.0 304.3 -35.3 -135.0
+3995.1 3931.1 1136.9 1721.4   68.1   15.8    0.0 304.4 -35.3 -135.0
+3994.7 3931.4 1120.2 1721.6   66.6   15.8    0.0 304.4 -35.3 -135.0
+3995.3 3931.4 1103.4 1721.2   64.9   15.8    0.0 304.4 -35.3 -135.0
+3995.0 3931.1 1087.1 1721.3   62.3   15.8    0.0 304.5 -35.3 -135.0
+3994.8 3931.1 1070.9 1721.8   62.2   15.8    0.0 304.7 -35.3 -135.0
+3995.4 3931.9 1054.1 1721.6   61.6   15.8    0.0 304.4 -35.3 -135.0
+3995.4 3931.5 1037.6 1721.4   62.8   15.8    0.0 304.5 -35.3 -135.0
+3995.2 3931.5 1021.2 1721.9   66.3   15.8    0.0 304.3 -35.3 -135.0
+3995.6 3930.8 1005.0 1721.4   67.9   15.8    0.0 304.1 -35.3 -135.0
+3995.1 3931.2  988.3 1721.1   63.5   15.8    0.0 304.4 -35.3 -135.0
+3995.1 3931.3  972.6 1721.2   66.3   15.8    0.0 304.4 -35.3 -135.0
+3995.0 3931.4  956.1 1721.1   65.5   15.8    0.0 304.3 -35.3 -135.0
+3995.0 3931.2  938.9 1721.4   68.1   15.8    0.0 303.5 -35.3 -135.0
+3995.5 3931.4  922.2 1721.2   69.8   15.8    0.0 304.5 -35.3 -135.0
+3994.9 3931.2  906.2 1721.5   68.1   15.8    0.0 304.4 -35.3 -135.0
+3995.2 3931.2  890.2 1721.4   68.1   15.8    0.0 304.5 -35.3 -135.0
+3995.1 3931.5  872.4 1721.2   66.7   15.8    0.0 304.1 -35.3 -135.0
+3995.0 3931.0  856.1 1721.3   64.8   15.8    0.0 304.6 -35.3 -135.0
+3994.4 3931.1  839.9 1721.6   65.8   15.8    0.0 304.5 -35.3 -135.0
+3994.9 3931.0  823.6 1721.4   63.0   15.8    0.0 303.9 -35.3 -135.0
+3994.8 3931.2  805.9 1721.5   69.0   15.8    0.0 304.5 -35.3 -135.0
+3994.9 3931.7  788.8 1721.4   69.5   15.8    0.0 304.7 -35.3 -135.0
+3995.0 3931.6  773.1 1721.5   64.2   15.8    0.0 304.4 -35.3 -135.0
+3995.6 3931.1  755.2 1721.6   65.3   15.8    0.0 304.1 -35.3 -135.0
+3995.6 3930.9  738.8 1721.6   68.1   15.8    0.0 304.4 -35.3 -135.0
+3994.9 3931.2  722.4 1721.6   67.6   15.8    0.0 303.8 -35.3 -135.0
+3995.3 3931.7  705.3 1721.6   68.5   15.8    0.0 304.4 -35.3 -135.0
+3994.9 3931.3  688.7 1721.6   68.5   15.8    0.0 304.6 -35.3 -135.0
+3994.9 3931.6  672.1 1721.3   64.3   15.8    0.0 304.2 -35.3 -135.0
+3994.9 3931.6  655.6 1721.4   65.8   15.8    0.0 304.0 -35.3 -135.0
+3994.8 3931.6  638.4 1721.4   66.2   15.8    0.0 304.0 -35.3 -135.0
+3995.1 3931.2  622.3 1721.6   65.0   15.8    0.0 304.2 -35.3 -135.0
+3995.2 3931.9  604.9 1721.6   65.8   15.8    0.0 304.1 -35.3 -135.0
+3995.0 3930.8  588.6 1721.3   70.4   15.8    0.0 304.0 -35.3 -135.0
+3994.8 3931.2  572.2 1721.6   71.1   15.8    0.0 303.7 -35.3 -135.0
+3995.1 3931.2  555.6 1721.6   66.3   15.8    0.0 304.1 -35.3 -135.0
+3995.2 3931.5  537.9 1721.7   69.1   15.8    0.0 304.0 -35.3 -135.0
+3995.2 3931.6  521.9 1721.4   66.8   15.8    0.0 304.3 -35.3 -135.0
+3995.2 3931.9  504.5 1721.3   72.8   15.8    0.0 304.2 -35.3 -135.0
+3995.1 3930.9  482.8 1721.4   72.6   15.8    0.0 304.1 -35.3 -135.0
+3994.6 3931.5  466.4 1721.2   76.9   15.8    0.0 303.9 -35.3 -135.0
+3995.4 3931.4  451.0 1721.6   79.1   15.8    0.0 304.1 -35.3 -135.0
+3995.5 3931.9  434.9 1721.5   79.3   15.8    0.0 304.4 -35.3 -135.0
+3995.1 3931.1  418.6 1721.2   72.2   15.8    0.0 304.3 -35.3 -135.0
+3995.3 3930.9  402.9 1721.9   72.4   15.8    0.0 303.9 -35.3 -135.0
+3994.8 3931.2  386.2 1721.2   72.7   15.8    0.0 304.1 -35.3 -135.0
+3994.9 3931.5  371.1 1721.4   75.1   15.8    0.0 303.9 -35.3 -135.0
+3995.2 3931.2  354.7 1721.4   73.8   15.8    0.0 303.7 -35.3 -135.0
+3995.1 3931.3  338.8 1721.7   73.2   15.8    0.0 304.0 -35.3 -135.0
+3994.9 3930.4  321.5 1721.7   73.5   15.8    0.0 304.1 -35.3 -135.0
+337.683,SUSR,N,Backing off pitch mass...
+337.795,HPITCH,N,+ move commanded from -7.53 cm (298.75) to -1.70 cm (1711.00)...
+338.005,SMOTOR,N,roll limits on
+338.560,HPITCH,N,-7.3 cm (ad: 365.38) mA=75 V=15.81 D=0.00done.
+347.265,HPITCH,N,Pitch completed from -7.53 cm (298.75) to -1.67 cm (1718.94) dest 1711.00 took 8.6 sec 79mA (570mA peak) 15.8V (15.7Vmin) 164.28 AD/sec 1729 ticks
+347.316,SMOTOR,N,3962.875000,3995.062500,3930.687500,1718.937500,1720.000000
+3994.8 3930.5  298.6 1720.9   43.5   16.3    0.0 302.9 -35.3 -135.0
+3995.4 3931.9  306.7 1721.3   47.8   16.0    0.0 303.7 -35.3 -135.0
+3995.1 3931.6  321.9 1721.0   83.7   15.9    0.0 304.2 -35.3 -135.0
+3994.6 3930.9  337.8 1721.6   80.4   15.8    0.0 304.1 -35.3 -135.0
+3994.9 3931.6  353.8 1721.4   74.4   15.8    0.0 304.2 -35.3 -135.0
+3995.4 3930.9  372.7 1721.8   73.0   15.8    0.0 304.1 -35.3 -135.0
+3995.1 3931.4  389.2 1721.7   73.9   15.8    0.0 304.0 -35.3 -135.0
+3995.0 3931.4  405.6 1721.7   75.2   15.8    0.0 304.0 -35.3 -135.0
+3995.4 3931.1  421.2 1721.2   72.3   15.8    0.0 303.9 -35.3 -135.0
+3995.3 3931.6  438.2 1721.2   73.1   15.8    0.0 304.4 -35.3 -135.0
+3995.1 3931.0  454.8 1721.6   82.0   15.8    0.0 303.9 -35.3 -135.0
+3995.2 3931.3  471.1 1721.4   79.9   15.8    0.0 304.3 -35.3 -135.0
+3995.0 3931.4  488.0 1721.7   79.6   15.8    0.0 304.0 -35.3 -135.0
+3995.4 3931.1  503.6 1721.3   77.1   15.8    0.0 304.1 -35.3 -135.0
+3995.0 3931.4  520.3 1721.4   75.8   15.8    0.0 304.0 -35.3 -135.0
+3994.7 3931.4  536.6 1721.5   74.5   15.8    0.0 304.2 -35.3 -135.0
+3994.7 3932.1  552.9 1721.4   75.2   15.8    0.0 304.1 -35.3 -135.0
+3994.8 3931.4  569.4 1721.6   79.6   15.8    0.0 303.7 -35.3 -135.0
+3994.9 3931.2  586.1 1721.5   77.4   15.8    0.0 304.2 -35.3 -135.0
+3994.7 3931.4  602.1 1721.5   82.1   15.8    0.0 304.4 -35.3 -135.0
+3994.9 3931.4  618.0 1721.5   83.9   15.8    0.0 304.6 -35.3 -135.0
+3995.9 3930.8  634.6 1721.5   78.6   15.8    0.0 304.3 -35.3 -135.0
+3995.9 3931.9  651.5 1721.4   79.6   15.8    0.0 304.1 -35.3 -135.0
+3995.7 3931.2  668.3 1721.8   77.2   15.8    0.0 303.9 -35.3 -135.0
+3995.0 3931.3  684.5 1721.5   76.1   15.8    0.0 304.3 -35.3 -135.0
+3995.1 3931.6  701.6 1721.4   75.6   15.8    0.0 304.4 -35.3 -135.0
+3995.1 3931.8  717.9 1721.3   77.2   15.8    0.0 304.4 -35.3 -135.0
+3994.8 3931.1  734.8 1721.5   78.1   15.8    0.0 303.9 -35.3 -135.0
+3995.2 3931.4  751.8 1721.4   83.1   15.8    0.0 304.5 -35.3 -135.0
+3995.1 3931.8  768.8 1721.6   80.5   15.8    0.0 304.9 -35.3 -135.0
+3995.1 3931.7  785.6 1721.4   77.2   15.8    0.0 304.6 -35.3 -135.0
+3995.0 3930.8  802.2 1721.4   77.5   15.8    0.0 304.3 -35.3 -135.0
+3995.6 3931.0  818.8 1721.6   75.4   15.8    0.0 304.2 -35.3 -135.0
+3995.4 3931.6  835.0 1721.6   74.9   15.8    0.0 304.1 -35.3 -135.0
+3995.4 3931.1  850.9 1721.2   76.2   15.8    0.0 304.4 -35.3 -135.0
+3994.8 3931.5  868.1 1721.6   78.0   15.8    0.0 304.2 -35.3 -135.0
+3994.9 3931.2  883.4 1721.7   82.3   15.8    0.0 304.8 -35.3 -135.0
+3995.2 3931.4  900.1 1721.9   80.0   15.8    0.0 304.2 -35.3 -135.0
+3994.8 3931.8  915.2 1721.6   78.8   15.8    0.0 304.1 -35.3 -135.0
+3994.9 3931.6  932.2 1721.6   76.3   15.8    0.0 304.1 -35.3 -135.0
+3994.4 3931.2  949.5 1721.5   73.7   15.8    0.0 303.9 -35.3 -135.0
+3994.9 3931.2  965.0 1721.4   74.0   15.8    0.0 304.6 -35.3 -135.0
+3995.4 3931.4  981.4 1721.4   76.7   15.8    0.0 304.2 -35.3 -135.0
+3995.2 3931.8  997.9 1721.5   76.7   15.8    0.0 304.7 -35.3 -135.0
+3995.3 3931.6 1014.2 1721.2   81.7   15.8    0.0 304.9 -35.3 -135.0
+3994.8 3931.1 1030.3 1721.4   77.7   15.8    0.0 304.7 -35.3 -135.0
+3995.9 3931.9 1047.4 1721.3   76.3   15.8    0.0 304.4 -35.3 -135.0
+3995.2 3931.1 1063.4 1721.1   74.4   15.8    0.0 304.8 -35.3 -135.0
+3995.0 3931.1 1080.1 1721.4   73.5   15.8    0.0 304.9 -35.3 -135.0
+3995.4 3931.6 1096.4 1721.4   76.6   15.8    0.0 304.4 -35.3 -135.0
+3994.8 3931.2 1113.4 1721.4   81.7   15.8    0.0 304.9 -35.3 -135.0
+3995.2 3931.8 1129.2 1721.4   81.7   15.8    0.0 303.9 -35.3 -135.0
+3994.7 3931.8 1145.4 1721.4   80.0   15.8    0.0 304.6 -35.3 -135.0
+3995.1 3931.2 1162.5 1721.6   76.4   15.8    0.0 304.7 -35.3 -135.0
+3995.0 3931.0 1178.5 1721.2   77.2   15.8    0.0 304.6 -35.3 -135.0
+3995.7 3931.2 1194.4 1721.5   73.8   15.8    0.0 304.3 -35.3 -135.0
+3995.4 3931.2 1210.2 1721.6   78.6   15.8    0.0 304.6 -35.3 -135.0
+3995.1 3931.4 1225.9 1721.4   76.1   15.8    0.0 304.7 -35.3 -135.0
+3995.1 3931.2 1242.5 1721.7   82.9   15.8    0.0 304.5 -35.3 -135.0
+3994.9 3931.6 1258.2 1721.4   83.8   15.8    0.0 304.6 -35.3 -135.0
+3995.4 3931.5 1274.1 1721.6   80.9   15.8    0.0 304.9 -35.3 -135.0
+3995.6 3931.1 1290.1 1721.1   80.0   15.8    0.0 304.2 -35.3 -135.0
+3995.1 3931.8 1307.0 1721.3   77.7   15.8    0.0 304.9 -35.3 -135.0
+3995.0 3931.3 1323.6 1721.4   76.8   15.8    0.0 304.2 -35.3 -135.0
+3995.6 3931.0 1340.1 1721.6   76.8   15.8    0.0 304.8 -35.3 -135.0
+3995.2 3931.5 1356.1 1721.4   77.7   15.8    0.0 304.7 -35.3 -135.0
+3995.3 3932.1 1373.2 1721.5   83.9   15.8    0.0 304.9 -35.3 -135.0
+3995.2 3931.4 1390.2 1721.5   80.9   15.8    0.0 304.5 -35.3 -135.0
+3995.2 3931.7 1407.3 1721.6   80.3   15.8    0.0 304.8 -35.3 -135.0
+3995.5 3931.1 1424.6 1721.3   78.5   15.8    0.0 304.8 -35.3 -135.0
+3994.9 3931.6 1440.7 1721.5   79.7   15.8    0.0 305.0 -35.3 -135.0
+3995.5 3930.8 1457.8 1721.7   83.2   15.7    0.0 304.9 -35.3 -135.0
+3995.6 3931.3 1474.2 1721.4   82.5   15.7    0.0 304.9 -35.3 -135.0
+3994.6 3931.4 1490.5 1721.5   82.2   15.7    0.0 304.2 -35.3 -135.0
+3994.7 3931.6 1506.2 1721.4   89.8   15.7    0.0 304.9 -35.3 -135.0
+3994.8 3931.2 1522.8 1721.4   83.9   15.7    0.0 304.9 -35.3 -135.0
+3994.9 3931.7 1539.4 1721.6   88.9   15.7    0.0 305.1 -35.3 -135.0
+3995.6 3931.6 1555.6 1721.4   78.1   15.7    0.0 304.8 -35.3 -135.0
+3994.9 3931.3 1572.9 1721.2   78.6   15.7    0.0 304.9 -35.3 -135.0
+3995.4 3931.7 1589.3 1721.7   79.7   15.7    0.0 305.0 -35.3 -135.0
+3995.2 3931.0 1605.2 1721.5   84.0   15.7    0.0 304.9 -35.3 -135.0
+3995.8 3931.3 1621.6 1721.6   90.6   15.7    0.0 304.9 -35.3 -135.0
+3995.1 3930.8 1638.1 1721.2   89.6   15.7    0.0 304.5 -35.3 -135.0
+3995.2 3931.4 1655.2 1721.4   92.2   15.7    0.0 305.0 -35.3 -135.0
+3995.0 3931.6 1671.2 1721.4   90.3   15.7    0.0 304.6 -35.3 -135.0
+3994.9 3931.3 1688.2 1721.4   92.9   15.7    0.0 305.1 -35.3 -135.0
+3995.3 3930.6 1703.8 1721.5   82.5   15.7    0.0 305.6 -35.3 -135.0
+349.027,SUSR,N,---- Checking roll motor ----
+349.073,SUSR,N,Roll to port...
+349.184,HROLL,N,+ move commanded from 1.12 deg (1720.31) to 80.00 deg (3156.00)...
+349.394,SMOTOR,N,roll limits on
+349.949,HROLL,N,11.1 deg (ad: 1902.12) mA=48 V=15.94 D=0.00done.
+353.642,SMOTOR,N,new min V reading 15.701 (was 15.703)
+353.678,HROLL,N,Roll completed from 1.12 deg (1720.31) to 80.42 deg (3163.62) dest 3156.00 took 3.7 sec 97mA (557mA peak) 15.7V (15.4Vmin) 385.91 AD/sec 748 ticks
+353.735,SMOTOR,N,3961.906250,3993.562500,3930.250000,1719.437500,3163.625000
+3994.4 3931.3 1720.6 1721.2   25.3   16.3    0.0 304.4 -35.3 -135.0
+3994.9 3932.0 1721.0 1755.2   49.0   15.9    0.0 304.7 -35.3 -135.0
+3995.5 3930.9 1720.9 1795.9   43.4   15.9    0.0 305.3 -35.3 -135.0
+3995.6 3931.0 1721.2 1835.2   51.7   16.0    0.0 305.1 -35.3 -135.0
+3994.6 3931.6 1721.1 1874.9   53.2   15.9    0.0 305.5 -35.3 -135.0
+3994.6 3931.1 1720.7 1923.4   56.0   15.9    0.0 305.3 -35.3 -135.0
+3995.5 3931.4 1720.8 1961.1   54.9   15.9    0.0 305.7 -35.3 -135.0
+3995.3 3931.4 1721.4 2003.9   44.2   16.0    0.0 305.0 -35.3 -135.0
+3994.9 3931.8 1721.3 2043.4   57.8   15.9    0.0 305.7 -35.3 -135.0
+3994.8 3931.4 1721.1 2082.9   59.8   15.9    0.0 305.7 -35.3 -135.0
+3995.6 3931.6 1720.9 2123.2   62.1   15.9    0.0 305.7 -35.3 -135.0
+3994.9 3931.1 1721.0 2162.9   67.1   15.9    0.0 305.6 -35.3 -135.0
+3995.1 3931.2 1721.1 2202.6   76.0   15.8    0.0 306.4 -35.3 -135.0
+3995.0 3931.5 1721.2 2242.9   74.0   15.8    0.0 306.0 -35.3 -135.0
+3994.8 3931.4 1720.8 2282.4   87.8   15.8    0.0 307.1 -35.3 -135.0
+3995.2 3931.6 1721.4 2322.5   91.4   15.8    0.0 306.1 -35.3 -135.0
+3994.4 3931.2 1721.1 2363.1   88.2   15.7    0.0 306.9 -35.3 -135.0
+3995.6 3931.6 1721.2 2403.4   75.7   15.8    0.0 306.3 -35.3 -135.0
+3994.9 3930.7 1721.2 2443.7  102.4   15.7    0.0 306.4 -35.3 -135.0
+3995.2 3931.5 1721.1 2482.1   93.6   15.7    0.0 307.4 -35.3 -135.0
+3995.0 3931.8 1721.1 2519.1  106.8   15.7    0.0 306.6 -35.3 -135.0
+3995.3 3930.8 1721.0 2557.5  113.7   15.7    0.0 307.3 -35.3 -135.0
+3994.9 3930.9 1721.0 2594.2   94.5   15.6    0.0 307.2 -35.3 -135.0
+3995.8 3931.3 1721.2 2631.3  109.6   15.6    0.0 307.8 -35.3 -135.0
+3995.1 3931.3 1721.1 2670.4  108.3   15.6    0.0 308.2 -35.3 -135.0
+3995.5 3931.2 1721.4 2705.9  108.6   15.6    0.0 308.0 -35.3 -135.0
+3995.3 3931.8 1721.0 2743.2  121.4   15.6    0.0 307.5 -35.3 -135.0
+3995.5 3931.8 1721.2 2778.0  138.3   15.5    0.0 308.1 -35.3 -135.0
+3995.1 3931.4 1721.1 2814.9  120.9   15.5    0.0 307.8 -35.3 -135.0
+3995.2 3931.8 1721.2 2851.8  127.4   15.5    0.0 309.0 -35.3 -135.0
+3994.9 3931.2 1721.4 2886.4  131.2   15.5    0.0 308.4 -35.3 -135.0
+3994.6 3931.8 1721.0 2922.8  144.7   15.5    0.0 309.2 -35.3 -135.0
+3994.8 3931.5 1721.2 2960.2  153.3   15.4    0.0 308.3 -35.3 -135.0
+3994.9 3931.3 1721.2 2994.4  137.2   15.4    0.0 308.6 -35.3 -135.0
+3995.3 3931.9 1721.0 3031.2  145.5   15.4    0.0 309.1 -35.3 -135.0
+3995.1 3931.5 1720.8 3068.6  132.8   15.4    0.0 309.1 -35.3 -135.0
+3995.6 3930.6 1720.9 3106.1  151.0   15.4    0.0 308.6 -35.3 -135.0
+3995.0 3931.4 1720.9 3142.5  152.8   15.4    0.0 309.1 -35.3 -135.0
+354.509,SUSR,N,Roll to starboard...
+354.627,HROLL,N,- move commanded from 80.45 deg (3164.19) to -79.12 deg (260.00)...
+354.837,SMOTOR,N,roll limits on
+355.392,HROLL,N,70.6 deg (ad: 2985.50) mA=68 V=15.87 D=0.00done.
+363.090,SMOTOR,N,new min V reading 15.669 (was 15.701)
+363.125,HROLL,N,Roll completed from 80.45 deg (3164.19) to -79.64 deg (250.50) dest 260.00 took 7.7 sec 102mA (541mA peak) 15.7V (15.4Vmin) 378.89 AD/sec 1538 ticks
+363.182,SMOTOR,N,3961.906250,3994.437500,3929.375000,1719.187500,250.500000
+3994.8 3930.5 1720.7 3165.3   43.6   16.3    0.0 307.7 -35.3 -135.0
+3995.2 3930.9 1720.6 3130.8   71.1   15.9    0.0 308.1 -35.3 -135.0
+3994.9 3931.3 1720.9 3092.8   71.3   15.9    0.0 308.6 -35.3 -135.0
+3995.4 3931.4 1721.2 3052.5   65.7   15.9    0.0 308.0 -35.3 -135.0
+3994.8 3931.4 1721.0 3012.8   60.0   15.9    0.0 308.6 -35.3 -135.0
+3994.6 3931.4 1721.2 2963.4   62.5   15.9    0.0 308.0 -35.3 -135.0
+3995.7 3931.1 1721.3 2923.7   68.1   15.9    0.0 307.5 -35.3 -135.0
+3995.1 3931.6 1721.3 2884.9   72.0   15.9    0.0 307.9 -35.3 -135.0
+3995.6 3931.1 1721.4 2846.0   71.4   15.9    0.0 308.1 -35.3 -135.0
+3995.8 3931.6 1720.9 2807.6   66.8   15.9    0.0 307.8 -35.3 -135.0
+3995.6 3931.8 1720.9 2767.7   67.5   15.9    0.0 307.6 -35.3 -135.0
+3994.9 3931.6 1721.2 2729.6   61.1   15.9    0.0 307.3 -35.3 -135.0
+3994.6 3931.8 1721.2 2691.2   66.0   15.9    0.0 307.5 -35.3 -135.0
+3995.2 3931.2 1720.9 2652.6   62.6   15.9    0.0 307.2 -35.3 -135.0
+3995.8 3931.9 1720.9 2612.2   56.9   15.9    0.0 306.7 -35.3 -135.0
+3995.4 3931.1 1720.8 2573.6   64.4   15.9    0.0 307.3 -35.3 -135.0
+3994.8 3931.6 1721.1 2534.0   61.2   15.9    0.0 306.8 -35.3 -135.0
+3995.2 3931.6 1721.0 2494.0   61.5   15.9    0.0 306.9 -35.3 -135.0
+3994.9 3931.5 1720.9 2454.8   65.8   15.9    0.0 307.2 -35.3 -135.0
+3995.5 3931.2 1720.9 2415.2   61.5   15.9    0.0 306.7 -35.3 -135.0
+3994.4 3931.0 1721.1 2375.7   60.1   15.9    0.0 306.1 -35.3 -135.0
+3995.9 3931.9 1720.9 2332.8   64.3   15.9    0.0 307.0 -35.3 -135.0
+3995.6 3931.4 1721.2 2294.2   74.1   15.9    0.0 306.4 -35.3 -135.0
+3995.2 3931.3 1721.2 2253.9   66.0   15.9    0.0 306.0 -35.3 -135.0
+3995.1 3931.4 1721.2 2213.1   61.6   15.9    0.0 306.1 -35.3 -135.0
+3995.2 3930.9 1721.1 2173.0   65.4   15.9    0.0 305.6 -35.3 -135.0
+3995.2 3931.2 1721.2 2134.6   68.4   15.9    0.0 306.1 -35.3 -135.0
+3995.4 3931.1 1721.1 2094.7   69.8   15.8    0.0 305.9 -35.3 -135.0
+3995.3 3931.8 1721.4 2056.2   70.9   15.8    0.0 305.8 -35.3 -135.0
+3995.6 3931.5 1721.3 2017.7   78.5   15.8    0.0 305.6 -35.3 -135.0
+3995.1 3931.7 1721.3 1980.2   82.7   15.8    0.0 305.6 -35.3 -135.0
+3994.9 3931.4 1721.2 1941.1   76.2   15.8    0.0 305.2 -35.3 -135.0
+3995.0 3931.7 1721.1 1903.0   77.9   15.8    0.0 305.6 -35.3 -135.0
+3995.4 3931.3 1721.1 1864.8   83.4   15.8    0.0 305.7 -35.3 -135.0
+3995.1 3931.8 1721.2 1828.1   85.3   15.8    0.0 305.6 -35.3 -135.0
+3995.0 3931.1 1721.2 1789.4   73.0   15.8    0.0 305.6 -35.3 -135.0
+3995.4 3931.3 1720.8 1750.4   82.7   15.8    0.0 305.7 -35.3 -135.0
+3994.9 3931.6 1720.7 1714.2   99.7   15.7    0.0 305.7 -35.3 -135.0
+3995.2 3931.1 1721.1 1675.8   64.4   15.7    0.0 304.7 -35.3 -135.0
+3994.6 3931.5 1721.1 1638.4  100.0   15.7    0.0 305.4 -35.3 -135.0
+3994.5 3931.1 1721.1 1600.2  100.3   15.7    0.0 305.2 -35.3 -135.0
+3995.2 3931.1 1721.3 1562.4  105.2   15.7    0.0 304.7 -35.3 -135.0
+3995.1 3931.4 1721.1 1525.0   99.3   15.7    0.0 305.2 -35.3 -135.0
+3995.2 3931.7 1721.2 1486.0  113.2   15.6    0.0 305.0 -35.3 -135.0
+3994.9 3931.4 1721.4 1448.2  105.3   15.6    0.0 305.0 -35.3 -135.0
+3994.6 3931.3 1721.4 1410.3  100.4   15.6    0.0 305.1 -35.3 -135.0
+3994.5 3931.3 1721.4 1370.4  118.8   15.6    0.0 304.3 -35.3 -135.0
+3995.2 3931.5 1721.4 1333.5  113.6   15.6    0.0 304.3 -35.3 -135.0
+3995.2 3931.6 1721.4 1296.7  119.8   15.6    0.0 305.1 -35.3 -135.0
+3995.2 3931.8 1721.3 1259.3  130.2   15.6    0.0 305.0 -35.3 -135.0
+3994.7 3931.5 1721.4 1223.2  118.8   15.5    0.0 304.3 -35.3 -135.0
+3995.2 3931.2 1721.4 1186.9  132.2   15.5    0.0 304.6 -35.3 -135.0
+3995.4 3931.4 1721.3 1150.4  126.8   15.5    0.0 305.1 -35.3 -135.0
+3995.4 3931.3 1721.2 1114.4  120.7   15.5    0.0 304.9 -35.3 -135.0
+3995.7 3932.4 1721.3 1077.8  120.0   15.5    0.0 304.9 -35.3 -135.0
+3994.9 3931.0 1721.2 1042.9  131.4   15.5    0.0 304.6 -35.3 -135.0
+3995.1 3931.3 1721.2 1005.8  150.1   15.5    0.0 305.1 -35.3 -135.0
+3994.7 3930.7 1721.2  971.1  133.1   15.5    0.0 305.4 -35.3 -135.0
+3995.2 3931.2 1721.3  935.3  140.6   15.4    0.0 305.1 -35.3 -135.0
+3995.1 3931.6 1721.4  900.0  144.0   15.4    0.0 305.3 -35.3 -135.0
+3995.2 3931.1 1720.9  864.2  141.0   15.4    0.0 305.8 -35.3 -135.0
+3995.2 3931.2 1721.2  829.2  139.8   15.4    0.0 305.6 -35.3 -135.0
+3995.2 3931.5 1721.2  793.1  142.3   15.4    0.0 305.3 -35.3 -135.0
+3995.0 3931.4 1721.2  757.2  151.8   15.4    0.0 305.5 -35.3 -135.0
+3994.8 3930.8 1721.1  720.4  155.6   15.4    0.0 305.5 -35.3 -135.0
+3995.4 3931.4 1721.2  682.4  146.6   15.4    0.0 305.6 -35.3 -135.0
+3994.8 3931.4 1721.1  647.6  145.2   15.4    0.0 305.0 -35.3 -135.0
+3995.0 3930.9 1721.4  609.1  143.7   15.4    0.0 305.6 -35.3 -135.0
+3995.2 3930.9 1721.2  573.4  153.9   15.4    0.0 305.8 -35.3 -135.0
+3995.3 3931.3 1721.8  537.5  150.3   15.4    0.0 305.8 -35.3 -135.0
+3994.5 3931.7 1721.1  500.8  156.6   15.4    0.0 306.1 -35.3 -135.0
+3994.4 3931.4 1721.2  463.9  138.7   15.4    0.0 306.5 -35.3 -135.0
+3994.8 3931.3 1721.2  428.2  157.7   15.4    0.0 305.9 -35.3 -135.0
+3995.1 3930.9 1721.5  392.6  152.8   15.4    0.0 306.4 -35.3 -135.0
+3995.1 3931.6 1721.3  359.5  163.3   15.4    0.0 306.4 -35.3 -135.0
+3994.9 3931.1 1721.1  324.2  146.3   15.4    0.0 307.0 -35.3 -135.0
+3995.1 3931.8 1720.9  290.4  163.9   15.4    0.0 306.5 -35.3 -135.0
+364.700,SUSR,N,Roll to neutral...
+364.822,HROLL,N,+ move commanded from -79.65 deg (250.44) to 0.00 deg (1700.00)...
+365.039,SMOTOR,N,roll limits on
+365.593,HROLL,N,-69.1 deg (ad: 443.25) mA=49 V=15.93 D=0.00done.
+368.790,HROLL,N,Roll completed from -79.65 deg (250.44) to 2.01 deg (1736.56) dest 1700.00 took 3.4 sec 57mA (559mA peak) 15.9V (15.9Vmin) 437.10 AD/sec 680 ticks
+368.846,SMOTOR,N,3961.343750,3992.812500,3929.875000,1719.187500,1736.562500
+3994.9 3930.8 1721.1  250.6   39.0   16.3    0.0 304.7 -35.3 -135.0
+3995.1 3931.3 1721.2  287.6   67.8   15.9    0.0 305.6 -35.3 -135.0
+3995.2 3931.1 1721.1  329.2   59.2   15.9    0.0 305.5 -35.3 -135.0
+3995.0 3931.0 1721.4  372.2   57.7   15.9    0.0 305.5 -35.3 -135.0
+3994.6 3930.8 1721.2  413.3   58.5   15.9    0.0 305.1 -35.3 -135.0
+3995.0 3930.8 1721.4  466.4   56.3   15.9    0.0 304.9 -35.3 -135.0
+3994.9 3931.8 1721.1  509.8   62.5   15.9    0.0 304.6 -35.3 -135.0
+3994.9 3931.3 1720.9  553.8   54.1   15.9    0.0 304.2 -35.3 -135.0
+3995.2 3931.6 1721.3  597.1   54.0   15.9    0.0 304.6 -35.3 -135.0
+3994.9 3931.2 1720.9  639.7   49.4   16.0    0.0 304.8 -35.3 -135.0
+3995.0 3931.2 1721.7  682.6   56.4   16.0    0.0 304.4 -35.3 -135.0
+3994.8 3930.8 1721.7  726.7   59.1   16.0    0.0 304.3 -35.3 -135.0
+3994.9 3931.8 1721.1  768.4   51.6   16.0    0.0 304.7 -35.3 -135.0
+3995.1 3931.3 1721.3  810.7   56.5   15.9    0.0 303.9 -35.3 -135.0
+3995.1 3931.5 1721.5  853.8   60.8   15.9    0.0 304.5 -35.3 -135.0
+3995.1 3931.5 1721.2  895.1   54.2   15.9    0.0 303.7 -35.3 -135.0
+3994.6 3931.2 1721.4  936.4   51.8   15.9    0.0 303.9 -35.3 -135.0
+3995.1 3931.2 1721.2  979.6   55.6   15.9    0.0 303.8 -35.3 -135.0
+3995.0 3931.7 1721.3 1020.7   54.4   15.9    0.0 304.2 -35.3 -135.0
+3995.1 3931.3 1721.3 1061.7   49.4   15.9    0.0 304.1 -35.3 -135.0
+3995.4 3931.4 1721.1 1104.1   55.3   15.9    0.0 303.6 -35.3 -135.0
+3995.4 3931.1 1721.0 1147.9   57.4   15.9    0.0 304.3 -35.3 -135.0
+3994.9 3931.4 1721.1 1189.2   56.9   15.9    0.0 304.1 -35.3 -135.0
+3995.7 3930.9 1721.0 1230.9   52.4   15.9    0.0 304.2 -35.3 -135.0
+3995.0 3931.4 1721.0 1274.2   56.4   15.9    0.0 303.4 -35.3 -135.0
+3995.4 3931.8 1721.2 1315.8   55.9   15.9    0.0 303.9 -35.3 -135.0
+3995.2 3931.5 1721.2 1357.9   56.5   15.9    0.0 304.2 -35.3 -135.0
+3995.3 3931.4 1720.9 1401.9   51.7   16.0    0.0 303.8 -35.3 -135.0
+3995.2 3931.4 1721.0 1446.2   56.8   15.9    0.0 304.1 -35.3 -135.0
+3995.6 3932.0 1721.2 1489.3   57.9   15.9    0.0 304.1 -35.3 -135.0
+3995.6 3931.6 1721.4 1532.6   59.5   15.9    0.0 304.4 -35.3 -135.0
+3995.4 3931.6 1721.2 1576.0   53.7   15.9    0.0 304.7 -35.3 -135.0
+3995.0 3931.3 1721.4 1618.1   53.4   15.9    0.0 304.7 -35.3 -135.0
+3994.8 3931.8 1721.4 1659.9   57.7   15.9    0.0 304.8 -35.3 -135.0
+369.545,SUSR,N,---- Checking VBD and valve ----
+369.613,HVBD,N,    VBD pos = -260.68 cc, AD#=3962.72 (3994.50,3930.94)
+369.687,HVBD,N,    VBD pos = -260.58 cc, AD#=3962.28 (3994.44,3930.12)
+369.721,SUSR,N,Pumping 100cc ...
+369.833,HVBD,N,- move commanded from -260.54 cc (3962.12) to -160.58 cc (3554.62)...
+370.043,SMOTOR,N,roll limits on
+370.598,HVBD,N,-259.6 cc (ad: 3958.19 [3988.31,3928.06]) mA=118 V=15.66 D=0.00
+380.706,HVBD,N,-250.1 cc (ad: 3919.66 [3950.81,3888.50]) mA=1018 V=14.43 D=0.00
+390.812,HVBD,N,-235.6 cc (ad: 3860.53 [3891.69,3829.38]) mA=990 V=14.67 D=0.00
+400.918,HVBD,N,-221.0 cc (ad: 3800.81 [3830.81,3770.81]) mA=983 V=14.75 D=0.00
+411.050,HVBD,N,-206.0 cc (ad: 3739.88 [3768.56,3711.19]) mA=983 V=14.85 D=0.00
+421.157,HVBD,N,-191.5 cc (ad: 3680.81 [3708.00,3653.62]) mA=989 V=14.89 D=0.00
+431.263,HVBD,N,-176.4 cc (ad: 3619.25 [3646.06,3592.44]) mA=991 V=14.93 D=0.00
+441.374,HVBD,N,-161.7 cc (ad: 3559.38 [3585.56,3533.19]) mA=980 V=14.98 D=0.00done.
+442.052,SMOTOR,N,new min V reading 14.750 (was 15.669)
+442.105,HVBD,N,VBD completed from -260.54 cc (3962.12) to -160.36 cc (3553.72 [3994.00,3930.25]->[3580.81, 3526.62]) dest 3554.62 took 71.5 sec 970mA (5133mA peak) 14.8V (9.1Vmin) 5.71 AD/sec 14293 ticks
+442.168,SMOTOR,N,3553.718750,3580.812500,3526.625000,1719.250000,1737.062500
+3994.7 3930.7 1720.9 1737.8   14.7   16.3    0.0 304.2 -35.3 -135.0
+3989.5 3925.2 1721.1 1738.2  130.7   15.6    0.0 305.5 -35.3 -135.0
+3993.6 3925.3 1720.6 1738.2  122.1   15.6    0.0 305.8 -35.3 -135.0
+3994.4 3925.8 1720.9 1737.4  116.0   15.6    0.0 305.9 -35.3 -135.0
+3985.6 3925.6 1720.7 1737.9 1071.3   13.6    0.0 317.4 -35.3 -135.0
+3980.7 3919.0 1720.9 1738.0 1052.3   13.9    0.0 317.4 -35.3 -135.0
+3976.6 3913.5 1720.8 1737.9 1076.6   14.1    0.0 314.6 -35.3 -135.0
+3970.7 3908.8 1721.1 1737.7 1051.8   14.2    0.0 320.5 -35.3 -135.0
+3966.4 3901.8 1720.5 1737.8 1142.4   14.2    0.0 314.4 -35.3 -135.0
+3959.9 3896.1 1720.9 1738.0 1120.6   14.3    0.0 319.5 -35.3 -135.0
+3954.0 3890.8 1720.6 1738.2  945.7   14.4    0.0 320.3 -35.3 -135.0
+3948.3 3885.2 1720.9 1737.8 1065.5   14.4    0.0 315.8 -35.3 -135.0
+3942.7 3878.9 1720.6 1737.9  950.7   14.5    0.0 320.6 -35.3 -135.0
+3937.2 3872.8 1720.6 1737.8 1035.7   14.5    0.0 316.6 -35.3 -135.0
+3930.4 3867.1 1721.2 1737.9 1014.1   14.5    0.0 319.2 -35.3 -135.0
+3924.7 3860.9 1721.0 1737.9 1044.2   14.6    0.0 318.4 -35.3 -135.0
+3918.9 3855.8 1720.5 1738.1 1017.3   14.6    0.0 320.6 -35.3 -135.0
+3912.6 3850.4 1720.9 1738.1 1074.1   14.6    0.0 320.3 -35.3 -135.0
+3907.0 3844.1 1721.0 1737.6  989.6   14.6    0.0 317.6 -35.3 -135.0
+3900.9 3838.5 1720.7 1737.8 1057.1   14.6    0.0 319.1 -35.3 -135.0
+3894.6 3833.1 1720.5 1737.8  957.8   14.6    0.0 320.2 -35.3 -135.0
+3888.9 3827.2 1720.7 1738.2  975.5   14.7    0.0 315.1 -35.3 -135.0
+3881.9 3820.9 1720.6 1737.9  970.1   14.7    0.0 318.2 -35.3 -135.0
+3876.8 3815.6 1720.7 1737.8 1037.1   14.7    0.0 317.2 -35.3 -135.0
+3870.8 3809.1 1720.6 1737.8  994.5   14.7    0.0 318.8 -35.3 -135.0
+3864.6 3804.0 1720.8 1737.8  987.2   14.7    0.0 319.0 -35.3 -135.0
+3858.1 3798.2 1720.8 1737.8 1001.5   14.7    0.0 316.6 -35.3 -135.0
+3853.0 3792.4 1720.4 1737.9 1010.3   14.7    0.0 316.4 -35.3 -135.0
+3846.0 3786.8 1720.8 1737.9  991.5   14.8    0.0 316.0 -35.3 -135.0
+3839.6 3781.2 1721.1 1737.8  999.8   14.8    0.0 319.6 -35.3 -135.0
+3834.7 3775.9 1720.8 1737.8  982.3   14.8    0.0 316.2 -35.3 -135.0
+3828.9 3768.4 1720.9 1737.6  996.0   14.8    0.0 316.0 -35.3 -135.0
+3821.6 3762.9 1720.9 1737.8  982.7   14.8    0.0 320.1 -35.3 -135.0
+3815.8 3757.2 1721.1 1737.8 1012.9   14.8    0.0 317.1 -35.3 -135.0
+3809.0 3750.9 1721.0 1737.6  978.4   14.8    0.0 317.9 -35.3 -135.0
+3804.8 3745.6 1720.8 1738.1  929.5   14.8    0.0 317.9 -35.3 -135.0
+3797.4 3739.1 1720.8 1737.5 1036.8   14.8    0.0 319.6 -35.3 -135.0
+3791.8 3733.6 1720.6 1737.9  994.2   14.8    0.0 318.1 -35.3 -135.0
+3784.4 3727.7 1720.6 1737.7  975.1   14.8    0.0 318.9 -35.3 -135.0
+3779.4 3721.9 1720.4 1738.1 1000.6   14.8    0.0 317.3 -35.3 -135.0
+3773.1 3715.8 1720.9 1737.8 1010.3   14.8    0.0 318.3 -35.3 -135.0
+3767.5 3710.4 1721.2 1737.9 1009.7   14.8    0.0 316.6 -35.3 -135.0
+3761.1 3704.2 1720.8 1737.8 1004.7   14.9    0.0 316.9 -35.3 -135.0
+3754.5 3697.8 1720.6 1737.9  996.2   14.8    0.0 317.4 -35.3 -135.0
+3748.6 3692.1 1720.6 1737.8 1016.1   14.8    0.0 315.5 -35.3 -135.0
+3743.1 3685.8 1721.0 1737.8  990.6   14.9    0.0 317.9 -35.3 -135.0
+3735.9 3680.0 1720.8 1737.6 1011.3   14.9    0.0 319.4 -35.3 -135.0
+3730.2 3674.9 1720.9 1737.9  976.5   14.9    0.0 318.1 -35.3 -135.0
+3724.3 3669.1 1720.8 1737.6 1054.8   14.9    0.0 315.1 -35.3 -135.0
+3718.4 3662.1 1720.5 1737.7 1047.5   14.9    0.0 319.9 -35.3 -135.0
+3713.0 3657.1 1720.6 1738.2 1018.3   14.9    0.0 315.2 -35.3 -135.0
+3705.6 3651.1 1721.4 1737.8  951.9   14.9    0.0 315.9 -35.3 -135.0
+3701.2 3644.2 1720.9 1738.1 1030.9   14.9    0.0 317.2 -35.3 -135.0
+3694.6 3639.4 1720.6 1738.1 1011.1   14.9    0.0 316.9 -35.3 -135.0
+3687.5 3632.8 1720.9 1737.9  971.4   14.9    0.0 317.1 -35.3 -135.0
+3682.8 3627.3 1720.6 1738.2  960.1   14.9    0.0 316.3 -35.3 -135.0
+3675.9 3620.9 1720.8 1737.6  987.0   14.9    0.0 319.9 -35.3 -135.0
+3669.4 3615.2 1720.9 1737.9  972.3   14.9    0.0 317.1 -35.3 -135.0
+3664.3 3608.8 1720.6 1738.3  972.8   14.9    0.0 317.0 -35.3 -135.0
+3657.8 3603.9 1720.8 1737.6  939.3   14.9    0.0 317.1 -35.3 -135.0
+3651.4 3596.9 1720.9 1737.8  977.0   14.9    0.0 315.1 -35.3 -135.0
+3644.8 3592.2 1720.5 1737.7 1129.1   14.9    0.0 318.0 -35.3 -135.0
+3639.5 3586.1 1721.1 1738.1 1033.9   14.9    0.0 316.9 -35.3 -135.0
+3633.4 3579.9 1720.6 1737.8 1013.6   14.9    0.0 315.5 -35.3 -135.0
+3627.7 3574.2 1720.9 1737.9  996.1   14.9    0.0 318.6 -35.3 -135.0
+3622.1 3568.8 1720.8 1737.8  987.6   15.0    0.0 319.2 -35.3 -135.0
+3615.2 3562.7 1720.5 1737.8  938.4   15.0    0.0 316.5 -35.3 -135.0
+3609.1 3556.1 1720.7 1737.8 1001.9   14.9    0.0 318.2 -35.3 -135.0
+3603.0 3550.1 1721.1 1737.8  987.6   15.0    0.0 316.7 -35.3 -135.0
+3596.7 3543.9 1720.4 1738.1  975.4   14.9    0.0 318.0 -35.3 -135.0
+3590.9 3538.6 1720.5 1738.1 1063.9   15.0    0.0 319.3 -35.3 -135.0
+3585.6 3533.0 1720.6 1738.2 1018.4   15.0    0.0 318.4 -35.3 -135.0
+443.599,SUSR,N,Pumping up to maximum buoyancy...
+443.723,HVBD,N,- move commanded from -160.50 cc (3554.28) to 593.63 cc (480.00)...
+443.933,SMOTOR,N,roll limits on
+444.488,HVBD,N,-160.6 cc (ad: 3554.72 [3580.81,3528.62]) mA=118 V=15.76 D=0.00
+454.595,HVBD,N,-149.7 cc (ad: 3510.31 [3536.50,3484.12]) mA=1024 V=15.01 D=0.00
+464.705,HVBD,N,-134.8 cc (ad: 3449.50 [3474.94,3424.06]) mA=976 V=15.02 D=0.00
+474.811,HVBD,N,-120.1 cc (ad: 3389.66 [3415.38,3363.94]) mA=1054 V=15.01 D=0.00
+484.918,HVBD,N,-105.4 cc (ad: 3329.59 [3353.75,3305.44]) mA=1013 V=15.03 D=0.00
+495.031,HVBD,N,-90.9 cc (ad: 3270.59 [3294.19,3247.00]) mA=1050 V=15.02 D=0.00
+505.137,HVBD,N,-76.3 cc (ad: 3211.00 [3235.00,3187.00]) mA=1065 V=15.05 D=0.00
+515.244,HVBD,N,-61.9 cc (ad: 3152.50 [3176.19,3128.81]) mA=1002 V=15.07 D=0.00
+525.351,HVBD,N,-47.4 cc (ad: 3093.12 [3115.94,3070.31]) mA=1079 V=15.04 D=0.00
+535.458,HVBD,N,-32.8 cc (ad: 3033.72 [3057.25,3010.19]) mA=945 V=15.09 D=0.00
+545.564,HVBD,N,-18.2 cc (ad: 2974.25 [2998.06,2950.44]) mA=968 V=15.09 D=0.00
+555.676,HVBD,N,-3.5 cc (ad: 2914.19 [2938.12,2890.25]) mA=943 V=15.11 D=0.00
+565.783,HVBD,N,11.3 cc (ad: 2853.84 [2879.31,2828.38]) mA=934 V=15.12 D=0.00
+575.890,HVBD,N,26.1 cc (ad: 2793.53 [2819.88,2767.19]) mA=965 V=15.11 D=0.00
+585.997,HVBD,N,40.9 cc (ad: 2733.25 [2760.50,2706.00]) mA=929 V=15.13 D=0.00
+596.103,HVBD,N,55.8 cc (ad: 2672.53 [2699.44,2645.62]) mA=947 V=15.13 D=0.00
+606.210,HVBD,N,70.4 cc (ad: 2613.00 [2640.25,2585.75]) mA=1020 V=15.09 D=0.00
+616.317,HVBD,N,85.0 cc (ad: 2553.38 [2580.31,2526.44]) mA=920 V=15.14 D=0.00
+626.429,HVBD,N,100.0 cc (ad: 2492.53 [2519.00,2466.06]) mA=924 V=15.14 D=0.00
+636.536,HVBD,N,114.6 cc (ad: 2432.66 [2460.06,2405.25]) mA=985 V=15.13 D=0.00
+646.642,HVBD,N,129.6 cc (ad: 2371.66 [2400.62,2342.69]) mA=951 V=15.15 D=0.00
+656.750,HVBD,N,144.7 cc (ad: 2310.31 [2341.19,2279.44]) mA=911 V=15.17 D=0.00
+666.856,HVBD,N,159.8 cc (ad: 2248.47 [2281.06,2215.88]) mA=999 V=15.11 D=0.00
+676.963,HVBD,N,174.8 cc (ad: 2187.41 [2221.06,2153.75]) mA=967 V=15.14 D=0.00
+687.070,HVBD,N,189.9 cc (ad: 2126.00 [2159.94,2092.06]) mA=1011 V=15.12 D=0.00
+697.181,HVBD,N,204.9 cc (ad: 2064.84 [2099.88,2029.81]) mA=952 V=15.16 D=0.00
+707.291,HVBD,N,219.8 cc (ad: 2004.09 [2040.19,1968.00]) mA=1009 V=15.14 D=0.00
+717.398,HVBD,N,234.4 cc (ad: 1944.56 [1982.12,1907.00]) mA=982 V=15.16 D=0.00
+727.504,HVBD,N,249.4 cc (ad: 1883.22 [1922.81,1843.62]) mA=993 V=15.14 D=0.00
+737.612,HVBD,N,264.1 cc (ad: 1823.22 [1864.00,1782.44]) mA=957 V=15.16 D=0.00
+747.718,HVBD,N,279.1 cc (ad: 1762.22 [1802.88,1721.56]) mA=947 V=15.19 D=0.00
+757.831,HVBD,N,294.1 cc (ad: 1701.25 [1743.75,1658.75]) mA=937 V=15.19 D=0.00
+767.937,HVBD,N,308.8 cc (ad: 1641.06 [1683.94,1598.19]) mA=976 V=15.16 D=0.00
+778.044,HVBD,N,323.6 cc (ad: 1580.69 [1623.81,1537.56]) mA=1002 V=15.14 D=0.00
+788.151,HVBD,N,338.3 cc (ad: 1520.94 [1564.75,1477.12]) mA=982 V=15.17 D=0.00
+798.257,HVBD,N,352.8 cc (ad: 1461.91 [1504.44,1419.38]) mA=961 V=15.19 D=0.00
+808.374,HVBD,N,367.2 cc (ad: 1403.06 [1443.69,1362.44]) mA=917 V=15.22 D=0.00
+818.480,HVBD,N,381.6 cc (ad: 1344.50 [1383.88,1305.12]) mA=984 V=15.16 D=0.00
+828.592,HVBD,N,395.8 cc (ad: 1286.31 [1325.62,1247.00]) mA=906 V=15.21 D=0.00
+838.700,HVBD,N,410.3 cc (ad: 1227.47 [1266.88,1188.06]) mA=905 V=15.22 D=0.00
+848.807,HVBD,N,424.5 cc (ad: 1169.38 [1208.75,1130.00]) mA=967 V=15.21 D=0.00
+858.920,HVBD,N,438.8 cc (ad: 1111.03 [1150.38,1071.69]) mA=912 V=15.23 D=0.00
+869.028,HVBD,N,453.1 cc (ad: 1052.69 [1091.62,1013.75]) mA=943 V=15.22 D=0.00
+879.134,HVBD,N,467.5 cc (ad: 993.97 [1031.19,956.75]) mA=974 V=15.22 D=0.00
+889.246,HVBD,N,481.8 cc (ad: 935.78 [970.75,900.81]) mA=978 V=15.20 D=0.00
+899.352,HVBD,N,496.4 cc (ad: 876.19 [908.88,843.50]) mA=942 V=15.21 D=0.00
+909.458,HVBD,N,510.9 cc (ad: 817.31 [848.75,785.88]) mA=874 V=15.25 D=0.00
+919.584,HVBD,N,525.3 cc (ad: 758.59 [789.12,728.06]) mA=873 V=15.23 D=0.00
+929.691,HVBD,N,540.0 cc (ad: 698.75 [727.44,670.06]) mA=941 V=15.22 D=0.00
+939.797,HVBD,N,554.6 cc (ad: 639.22 [667.00,611.44]) mA=949 V=15.22 D=0.00
+949.904,HVBD,N,569.2 cc (ad: 579.38 [604.12,554.62]) mA=964 V=15.22 D=0.00
+960.016,HVBD,N,584.1 cc (ad: 518.78 [540.06,497.50]) mA=929 V=15.23 D=0.00done.
+966.716,HVBD,N,VBD completed from -160.50 cc (3554.28) to 593.39 cc (480.97 [3581.00,3527.56]->[496.06, 465.88]) dest 480.00 took 520.4 sec 952mA (5133mA peak) 15.2V (11.4Vmin) 5.91 AD/sec 104085 ticks
+966.774,SMOTOR,N,480.968750,496.062500,465.875000,1719.500000,1736.625000
+3582.7 3529.1 1720.7 1737.5   21.6   16.0    0.0 304.0 -35.3 -135.0
+3581.6 3528.0 1720.8 1737.8  115.8   15.8    0.0 305.7 -35.3 -135.0
+3581.2 3528.1 1721.1 1737.9  114.3   15.8    0.0 305.7 -35.3 -135.0
+3580.2 3528.2 1721.1 1737.9  115.9   15.8    0.0 305.3 -35.3 -135.0
+3575.8 3523.0 1720.8 1737.9  999.9   15.0    0.0 318.5 -35.3 -135.0
+3569.4 3516.2 1720.8 1737.9 1039.0   15.0    0.0 316.3 -35.3 -135.0
+3562.4 3510.5 1720.6 1738.1 1035.7   15.0    0.0 316.9 -35.3 -135.0
+3557.6 3504.6 1721.1 1737.7  983.8   15.0    0.0 318.0 -35.3 -135.0
+3551.2 3499.2 1721.0 1737.2 1007.1   15.0    0.0 318.5 -35.3 -135.0
+3543.9 3493.6 1720.9 1738.0 1035.4   15.0    0.0 317.5 -35.3 -135.0
+3539.2 3486.4 1721.0 1737.9 1024.7   15.0    0.0 318.4 -35.3 -135.0
+3532.6 3480.4 1720.8 1737.6  987.0   15.0    0.0 316.9 -35.3 -135.0
+3526.2 3474.8 1721.1 1738.0 1024.1   15.0    0.0 316.2 -35.3 -135.0
+3520.1 3469.2 1721.1 1737.8  965.1   15.0    0.0 316.6 -35.3 -135.0
+3514.8 3462.8 1720.6 1737.9 1002.4   15.0    0.0 316.6 -35.3 -135.0
+3508.9 3457.1 1720.7 1737.6 1016.3   15.0    0.0 315.5 -35.3 -135.0
+3503.1 3452.2 1720.6 1737.6  992.5   15.0    0.0 319.1 -35.3 -135.0
+3497.1 3446.0 1720.8 1737.8  987.9   15.0    0.0 318.9 -35.3 -135.0
+3491.5 3439.5 1720.7 1737.8  989.2   15.0    0.0 317.4 -35.3 -135.0
+3485.2 3433.7 1721.0 1738.1 1003.7   15.0    0.0 319.6 -35.3 -135.0
+3478.8 3428.1 1721.0 1737.9  992.2   15.0    0.0 318.4 -35.3 -135.0
+3472.8 3421.5 1720.9 1737.6  999.6   15.0    0.0 317.6 -35.3 -135.0
+3465.8 3416.7 1720.9 1737.8  985.1   15.0    0.0 318.5 -35.3 -135.0
+3460.6 3409.8 1720.6 1737.9 1017.7   15.0    0.0 318.2 -35.3 -135.0
+3454.4 3402.6 1721.1 1737.9  980.8   15.1    0.0 317.1 -35.3 -135.0
+3450.1 3397.5 1721.2 1737.8  995.1   15.0    0.0 316.8 -35.3 -135.0
+3443.6 3391.2 1720.4 1738.2  963.7   15.0    0.0 317.4 -35.3 -135.0
+3436.9 3385.4 1720.4 1737.7  903.9   15.1    0.0 316.0 -35.3 -135.0
+3430.2 3380.1 1721.1 1737.7 1001.8   15.0    0.0 317.6 -35.3 -135.0
+3425.0 3373.7 1720.8 1737.7  999.6   15.0    0.0 317.8 -35.3 -135.0
+3419.4 3367.5 1720.8 1738.0  977.4   15.1    0.0 317.5 -35.3 -135.0
+3413.1 3361.6 1720.7 1738.0 1080.1   15.0    0.0 316.0 -35.3 -135.0
+3406.9 3355.9 1721.1 1737.8  964.7   15.0    0.0 316.9 -35.3 -135.0
+3400.8 3349.9 1721.1 1737.8  960.1   15.0    0.0 320.6 -35.3 -135.0
+3394.9 3343.9 1720.8 1737.8 1059.4   15.0    0.0 318.8 -35.3 -135.0
+3389.7 3338.2 1720.9 1737.9  989.6   15.0    0.0 314.1 -35.3 -135.0
+3383.1 3333.1 1721.1 1737.7  957.2   15.1    0.0 313.5 -35.3 -135.0
+3377.0 3326.9 1721.0 1737.4  973.4   15.0    0.0 315.4 -35.3 -135.0
+3370.6 3320.6 1720.8 1738.1  969.2   15.1    0.0 319.7 -35.3 -135.0
+3364.6 3315.8 1720.7 1737.8 1079.8   15.0    0.0 319.1 -35.3 -135.0
+3358.6 3310.1 1720.8 1738.4  977.9   15.0    0.0 316.6 -35.3 -135.0
+3352.5 3303.5 1720.7 1737.8  991.8   15.0    0.0 317.9 -35.3 -135.0
+3345.9 3297.8 1720.8 1737.6  963.5   15.1    0.0 314.0 -35.3 -135.0
+3340.1 3292.4 1720.9 1737.6  987.1   15.0    0.0 319.6 -35.3 -135.0
+3334.2 3286.6 1720.7 1737.5  954.8   15.0    0.0 316.2 -35.3 -135.0
+3328.0 3281.4 1720.6 1738.0  954.3   15.1    0.0 315.7 -35.3 -135.0
+3322.4 3274.9 1720.6 1737.8 1083.5   15.0    0.0 317.6 -35.3 -135.0
+3316.6 3269.6 1720.4 1737.7  981.0   15.0    0.0 320.3 -35.3 -135.0
+3311.4 3263.2 1720.9 1737.8  963.7   15.1    0.0 315.6 -35.3 -135.0
+3305.7 3257.2 1721.0 1737.8  959.6   15.1    0.0 315.0 -35.3 -135.0
+3299.1 3252.3 1721.2 1738.0  943.0   15.1    0.0 317.7 -35.3 -135.0
+3293.2 3245.0 1720.9 1738.0 1036.5   15.0    0.0 317.4 -35.3 -135.0
+3287.4 3240.2 1720.6 1737.9  985.0   15.1    0.0 318.8 -35.3 -135.0
+3280.6 3234.6 1721.2 1737.6 1053.9   15.1    0.0 318.9 -35.3 -135.0
+3275.2 3228.6 1720.7 1737.4  989.1   15.1    0.0 318.9 -35.3 -135.0
+3268.6 3222.4 1720.8 1738.2  984.5   15.1    0.0 314.4 -35.3 -135.0
+3262.6 3216.1 1720.8 1737.9  963.7   15.1    0.0 315.4 -35.3 -135.0
+3258.0 3210.8 1720.8 1737.7 1083.1   15.0    0.0 318.4 -35.3 -135.0
+3252.4 3203.6 1720.8 1738.2  954.3   15.1    0.0 317.4 -35.3 -135.0
+3245.9 3198.7 1720.7 1737.8 1031.6   15.1    0.0 315.3 -35.3 -135.0
+3240.1 3192.2 1721.0 1738.0  963.6   15.1    0.0 317.1 -35.3 -135.0
+3234.7 3187.5 1721.1 1737.6  950.5   15.1    0.0 314.2 -35.3 -135.0
+3227.9 3181.2 1721.2 1737.8 1056.7   15.0    0.0 316.3 -35.3 -135.0
+3222.4 3175.7 1720.4 1737.6  972.2   15.1    0.0 316.4 -35.3 -135.0
+3215.4 3168.9 1720.8 1737.6 1041.5   15.0    0.0 317.3 -35.3 -135.0
+3210.2 3163.9 1720.7 1737.6 1014.7   15.0    0.0 313.6 -35.3 -135.0
+3204.4 3157.1 1720.9 1737.6  982.7   15.1    0.0 319.5 -35.3 -135.0
+3199.1 3151.4 1720.8 1737.8  977.7   15.0    0.0 319.8 -35.3 -135.0
+3192.1 3145.9 1720.7 1738.1  948.7   15.1    0.0 319.3 -35.3 -135.0
+3186.8 3139.3 1721.2 1737.5  965.2   15.1    0.0 320.2 -35.3 -135.0
+3180.3 3133.6 1720.9 1737.9  963.3   15.1    0.0 316.7 -35.3 -135.0
+3175.3 3127.8 1720.6 1737.8  970.1   15.1    0.0 316.1 -35.3 -135.0
+3168.4 3121.9 1720.9 1738.2  979.2   15.1    0.0 317.3 -35.3 -135.0
+3163.1 3116.4 1720.6 1737.7 1003.4   15.1    0.0 316.8 -35.3 -135.0
+3156.6 3111.2 1720.4 1737.8  936.0   15.1    0.0 315.5 -35.3 -135.0
+3150.4 3104.9 1721.1 1737.9 1030.3   15.1    0.0 317.0 -35.3 -135.0
+3145.6 3098.6 1720.3 1737.6  941.0   15.1    0.0 316.9 -35.3 -135.0
+3138.8 3093.4 1720.8 1738.1  984.4   15.1    0.0 319.9 -35.3 -135.0
+3133.9 3087.4 1720.9 1737.6  952.3   15.1    0.0 318.5 -35.3 -135.0
+3128.1 3080.9 1720.7 1738.0 1022.3   15.1    0.0 315.1 -35.3 -135.0
+3121.4 3075.2 1720.9 1738.2 1056.4   15.1    0.0 317.4 -35.3 -135.0
+3116.1 3069.5 1720.3 1738.2  937.3   15.1    0.0 317.4 -35.3 -135.0
+3109.9 3064.5 1720.9 1737.9 1009.6   15.1    0.0 316.6 -35.3 -135.0
+3103.7 3057.9 1720.4 1737.6  941.7   15.1    0.0 315.1 -35.3 -135.0
+3098.1 3051.2 1721.0 1737.8  951.3   15.1    0.0 316.9 -35.3 -135.0
+3092.5 3046.0 1721.3 1738.1 1054.4   15.0    0.0 313.8 -35.3 -135.0
+3087.9 3040.2 1720.8 1738.1  930.3   15.1    0.0 317.8 -35.3 -135.0
+3081.6 3033.8 1720.7 1738.1  971.7   15.1    0.0 316.4 -35.3 -135.0
+3075.0 3027.8 1720.8 1737.9  960.1   15.1    0.0 317.5 -35.3 -135.0
+3068.9 3021.8 1720.7 1737.9 1023.0   15.1    0.0 316.8 -35.3 -135.0
+3063.1 3016.6 1720.5 1737.9 1033.4   15.1    0.0 317.2 -35.3 -135.0
+3057.8 3010.1 1720.4 1738.1  946.9   15.1    0.0 317.1 -35.3 -135.0
+3052.4 3003.6 1720.4 1737.9 1008.9   15.1    0.0 316.4 -35.3 -135.0
+3044.6 2998.5 1721.1 1737.9  982.2   15.1    0.0 318.3 -35.3 -135.0
+3038.6 2992.1 1720.7 1737.7  922.5   15.1    0.0 315.8 -35.3 -135.0
+3035.1 2987.1 1720.9 1737.7  984.8   15.1    0.0 318.9 -35.3 -135.0
+3027.9 2980.4 1720.8 1737.9  998.8   15.1    0.0 316.3 -35.3 -135.0
+3021.2 2974.9 1721.0 1737.8  991.0   15.1    0.0 320.0 -35.3 -135.0
+3015.8 2969.8 1720.6 1737.8  983.8   15.1    0.0 322.0 -35.3 -135.0
+3010.9 2962.9 1720.8 1737.8  977.8   15.1    0.0 313.9 -35.3 -135.0
+3004.2 2956.7 1721.0 1737.6  970.7   15.1    0.0 317.3 -35.3 -135.0
+2998.1 2951.2 1721.1 1737.9 1036.2   15.1    0.0 315.3 -35.3 -135.0
+2992.3 2944.8 1720.8 1738.2  989.3   15.1    0.0 316.3 -35.3 -135.0
+2986.6 2938.1 1720.8 1738.1  990.3   15.1    0.0 315.3 -35.3 -135.0
+2980.8 2932.8 1720.9 1737.8  976.6   15.1    0.0 313.1 -35.3 -135.0
+2974.4 2926.5 1720.9 1737.9  925.0   15.1    0.0 314.5 -35.3 -135.0
+2968.9 2920.6 1721.1 1738.0  993.8   15.1    0.0 312.9 -35.3 -135.0
+2962.8 2915.1 1721.2 1737.9  969.9   15.1    0.0 313.8 -35.3 -135.0
+2956.5 2909.4 1720.6 1737.9  970.3   15.1    0.0 314.3 -35.3 -135.0
+2950.6 2903.3 1720.9 1738.0  987.7   15.1    0.0 317.0 -35.3 -135.0
+2944.6 2896.8 1720.9 1737.8 1005.3   15.1    0.0 319.7 -35.3 -135.0
+2939.0 2891.1 1720.8 1738.1  969.6   15.1    0.0 315.9 -35.3 -135.0
+2933.2 2884.1 1720.8 1737.8 1017.6   15.1    0.0 316.9 -35.3 -135.0
+2927.8 2877.8 1721.1 1738.2  989.6   15.1    0.0 316.2 -35.3 -135.0
+2920.6 2872.5 1720.9 1737.9  948.2   15.1    0.0 316.7 -35.3 -135.0
+2915.4 2866.1 1720.8 1737.9 1016.4   15.1    0.0 315.0 -35.3 -135.0
+2909.6 2860.4 1720.9 1737.9  936.3   15.1    0.0 315.7 -35.3 -135.0
+2903.9 2854.1 1720.8 1737.8  950.1   15.1    0.0 317.7 -35.3 -135.0
+2898.4 2848.8 1720.8 1737.4  975.6   15.1    0.0 315.1 -35.3 -135.0
+2892.0 2842.0 1720.6 1737.9  931.8   15.1    0.0 316.5 -35.3 -135.0
+2886.3 2836.2 1721.1 1737.8  917.8   15.1    0.0 318.7 -35.3 -135.0
+2880.1 2830.0 1720.9 1738.0  918.3   15.1    0.0 317.4 -35.3 -135.0
+2874.6 2824.4 1721.1 1737.7 1017.9   15.1    0.0 316.7 -35.3 -135.0
+2868.9 2817.6 1721.2 1737.8 1053.5   15.1    0.0 317.7 -35.3 -135.0
+2863.8 2811.6 1720.8 1738.0  961.3   15.1    0.0 314.5 -35.3 -135.0
+2858.1 2804.2 1720.9 1737.9  952.8   15.1    0.0 317.3 -35.3 -135.0
+2851.6 2798.9 1721.1 1737.8  948.6   15.1    0.0 316.7 -35.3 -135.0
+2845.8 2792.3 1720.9 1737.8  982.6   15.1    0.0 319.5 -35.3 -135.0
+2840.6 2786.6 1720.8 1737.9 1021.9   15.1    0.0 317.0 -35.3 -135.0
+2833.7 2780.7 1720.9 1737.9  966.8   15.1    0.0 317.2 -35.3 -135.0
+2827.6 2775.1 1720.8 1737.6  982.4   15.1    0.0 316.0 -35.3 -135.0
+2821.7 2769.7 1720.8 1737.8  943.7   15.1    0.0 313.9 -35.3 -135.0
+2815.7 2762.9 1720.9 1737.7  949.9   15.1    0.0 318.1 -35.3 -135.0
+2809.8 2756.6 1720.9 1737.8  942.5   15.1    0.0 316.1 -35.3 -135.0
+2803.5 2751.1 1720.5 1737.4  942.4   15.1    0.0 316.3 -35.3 -135.0
+2798.8 2744.9 1720.5 1737.8 1032.0   15.1    0.0 315.8 -35.3 -135.0
+2792.8 2738.4 1720.7 1738.2  943.0   15.1    0.0 317.0 -35.3 -135.0
+2787.1 2733.3 1720.9 1737.9  950.0   15.1    0.0 315.0 -35.3 -135.0
+2780.6 2726.4 1720.8 1737.8  989.3   15.1    0.0 317.4 -35.3 -135.0
+2774.5 2720.3 1720.9 1738.2  922.0   15.1    0.0 316.9 -35.3 -135.0
+2767.8 2714.2 1721.0 1738.1  917.2   15.1    0.0 318.7 -35.3 -135.0
+2762.2 2708.9 1721.1 1737.8  959.0   15.1    0.0 317.4 -35.3 -135.0
+2755.9 2702.8 1721.2 1737.9  969.6   15.1    0.0 317.9 -35.3 -135.0
+2750.5 2696.7 1721.1 1737.9  960.0   15.1    0.0 316.3 -35.3 -135.0
+2744.6 2690.5 1721.0 1737.8  948.3   15.1    0.0 316.8 -35.3 -135.0
+2738.9 2685.4 1720.8 1737.5  967.7   15.1    0.0 316.0 -35.3 -135.0
+2733.0 2678.3 1721.1 1737.9  956.0   15.1    0.0 316.3 -35.3 -135.0
+2725.6 2672.6 1720.6 1737.8 1013.6   15.1    0.0 315.9 -35.3 -135.0
+2719.8 2666.2 1720.6 1737.7  976.6   15.1    0.0 315.4 -35.3 -135.0
+2713.8 2661.1 1721.0 1738.0  929.2   15.1    0.0 321.1 -35.3 -135.0
+2708.8 2654.3 1720.7 1737.9  966.9   15.1    0.0 316.2 -35.3 -135.0
+2702.3 2648.0 1720.6 1737.6 1013.8   15.1    0.0 316.1 -35.3 -135.0
+2695.4 2641.8 1721.0 1737.9  937.3   15.1    0.0 318.7 -35.3 -135.0
+2689.6 2636.4 1720.8 1737.9 1028.3   15.1    0.0 315.1 -35.3 -135.0
+2684.1 2630.4 1720.6 1738.1  929.5   15.1    0.0 317.6 -35.3 -135.0
+2677.8 2625.1 1721.0 1737.9  962.4   15.1    0.0 314.9 -35.3 -135.0
+2672.5 2619.2 1720.8 1737.8  923.0   15.1    0.0 316.6 -35.3 -135.0
+2666.8 2612.5 1720.9 1738.1  921.4   15.1    0.0 317.7 -35.3 -135.0
+2660.5 2606.6 1721.1 1737.8  950.4   15.1    0.0 315.9 -35.3 -135.0
+2654.6 2601.4 1721.2 1738.1  959.7   15.1    0.0 315.8 -35.3 -135.0
+2648.3 2594.6 1721.0 1737.9  979.7   15.1    0.0 316.9 -35.3 -135.0
+2642.4 2589.1 1720.7 1738.1  909.5   15.2    0.0 318.6 -35.3 -135.0
+2636.6 2582.2 1721.1 1737.7  942.9   15.1    0.0 317.0 -35.3 -135.0
+2631.6 2576.9 1721.1 1737.6 1036.3   15.1    0.0 317.6 -35.3 -135.0
+2625.1 2571.7 1720.9 1737.8 1026.3   15.1    0.0 315.1 -35.3 -135.0
+2619.2 2565.9 1721.2 1737.9  962.6   15.1    0.0 314.7 -35.3 -135.0
+2612.4 2559.8 1721.0 1738.0  916.2   15.1    0.0 316.9 -35.3 -135.0
+2607.8 2553.2 1720.9 1738.1  910.2   15.2    0.0 316.6 -35.3 -135.0
+2601.4 2547.2 1721.0 1738.1 1007.2   15.1    0.0 317.9 -35.3 -135.0
+2596.0 2542.4 1720.6 1737.6 1024.1   15.1    0.0 316.6 -35.3 -135.0
+2589.4 2536.2 1720.9 1737.9  978.9   15.1    0.0 315.3 -35.3 -135.0
+2583.1 2530.1 1721.1 1737.9 1077.6   15.1    0.0 317.7 -35.3 -135.0
+2577.2 2524.1 1721.1 1737.9  950.5   15.2    0.0 316.2 -35.3 -135.0
+2571.5 2518.0 1720.8 1738.1  937.2   15.1    0.0 318.1 -35.3 -135.0
+2565.0 2512.2 1720.9 1737.6  967.4   15.1    0.0 315.8 -35.3 -135.0
+2559.5 2506.4 1721.2 1737.6  955.4   15.1    0.0 315.6 -35.3 -135.0
+2553.0 2500.4 1720.9 1737.9  928.1   15.2    0.0 318.1 -35.3 -135.0
+2547.6 2494.1 1720.7 1738.0  966.4   15.1    0.0 318.1 -35.3 -135.0
+2541.8 2488.4 1720.7 1738.1  988.9   15.2    0.0 314.5 -35.3 -135.0
+2536.0 2482.2 1720.6 1737.9  920.0   15.2    0.0 314.1 -35.3 -135.0
+2529.2 2476.1 1720.9 1738.0  982.3   15.1    0.0 317.1 -35.3 -135.0
+2523.5 2470.4 1720.8 1737.8  926.7   15.1    0.0 314.9 -35.3 -135.0
+2517.5 2463.8 1720.9 1737.8  958.2   15.1    0.0 315.9 -35.3 -135.0
+2511.4 2457.4 1720.8 1737.8  995.9   15.1    0.0 318.8 -35.3 -135.0
+2505.2 2451.8 1720.6 1737.8  985.2   15.1    0.0 316.6 -35.3 -135.0
+2499.0 2445.9 1720.9 1738.1  941.3   15.2    0.0 316.1 -35.3 -135.0
+2493.7 2439.6 1720.8 1737.8  964.1   15.1    0.0 315.6 -35.3 -135.0
+2486.9 2434.4 1720.7 1738.1  970.4   15.1    0.0 317.9 -35.3 -135.0
+2481.6 2427.3 1720.6 1737.9 1054.8   15.1    0.0 316.9 -35.3 -135.0
+2476.5 2421.2 1720.8 1737.5  948.8   15.1    0.0 315.1 -35.3 -135.0
+2470.5 2415.4 1720.8 1737.8  951.0   15.2    0.0 317.0 -35.3 -135.0
+2464.1 2409.6 1720.9 1737.6  990.4   15.1    0.0 316.6 -35.3 -135.0
+2458.2 2403.2 1720.9 1737.8  947.8   15.1    0.0 316.4 -35.3 -135.0
+2452.4 2397.3 1720.8 1737.5  952.0   15.2    0.0 315.9 -35.3 -135.0
+2446.6 2390.8 1720.9 1737.9  912.2   15.2    0.0 314.6 -35.3 -135.0
+2440.8 2385.0 1720.8 1738.1  983.9   15.1    0.0 315.7 -35.3 -135.0
+2434.2 2379.3 1720.6 1737.8  954.0   15.2    0.0 315.8 -35.3 -135.0
+2429.2 2372.4 1720.6 1738.2 1015.6   15.1    0.0 317.5 -35.3 -135.0
+2423.3 2365.8 1720.8 1737.8  989.5   15.1    0.0 318.2 -35.3 -135.0
+2418.6 2360.4 1721.1 1738.4  900.4   15.1    0.0 315.8 -35.3 -135.0
+2412.3 2353.8 1720.8 1738.2  937.3   15.1    0.0 319.4 -35.3 -135.0
+2406.0 2347.2 1720.8 1737.8  903.6   15.2    0.0 316.2 -35.3 -135.0
+2399.2 2341.4 1721.0 1737.7  934.3   15.2    0.0 316.9 -35.3 -135.0
+2393.8 2334.9 1721.1 1737.9  919.6   15.2    0.0 318.9 -35.3 -135.0
+2388.2 2328.3 1720.7 1737.7  980.8   15.1    0.0 318.3 -35.3 -135.0
+2381.8 2322.3 1720.8 1737.7 1012.0   15.1    0.0 316.3 -35.3 -135.0
+2376.5 2315.7 1720.8 1737.8  999.0   15.1    0.0 318.6 -35.3 -135.0
+2370.6 2310.2 1721.5 1738.2  901.0   15.1    0.0 316.2 -35.3 -135.0
+2364.9 2304.2 1720.8 1737.8  923.6   15.2    0.0 316.5 -35.3 -135.0
+2358.3 2296.8 1721.2 1737.8  895.6   15.2    0.0 314.5 -35.3 -135.0
+2353.3 2290.2 1720.7 1737.8  926.1   15.1    0.0 317.6 -35.3 -135.0
+2346.9 2285.0 1720.8 1737.6  909.9   15.2    0.0 315.3 -35.3 -135.0
+2340.8 2277.8 1721.1 1738.2  958.7   15.2    0.0 318.6 -35.3 -135.0
+2334.4 2271.6 1720.9 1737.9 1019.8   15.1    0.0 318.1 -35.3 -135.0
+2329.8 2266.1 1720.8 1737.8 1054.3   15.1    0.0 317.6 -35.3 -135.0
+2323.3 2258.9 1720.6 1737.7 1029.0   15.1    0.0 312.9 -35.3 -135.0
+2316.7 2252.7 1721.1 1738.1 1002.9   15.1    0.0 317.8 -35.3 -135.0
+2310.9 2246.1 1721.0 1737.7  923.6   15.2    0.0 314.8 -35.3 -135.0
+2304.9 2240.4 1721.4 1737.4  885.8   15.2    0.0 315.9 -35.3 -135.0
+2298.8 2234.1 1720.7 1738.7  939.0   15.1    0.0 319.0 -35.3 -135.0
+2292.8 2228.3 1720.9 1737.9  930.6   15.2    0.0 314.4 -35.3 -135.0
+2286.6 2221.8 1720.8 1738.1  940.4   15.1    0.0 317.6 -35.3 -135.0
+2280.8 2215.7 1721.0 1737.9  926.8   15.2    0.0 315.8 -35.3 -135.0
+2274.1 2208.9 1720.8 1738.4  925.0   15.2    0.0 318.6 -35.3 -135.0
+2268.6 2203.4 1720.9 1737.6 1008.8   15.2    0.0 315.0 -35.3 -135.0
+2263.2 2196.9 1720.8 1737.6  910.6   15.2    0.0 314.9 -35.3 -135.0
+2257.1 2190.8 1720.2 1738.4  984.7   15.2    0.0 319.7 -35.3 -135.0
+2250.5 2185.5 1721.6 1737.2  952.3   15.2    0.0 314.7 -35.3 -135.0
+2244.8 2178.8 1720.9 1737.8  956.0   15.2    0.0 314.4 -35.3 -135.0
+2238.4 2172.0 1720.9 1738.4  943.3   15.2    0.0 317.9 -35.3 -135.0
+2231.8 2166.9 1720.7 1737.8  917.5   15.2    0.0 317.1 -35.3 -135.0
+2226.5 2159.6 1720.9 1737.6  935.1   15.2    0.0 317.0 -35.3 -135.0
+2221.1 2153.2 1720.9 1737.8  948.3   15.2    0.0 313.8 -35.3 -135.0
+2214.4 2147.2 1720.8 1737.8  977.0   15.1    0.0 319.1 -35.3 -135.0
+2207.8 2141.3 1720.8 1737.8  937.2   15.2    0.0 315.1 -35.3 -135.0
+2201.8 2135.1 1720.9 1737.6  930.8   15.2    0.0 316.3 -35.3 -135.0
+2196.0 2129.1 1721.0 1737.8  990.6   15.1    0.0 314.9 -35.3 -135.0
+2190.3 2122.8 1720.8 1737.8 1009.0   15.1    0.0 317.2 -35.3 -135.0
+2184.4 2116.9 1721.1 1737.9  965.7   15.1    0.0 321.2 -35.3 -135.0
+2179.0 2110.6 1720.8 1737.9  989.2   15.2    0.0 315.8 -35.3 -135.0
+2172.5 2104.5 1720.8 1737.9  949.8   15.1    0.0 316.2 -35.3 -135.0
+2166.7 2097.4 1721.0 1737.9  926.5   15.2    0.0 313.1 -35.3 -135.0
+2160.4 2092.4 1720.8 1737.9  921.3   15.2    0.0 315.5 -35.3 -135.0
+2155.0 2085.9 1721.1 1737.9  965.5   15.1    0.0 318.8 -35.3 -135.0
+2148.5 2080.1 1721.2 1738.1 1004.0   15.2    0.0 316.5 -35.3 -135.0
+2142.2 2074.0 1721.0 1738.2  945.0   15.2    0.0 315.6 -35.3 -135.0
+2136.6 2067.9 1720.7 1737.8  944.0   15.2    0.0 315.6 -35.3 -135.0
+2130.9 2061.6 1720.7 1737.9  909.3   15.2    0.0 316.4 -35.3 -135.0
+2124.6 2055.4 1721.0 1737.9  940.6   15.2    0.0 315.3 -35.3 -135.0
+2118.3 2049.6 1720.8 1737.8  927.7   15.2    0.0 314.6 -35.3 -135.0
+2113.1 2042.9 1720.9 1738.2  932.0   15.2    0.0 315.3 -35.3 -135.0
+2106.2 2037.0 1720.4 1737.7  941.3   15.1    0.0 314.5 -35.3 -135.0
+2100.7 2030.7 1720.9 1738.1  925.2   15.2    0.0 318.6 -35.3 -135.0
+2094.9 2024.7 1720.8 1737.9  951.5   15.2    0.0 317.2 -35.3 -135.0
+2089.2 2018.8 1720.9 1738.0  946.9   15.2    0.0 317.1 -35.3 -135.0
+2083.2 2012.2 1721.1 1737.9  949.2   15.2    0.0 319.0 -35.3 -135.0
+2076.9 2006.5 1721.0 1737.9  969.0   15.2    0.0 315.0 -35.3 -135.0
+2071.2 2000.1 1720.8 1737.6  962.4   15.2    0.0 318.2 -35.3 -135.0
+2066.2 1993.6 1720.8 1738.1  894.3   15.2    0.0 314.9 -35.3 -135.0
+2059.9 1987.4 1721.4 1738.1  923.0   15.2    0.0 315.4 -35.3 -135.0
+2053.9 1981.3 1721.1 1737.5  935.0   15.2    0.0 320.0 -35.3 -135.0
+2047.8 1975.2 1720.5 1737.9  956.7   15.2    0.0 316.5 -35.3 -135.0
+2041.6 1969.6 1720.8 1737.5  938.2   15.2    0.0 316.9 -35.3 -135.0
+2035.9 1963.1 1720.9 1737.8  925.6   15.2    0.0 315.8 -35.3 -135.0
+2030.2 1957.1 1720.9 1737.8  986.0   15.2    0.0 316.0 -35.3 -135.0
+2024.6 1951.1 1720.8 1737.6  993.0   15.2    0.0 315.9 -35.3 -135.0
+2018.2 1945.5 1720.8 1737.7  974.4   15.2    0.0 317.5 -35.3 -135.0
+2012.8 1938.9 1720.7 1737.9  939.6   15.2    0.0 315.9 -35.3 -135.0
+2006.6 1932.6 1720.9 1737.7  918.2   15.2    0.0 313.8 -35.3 -135.0
+2001.5 1927.1 1720.8 1737.6  927.1   15.2    0.0 314.4 -35.3 -135.0
+1994.6 1920.9 1720.6 1738.1  935.1   15.2    0.0 317.5 -35.3 -135.0
+1989.3 1914.6 1720.8 1737.9  926.4   15.2    0.0 314.5 -35.3 -135.0
+1983.0 1908.1 1720.8 1738.2  953.1   15.2    0.0 317.5 -35.3 -135.0
+1977.4 1901.7 1720.6 1738.0  992.4   15.2    0.0 318.5 -35.3 -135.0
+1970.9 1895.5 1720.9 1737.6  973.4   15.2    0.0 313.8 -35.3 -135.0
+1965.6 1888.9 1720.7 1737.9  948.1   15.2    0.0 314.4 -35.3 -135.0
+1959.4 1883.2 1721.1 1737.5  906.7   15.2    0.0 314.9 -35.3 -135.0
+1953.6 1877.0 1721.0 1737.9  906.6   15.2    0.0 315.6 -35.3 -135.0
+1947.8 1870.5 1720.9 1738.2  888.9   15.2    0.0 315.4 -35.3 -135.0
+1942.4 1864.9 1720.8 1738.5  937.6   15.2    0.0 316.9 -35.3 -135.0
+1936.8 1858.0 1720.9 1738.1  940.3   15.2    0.0 315.7 -35.3 -135.0
+1930.2 1851.9 1720.7 1738.2  908.9   15.2    0.0 316.4 -35.3 -135.0
+1924.8 1845.9 1720.6 1737.8  925.0   15.2    0.0 315.9 -35.3 -135.0
+1918.6 1839.8 1721.1 1737.6  951.4   15.2    0.0 315.9 -35.3 -135.0
+1912.9 1833.3 1721.1 1737.6  985.4   15.2    0.0 316.1 -35.3 -135.0
+1906.5 1827.9 1720.8 1738.1  964.6   15.2    0.0 314.4 -35.3 -135.0
+1901.6 1821.1 1720.8 1737.8 1002.2   15.1    0.0 315.8 -35.3 -135.0
+1894.9 1814.9 1720.9 1737.8  986.3   15.2    0.0 315.5 -35.3 -135.0
+1888.4 1808.9 1721.2 1737.9  957.6   15.2    0.0 317.1 -35.3 -135.0
+1883.3 1803.2 1721.2 1738.1  969.9   15.2    0.0 316.1 -35.3 -135.0
+1877.6 1796.8 1721.0 1737.5  966.0   15.2    0.0 316.8 -35.3 -135.0
+1872.1 1790.5 1720.6 1738.0  940.5   15.2    0.0 316.6 -35.3 -135.0
+1866.0 1784.2 1720.9 1737.9  971.0   15.2    0.0 316.0 -35.3 -135.0
+1859.4 1778.6 1720.9 1737.9  923.0   15.2    0.0 316.2 -35.3 -135.0
+1854.0 1772.3 1720.8 1738.0  910.3   15.2    0.0 315.9 -35.3 -135.0
+1847.5 1766.4 1721.2 1737.9  887.8   15.2    0.0 315.3 -35.3 -135.0
+1842.4 1759.4 1720.7 1737.8  896.1   15.2    0.0 317.2 -35.3 -135.0
+1836.2 1753.8 1720.7 1738.2  906.9   15.2    0.0 314.4 -35.3 -135.0
+1830.1 1747.8 1721.0 1737.9  908.8   15.2    0.0 315.2 -35.3 -135.0
+1823.8 1741.4 1721.1 1737.6  915.1   15.2    0.0 316.9 -35.3 -135.0
+1817.4 1735.1 1720.6 1738.0  927.3   15.2    0.0 318.6 -35.3 -135.0
+1811.2 1730.0 1721.7 1738.0  918.4   15.2    0.0 314.6 -35.3 -135.0
+1805.2 1724.8 1720.8 1737.9  956.7   15.2    0.0 314.9 -35.3 -135.0
+1798.8 1718.6 1720.8 1738.0  982.5   15.2    0.0 314.5 -35.3 -135.0
+1792.2 1711.9 1721.2 1738.1  973.9   15.2    0.0 318.3 -35.3 -135.0
+1786.4 1705.4 1721.1 1738.1  933.7   15.2    0.0 313.5 -35.3 -135.0
+1780.2 1699.6 1721.2 1737.7  925.5   15.2    0.0 313.7 -35.3 -135.0
+1775.6 1693.7 1720.7 1737.6  937.0   15.2    0.0 317.7 -35.3 -135.0
+1769.1 1686.9 1721.0 1737.7  977.8   15.2    0.0 315.3 -35.3 -135.0
+1763.3 1681.4 1721.3 1738.5  928.6   15.2    0.0 317.0 -35.3 -135.0
+1758.7 1675.1 1721.1 1738.4  923.3   15.2    0.0 315.4 -35.3 -135.0
+1752.9 1668.3 1720.8 1737.9  934.0   15.2    0.0 315.4 -35.3 -135.0
+1747.2 1661.8 1720.9 1737.9  925.4   15.2    0.0 315.0 -35.3 -135.0
+1739.9 1656.2 1720.9 1737.9  924.6   15.2    0.0 318.9 -35.3 -135.0
+1735.2 1650.3 1721.2 1737.6  964.8   15.2    0.0 314.1 -35.3 -135.0
+1729.4 1643.7 1720.8 1738.0  928.5   15.2    0.0 313.9 -35.3 -135.0
+1723.2 1637.9 1720.5 1738.1  923.6   15.2    0.0 316.1 -35.3 -135.0
+1717.3 1632.0 1720.9 1737.9  929.2   15.2    0.0 316.7 -35.3 -135.0
+1711.7 1626.2 1720.8 1737.6  916.9   15.2    0.0 316.9 -35.3 -135.0
+1705.6 1619.9 1720.9 1737.9  897.5   15.2    0.0 315.7 -35.3 -135.0
+1700.2 1614.2 1720.9 1737.6  895.8   15.2    0.0 317.6 -35.3 -135.0
+1693.1 1608.2 1720.3 1738.2  904.9   15.2    0.0 317.1 -35.3 -135.0
+1687.1 1601.8 1720.8 1737.8  888.5   15.2    0.0 315.7 -35.3 -135.0
+1681.2 1595.9 1720.8 1738.2  919.0   15.2    0.0 315.9 -35.3 -135.0
+1674.8 1589.8 1721.1 1738.1  910.9   15.2    0.0 317.4 -35.3 -135.0
+1669.7 1583.6 1720.8 1738.1  933.9   15.2    0.0 314.7 -35.3 -135.0
+1663.3 1577.9 1720.6 1737.8  919.9   15.2    0.0 315.9 -35.3 -135.0
+1657.2 1572.3 1721.1 1737.8  926.5   15.2    0.0 316.4 -35.3 -135.0
+1651.3 1565.7 1720.9 1737.9  920.3   15.2    0.0 313.1 -35.3 -135.0
+1645.2 1560.2 1720.9 1737.9  912.9   15.2    0.0 317.2 -35.3 -135.0
+1639.5 1554.2 1720.9 1738.2  929.1   15.2    0.0 317.3 -35.3 -135.0
+1634.2 1547.6 1721.4 1737.9  940.1   15.2    0.0 314.6 -35.3 -135.0
+1628.4 1541.5 1720.7 1738.1  945.5   15.2    0.0 313.9 -35.3 -135.0
+1621.9 1535.2 1721.0 1737.6 1009.3   15.2    0.0 319.8 -35.3 -135.0
+1615.9 1529.2 1720.9 1737.9 1013.7   15.2    0.0 316.6 -35.3 -135.0
+1610.7 1522.9 1720.8 1738.1  961.4   15.2    0.0 316.3 -35.3 -135.0
+1604.5 1517.1 1721.3 1738.2  961.5   15.2    0.0 316.8 -35.3 -135.0
+1599.0 1511.6 1720.6 1737.6  996.5   15.2    0.0 315.8 -35.3 -135.0
+1592.2 1505.6 1720.8 1738.3  971.3   15.2    0.0 314.7 -35.3 -135.0
+1586.9 1499.4 1721.0 1737.5  923.4   15.2    0.0 313.9 -35.3 -135.0
+1580.6 1493.4 1720.8 1737.7  937.5   15.2    0.0 314.6 -35.3 -135.0
+1574.5 1487.9 1721.1 1738.4  912.7   15.2    0.0 314.6 -35.3 -135.0
+1569.4 1481.7 1721.2 1737.9  898.3   15.2    0.0 318.8 -35.3 -135.0
+1562.9 1476.2 1721.2 1737.4  889.7   15.2    0.0 315.9 -35.3 -135.0
+1557.1 1470.4 1720.9 1738.0  948.4   15.2    0.0 318.0 -35.3 -135.0
+1551.4 1464.2 1720.9 1738.1  872.1   15.2    0.0 316.9 -35.3 -135.0
+1545.0 1458.8 1720.6 1737.9  935.5   15.2    0.0 315.6 -35.3 -135.0
+1539.6 1453.0 1720.8 1737.9  923.8   15.2    0.0 315.9 -35.3 -135.0
+1532.8 1447.1 1720.4 1737.9  927.5   15.2    0.0 314.6 -35.3 -135.0
+1527.2 1441.6 1720.9 1737.6  930.4   15.2    0.0 313.9 -35.3 -135.0
+1520.6 1435.8 1721.0 1737.9  986.6   15.2    0.0 317.1 -35.3 -135.0
+1515.0 1429.2 1721.0 1737.8  935.7   15.2    0.0 316.7 -35.3 -135.0
+1508.9 1424.2 1720.7 1738.1  959.0   15.2    0.0 318.2 -35.3 -135.0
+1502.2 1417.6 1720.9 1738.1  964.0   15.2    0.0 315.0 -35.3 -135.0
+1496.7 1412.5 1721.0 1737.7  885.2   15.2    0.0 317.4 -35.3 -135.0
+1490.7 1407.2 1721.0 1737.9  908.2   15.2    0.0 316.9 -35.3 -135.0
+1484.4 1401.5 1720.8 1738.0  895.4   15.2    0.0 314.8 -35.3 -135.0
+1478.4 1396.1 1720.6 1737.7  929.9   15.2    0.0 318.0 -35.3 -135.0
+1472.9 1390.1 1720.8 1738.2  969.3   15.2    0.0 316.8 -35.3 -135.0
+1466.4 1384.2 1720.6 1738.0  947.8   15.2    0.0 316.7 -35.3 -135.0
+1460.8 1378.8 1720.8 1737.7  896.3   15.2    0.0 315.2 -35.3 -135.0
+1454.4 1372.6 1720.8 1737.8  968.9   15.2    0.0 316.1 -35.3 -135.0
+1448.2 1367.2 1720.9 1737.9  931.8   15.2    0.0 316.6 -35.3 -135.0
+1442.2 1361.4 1721.1 1737.9  941.0   15.2    0.0 316.6 -35.3 -135.0
+1436.2 1356.1 1721.0 1737.8  891.7   15.2    0.0 316.9 -35.3 -135.0
+1431.0 1349.5 1721.1 1737.8 1010.6   15.1    0.0 316.2 -35.3 -135.0
+1424.8 1344.4 1720.6 1737.6  881.2   15.2    0.0 316.6 -35.3 -135.0
+1418.9 1338.4 1720.8 1737.4  960.0   15.2    0.0 313.4 -35.3 -135.0
+1412.7 1333.4 1721.0 1738.1  959.0   15.2    0.0 316.9 -35.3 -135.0
+1406.6 1327.2 1720.7 1737.7  958.9   15.2    0.0 317.8 -35.3 -135.0
+1401.0 1321.4 1720.8 1737.8  983.1   15.2    0.0 318.8 -35.3 -135.0
+1395.9 1315.5 1721.2 1737.8  924.7   15.2    0.0 315.5 -35.3 -135.0
+1389.6 1310.1 1720.4 1737.9  896.6   15.2    0.0 315.4 -35.3 -135.0
+1383.2 1303.9 1720.8 1737.7  916.8   15.2    0.0 314.9 -35.3 -135.0
+1376.9 1298.6 1720.9 1737.9  931.2   15.2    0.0 315.7 -35.3 -135.0
+1371.8 1292.9 1720.8 1737.9  933.2   15.2    0.0 312.3 -35.3 -135.0
+1365.2 1287.3 1720.8 1737.9  998.0   15.2    0.0 317.7 -35.3 -135.0
+1359.2 1281.5 1721.1 1737.9  952.1   15.2    0.0 315.3 -35.3 -135.0
+1354.2 1275.9 1720.8 1737.8  927.9   15.2    0.0 315.9 -35.3 -135.0
+1347.6 1270.0 1721.2 1738.0  933.7   15.2    0.0 315.2 -35.3 -135.0
+1342.8 1264.6 1720.5 1737.8  912.2   15.2    0.0 316.3 -35.3 -135.0
+1336.3 1258.4 1720.9 1737.8  948.7   15.2    0.0 318.5 -35.3 -135.0
+1330.1 1252.4 1721.2 1738.1  931.1   15.2    0.0 317.1 -35.3 -135.0
+1325.5 1246.8 1721.1 1738.0  920.4   15.2    0.0 315.8 -35.3 -135.0
+1318.8 1240.9 1720.9 1737.9  884.0   15.3    0.0 315.7 -35.3 -135.0
+1312.7 1235.7 1720.9 1738.1  934.1   15.2    0.0 315.5 -35.3 -135.0
+1307.3 1229.3 1721.0 1737.8  969.7   15.2    0.0 318.1 -35.3 -135.0
+1301.2 1223.4 1720.9 1738.0  953.7   15.2    0.0 317.7 -35.3 -135.0
+1295.9 1217.3 1720.9 1737.9  953.3   15.2    0.0 318.5 -35.3 -135.0
+1290.2 1211.2 1720.8 1737.8  967.0   15.2    0.0 318.9 -35.3 -135.0
+1284.4 1205.2 1720.9 1738.0  922.4   15.2    0.0 317.6 -35.3 -135.0
+1278.9 1199.9 1720.9 1737.9  948.4   15.2    0.0 315.3 -35.3 -135.0
+1273.3 1194.1 1720.9 1737.7  963.3   15.2    0.0 315.9 -35.3 -135.0
+1267.2 1188.4 1721.0 1737.7  918.3   15.2    0.0 318.3 -35.3 -135.0
+1261.2 1182.7 1720.6 1737.8  963.1   15.2    0.0 317.2 -35.3 -135.0
+1255.5 1176.6 1720.7 1737.7  960.5   15.2    0.0 315.4 -35.3 -135.0
+1249.5 1170.9 1721.3 1738.2  908.3   15.2    0.0 314.5 -35.3 -135.0
+1242.8 1164.7 1720.8 1738.0  951.0   15.2    0.0 318.7 -35.3 -135.0
+1238.2 1160.0 1721.5 1738.2  958.1   15.2    0.0 316.6 -35.3 -135.0
+1232.8 1153.8 1721.1 1737.8  900.6   15.2    0.0 317.2 -35.3 -135.0
+1226.6 1148.1 1721.0 1737.9  947.4   15.2    0.0 314.8 -35.3 -135.0
+1221.2 1142.4 1720.8 1738.1  947.7   15.2    0.0 315.8 -35.3 -135.0
+1216.1 1136.2 1720.8 1738.0  971.7   15.2    0.0 317.4 -35.3 -135.0
+1209.6 1130.9 1720.8 1737.9  877.6   15.3    0.0 314.7 -35.3 -135.0
+1204.2 1124.4 1720.9 1737.8  917.0   15.2    0.0 315.1 -35.3 -135.0
+1197.9 1119.0 1721.0 1737.9  947.9   15.2    0.0 314.1 -35.3 -135.0
+1192.3 1113.0 1720.6 1737.6  920.4   15.2    0.0 315.9 -35.3 -135.0
+1185.6 1107.7 1720.8 1737.9  932.3   15.2    0.0 315.4 -35.3 -135.0
+1181.2 1101.6 1720.9 1737.9  992.4   15.2    0.0 315.8 -35.3 -135.0
+1175.1 1096.2 1721.1 1738.0  963.2   15.2    0.0 316.0 -35.3 -135.0
+1168.9 1089.8 1721.2 1737.9  918.6   15.2    0.0 316.9 -35.3 -135.0
+1163.2 1084.1 1721.1 1737.5  963.0   15.2    0.0 317.1 -35.3 -135.0
+1156.9 1078.9 1720.8 1738.0  998.4   15.2    0.0 317.1 -35.3 -135.0
+1151.6 1073.3 1720.6 1737.9  928.5   15.2    0.0 315.9 -35.3 -135.0
+1145.4 1067.5 1720.5 1737.7  898.0   15.2    0.0 316.5 -35.3 -135.0
+1139.7 1061.5 1720.6 1737.9  885.4   15.2    0.0 315.6 -35.3 -135.0
+1133.9 1055.7 1720.8 1737.8  943.6   15.2    0.0 315.4 -35.3 -135.0
+1127.5 1049.9 1720.7 1737.9  894.6   15.2    0.0 318.2 -35.3 -135.0
+1122.1 1044.1 1720.9 1737.2 1015.7   15.2    0.0 314.2 -35.3 -135.0
+1116.7 1038.5 1720.8 1737.8  936.9   15.2    0.0 314.6 -35.3 -135.0
+1110.6 1032.6 1721.2 1737.7  921.7   15.2    0.0 314.7 -35.3 -135.0
+1104.8 1026.5 1720.8 1737.8  968.3   15.2    0.0 316.4 -35.3 -135.0
+1098.6 1021.5 1720.5 1737.8  999.2   15.2    0.0 315.3 -35.3 -135.0
+1093.4 1015.7 1720.8 1738.0  975.2   15.2    0.0 319.8 -35.3 -135.0
+1086.2 1009.6 1720.8 1737.9  935.5   15.2    0.0 319.5 -35.3 -135.0
+1081.0 1004.1 1721.0 1737.9  886.7   15.2    0.0 314.4 -35.3 -135.0
+1075.4  998.1 1720.6 1737.9  915.8   15.2    0.0 312.4 -35.3 -135.0
+1069.4  992.3 1721.2 1737.9  916.4   15.2    0.0 316.2 -35.3 -135.0
+1062.9  986.9 1720.9 1738.4  947.3   15.2    0.0 316.7 -35.3 -135.0
+1057.4  980.9 1721.0 1738.2  914.9   15.2    0.0 319.1 -35.3 -135.0
+1051.2  975.6 1720.4 1738.3  916.7   15.2    0.0 315.8 -35.3 -135.0
+1045.4  969.8 1720.8 1738.1  977.2   15.2    0.0 315.3 -35.3 -135.0
+1038.8  964.3 1721.1 1738.2  931.0   15.2    0.0 316.0 -35.3 -135.0
+1033.1  958.4 1721.1 1738.0  973.7   15.2    0.0 316.1 -35.3 -135.0
+1027.3  953.5 1720.9 1737.6  932.2   15.2    0.0 314.3 -35.3 -135.0
+1021.1  947.1 1720.9 1738.3  884.2   15.2    0.0 314.8 -35.3 -135.0
+1015.2  941.7 1720.5 1738.5  920.6   15.2    0.0 318.2 -35.3 -135.0
+1009.4  936.1 1720.9 1738.1  904.0   15.2    0.0 315.4 -35.3 -135.0
+1003.5  930.5 1720.6 1738.1  946.6   15.2    0.0 314.9 -35.3 -135.0
+ 996.8  924.8 1720.8 1738.1  899.0   15.2    0.0 316.8 -35.3 -135.0
+ 990.7  919.5 1721.3 1738.2  910.7   15.2    0.0 317.3 -35.3 -135.0
+ 985.2  914.1 1721.2 1737.7  910.8   15.2    0.0 314.4 -35.3 -135.0
+ 979.2  908.7 1720.9 1737.6  906.0   15.2    0.0 316.5 -35.3 -135.0
+ 972.6  902.9 1721.1 1738.1  984.8   15.2    0.0 315.0 -35.3 -135.0
+ 966.4  896.3 1720.9 1738.1  905.9   15.2    0.0 315.9 -35.3 -135.0
+ 960.3  891.1 1721.5 1738.1  962.3   15.2    0.0 315.8 -35.3 -135.0
+ 954.4  885.6 1721.2 1737.6  899.9   15.2    0.0 319.7 -35.3 -135.0
+ 949.1  880.0 1721.2 1737.8  904.6   15.3    0.0 316.6 -35.3 -135.0
+ 942.8  874.8 1721.5 1737.7  906.4   15.2    0.0 316.7 -35.3 -135.0
+ 936.9  869.1 1720.4 1738.4  951.7   15.2    0.0 314.8 -35.3 -135.0
+ 930.4  863.1 1720.6 1737.8  997.4   15.2    0.0 314.2 -35.3 -135.0
+ 924.4  857.8 1720.9 1737.7  928.2   15.2    0.0 314.5 -35.3 -135.0
+ 917.9  852.0 1721.2 1737.9  922.4   15.2    0.0 315.0 -35.3 -135.0
+ 912.1  846.6 1720.8 1738.2  979.4   15.2    0.0 313.2 -35.3 -135.0
+ 906.4  840.4 1720.8 1737.9  915.4   15.2    0.0 313.3 -35.3 -135.0
+ 899.7  835.0 1720.8 1737.9 1020.7   15.2    0.0 317.1 -35.3 -135.0
+ 893.4  829.2 1720.7 1738.1  906.5   15.2    0.0 314.6 -35.3 -135.0
+ 887.5  823.6 1720.9 1738.1  901.6   15.2    0.0 316.5 -35.3 -135.0
+ 881.8  817.6 1720.8 1737.8  910.9   15.2    0.0 315.2 -35.3 -135.0
+ 876.0  812.1 1720.9 1738.0  935.9   15.2    0.0 317.9 -35.3 -135.0
+ 870.2  806.3 1720.4 1737.8  927.3   15.2    0.0 317.4 -35.3 -135.0
+ 863.4  800.4 1720.6 1737.9  939.6   15.2    0.0 319.2 -35.3 -135.0
+ 858.2  794.9 1720.9 1737.9  900.9   15.2    0.0 314.0 -35.3 -135.0
+ 851.6  789.3 1720.9 1737.8  921.2   15.2    0.0 313.8 -35.3 -135.0
+ 845.6  783.1 1720.9 1737.6  953.6   15.2    0.0 313.9 -35.3 -135.0
+ 839.8  777.8 1720.9 1738.1  941.6   15.2    0.0 316.2 -35.3 -135.0
+ 834.1  771.6 1721.1 1737.5  987.2   15.2    0.0 313.9 -35.3 -135.0
+ 828.8  765.9 1721.1 1738.1  969.0   15.2    0.0 313.2 -35.3 -135.0
+ 822.2  760.6 1721.1 1738.1  909.1   15.2    0.0 315.9 -35.3 -135.0
+ 816.2  754.8 1720.8 1737.8  896.3   15.3    0.0 315.3 -35.3 -135.0
+ 809.9  749.0 1720.8 1738.2  932.8   15.2    0.0 316.5 -35.3 -135.0
+ 804.6  743.3 1720.8 1738.3 1007.9   15.2    0.0 313.6 -35.3 -135.0
+ 797.8  737.8 1721.1 1738.0  885.4   15.3    0.0 318.8 -35.3 -135.0
+ 792.2  731.9 1720.6 1737.9  987.5   15.2    0.0 314.7 -35.3 -135.0
+ 786.4  725.5 1721.1 1737.9  874.7   15.3    0.0 317.9 -35.3 -135.0
+ 779.7  719.6 1720.7 1738.0  928.2   15.2    0.0 318.7 -35.3 -135.0
+ 774.4  714.0 1720.8 1738.2  908.0   15.2    0.0 313.8 -35.3 -135.0
+ 768.1  708.6 1720.9 1737.4  914.8   15.2    0.0 317.4 -35.3 -135.0
+ 761.8  702.5 1720.9 1738.2  941.2   15.2    0.0 313.9 -35.3 -135.0
+ 755.9  696.8 1721.3 1737.9  917.0   15.2    0.0 317.3 -35.3 -135.0
+ 749.6  691.2 1720.7 1738.0  905.8   15.2    0.0 313.6 -35.3 -135.0
+ 743.6  685.4 1721.0 1738.0  940.6   15.2    0.0 314.2 -35.3 -135.0
+ 737.1  679.5 1720.8 1738.1  977.9   15.2    0.0 316.2 -35.3 -135.0
+ 731.4  673.9 1721.1 1737.9  892.5   15.3    0.0 314.5 -35.3 -135.0
+ 725.6  668.0 1720.8 1737.8  979.9   15.2    0.0 318.3 -35.3 -135.0
+ 719.1  662.2 1720.6 1738.1  937.3   15.2    0.0 316.4 -35.3 -135.0
+ 713.5  656.0 1720.6 1737.9  958.7   15.2    0.0 315.1 -35.3 -135.0
+ 707.4  650.5 1720.8 1737.8  917.6   15.3    0.0 316.9 -35.3 -135.0
+ 701.2  644.4 1720.5 1737.6  935.5   15.3    0.0 313.9 -35.3 -135.0
+ 695.4  638.9 1720.9 1737.9  909.5   15.3    0.0 313.9 -35.3 -135.0
+ 689.4  632.6 1720.9 1737.7  956.9   15.2    0.0 317.1 -35.3 -135.0
+ 683.1  627.0 1721.2 1737.6  890.6   15.3    0.0 312.7 -35.3 -135.0
+ 677.2  621.1 1720.6 1738.0  905.0   15.2    0.0 316.4 -35.3 -135.0
+ 671.4  615.4 1720.6 1737.8  997.0   15.2    0.0 315.1 -35.3 -135.0
+ 664.6  609.6 1720.7 1737.9  891.9   15.2    0.0 313.0 -35.3 -135.0
+ 658.2  604.4 1720.4 1737.9  952.4   15.2    0.0 313.6 -35.3 -135.0
+ 652.9  598.2 1721.1 1738.5  928.0   15.3    0.0 314.8 -35.3 -135.0
+ 646.9  592.7 1720.8 1737.8  926.4   15.2    0.0 315.4 -35.3 -135.0
+ 640.8  586.8 1720.9 1737.6  893.7   15.2    0.0 318.9 -35.3 -135.0
+ 634.6  581.7 1720.6 1738.1  874.9   15.2    0.0 315.7 -35.3 -135.0
+ 628.5  575.6 1720.5 1738.0  957.2   15.2    0.0 314.0 -35.3 -135.0
+ 621.4  570.5 1720.6 1738.1  903.9   15.2    0.0 317.3 -35.3 -135.0
+ 615.6  564.9 1720.6 1737.5  900.2   15.2    0.0 314.2 -35.3 -135.0
+ 608.8  558.9 1721.2 1737.6  912.3   15.2    0.0 317.8 -35.3 -135.0
+ 602.4  553.4 1720.8 1738.2  910.0   15.3    0.0 314.6 -35.3 -135.0
+ 596.4  548.0 1721.3 1737.9  866.6   15.3    0.0 314.3 -35.3 -135.0
+ 590.6  542.3 1720.9 1738.1  905.4   15.3    0.0 313.9 -35.3 -135.0
+ 583.9  536.8 1720.8 1738.3  889.4   15.2    0.0 314.8 -35.3 -135.0
+ 576.2  531.1 1720.6 1738.2  952.3   15.2    0.0 312.9 -35.3 -135.0
+ 570.8  525.7 1721.0 1738.1  908.5   15.2    0.0 315.1 -35.3 -135.0
+ 564.3  519.8 1720.8 1737.8  893.5   15.3    0.0 315.3 -35.3 -135.0
+ 558.8  513.8 1720.9 1737.5  871.3   15.3    0.0 316.1 -35.3 -135.0
+ 552.4  508.0 1721.0 1738.1  951.3   15.2    0.0 313.1 -35.3 -135.0
+ 545.9  502.6 1721.2 1738.0  942.1   15.2    0.0 318.0 -35.3 -135.0
+ 539.2  496.7 1720.9 1737.8  902.2   15.2    0.0 315.0 -35.3 -135.0
+ 533.0  490.9 1721.3 1738.2  901.1   15.2    0.0 314.6 -35.3 -135.0
+ 526.9  485.2 1720.6 1737.8  950.8   15.2    0.0 316.5 -35.3 -135.0
+ 520.3  480.2 1720.9 1737.6  913.3   15.3    0.0 315.7 -35.3 -135.0
+ 512.5  476.1 1720.8 1738.0  897.0   15.3    0.0 314.8 -35.3 -135.0
+ 507.1  472.4 1721.1 1737.8  923.6   15.2    0.0 316.8 -35.3 -135.0
+ 499.3  467.7 1720.9 1737.8  911.6   15.3    0.0 313.8 -35.3 -135.0
+0.902,SSURF,N,Initializing data file
+0.994,SSURF,N,Initializing log file
+1.506,HSUPER,N,accum time 983 sec/0.273 hours/0.011 days
+1.541,HTT8,N,Updating parameter $FG_AHR_24V to 0.3587378
+1.583,HSUPER,N,adding 570667.648 mA-s to 24V FG: 0.3587378 A-hr (count=1256, dt=983.00)
+1.620,HTT8,N,Updating parameter $FG_AHR_10V to 0.041282687
+1.662,HSUPER,N,adding 7913.356 mA-s to 10V FG: 0.0412827 A-hr
+2.050,SUSR,N,---- Checking sensors and data file creation ----
+2.109,SSENSOR,N,Changing to bin 250.0() at 0.00m: sec=10.0s gc=120.0s sensors=1 pressure=1 compass=1 timeout=10.00 turn=0
+2.157,SSENSOR,N,Changing to bin 250.0() at 0.00m: sec=10.0s gc=120.0s sensors=1 pressure=1 compass=1 timeout=10.00 turn=0
+0.197,SSURF,N,Dive started Tue Jun  2 15:31:39 2026
+ (1780414299)
+5.530,HBATT,N,24V batt pack voltage = 15.09V (min 14.75V)
+5.564,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+7.449,SSENSOR,N,P 6851ms 0.03m 334.6 #1
+9.636,HBATT,N,24V batt pack voltage = 15.11V (min 14.75V)
+9.670,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+11.478,SSENSOR,N,P 10959ms 0.06m 334.8 #2
+13.669,HBATT,N,24V batt pack voltage = 15.14V (min 14.75V)
+13.704,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+15.510,SSENSOR,N,P 14993ms 0.06m 335.7 #3
+17.483,HBATT,N,24V batt pack voltage = 15.14V (min 14.75V)
+17.517,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+19.325,SSENSOR,N,P 18805ms 0.06m 336.0 #4
+21.529,HBATT,N,24V batt pack voltage = 15.15V (min 14.75V)
+21.563,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+23.370,SSENSOR,N,P 22851ms 0.06m 334.4 #5
+25.966,SSENSOR,N,A 25443ms [0,4] 0.03m 334.7 #6
+29.964,SSENSOR,N,A 29440ms [0,4] 0.06m 336.3 #7
+33.965,SSENSOR,N,A 33442ms [0,4] 0.06m 336.1 #8
+37.964,SSENSOR,N,A 37441ms [0,4] 0.06m 337.2 #9
+41.964,SSENSOR,N,A 41441ms [0,4] 0.03m 335.2 #10
+45.623,HBATT,N,24V batt pack voltage = 15.21V (min 14.75V)
+45.657,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+47.464,SSENSOR,N,P 46945ms 0.03m 334.7 #11
+49.730,HBATT,N,24V batt pack voltage = 15.22V (min 14.75V)
+49.764,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+51.577,SSENSOR,N,P 51057ms 0.06m 336.6 #12
+53.527,HBATT,N,24V batt pack voltage = 15.21V (min 14.75V)
+53.561,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+55.368,SSENSOR,N,P 54849ms 0.06m 337.0 #13
+57.529,HBATT,N,24V batt pack voltage = 15.23V (min 14.75V)
+57.563,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+59.371,SSENSOR,N,P 58852ms 0.06m 337.7 #14
+61.577,HBATT,N,24V batt pack voltage = 15.23V (min 14.75V)
+61.611,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+63.417,SSENSOR,N,P 62899ms 0.06m 334.4 #15
+version: 67.01
+glider: 263
+mission: 7
+selftest: 15
+start: 6 2 126 15 31 37
+columns: rec,elaps_tms,depth,heading,pitch,roll,GC_state,mag.x,mag.y,mag.z,
+data:
+0 6851 3 3346 -9 24 0 110 1864 1163
+1 10959 6 3347 -9 23 0 116 1860 1157
+2 14993 6 3357 -9 21 0 118 1838 1163
+3 18805 6 3360 -10 25 0 108 1841 1163
+4 22851 6 3344 -9 23 0 106 1859 1151
+5 25443 3 3346 -10 27 1 105 1867 1153
+6 29440 6 3363 -9 26 1 111 1839 1152
+7 33442 6 3361 -9 24 1 118 1841 1156
+8 37441 6 3372 -9 25 1 131 1831 1155
+9 41441 3 3352 -8 24 1 110 1854 1150
+10 46945 3 3346 -11 24 0 102 1854 1146
+11 51057 6 3366 -9 25 0 130 1839 1148
+12 54849 6 3370 -8 25 0 137 1836 1152
+13 58852 6 3377 -8 27 0 130 1830 1145
+14 62899 6 3343 -7 23 0 86 1855 1143
+64.982,SUSR,N,---- Writing internal sensors to log ----
+66.069,SUSR,N,internal humidity 7612777 counts (47.38 RH)
+66.102,SUSR,N,internal temp 10949748 counts (19.851 degC)
+66.137,SUSR,N,internal pressure 8.557 psia
+66.180,SUSR,N,latched internal pressure = 8.559
+66.212,SUSR,N,---- Checking altimeter ----
+66.699,HXPDR,N,range was 7.765500 m
+66.860,SUSR,N,---- Checking transponder ----
+68.133,HXPDR,N,Tried 1 times to respond to command $N
+68.313,SUSR,N,transponder reply ping count=0
+69.089,HXPDR,N,Tried 1 times to respond to command $W
+69.123,HXPDR,N,version($W)=3.08 E4947
+69.262,HXPDR,N,channel($R)=91
+69.410,HXPDR,N,int/repl($V)=11.0,10.5
+69.548,HXPDR,N,xpdr disabled($B)=0
+69.716,HXPDR,N,id1($HR1)=00000000
+69.884,HXPDR,N,id2($HR2)=00000000
+70.052,HXPDR,N,id3($HR3)=00000000
+70.220,HXPDR,N,id4($HR4)=00000000
+70.486,SUSR,N,---- Reporting targets specifications ----
+70.552,SNAV,N,starting target WESTPORT at 1780414369, dive 0
+70.596,SNAV,N,      Target     Latitude  Longitude    Heading Radius Depth Finish Timeout Dive Exec Next-target Escp-target Timeout-goto Timeout-exec Slow goto exec Fence lat lon radius goto exec Src timeout exec goto
+70.651,SNAV,N,      SHELF      4752.000  -12510.270  -1.0   2500.0m    0  -1  0.0 0 0 OFFSHORE none none 0 0.000,0.00,0,0 none 0 0.0000 0.0000 0.00 none 0 none 0.000000 none 0
+70.722,SNAV,N,      OFFSHORE   4700.000  -12700.000  -1.0   2500.0m    0  -1  0.0 0 0 HOME none none 0 0.000,0.00,0,0 none 0 0.0000 0.0000 0.00 none 0 none 0.000000 none 0
+70.772,SNAV,N,      DEPLOY     4654.000  -12454.000  -1.0   2000.0m    0  -1  0.0 0 0 OFFSHORE none none 0 0.000,0.00,0,0 none 0 0.0000 0.0000 0.00 none 0 none 0.000000 none 0
+70.822,SNAV,N,      HOME       4654.950  -12517.400  -1.0   2000.0m    0  -1  0.0 0 0 WESTPORT none none 0 0.000,0.00,0,0 none 0 0.0000 0.0000 0.00 none 0 none 0.000000 none 0
+70.878,SNAV,N,  =>  WESTPORT   4654.000  -12454.000  -1.0   2500.0m    0  -1  0.0 0 0 WESTPORT none none 0 0.000,0.00,0,0 none 0 0.0000 0.0000 0.00 none 0 none 0.000000 none 0
+70.921,SUSR,N,---- Reporting science specifications ----
+70.983,SSENSOR,N,250.0 gc=120.0 seconds=10.0 turn=0 sensors=1 compass=1 pressure=1 network=0,0,0,0 dest=-1 retries=0,0 rate=1 // 
+71.025,SSENSOR,N,300.0 gc=300.0 seconds=30.0 turn=0 sensors=1 compass=1 pressure=1 network=0,0,0,0 dest=-1 retries=0,0 rate=1 // 
+71.074,SSENSOR,N,500.0 gc=300.0 seconds=30.0 turn=0 sensors=1 compass=1 pressure=1 network=0,0,0,0 dest=-1 retries=0,0 rate=1 // 
+71.117,SSENSOR,N,1010.0 gc=300.0 seconds=30.0 turn=0 sensors=1 compass=1 pressure=1 network=0,0,0,0 dest=-1 retries=0,0 rate=1 // 
+71.159,SUSR,N,---- Reporting battery status ----
+71.963,SPOWER,N,------ Fuel gauges (Cumulative Amp-secs) -------
+
+72.003,SPOWER,N,                          cumulative      / since power up
+72.040,SPOWER,N,                VBD_pump:  1091.15 amp-sec /   591.89 sec
+72.082,SPOWER,N,             Pitch_motor:    26.84 amp-sec /    44.36 sec
+72.118,SPOWER,N,              Roll_motor:     4.21 amp-sec /    14.83 sec
+72.155,SPOWER,N,                 Iridium:   150.27 amp-sec /    41.60 sec
+72.190,SPOWER,N,        Transponder_ping:     1.26 amp-sec /     1.00 sec
+72.226,SPOWER,N,      ------------- 24V total = 0.354 AmpHr -----------
+72.262,SPOWER,N,                     GPS:     2.34 amp-sec /    41.91 sec
+72.298,SPOWER,N,                    Core:    51.69 amp-sec /   215.77 sec
+72.339,SPOWER,N,                    Fast:     0.00 amp-sec /     1.19 sec
+72.375,SPOWER,N,                    Slow:     0.00 amp-sec /     0.00 sec
+72.412,SPOWER,N,                 LPSleep:    24.32 amp-sec /    21.38 sec
+72.448,SPOWER,N,                 Compass:     1.11 amp-sec /    27.32 sec
+72.483,SPOWER,N,                   RAFOS:     0.00 amp-sec /     0.00 sec
+72.519,SPOWER,N,             Transponder:     0.36 amp-sec /     4.00 sec
+72.555,SPOWER,N,                Compass2:     0.00 amp-sec /     0.00 sec
+72.596,SPOWER,N,                 network:     0.00 amp-sec /     0.00 sec
+72.632,SPOWER,N,                 device1:    14.57 amp-sec /    19.90 sec
+72.668,SPOWER,N,                  SciCon:     4.77 amp-sec /    99.00 sec
+72.704,SPOWER,N,      ------------- 10V total = 0.028 AmpHr ------------
+73.371,HBATT,N,24V batt pack voltage = 15.23V (min 14.75V)
+73.405,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+73.914,HSUPER,N,accum time 74 sec/0.021 hours/0.001 days
+73.948,HTT8,N,Updating parameter $FG_AHR_24V to 0.35875258
+73.997,HSUPER,N,adding 53.212 mA-s to 24V FG: 0.3587526 A-hr (count=85, dt=74.00)
+74.033,HTT8,N,Updating parameter $FG_AHR_10V to 0.041543059
+74.075,HSUPER,N,adding 937.340 mA-s to 10V FG: 0.0415431 A-hr
+74.998,HBATT,N,24V batt pack voltage = 15.25V (min 14.75V)
+75.033,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+75.075,SUSR,N,---- Checking capture vector ----
+75.107,SUSR,N,all capture settings at default values
+75.719,SUSR,N,---- Checking SMS ----
+75.755,SUSR,N,sms_email = iopsggw@uw.edu
+76.575,HBATT,N,24V batt pack voltage = 15.25V (min 14.75V)
+76.609,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+77.638,SDIVE,N,Measuring depth & angle for 1 sec...
+80.400,SDIVE,N,Complete. Measured depth: 0.03m angle: -0.91deg
+80.435,SSENSOR,N,assigned legato to sensor slot 1 (p = 120) [index 7; ch 8])
+93.277,SSURF,N,T=31.17 S=0.014 rho=-4.6977
+95.771,HPHONE,N,Checking for SMS capability (up to one minute)
+114.236,HPHONE,N,Phone can send sms and can receive sms (3)
+119.363,HPHONE,N,Phone registered
+125.083,HPHONE,N,
+
+Sent SMS message
+125.114,HPHONE,N,Powering off the phone after SMS
+127.537,HPHONE,N,phone on 34632 ms, avg mA=67.3, max mA=630.8
+127.570,SUSR,N,*** EOTD ***
+127.600,SUSR,N,---- Self test PASSED! ----
+127.632,SUSR,N,1 warnings noted
+127.664,SUSR,N,--> Iridium registration
+Compressing THISDIVE.LOG to st0015lz.x
+Compressing THISDIVE.DAT to st0015dz.x
+129.303,SUSR,N,---- Checking communications ----
+129.343,SUSR,N,Testing comms by transmitting self-test results:
+130.202,HBATT,N,24V batt pack voltage = 15.29V (min 14.75V)
+130.241,HBATT,N,10V batt pack voltage = 15.00V (min 15.00V)
+131.314,SDIVE,N,Measuring depth & angle for 1 sec...
+134.077,SDIVE,N,Complete. Measured depth: 0.06m angle: -0.83deg
+134.111,SSENSOR,N,assigned legato to sensor slot 1 (p = 120) [index 7; ch 8])
+147.277,SSURF,N,T=30.86 S=0.015 rho=-4.6015
+147.315,SSURF,N,Trying call 0...
+147.346,SSURF,N,Calling phone number: 881600005296
+149.867,HPHONE,N,initializing RUDICS connection
+180.046,HPHONE,N,registration check failed - signal strength not checked
+180.086,HPHONE,N,cnt_NoComm:0 callCycle:0 smsLastCallCycle:-1
+180.155,HPHONE,N,Iridium geolocation: 47.677944 -122.197411 Thu Aug 27 11:43:18 2015
+180.270,HPHONE,N,dialing failed: ret 1, response ATDT00881600005296
+NO CARRIER
+
+185.306,SSURF,N,Unable to login (-2)...
+187.728,HPHONE,N,phone on 40907 ms, avg mA=38.0, max mA=94.7
+188.203,SSURF,N,going to sleep..
+221.569,SSURF,N,Trying call 1...
+221.600,SSURF,N,Calling phone number: 881600005296
+224.122,HPHONE,N,initializing RUDICS connection
+254.306,HPHONE,N,registration check failed - signal strength not checked
+254.341,HPHONE,N,cnt_NoComm:0 callCycle:0 smsLastCallCycle:-1
+254.409,HPHONE,N,Iridium geolocation: 47.677944 -122.197411 Thu Aug 27 11:43:18 2015
+254.524,HPHONE,N,dialing failed: ret 1, response ATDT00881600005296
+NO CARRIER
+
+259.579,SSURF,N,Unable to login (-2)...
+262.000,HPHONE,N,phone on 40926 ms, avg mA=28.7, max mA=90.5
+262.475,SSURF,N,going to sleep..
+322.003,SSURF,N,Trying call 2...
+322.040,SSURF,N,Calling phone number: 881600005296
+324.561,HPHONE,N,initializing RUDICS connection
+344.697,HPHONE,N,Phone registered
+352.050,HPHONE,N,Iridium signal strength: 5
+352.083,HPHONE,N,cnt_NoComm:0 callCycle:0 smsLastCallCycle:-1
+352.150,HPHONE,N,Iridium geolocation: 47.677944 -122.197411 Thu Aug 27 11:43:18 2015
+373.170,HPHONE,N,dialing succeeded
+387.115,SSURF,N,printf "0:0:3:0:7:120:-2:1720:1737:481:-0.8:0.06:19.8:15.00:15.29:8.55:47.4:30.9:0.0:-4.6 GPS,020626,151602,4740.803,-12224.407,26,1.6,27,15.1\n" >> comm.log
+414.570,SSURF,N,Logged in...
+414.614,SSURF,N,Expected [csh], received []
+414.646,SSURF,N,Basestation not ready to send cmdfile (prompt not available)
+414.680,SSURF,N,Transmission failed...
+414.712,SSURF,N,lost carrier
+414.743,SSURF,N,call try complete
+414.774,SSURF,N,Problems transferring files (send=0/rcv=1)...
+414.814,SSURF,N,./callend
+ start expected [csh], received []
+414.848,SSURF,N,closing
+414.877,SSURF,N,lost carrier
+422.303,HPHONE,N,phone on 102225 ms, avg mA=91.8, max mA=593.3
+422.784,SSURF,N,going to sleep..
+482.002,SSURF,N,Trying call 3...
+482.033,SSURF,N,Calling phone number: 881600005296
+484.554,HPHONE,N,initializing RUDICS connection
+499.669,HPHONE,N,Phone registered
+508.290,HPHONE,N,Iridium signal strength: 5
+508.322,HPHONE,N,cnt_NoComm:0 callCycle:0 smsLastCallCycle:-1
+508.389,HPHONE,N,Iridium geolocation: 47.702751 -122.418030 Thu Aug 27 11:47:25 2015
+519.969,HPHONE,N,dialing succeeded
+529.070,SSURF,N,printf "0:0:4:0:7:120:0:1720:1737:481:-0.8:0.06:19.8:15.00:15.29:8.55:47.4:30.9:0.0:-4.6 GPS,020626,151602,4740.803,-12224.407,26,1.6,27,15.1\n" >> comm.log
+534.185,SSURF,N,Logged in...
+535.560,SSURF,N,Receiving cmdfile...
+535.607,SSURF,N,Sending cmd rawsend cmdfile
+537.867,SSURF,N,received 327 of 327 for cmdfile
+538.030,SSURF,N,Transmission succeeded...
+538.079,HTT8,N,Updating parameter $MASS to 72578
+538.122,HTT8,N,Updating parameter $RHO to 1.023
+538.164,HTT8,N,Updating parameter $D_OFFGRID to 100
+538.206,HTT8,N,Updating parameter $C_VBD to 3000
+538.251,HTT8,N,Updating parameter $W_ADJ_DBAND to 0
+538.299,HTT8,N,Updating parameter $PITCH_W_DBAND to 0
+538.342,HTT8,N,Updating parameter $PITCH_W_GAIN to 0
+538.385,HTT8,N,Updating parameter $PITCH_ADJ_DBAND to 1
+538.428,HTT8,N,Updating parameter $PITCH_ADJ_GAIN to 0.0099999998
+538.473,HTT8,N,Updating parameter $XPDR_INT to 14.5
+539.011,HTT8,N,Updating parameter $XPDR_REP to 13
+540.280,HXPDR,N,Tried 2 times to respond to command $C1
+540.593,HTT8,N,Updating parameter $C_ROLL_DIVE to 2000
+540.637,HTT8,N,Updating parameter $MAX_BUOY to 150
+540.685,HTT8,N,Updating parameter $N_NOCOMM to 1
+540.726,HTT8,N,Updating parameter $D_TGT to 45
+540.768,HTT8,N,Updating parameter $T_DIVE to 15
+540.809,HTT8,N,Updating parameter $T_MISSION to 30
+540.851,HTT8,N,Updating parameter $D_ABORT to 125
+540.892,HTT8,N,Updating parameter $N_DIVES to 1
+540.932,SDIVE,N,Parsed command: $QUIT
+542.364,SUSR,N,$ID,263
+542.368,SUSR,N,$MISSION,7
+542.371,SUSR,N,$DIVE,0
+542.375,SUSR,N,$N_DIVES,1
+542.378,SUSR,N,$STOP_T,0
+542.381,SUSR,N,$D_SURF,2
+542.385,SUSR,N,$D_FLARE,3
+542.389,SUSR,N,$D_TGT,45
+542.393,SUSR,N,$D_ABORT,125
+542.397,SUSR,N,$D_BATHY_OFFSET,0
+542.402,SUSR,N,$D_NO_BLEED,50
+542.406,SUSR,N,$D_BOOST,0
+542.409,SUSR,N,$T_BOOST,0
+542.413,SUSR,N,$D_FINISH,0
+542.416,SUSR,N,$D_PITCH,0
+542.419,SUSR,N,$D_SAFE,0
+542.423,SUSR,N,$D_CALL,0
+542.426,SUSR,N,$SURFACE_URGENCY,0
+542.431,SUSR,N,$SURFACE_URGENCY_TRY,0
+542.435,SUSR,N,$SURFACE_URGENCY_FORCE,0
+542.441,SUSR,N,$T_DIVE,15
+542.445,SUSR,N,$T_MISSION,30
+542.449,SUSR,N,$T_ABORT,1440
+542.453,SUSR,N,$T_TURN,225
+542.457,SUSR,N,$T_TURN_SAMPINT,-5
+542.461,SUSR,N,$T_NO_W,120
+542.465,SUSR,N,$T_LOITER,0
+542.469,SUSR,N,$T_EPIRB,0
+542.473,SUSR,N,$USE_BATHY,-1
+542.477,SUSR,N,$USE_ICE,0
+542.481,SUSR,N,$ICE_FREEZE_MARGIN,0.30000001
+542.486,SUSR,N,$D_OFFGRID,100
+542.491,SUSR,N,$RELAUNCH,1
+542.495,SUSR,N,$APOGEE_PITCH,-5
+542.499,SUSR,N,$MAX_BUOY,150
+542.503,SUSR,N,$GLIDE_SLOPE,30
+542.507,SUSR,N,$SPEED_FACTOR,1
+542.512,SUSR,N,$RHO,1.023
+542.516,SUSR,N,$MASS,72578
+542.520,SUSR,N,$NAV_MODE,2
+542.524,SUSR,N,$FERRY_MAX,45
+542.528,SUSR,N,$KALMAN_USE,2
+542.533,SUSR,N,$HD_A,0.003
+542.537,SUSR,N,$HD_B,0.0099999998
+542.541,SUSR,N,$HD_C,1.6e-05
+542.545,SUSR,N,$HEADING,-1
+542.549,SUSR,N,$ESCAPE_HEADING,0
+542.553,SUSR,N,$ESCAPE_HEADING_DELTA,10
+542.558,SUSR,N,$FIX_MISSING_TIMEOUT,0
+542.564,SUSR,N,$TGT_DEFAULT_LAT,4736
+542.569,SUSR,N,$TGT_DEFAULT_LON,-12218
+542.574,SUSR,N,$TGT_AUTO_DEFAULT,0
+542.578,SUSR,N,$SM_CC,550
+542.582,SUSR,N,$N_FILEKB,8
+542.585,SUSR,N,$FILEMGR,0
+542.589,SUSR,N,$CALL_NDIVES,1
+542.593,SUSR,N,$COMM_SEQ,7
+542.597,SUSR,N,$PROTOCOL,9
+542.601,SUSR,N,$N_NOCOMM,1
+542.605,SUSR,N,$N_NOCOMM_RESUME,0
+542.610,SUSR,N,$NOCOMM_ACTION,131
+542.614,SUSR,N,$N_NOSURFACE,0
+542.619,SUSR,N,$UPLOAD_DIVES_MAX,-1
+542.624,SUSR,N,$NETBOX,1
+542.627,SUSR,N,$CALL_TRIES,5
+542.631,SUSR,N,$CALL_WAIT,60
+542.635,SUSR,N,$N_CYCLES,0
+542.638,SUSR,N,$CAPUPLOAD,0
+542.643,SUSR,N,$CAPMAXSIZE,20000
+542.647,SUSR,N,$T_GPS,5
+542.698,SUSR,N,$N_GPS,100440
+542.702,SUSR,N,$T_RSLEEP,2
+542.706,SUSR,N,$STROBE,0
+542.708,SUSR,N,$RAFOS_PEAK_OFFSET,0
+542.713,SUSR,N,$RAFOS_CORR_THRESH,60
+542.718,SUSR,N,$RAFOS_HIT_WINDOW,3600
+542.723,SUSR,N,$RAFOS_MMODEM,0
+542.728,SUSR,N,$PITCH_MIN,311
+542.732,SUSR,N,$PITCH_MAX,3855
+542.737,SUSR,N,$C_PITCH,2123
+542.741,SUSR,N,$PITCH_DBAND,0.1
+542.746,SUSR,N,$PITCH_CNV,0.0041299998
+542.750,SUSR,N,$PITCH_GAIN,11.5
+542.755,SUSR,N,$PITCH_TIMEOUT,30
+542.759,SUSR,N,$PITCH_MAXERRORS,1
+542.764,SUSR,N,$PITCH_ADJ_GAIN,0.0099999998
+542.770,SUSR,N,$PITCH_ADJ_DBAND,1
+542.774,SUSR,N,$C_PITCH_AUTO_DELTA,0
+542.779,SUSR,N,$C_PITCH_AUTO_MAX,0
+542.783,SUSR,N,$PITCH_GAIN_AUTO_DELTA,0
+542.788,SUSR,N,$PITCH_GAIN_AUTO_MAX,0
+542.792,SUSR,N,$PITCH_W_GAIN,0
+542.796,SUSR,N,$PITCH_W_DBAND,0
+542.801,SUSR,N,$ROLL_MIN,260
+542.805,SUSR,N,$ROLL_MAX,3935
+542.809,SUSR,N,$ROLL_DEG,80
+542.814,SUSR,N,$C_ROLL_DIVE,2000
+542.818,SUSR,N,$C_ROLL_CLIMB,2150
+542.823,SUSR,N,$HEAD_ERRBAND,10
+542.828,SUSR,N,$ROLL_CNV,0.054945
+542.833,SUSR,N,$ROLL_TIMEOUT,15
+542.836,SUSR,N,$ROLL_MAXERRORS,1
+542.840,SUSR,N,$ROLL_ADJ_GAIN,0
+542.845,SUSR,N,$ROLL_ADJ_DBAND,0
+542.849,SUSR,N,$VBD_MIN,480
+542.854,SUSR,N,$VBD_MAX,3960
+542.858,SUSR,N,$C_VBD,3000
+542.862,SUSR,N,$VBD_DBAND,2
+542.866,SUSR,N,$VBD_CNV,-0.24529999
+542.871,SUSR,N,$VBD_LP_IGNORE,0
+542.875,SUSR,N,$VBD_TIMEOUT,720
+542.879,SUSR,N,$PITCH_VBD_SHIFT,0.0012300001
+542.885,SUSR,N,$UNCOM_BLEED,20
+542.889,SUSR,N,$VBD_MAXERRORS,1
+542.894,SUSR,N,$C_VBD_AUTO_DELTA,0
+542.898,SUSR,N,$C_VBD_AUTO_MAX,0
+542.902,SUSR,N,$W_ADJ_DBAND,0
+542.906,SUSR,N,$DBDW,0
+542.910,SUSR,N,$LOITER_W_DBAND,0
+542.914,SUSR,N,$LOITER_DBDW,500
+542.918,SUSR,N,$LOITER_D_TOP,850
+542.923,SUSR,N,$LOITER_D_BOTTOM,950
+542.927,SUSR,N,$LOITER_N_DIVE,0
+542.932,SUSR,N,$CF8_MAXERRORS,20
+542.936,SUSR,N,$AH0_24V,540
+542.940,SUSR,N,$AH0_10V,0
+542.944,SUSR,N,$MINV_24V,11
+542.949,SUSR,N,$MINV_10V,11
+542.953,SUSR,N,$MAXI_24V,5
+542.957,SUSR,N,$MAXI_10V,1.5
+542.960,SUSR,N,$FG_AHR_10V,0.041543059
+542.966,SUSR,N,$FG_AHR_24V,0.35875258
+542.971,SUSR,N,$PHONE_SUPPLY,2
+542.975,SUSR,N,$PRESSURE_YINT,-740.32623
+543.021,SUSR,N,$PRESSURE_SLOPE,0.044261999
+543.027,SUSR,N,$COMPASS_USE,16388
+543.031,SUSR,N,$ALTIM_PING_FIT,0
+543.036,SUSR,N,$ALTIM_TOP_PING_RANGE,0
+543.041,SUSR,N,$ALTIM_BOTTOM_TURN_MARGIN,0
+543.045,SUSR,N,$ALTIM_TOP_TURN_MARGIN,0
+543.050,SUSR,N,$ALTIM_TOP_MIN_OBSTACLE,1
+543.055,SUSR,N,$ALTIM_PING_DEPTH,0
+543.059,SUSR,N,$ALTIM_PING_DELTA,0
+543.064,SUSR,N,$ALTIM_FREQUENCY,13
+543.069,SUSR,N,$ALTIM_PULSE,3
+543.074,SUSR,N,$ALTIM_SENSITIVITY,2
+543.078,SUSR,N,$XPDR_VALID,4
+543.083,SUSR,N,$XPDR_INHIBIT,90
+543.086,SUSR,N,$XPDR_INT,14.5
+543.091,SUSR,N,$XPDR_REP,13
+543.095,SUSR,N,$INT_PRESSURE_SLOPE,1.9639999e-06
+543.101,SUSR,N,$INT_PRESSURE_YINT,-1.34
+543.106,SUSR,N,$DEEPGLIDER,0
+543.110,SUSR,N,$DEEPGLIDERMB,0
+543.115,SUSR,N,$MOTHERBOARD,6
+543.119,SUSR,N,$DEVICE1,-1
+543.123,SUSR,N,$DEVICE2,-1
+543.126,SUSR,N,$DEVICE3,-1
+543.130,SUSR,N,$DEVICE4,-1
+543.134,SUSR,N,$DEVICE5,-1
+543.138,SUSR,N,$DEVICE6,-1
+543.142,SUSR,N,$LOGGERS,0
+543.146,SUSR,N,$LOGGERDEVICE1,7
+543.150,SUSR,N,$LOGGERDEVICE2,-1
+543.155,SUSR,N,$LOGGERDEVICE3,-1
+543.160,SUSR,N,$LOGGERDEVICE4,-1
+543.165,SUSR,N,$COMPASS_DEVICE,66
+543.168,SUSR,N,$COMPASS2_DEVICE,-1
+543.173,SUSR,N,$PHONE_DEVICE,33
+543.178,SUSR,N,$GPS_DEVICE,48
+543.182,SUSR,N,$RAFOS_DEVICE,-1
+543.187,SUSR,N,$NAV_DEVICE,-1
+543.191,SUSR,N,$NAV2_DEVICE,-1
+543.196,SUSR,N,$NAV3_DEVICE,-1
+543.200,SUSR,N,$NAV4_DEVICE,-1
+543.204,SUSR,N,$NETWORK_DEVICE,-1
+543.208,SUSR,N,$PRESSURE_DEVICE,34
+543.213,SUSR,N,$XPDR_DEVICE,21
+543.217,SUSR,N,$SIM_W,0
+543.221,SUSR,N,$SIMULATE,0
+543.225,SUSR,N,$SEABIRD_T_G,0.0043000001
+543.231,SUSR,N,$SEABIRD_T_H,0.00063999998
+543.236,SUSR,N,$SEABIRD_T_I,2.4999999e-05
+543.242,SUSR,N,$SEABIRD_T_J,4.3e-06
+543.247,SUSR,N,$SEABIRD_C_G,-10
+543.250,SUSR,N,$SEABIRD_C_H,1
+543.255,SUSR,N,$SEABIRD_C_I,-0.0020000001
+543.260,SUSR,N,$SEABIRD_C_J,0.00019999999
+543.265,SUSR,N,$OPTIONS,0
+543.269,SSENSOR,N,$SC_RECORDABOVE,2000.0
+543.315,SSENSOR,N,$SC_PROFILE,7.0
+543.346,SSENSOR,N,$SC_XMITPROFILE,7.0
+543.378,SSENSOR,N,$SC_NDIVE,1.0
+544.739,SSURF,N,Receiving science...
+544.786,SSURF,N,Sending cmd rawsend science
+546.508,SSURF,N,received 116 of 116 for science
+546.668,SSURF,N,Transmission succeeded...
+547.978,SSURF,N,Receiving targets...
+548.031,SSURF,N,Sending cmd rawsend targets
+550.028,SSURF,N,received 225 of 225 for targets
+550.189,SSURF,N,Transmission succeeded...
+550.256,SNAV,N,Using the first target 'SE'
+550.289,SNAV,N,starting target SE at 1780414849, dive 0
+551.673,SSURF,N,Receiving scicon.sch...
+551.720,SSURF,N,Sending cmd rawsend scicon.sch
+553.348,SSURF,N,received 81 of 81 for scicon.sch
+553.955,SSURF,N,Transmission succeeded...
+553.993,SSURF,N,walking the list n=2, types=ldk
+554.010,SSURF,N,adding st0015dz.x
+554.033,SSURF,N,adding st0015lz.x
+554.056,SSURF,N,list complete, files=2
+558.914,SSURF,N,sent 335 of 335 of st0015dz.x, EOF=1, stat=0,OK
+566.654,SSURF,N,sent 1999 of 1999 of st0015lz.x, EOF=1, stat=0,OK
+567.193,SSURF,N,waiting for prompt
+567.231,SSURF,N,batch exit
+567.262,SSURF,N,walking the list n=2, types=abcd
+567.275,SSURF,N,list complete, files=0
+567.287,SSURF,N,walking the list n=2, types=ldk
+567.299,SSURF,N,list complete, files=0
+567.311,SSURF,N,call try complete
+Compressing THISDIVE.KAP to st0015kz.x

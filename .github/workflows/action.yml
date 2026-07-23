@@ -14,6 +14,11 @@ jobs:
     steps:
     - uses: actions/checkout@v5
 
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tcsh bc dos2unix
+
     - name: Install uv
       uses: astral-sh/setup-uv@v5
       with:

@@ -123,6 +123,7 @@ def getSGCalibrationConstants(
             # log_debug("parsing: " + line)
 
             # remove line comments
+            comment_str = ""
             m = comment.search(line)
             if m:
                 comment_str = m.group(0)

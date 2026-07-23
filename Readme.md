@@ -93,8 +93,9 @@ commands
 
 #### Shell installation
 
-The basestation depends on csh being installed on the system.  On
-Ubuntu, ```sudo apt-get install tcsh```
+The basestation depends on csh being installed on the system. `selftest.sh` also
+depends on `bc` and `dos2unix`, neither of which is part of a minimal Ubuntu
+install. On Ubuntu, ```sudo apt-get install tcsh bc dos2unix```
 
 #### System time
 
