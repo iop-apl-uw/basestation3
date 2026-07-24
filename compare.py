@@ -29,8 +29,8 @@
 
 # ruff: noqa
 
+import contextlib
 import sys
-import shutil
 import os
 from pathlib import Path
 import re
@@ -60,22 +60,21 @@ def parse_param_file(filename: str | Path) -> dict[str, float] | None:
     """
     try:
         log = open(filename, "rb")
-    except IOError:
+    except OSError:
         print("could not open input file %s" % filename)
         return None
 
-    try:
-        canon = open(canonname)
-    except:
-        print("could not open canonical file %s" % canonname)
-        return None
+    # try:
+    #     canon = open(filename)
+    # except:
+    #     print("could not open canonical file %s" % filename)
+    #     return None
 
-    canonmin = {}
-    canonmax = {}
-    canonopt = {}
-    canonvars = {}
+    #canonmin = {}
+    #canonmax = {}
+    #canonopt = {}
+    #canonvars = {}
     logdata: dict[str, float] = {}
-    canonerrors = []
 
     line_count = 0
     for raw_line in log:
@@ -90,10 +89,8 @@ def parse_param_file(filename: str | Path) -> dict[str, float] | None:
         if len(columns) == 2 and columns[0].startswith('$') and not columns[0].startswith('$_') and columns[1].find('*') == -1:
             #print columns
             key = columns[0].lstrip('$')
-            try:
+            with contextlib.suppress(ValueError):
                 logdata[key] = float(columns[1])
-            except ValueError:
-                pass
         elif len(columns) == 5 and columns[3].startswith('$') and columns[4].find('*') == -1:
             key = columns[3].lstrip('$')
             try:
@@ -114,7 +111,7 @@ def compare(canonname, logname):
 
     try:
         canon = open(canonname)
-    except:
+    except Exception:
         print("could not open canonical file %s" % canonname)
         return None
 
@@ -122,6 +119,7 @@ def compare(canonname, logname):
     canonmax = {}
     canonopt = {}
     canonvars = {}
+    canonerrors = []
 
     if len(logdata.keys()) == 0:
         print("no log data present")
@@ -152,7 +150,7 @@ def compare(canonname, logname):
                     v = columns[i].split('=')
                     canonvars[key][v[0]] = float(v[1])
 
-        except: #  IndexError:
+        except Exception: #  IndexError:
             sys.stderr.write("Could not handle %s (%s)\n" %(key, columns))
             canonerrors.append(key)
      
@@ -190,12 +188,12 @@ def compare(canonname, logname):
         x.append( {"param": key, "status": "error", "missing": "error" } )
 
     for key in keys:
-        if not key in canonmin and not key in canonerrors:
+        if key not in canonmin and key not in canonerrors:
             x.append( { "param": key, "status": "unknown", "missing":  "canon" } )
 
     keys = sorted(canonmin.keys())
     for key in keys:
-        if not key in logdata and canonopt[key] == False and not key in canonerrors:
+        if key not in logdata and canonopt[key] == False and key not in canonerrors:
             x.append( { "param": key, "status": "unknown", "missing": "log" } )
 
     return x
