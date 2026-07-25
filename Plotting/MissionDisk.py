@@ -57,7 +57,7 @@ from Plotting import plotmissionsingle
 
 def est_remaining(df, y_val, tag_val: str) -> str:
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=np.RankWarning)
+        warnings.simplefilter("ignore", category=np.exceptions.RankWarning)
         if df["dive"].to_numpy().size > 20:
             dives_back = -20
         else:
@@ -117,9 +117,9 @@ def mission_disk(
 
     qcols = list(
         filter(
-            lambda x: x.startswith("SD_")
-            or x.endswith("_FREEKB")
-            or x.endswith("_FREE"),
+            lambda x: (
+                x.startswith("SD_") or x.endswith("_FREEKB") or x.endswith("_FREE")
+            ),
             columns,
         )
     )

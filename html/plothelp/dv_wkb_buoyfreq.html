@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>WKB Buoyancy Frequency Plot Help</title>
+    <meta name="viewport" content="width=device-width"></meta>
+    <link rel="stylesheet" href="style.css?v="></link>
+  </head>
+  <body>
+    <h1>WKB Buoyancy Frequency Plot Help</h1>
+    <p>This plot shows buoyancy frequency (N) profiles gridded across a trailing window of
+    dives (the <code>--wkb_dives_back</code> most recent dives, inclusive of the current one),
+    and is the basis for the WKB stretching used to derive the proposed sampling schedule shown
+    in the companion <a href="dv_wkb_schedule.html">WKB Sampling Schedule</a> plot. Depth
+    increases downward; the screenshot below is from SG272's dive 300.</p>
+    <a href="/plothelp/images/dv_wkb_buoyfreq_traces.png">
+      <img src="/plothelp/images/dv_wkb_buoyfreq_traces.png" alt="Buoyancy frequency traces" style="width: 600px;"/>
+    </a>
+
+    <br></br>
+    <h2>5-m Buoyancy Frequency</h2>
+    <p>The faint gray, jagged <code>5-m buoyancy frequency</code> traces are the per-cast
+    (dive/climb) buoyancy frequency profiles, one per cast in the trailing dive window, gridded
+    at 5 m depth spacing - each cast contributes one trace, so a longer
+    <code>--wkb_dives_back</code> window means more (and generally noisier-looking, just from
+    there being more of them overlaid) traces.</p>
+
+    <br></br>
+    <h2>Smooth Buoyancy Frequency</h2>
+    <p>The solid black <code>smooth buoyancy frequency</code> trace is the cross-cast mean of
+    the 5-m traces above, smoothed over depth, used as the basis for WKB stretching.</p>
+
+    <br></br>
+    <h2>Uniform Buoyancy Frequency</h2>
+    <p>The dashed black vertical <code>uniform buoyancy frequency</code> line is the single
+    reference frequency that WKB-stretched sampling (shown in the companion schedule plot) is
+    made uniform with respect to - the mean of the smooth trace above, from the bottom of the
+    fixed-rate top zone (<code>--wkb_buckets_depths</code>' first value) down to the deepest
+    depth reached.</p>
+
+    <br></br>
+    <h2>Options</h2>
+    <p>These options configure the WKB computation shared by this plot and the companion
+    <a href="dv_wkb_schedule.html">WKB Sampling Schedule</a> plot:</p>
+    <ul>
+      <li><code>--wkb_dives_back</code>: How many dives back (inclusive of the current dive)
+      to include.</li>
+      <li><code>--wkb_buckets_depths</code>: Comma-separated depth bucket boundaries (m), e.g.
+      <code>100,200,300,400,500,600,700,800,1200</code>. The first value marks the bottom of
+      the fixed-rate top zone used when computing the uniform reference frequency.</li>
+      <li><code>--wkb_relative_n</code>: Comma-separated candidate point-count multipliers
+      (relative to the current sampling), e.g. <code>0.8,1,1.5</code> - see the companion
+      <a href="dv_wkb_schedule.html">WKB Sampling Schedule</a> plot.</li>
+      <li><code>--wkb_dz</code>: Depth bin size (m) used when gridding dives.</li>
+      <li><code>--wkb_z_max</code>: Maximum depth (m) used when gridding dives.</li>
+      <li><code>--wkb_top_sampling_rate</code>: Fixed sampling interval (s) imposed above the
+      first depth bucket - see the companion
+      <a href="dv_wkb_schedule.html">WKB Sampling Schedule</a> plot.</li>
+      <li><code>--wkb_buoyfreq</code>/<code>--no-wkb_buoyfreq</code>: Whether to generate this
+      plot at all (default on) - the companion
+      <a href="dv_wkb_schedule.html">WKB Sampling Schedule</a> plot is always generated
+      regardless.</li>
+    </ul>
+  </body>
+</html>

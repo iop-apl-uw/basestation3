@@ -132,7 +132,7 @@ for test_data_dir, glider, additional_args, allowed_msgs in test_cases:
     test_inputs.append(
         (
             test_data_dir,
-            f"--verbose --local --no-notify_vis {additional_args} --mission_dir {test_data_dir}/mission_dir --config {test_data_dir}/mission_dir/{glider}.conf".split(),
+            f"--verbose --local --plot_types none --no-notify_vis {additional_args} --mission_dir {test_data_dir}/mission_dir --config {test_data_dir}/mission_dir/{glider}.conf".split(),
             allowed_msgs,
         )
     )

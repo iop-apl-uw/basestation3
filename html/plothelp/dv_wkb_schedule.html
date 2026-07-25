@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>WKB Sampling Schedule Plot Help</title>
+    <meta name="viewport" content="width=device-width"></meta>
+    <link rel="stylesheet" href="style.css?v="></link>
+  </head>
+  <body>
+    <h1>WKB Sampling Schedule Plot Help</h1>
+    <p>This plot proposes a CTD sampling interval that is uniform in WKB-stretched
+    (buoyancy-frequency-normalized) depth, rather than uniform in raw depth, derived from the
+    same trailing window of dives (<code>--wkb_dives_back</code>) as the companion
+    <a href="dv_wkb_buoyfreq.html">WKB Buoyancy Frequency</a> plot. Separate <code>dive</code>
+    and <code>climb</code> subplots are shown, each as sampling interval (seconds) vs. time
+    into the dive. The screenshots below are from SG272's dive 300.</p>
+
+    <br></br>
+    <h2>Toggle Buttons</h2>
+    <p>The <code>All</code>/<code>Current</code>/<code>Option N</code> buttons above the plot
+    show or hide that group's traces (in both subplots at once) - click a button once to hide
+    its group, click again to show it. Each group can be toggled independently, so any
+    combination can be shown together; the rest of this page shows just <code>Current</code>
+    and <code>Option 0</code> for clarity, since all three options together can be hard to tell
+    apart. Showing an <code>Option N</code> group also reveals its proposed <code>ct = {
+    ... }</code> text below the plot (see "Proposed Schedule Text" below) - the two are always
+    shown/hidden together. <code>Copy schedule</code> copies whichever proposed schedule text is
+    currently visible to the clipboard, and only appears once a schedule is showing.</p>
+    <a href="/plothelp/images/dv_wkb_schedule_buttons.png">
+      <img src="/plothelp/images/dv_wkb_schedule_buttons.png" alt="Toggle buttons" style="width: 400px;"/>
+    </a>
+
+    <br></br>
+    <h2>Current Sampling</h2>
+    <p>The thick gray <code>current sampling</code> trace is the sampling interval actually
+    used for the dive, as currently configured.</p>
+
+    <br></br>
+    <h2>WKB Sampling</h2>
+    <p>The thin <code>wkb sampling, option N</code> traces are the proposed WKB-stretched
+    sampling intervals, one per candidate relative-buoyancy-frequency option evaluated
+    (<code>--wkb_relative_n</code>) - noisier than the current sampling trace since they aren't
+    bucket-averaged (see "Points" below). Each option has its own color, consistent across the
+    dive and climb subplots, the legend, and the proposed schedule text: option 0 is red, option
+    1 is black, option 2 is blue.</p>
+
+    <br></br>
+    <h2>Points</h2>
+    <p>The thicker <code>N points</code> traces highlight, for each option, the sampling
+    interval that would be used if sampling at a fixed 1-m vertical resolution (bucket-averaged
+    from the thin WKB sampling trace above, same color), annotated with the resulting total
+    point count for that option. The image below shows Current (gray) and Option 0 (red)
+    together - the thin, noisier red line is <code>wkb sampling, option 0</code>; the thick red
+    line with the <code>439 points</code> label is that option's bucket-averaged rate.</p>
+    <a href="/plothelp/images/dv_wkb_schedule_traces.png">
+      <img src="/plothelp/images/dv_wkb_schedule_traces.png" alt="Current and Option 0 traces" style="width: 600px;"/>
+    </a>
+
+    <br></br>
+    <h2>Depth Reference Lines</h2>
+    <p>The vertical dashed blue reference lines and labels (also visible in the image above)
+    mark the dive time at which the glider crosses each labeled depth, for orientation between
+    the depth and time axes.</p>
+
+    <br></br>
+    <h2>Proposed Schedule Text</h2>
+    <p>Below the plot, a permanent note reports the dive's actual CT sensor type and mount
+    (truck/scicon/logger - see <code>WkbConfigText.ct_mount</code>). Selecting
+    <code>Current</code> or an <code>Option N</code> button (see "Toggle Buttons" above) shows
+    that group's proposed sampling schedule as <code>ct = { depth,seconds ... }</code> text,
+    in the same format as <code>scicon.sch</code>, laid out in two columns to keep it compact.
+    The first line is a comment (<code>/ ...</code>, ignored by
+    <code>validate.sciconsch</code>) identifying which schedule it is - either
+    <code>Current</code>, or the option's point-count multiplier (e.g. <code>/ 0.8 * points</code>
+    for the <code>0.8</code> in <code>--wkb_relative_n</code>). Depth buckets deeper than the
+    dive actually reached are omitted. Use the <code>Copy schedule</code> button (see "Toggle
+    Buttons" above) to copy this text - including the comment line, but not the two-column
+    layout, which is display-only - to the clipboard.</p>
+    <a href="/plothelp/images/dv_wkb_schedule_text.png">
+      <img src="/plothelp/images/dv_wkb_schedule_text.png" alt="Note and proposed schedule text" style="width: 600px;"/>
+    </a>
+
+    <br></br>
+    <h2>Options</h2>
+    <p>These options configure the WKB computation shared by this plot and the companion
+    <a href="dv_wkb_buoyfreq.html">WKB Buoyancy Frequency</a> plot:</p>
+    <ul>
+      <li><code>--wkb_dives_back</code>: How many dives back (inclusive of the current dive)
+      to include.</li>
+      <li><code>--wkb_buckets_depths</code>: Comma-separated depth bucket boundaries (m), e.g.
+      <code>100,200,300,400,500,600,700,800,1200</code>. The first value also marks the bottom
+      of the fixed-rate top zone (see <code>--wkb_top_sampling_rate</code>).</li>
+      <li><code>--wkb_relative_n</code>: Comma-separated candidate point-count multipliers
+      (relative to the current sampling), e.g. <code>0.8,1,1.5</code> - one <code>wkb
+      sampling, option N</code> trace is proposed per value.</li>
+      <li><code>--wkb_dz</code>: Depth bin size (m) used when gridding dives.</li>
+      <li><code>--wkb_z_max</code>: Maximum depth (m) used when gridding dives.</li>
+      <li><code>--wkb_top_sampling_rate</code>: Fixed sampling interval (s) imposed above the
+      first depth bucket.</li>
+      <li><code>--wkb_buoyfreq</code>/<code>--no-wkb_buoyfreq</code>: Whether to also generate
+      the companion <a href="dv_wkb_buoyfreq.html">WKB Buoyancy Frequency</a> plot (default
+      on).</li>
+    </ul>
+  </body>
+</html>

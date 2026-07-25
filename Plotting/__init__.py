@@ -156,6 +156,7 @@ from . import (  # noqa : E402, F401, I001
     # DiveVertVelocity    # deprecated in favor of the DiveVertVelocityNew
     DiveVertVelocityNew,
     DiveWetlabs,
+    DiveWkbSchedule,
     DiveScience,
     # Whole mission plotting routines
     MissionCallStats,

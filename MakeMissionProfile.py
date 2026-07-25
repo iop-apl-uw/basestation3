@@ -39,6 +39,7 @@ import pstats
 import sys
 import time
 import traceback
+import warnings
 
 import numpy as np
 
@@ -191,7 +192,7 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, inp_data_colu
                         data_cols_bin[d][j] = np.average(
                             temp_data_col[np.where(np.isfinite(temp_data_col))]
                         )
-                    except (ZeroDivisionError, FloatingPointError):
+                    except ZeroDivisionError, FloatingPointError:
                         data_cols_bin[d][j] = BaseNetCDF.nc_nan
 
         return (obs_bin, depth_bin, data_cols_bin)
@@ -240,7 +241,7 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, inp_data_colu
                             continue
                         try:
                             data_cols_down_bin[d][j] = np.average(temp_temp_data_col)
-                        except (ZeroDivisionError, FloatingPointError):
+                        except ZeroDivisionError, FloatingPointError:
                             data_cols_down_bin[d][j] = BaseNetCDF.nc_nan
 
                 # msg = "index=%d obs = %d depth=%.2f" % (j, num_obs_bin, depth_up_bin[j])
@@ -291,7 +292,7 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, inp_data_colu
                             continue
                         try:
                             data_cols_up_bin[d][j] = np.average(temp_temp_data_col)
-                        except (ZeroDivisionError, FloatingPointError):
+                        except ZeroDivisionError, FloatingPointError:
                             data_cols_up_bin[d][j] = BaseNetCDF.nc_nan
 
                 # msg = "index=%d obs = %d depth=%.2f" % (j, num_obs_bin, depth_up_bin[j])
@@ -1315,7 +1316,19 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                     temp_v[:data_len] = mission_nc_dive_d[dive_num]["profiles"][i][
                         "data_cols"
                     ][dive_varname]
-                mission_nc_var_d[dive_varname][nc_profile, :] = temp_v
+
+                # Handles this:
+                # mission_nc_var_d[dive_varname][nc_profile, :] = temp_v
+                # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+                # File "src/netCDF4/_netCDF4.pyx", line 5616, in netCDF4._netCDF4.Variable.__setitem__
+                # DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+                # As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+                #
+                # TODO - this may be fixed wit https://github.com/Unidata/netcdf4-python/pull/1469, once
+                # it gets out into release
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=DeprecationWarning)
+                    mission_nc_var_d[dive_varname][nc_profile, :] = temp_v
 
             nc_profile = nc_profile + 1
 
