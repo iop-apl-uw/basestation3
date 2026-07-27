@@ -808,7 +808,7 @@ requires-dist = [
     { name = "scipy", specifier = "==1.18.0" },
     { name = "ty", marker = "extra == 'ci'", specifier = "==0.0.32" },
     { name = "types-pyyaml", marker = "extra == 'ci'" },
-    { name = "xarray", specifier = "==2026.4.0" },
+    { name = "xarray", specifier = "==2026.7.0" },
 ]
 provides-extras = ["ci", "dev"]
 
