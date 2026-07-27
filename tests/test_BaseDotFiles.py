@@ -216,7 +216,7 @@ def test_process_ftp_line_ftps_prot_p_failure_continues(
 
 
 @pytest.fixture
-def known_hosts_file(tmp_path) -> "os.PathLike[str]":
+def known_hosts_file(tmp_path) -> os.PathLike[str]:
     f = tmp_path / "known_hosts"
     f.write_text("")
     return f
