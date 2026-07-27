@@ -12,7 +12,7 @@ dependencies = [
     "isodate==0.7.2",
     "cmocean==4.0.3",
     "pyyaml==6.0.2",
-    "xarray==2026.4.0",
+    "xarray==2026.7.0",
     "netCDF4==1.7.4",
     "pydantic==2.13.4",
 ]
