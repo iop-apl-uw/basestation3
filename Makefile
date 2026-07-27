@@ -1,32 +1,32 @@
 # For source checking and testing
 
-all: rufflint mypy 
+all: rufflint typecheck testcov
 
 rufflint:
-	-uv run ruff check .
+	uv run ruff check .
 
 # To turn on checks for pathlib - add --select PTH to the above
 rufflintpath:
-	-uv run ruff --select PTH
+	uv run ruff --select PTH
 # Not yet
 #rufffmt:
 #	-uv run ruff check --select I --fix .
 #	-uv run ruff format .
 
 typecheck:
-	-uv run ty check --output-format github 2>/dev/null
+	uv run ty check --output-format github 2>/dev/null
 
 test:
-	-uv run pytest -rsx tests/
+	uv run pytest -rsx tests/
 
 testpdb:
-	-uv run pytest --pdb -rsx tests/
+	uv run pytest --pdb -rsx tests/
 
 testcov:
-	-uv run pytest -rsx --cov --cov-report term-missing tests/
+	uv run pytest -rsx --cov --cov-report term-missing tests/
 
 testhtml:
-	-uv run pytest -rsx --cov --cov-report html tests/
+	uv run pytest -rsx --cov --cov-report html tests/
 
 # Runs github workflow locally
 # Requires act tool to be installed.  Act requires docker to be installed.
@@ -37,7 +37,7 @@ testhtml:
 # Plotly6/kaleido1.0 - need to change to amd64 and run container under rosetta because there
 # is no good way to get a ARM64 chrome/chromium browswer install on a ARM64 runner container
 act:
-	-act -j check --container-daemon-socket -  --container-architecture linux/aarch64 push
+	act -j check --container-daemon-socket -  --container-architecture linux/aarch64 push
 
 # For Ubuntu:
 # curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
@@ -48,8 +48,8 @@ act:
 # Assuming the docker post-install script has been run
 # Obviously, this needs to be set after every reboot/restart of docker
 actlinux:
-	-act -j check --container-daemon-socket -  push
+	act -j check --container-daemon-socket -  push
 
 
 doc:
-	-uv run mkdocs build
+	uv run mkdocs build
