@@ -44,6 +44,8 @@ import scipy
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
+    import sqlite3
+
     import BaseOpts
 
 import PlotUtilsPlotly
@@ -56,9 +58,9 @@ from Plotting import plotmissionsingle
 def mission_commlog(
     base_opts: BaseOpts.BaseOptions,
     mission_str: list,
-    dive=None,
-    generate_plots=True,
-    dbcon=None,
+    dive: int | None = None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots disk stats"""
 

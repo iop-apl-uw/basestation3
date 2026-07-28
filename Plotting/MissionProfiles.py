@@ -49,6 +49,8 @@ import ExtractTimeseries
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
+    import sqlite3
+
     import BaseOpts
 
 import PlotUtilsPlotly
@@ -94,7 +96,11 @@ def cmocean_to_plotly(cmapname, pl_entries):
 
 @plotmissionsingle
 def mission_profiles(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
+    base_opts: BaseOpts.BaseOptions,
+    mission_str: list,
+    dive: int | None = None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
 
     if not generate_plots:

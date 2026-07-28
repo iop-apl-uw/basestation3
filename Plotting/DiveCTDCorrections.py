@@ -44,6 +44,8 @@ import scipy
 import seawater
 
 if typing.TYPE_CHECKING:
+    import sqlite3
+
     import BaseOpts
 
 import PlotUtils
@@ -64,8 +66,8 @@ f_add_raw_qc = False
 def plot_ctd_corrections(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
-    generate_plots=True,
-    dbcon=None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plot showing results for ctd thermal-inertia corrections"""
     if not generate_plots:

@@ -41,6 +41,8 @@ import numpy as np
 import plotly.graph_objects
 
 if typing.TYPE_CHECKING:
+    import sqlite3
+
     import scipy
 
     import BaseOpts
@@ -56,8 +58,8 @@ from Plotting import plotdivesingle
 def plot_CTW(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
-    generate_plots=True,
-    dbcon=None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots the glider course through the water"""
     # TODO create roll to right and left vectors

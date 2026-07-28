@@ -43,6 +43,7 @@ import plotly.graph_objects
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
     import pathlib
+    import sqlite3
 
     import BaseOpts
 
@@ -94,9 +95,9 @@ def est_remaining(df, y_val, tag_val: str) -> str:
 def mission_disk(
     base_opts: BaseOpts.BaseOptions,
     mission_str: list,
-    dive=None,
-    generate_plots=True,
-    dbcon=None,
+    dive: int | None = None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots disk stats"""
 
@@ -296,9 +297,9 @@ pmar_free_color_map = (
 def mission_pmar_disk(
     base_opts: BaseOpts.BaseOptions,
     mission_str: list,
-    dive=None,
-    generate_plots=True,
-    dbcon=None,
+    dive: int | None = None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots disk stats"""
 

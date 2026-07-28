@@ -45,6 +45,8 @@ import plotly.graph_objects
 import scipy
 
 if typing.TYPE_CHECKING:
+    import sqlite3
+
     import BaseOpts
 
 import BaseOptsType
@@ -473,8 +475,8 @@ def load_ctd_vars(
 def plot_CTD(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
-    generate_plots=True,
-    dbcon=None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots CTD data and Optode Temp (if present)"""
 
@@ -992,8 +994,8 @@ def plot_CTD(
 def plot_CTD_series(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
-    generate_plots=True,
-    dbcon=None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots CTD data and Optode Temp (if present) as a annimation"""
 

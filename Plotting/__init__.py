@@ -42,6 +42,8 @@ import typing
 
 # Avoid circular input for type checking
 if typing.TYPE_CHECKING:
+    import sqlite3
+
     import plotly.graph_objects
     import scipy
 
@@ -56,8 +58,8 @@ plotting_additional_arguments = {}
 def plot_dive_single(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file_name: scipy.io._netcdf.netcdf_file,
-    generate_plots=True,
-    dbcon=None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Signature for per-dive plotting routines"""
     return ([], [])
@@ -67,9 +69,9 @@ def plot_dive_single(
 def plot_mission_single(
     base_opts: BaseOpts.BaseOptions,
     mission_str: list,
-    dive=None,
-    generate_plots=True,
-    dbcon=None,
+    dive: int | None = None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Signature for whole mission plotting routines"""
     return ([], [])

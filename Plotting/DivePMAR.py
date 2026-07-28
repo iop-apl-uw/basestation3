@@ -43,6 +43,8 @@ import plotly.graph_objects
 import scipy
 
 if typing.TYPE_CHECKING:
+    import sqlite3
+
     import BaseOpts
 
 import PlotUtils
@@ -134,8 +136,8 @@ def pmar_create_stats_lines(dive_nc_file, ch_tag, plot_type):
 def plot_PMAR(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
-    generate_plots=True,
-    dbcon=None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots PMAR data"""
 

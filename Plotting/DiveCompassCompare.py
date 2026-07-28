@@ -44,6 +44,8 @@ import scipy
 import seawater
 
 if typing.TYPE_CHECKING:
+    import sqlite3
+
     import BaseOpts
 
 import BaseOptsType
@@ -487,8 +489,8 @@ def plot_compass_compare(
 def plot_compare_aux(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
-    generate_plots=True,
-    dbcon=None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots comparision of truc with with aux compass"""
 
@@ -510,8 +512,8 @@ def plot_compare_aux(
 def plot_compare_auxb(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
-    generate_plots=True,
-    dbcon=None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots comparision of truc with with auxb compass"""
     if "auxB_time" not in dive_nc_file.variables or not generate_plots:
@@ -532,8 +534,8 @@ def plot_compare_auxb(
 def plot_compare_cp(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
-    generate_plots=True,
-    dbcon=None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots comparision of truck compass with with logdev adcp compass"""
     if "cp_time" not in dive_nc_file.variables or not generate_plots:
@@ -606,8 +608,8 @@ def plot_compare_cp(
 def plot_compare_ad2cp(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
-    generate_plots=True,
-    dbcon=None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots comparision of truck compass with with logdev adcp compass"""
     if "ad2cp_time" not in dive_nc_file.variables or not generate_plots:

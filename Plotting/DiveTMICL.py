@@ -43,6 +43,8 @@ import plotly.graph_objects
 import scipy
 
 if typing.TYPE_CHECKING:
+    import sqlite3
+
     import BaseOpts
 
 import PlotUtils
@@ -55,8 +57,8 @@ from Plotting import plotdivesingle
 def plot_TMICL(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
-    generate_plots=True,
-    dbcon=None,
+    generate_plots: bool = True,
+    dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots TMICL data"""
 
