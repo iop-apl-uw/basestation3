@@ -37,6 +37,7 @@ import pathlib
 import random
 import sys
 import time
+import warnings
 from io import BytesIO
 from zipfile import ZipFile
 
@@ -2934,8 +2935,10 @@ def attachHandlers(app: sanic.Sanic):
                 zsock.close()
                 return
 
+    # Note - removed the loop argument per site-packages/sanic/logging/deprecation.py:33: DeprecationWarning: [DEPRECATION v26.6]
+    # Passing the loop argument to listeners is deprecated. Your listener 'attachHandlers.<locals>.initApp' should only accept the app argument.
     @app.listener("after_server_start")
-    async def initApp(app, loop):
+    async def initApp(app):
         await buildMissionTable(app)
         await buildUserTable(app)
 
@@ -3650,7 +3653,12 @@ async def watchMonitorPublish(config):
 
                 
 def backgroundWatcher(config):
-    loop = asyncio.get_event_loop()
+    # Runs as its own process (spawned via app.manager.manage() below), so
+    # there's no event loop yet - asyncio.get_event_loop()'s old fallback of
+    # silently creating one when none is set is gone in 3.14, so create and
+    # install one explicitly instead.
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     loop.create_task(watchMonitorPublish(config))
     loop.run_forever()
 
@@ -3671,6 +3679,36 @@ def createApp(overrides: dict, test=False) -> sanic.Sanic:
         }
 
     app = sanic.Sanic("SGpilot", ctx=SimpleNamespace(**d), dumps=dumps)
+
+    # sanic's own Config.__init__() (just above) already registered its own
+    # `module=r"sanic.*"` DeprecationWarning filter (config.py's
+    # _configure_warnings()) - ours have to be added after, so they land
+    # ahead of sanic's in the filter list and actually win. createApp() runs
+    # fresh in every worker process, so these re-apply wherever needed.
+    #
+    # try_use_uvloop() (sanic/server/loop.py) still calls the asyncio
+    # get_event_loop_policy/set_event_loop_policy/AbstractEventLoopPolicy
+    # APIs Python deprecated (removal slated for 3.16) - nothing in this
+    # codebase triggers it. No message= filter: which of that trio actually
+    # fires depends on whether a loop policy is already installed, so match
+    # on module instead - loop.py has no other DeprecationWarning source.
+    warnings.filterwarnings(
+        "ignore",
+        category=DeprecationWarning,
+        module=r"sanic\.server\.loop",
+    )
+    # Same story one level down: serve_multiple()/worker startup
+    # (sanic/server/runners.py) calls loop.add_signal_handler(), which
+    # internally still calls the deprecated asyncio.iscoroutinefunction()
+    # (Python recommends inspect.iscoroutinefunction() instead) - again
+    # nothing in this codebase triggers it, and runners.py has no other
+    # DeprecationWarning source.
+    warnings.filterwarnings(
+        "ignore",
+        category=DeprecationWarning,
+        module=r"sanic\.server\.runners",
+    )
+    # Remove both filters once sanic stops calling these deprecated APIs.
 
     # config values loaded from SANIC_ environment variables first
     # then get overridden by anything from command line

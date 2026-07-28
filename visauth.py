@@ -29,8 +29,10 @@ import getpass
 import io
 import os.path
 import random
+import secrets
 import smtplib
 import sqlite3
+import string
 import sys
 import time
 from contextlib import closing
@@ -38,7 +40,6 @@ from email.mime.nonmultipart import MIMENonMultipart
 from email.utils import formatdate
 
 import pyqrcode
-from passlib import pwd
 from passlib.hash import sha256_crypt
 from passlib.totp import TOTP
 
@@ -47,6 +48,19 @@ from passlib.totp import TOTP
 FAILED_LOGIN_LIMIT = 10
 OTC_EXPIRE_TIME    = 300
 TOTP_VERIFY_TIME   = 300
+
+
+def _generate_password(length: int = 12) -> str:
+    """Generates a random alphanumeric password.
+
+    Args:
+        length: Number of characters to generate.
+
+    Returns:
+        A random string drawn from ascii letters and digits.
+    """
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
 
 def sendMail(fromAddr, toAddr, subj, body):
     email_msg = MIMENonMultipart("text", "plain")
@@ -110,7 +124,7 @@ def resetUser(db, username, password, sendEmail):
             print("passwords do not match")
             return
     elif password == "auto":
-        password = pwd.genword()
+        password = _generate_password()
         if not sendEmail:
             print(f"password={password}")
 
@@ -149,7 +163,7 @@ def addUser(db, username, email, domain, authType, password, sendEmail):
             print("passwords do not match")
             return
     elif password == "auto":
-        password = pwd.genword()
+        password = _generate_password()
         if not sendEmail:
             print(f"password={password}")
 
