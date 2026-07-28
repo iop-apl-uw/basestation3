@@ -310,7 +310,7 @@ def find_additional_options(
                             itertools.chain(["[global]"], fi),
                             source=extensions_file_name,
                         )
-                except (OSError, PermissionError):
+                except OSError, PermissionError:
                     sys.stderror.write(
                         f"Could not open extensions_file_name {traceback.format_exc()}"
                     )
