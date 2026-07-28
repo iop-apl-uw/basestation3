@@ -115,6 +115,12 @@ filterwarnings = [
     # `data.shape = ...` on a view, which NumPy 2.5 deprecated in favor of
     # np.reshape(copy=False). This is upstream (Unidata/netcdf4-python), not our code.
     "ignore:Setting the shape on a NumPy array has been deprecated:DeprecationWarning",
+    # cmocean 3.0.3 (imported by Plotting/MissionProfiles.py) defines every
+    # built-in colormap via ListedColormap(..., N=...), which matplotlib 3.11
+    # deprecated in favor of just relying on the passed color list's length.
+    # Confirmed still present even in cmocean's latest release (4.0.3) - an
+    # open upstream issue, not our code, not fixed by upgrading cmocean.
+    "ignore:Passing 'N' to ListedColormap is deprecated:DeprecationWarning",
 ]
 
 [tool.ruff]
