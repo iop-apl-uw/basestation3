@@ -247,6 +247,7 @@ python3 -c "import os; print(os.environ.get('BROWSER_PATH'))"
 ```
 You should see something like:
 ```
+/opt/playwright-browsers/chromium-1228/chrome-linux/chrome
 ```
 
 ### login/logout scripts
