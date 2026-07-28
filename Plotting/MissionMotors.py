@@ -273,7 +273,9 @@ def mission_motors(
     pumpdf = vdf[vdf["vbd_rate"] < 0]
     bleeddf = vdf[vdf["vbd_rate"] > 0]
 
-    pumpdf_vbd_rate = pumpdf["vbd_rate"].to_numpy()
+    # copy=True: pandas 3.0's Copy-on-Write returns a read-only array from
+    # to_numpy() on a filtered Series by default
+    pumpdf_vbd_rate = pumpdf["vbd_rate"].to_numpy(copy=True)
     pumpdf_vbd_rate[pumpdf_vbd_rate < base_opts.max_vbd_pump_rate] = np.nan
 
     fig.add_trace(
@@ -366,7 +368,9 @@ def mission_motors(
 
     fig = plotly.graph_objects.Figure()
 
-    pumpdf_vbd_eff = pumpdf["vbd_eff"].to_numpy()
+    # copy=True: see the pumpdf_vbd_rate comment above - same pandas 3.0
+    # Copy-on-Write read-only-array issue, same fix.
+    pumpdf_vbd_eff = pumpdf["vbd_eff"].to_numpy(copy=True)
     pumpdf_vbd_eff[pumpdf_vbd_eff > base_opts.max_vbd_effic] = np.nan
 
     fig.add_trace(
