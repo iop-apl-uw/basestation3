@@ -10,8 +10,8 @@ rufflintpath:
 	uv run ruff --select PTH
 # Not yet
 #rufffmt:
-#	-uv run ruff check --select I --fix .
-#	-uv run ruff format .
+#	uv run ruff check --select I --fix .
+#	uv run ruff format .
 
 typecheck:
 	uv run ty check --output-format github 2>/dev/null
@@ -27,6 +27,20 @@ testcov:
 
 testhtml:
 	uv run pytest -rsx --cov --cov-report html tests/
+
+# Slow, Docker-based validation of the Dockerfile and install/ scripts.
+# Not part of the normal check-in/CI pipeline - run manually.
+test-long:
+	-uv run pytest -rsx testlong/
+
+# Starts a throwaway Docker container pre-staged through Readme.md's
+# "Basestation source" section, for live-demoing the "## Installation"
+# steps (uv/venv/Chromium) by hand over SSH. Not part of CI - see demo/Readme.md.
+demo-start:
+	demo/start_demo_container.sh
+
+demo-stop:
+	demo/stop_demo_container.sh
 
 # Runs github workflow locally
 # Requires act tool to be installed.  Act requires docker to be installed.

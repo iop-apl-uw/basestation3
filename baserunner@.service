@@ -56,7 +56,7 @@
 # For docker containers add:
 # --docker_image <repository>:<tag>  --docker_uid <uid> --docker_gid <gid>
 # where
-# <repository>:<tag> are the docker repository and tag - i.e. - basestation:3.10.10 (See Dockerfile)
+# <repository>:<tag> are the docker repository and tag - i.e. - basestation:latest (See Dockerfile)
 # <uid> is the UID of username
 # <gid> is the GID of username
 # 

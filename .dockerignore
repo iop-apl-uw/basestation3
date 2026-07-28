@@ -1,0 +1,27 @@
+# testdata/ is intentionally NOT excluded here - the `ci` build target runs
+# `pytest tests/`, and tests/testutils.py::run_mission() reads fixtures from
+# testdata/ at test time. Excluding it would break the ci target silently.
+
+.git/
+.github/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage_func
+htmlcov/
+*.cprof
+*.prof
+site/
+docs/
+local/
+/Plotting/local/
+ssh/
+etc/
+adcp/
+microstructure/
+data/
+.claude/
+.DS_Store

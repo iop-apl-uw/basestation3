@@ -149,7 +149,6 @@ def plot_dives(
     if dive_nc_file_names and generate_plots:
         kaleido_server = PlotUtilsPlotly.KaleidoServer(base_opts)
         kaleido_server.start_kaleido_global_server()
-
     try:
         for dive_nc_file_name in dive_nc_file_names:
             log_info(f"Plotting {dive_nc_file_name}")

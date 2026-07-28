@@ -25,7 +25,7 @@ read and write files from the root of its home directory.  In the second method,
 symlink - ```current``` - points to a sub-directory off the glider's home directory.  When 
 this symlink is setup, the glider will connect to that sub-directory before up and down loading 
 files.  All processing will occur is this sub-directory.  The script ```NewMission.py``` can be 
-used to setup this structure - ```/opt/basestation/bin/python /usr/local/basesation3/NewMission.py --help``` for more details.
+used to setup this structure - ```/opt/basestation/bin/python /usr/local/basestation3/NewMission.py --help``` for more details.
 
 When a glider logs in, it expects to see `=` as its prompt, hence the .cshrc
 file in each glider's directory.  It also triggers the `.login` script, which sets
@@ -124,10 +124,22 @@ comment out the following lines:
 	#session    optional   pam_motd.so noupdate
 	#session    optional   pam_lastlog.so
 
+### Quick install
+
+The steps from here through [login/logout scripts](#loginlogout-scripts) -
+system packages, the `gliders` group, the PAM edit above, the
+`/usr/local/basestation3` checkout, the `uv` venv setup, Chromium (needed by
+kaleido for static plot image export - see
+[Installing Chromium](#installing-chromium) below), and installing the
+login/logout scripts - can be automated with
+`install/install_basestation.sh` / `install/update_basestation.sh` - see
+[install/Readme.md](install/Readme.md) for usage and what they don't cover.
+The manual walkthrough below is also the reference for what the scripts do
+under the hood, useful if a script fails partway through.
 
 ## Basestation source
 
-Basestation3 assumes it is installed in `/usr/local/basesation3`.
+Basestation3 assumes it is installed in `/usr/local/basestation3`.
 
 ``` 
 sudo mkdir -p /usr/local/basestation3
@@ -190,7 +202,6 @@ Replace ```<user>``` in the above your username. Then, use ``uv`` to create the 
 Next activate the virtual environment:
 
 ```source /opt/basestation/bin/activate```
-
 Make sure your current directory is the root of the basestation source tree:
 
 ```cd /usr/local/basestation3```
@@ -210,10 +221,14 @@ and you should see the help message for ```Base.py```
 
 ### Installing Chromium
 
+Needed because kaleido (used for static plot image export - png/jpg/webp/svg)
+no longer bundles its own browser as of kaleido 1.x; it renders through an
+externally supplied Chromium instead.
 ```
 sudo mkdir -p /opt/playwright-browsers
 sudo chown -R <user>:gliders /opt/playwright-browsers
 export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
+playwright install-deps
 playwright install chromium
 sudo chmod -R o+rx /opt/playwright-browsers
 ```
@@ -260,7 +275,7 @@ cp /usr/local/basestation3/login_logout_scripts/glider_logout /usr/local/basesta
 
 Be sure to review and edit ```/usr/local/basestation/glider_login``` and ```/usr/local/basestation/glider_logout``` any make edits any place indicated.
 
-#### Basesation2
+#### Basestation2
 
 If you want to maintain the ability to run basestation2, you need to do the
 following:
@@ -290,7 +305,7 @@ need to be edited.  The string ```/usr/local/basestation``` needs to be replaced
 
 ### Installation of raw protocol
 
-From the ```/usr/local/basestation3/rawxfr``` directory
+From the ```/usr/local/basestation3/rawxfer``` directory
 
 ```
 make
