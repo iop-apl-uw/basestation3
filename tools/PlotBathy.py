@@ -66,7 +66,10 @@ def cmocean_to_plotly(cmap, pl_entries):
     pl_colorscale = []
 
     for k in range(pl_entries):
-        C = list(map(np.uint8, np.array(cmap(k * h)[:3]) * 255))
+        # Plain int, not np.uint8: NumPy 2.0's NEP 51 changed scalar repr
+        # to include the type name (str(np.uint8(68)) -> "np.uint8(68)"),
+        # which breaks the "rgb"+str((...)) formatting below.
+        C = list(map(int, np.array(cmap(k * h)[:3]) * 255))
         pl_colorscale.append([k * h, "rgb" + str((C[0], C[1], C[2]))])
 
     return pl_colorscale
