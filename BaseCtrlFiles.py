@@ -130,7 +130,12 @@ def send_slack(
     else:
         hook_url = endpoint["hook"]
 
-    msg = {"text": "%s:%s" % (subject_line, message_body)}
+    # Multi-line bodies (tracebacks, log dumps) get fenced as a code block
+    if "\n" in message_body:
+        text = f"{subject_line}:\n```\n{message_body}\n```"
+    else:
+        text = "%s:%s" % (subject_line, message_body)
+    msg = {"text": text}
 
     log_info(f"Sending slack {subject_line} {message_body} {hook_url} to {user}")
 
@@ -165,7 +170,11 @@ def send_mattermost(
     else:
         hook_url = endpoint["hook"]
 
-    msg_str = f"{subject_line}:{message_body}"
+    # Multi-line bodies (tracebacks, log dumps) get fenced as a code block
+    if "\n" in message_body:
+        msg_str = f"{subject_line}:\n```\n{message_body}\n```"
+    else:
+        msg_str = f"{subject_line}:{message_body}"
 
     log_info(f"Sending mattermost {subject_line} {message_body} {hook_url} to {user}")
 

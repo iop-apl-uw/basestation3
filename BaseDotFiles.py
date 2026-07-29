@@ -120,7 +120,12 @@ def post_slack(
         f"subject_line:{subject_line} message_body:{message_body}"
     )
 
-    msg = {"text": f"{subject_line}:{message_body}"}
+    # Multi-line bodies (tracebacks, log dumps) get fenced as a code block
+    if "\n" in message_body:
+        text = f"{subject_line}:\n```\n{message_body}\n```"
+    else:
+        text = f"{subject_line}:{message_body}"
+    msg = {"text": text}
 
     try:
         response = requests.post(
