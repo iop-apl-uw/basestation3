@@ -345,9 +345,7 @@ def sensor_data_processing(
         try:
             sbe43_o2_freq = results_d["sbe43_o2Freq"]  # try from scicon
             sbe43_time_s_v = results_d["sbe43_time"]
-            sbe43_results_dim = BaseNetCDF.nc_mdp_data_info[
-                BaseNetCDF.nc_sbe43_data_info
-            ]
+            sbe43_results_dim = BaseNetCDF.nc_mdp_data_info[nc_sbe43_data_info]
             eng_SBE43_present = True
         except KeyError:
             return 1  # nothing to do....
@@ -400,7 +398,11 @@ def sensor_data_processing(
         QC.assert_qc(
             QC.QC_UNSAMPLED,
             oxygen_qc_v,
-            [i for i in range(sbe43_np) if np.isnan(sbe43_o2_freq[i])],
+            [
+                i
+                for i in range(sbe43_np)
+                if np.isnan(sbe43_o2_freq[i]) or sbe43_o2_freq[i] == 0
+            ],
             "unsampled SBE43 oyxgen",
         )
         QC.inherit_qc(

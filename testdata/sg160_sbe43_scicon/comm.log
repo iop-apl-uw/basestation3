@@ -1,0 +1,1374 @@
+Connected at Fri Aug 20 08:14:48 PDT 2010
+logged in
+0:0:1:0:4:42:0:783:2312:189 GPS,200810,150616,4741.260,-12224.212,13,99.0,32,18.2
+ver=66.08,rev=2375:2385M,frag=8,launch=190810:175804
+Iridium bars: 5 geolocation: 4722.920898,-12114.263672,200810,030030
+Fri Aug 20 08:14:58 2010 [sg160] Sending 332 bytes of cmdfile
+Fri Aug 20 08:14:58 2010 [sg160] Sent 332 bytes of cmdfile
+Fri Aug 20 08:15:49 2010 [sg160] ready to receive st0015lu.x00
+Fri Aug 20 08:15:50 2010 [sg160] received four size bytes 0 0 16 91
+Fri Aug 20 08:15:50 2010 [sg160] Receiving 4187 bytes of st0015lu.x00
+Fri Aug 20 08:16:02 2010 [sg160] Received 4187 bytes of st0015lu.x00
+Fri Aug 20 08:16:07 2010 [sg160] ready to receive st0015du.x00
+Fri Aug 20 08:16:09 2010 [sg160] received four size bytes 0 0 4 50
+Fri Aug 20 08:16:09 2010 [sg160] Receiving 1074 bytes of st0015du.x00
+Fri Aug 20 08:16:11 2010 [sg160] Received 1074 bytes of st0015du.x00
+Fri Aug 20 08:16:23 2010 [sg160] ready to receive st0015kz.x
+Fri Aug 20 08:16:24 2010 [sg160] received four size bytes 0 0 43 241
+Fri Aug 20 08:16:24 2010 [sg160] Receiving 11249 bytes of st0015kz.x
+Fri Aug 20 08:16:59 2010 [sg160] Received 11249 bytes of st0015kz.x
+0:0:1:0:4:42:1 logout
+Disconnected at Fri Aug 20 08:17:08 PDT 2010
+Connected at Fri Aug 20 08:28:06 PDT 2010
+logged in
+0:1:2:0:4:42:-4:783:2312:189 GPS,200810,152452,4741.254,-12224.209,13,99.0,32,18.2
+ver=66.08,rev=2375:2385M,frag=8,launch=190810:175804
+Iridium bars: 3 geolocation: 4710.206055,-12231.687500,200810,152533
+Fri Aug 20 08:28:17 2010 [sg160] Sending 332 bytes of cmdfile
+Fri Aug 20 08:28:17 2010 [sg160] Sent 332 bytes of cmdfile
+Disconnected at Fri Aug 20 08:29:04 PDT 2010
+Connected at Fri Aug 20 08:31:25 PDT 2010
+logged in
+0:1:3:0:4:42:0:783:2312:189 GPS,200810,152452,4741.254,-12224.209,13,99.0,32,18.2
+ver=66.08,rev=2375:2385M,frag=8,launch=190810:175804
+Iridium bars: 3 geolocation: 4722.920898,-12221.656250,200810,152757
+targets
+science
+pdoscmds.bat
+Fri Aug 20 08:32:53 2010 [sg160] ready to receive sg0000kl.x
+Fri Aug 20 08:32:55 2010 [sg160] received four size bytes 0 0 28 58
+Fri Aug 20 08:32:55 2010 [sg160] Receiving 7226 bytes of sg0000kl.x
+Fri Aug 20 08:33:16 2010 [sg160] Received 7226 bytes of sg0000kl.x
+0:1:3:0:4:42:1 logout
+Disconnected at Fri Aug 20 08:33:24 PDT 2010
+Connected at Fri Aug 20 08:39:26 PDT 2010
+logged in
+0:2:1:0:5:42:0:150:2313:230 GPS,200810,153817,4741.257,-12224.196,10,1.7,19,18.2
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 3 geolocation: 4726.107422,-12223.367188,200810,153109
+cmdfile
+Fri Aug 20 08:40:02 2010 [sg160] cmdfile/XMODEM: 384 Bytes, 16 BPS
+Received cmdfile 344 bytes
+Fri Aug 20 08:40:37 2010 [sg160] ready to receive sg0000lz.x00
+Fri Aug 20 08:40:39 2010 [sg160] received four size bytes 0 0 5 128
+Fri Aug 20 08:40:39 2010 [sg160] Receiving 1408 bytes of sg0000lz.x00
+Fri Aug 20 08:40:43 2010 [sg160] Received 1408 bytes of sg0000lz.x00
+0:2:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 08:40:52 PDT 2010
+Connected at Fri Aug 20 08:43:06 PDT 2010
+logged in
+0:3:1:0:5:42:0:150:2312:231 GPS,200810,154158,4741.249,-12224.194,9,3.0,28,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4726.107422,-12223.367188,200810,153920
+Fri Aug 20 08:43:16 2010 [sg160] Sending 344 bytes of cmdfile
+Fri Aug 20 08:43:16 2010 [sg160] Sent 344 bytes of cmdfile
+0:3:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 08:43:56 PDT 2010
+Connected at Fri Aug 20 08:47:21 PDT 2010
+logged in
+0:4:1:0:5:42:0:150:2313:231 GPS,200810,154637,4741.254,-12224.198,11,1.7,28,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4722.920898,-12226.066406,200810,154238
+Fri Aug 20 08:47:31 2010 [sg160] Sending 344 bytes of cmdfile
+Fri Aug 20 08:47:31 2010 [sg160] Sent 344 bytes of cmdfile
+Disconnected at Fri Aug 20 08:48:09 PDT 2010
+Connected at Fri Aug 20 08:51:47 PDT 2010
+logged in
+0:5:1:0:5:42:0:150:2314:232 GPS,200810,155058,4741.212,-12224.181,28,2.2,47,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 4 geolocation: 4722.920898,-12223.367188,200810,154715
+Fri Aug 20 08:51:58 2010 [sg160] Sending 344 bytes of cmdfile
+Fri Aug 20 08:51:58 2010 [sg160] Sent 344 bytes of cmdfile
+0:5:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 08:52:36 PDT 2010
+Connected at Fri Aug 20 08:58:34 PDT 2010
+logged in
+0:6:2:0:5:42:-2:150:2314:232 GPS,200810,155533,4741.208,-12224.257,29,2.4,48,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4722.920898,-12226.066406,200810,155141
+Fri Aug 20 08:58:44 2010 [sg160] Sending 309 bytes of cmdfile
+Fri Aug 20 08:58:44 2010 [sg160] Sent 309 bytes of cmdfile
+0:6:2:0:5:42:1 logout
+Disconnected at Fri Aug 20 08:59:34 PDT 2010
+Connected at Fri Aug 20 09:05:12 PDT 2010
+logged in
+0:7:2:0:5:42:-3:150:2314:231 GPS,200810,160216,4741.613,-12224.504,9,99.0,28,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4726.107422,-12225.081055,200810,160255
+Fri Aug 20 09:05:22 2010 [sg160] Sending 309 bytes of cmdfile
+Fri Aug 20 09:05:22 2010 [sg160] Sent 309 bytes of cmdfile
+0:7:2:0:5:42:1 logout
+Disconnected at Fri Aug 20 09:06:00 PDT 2010
+Connected at Fri Aug 20 09:11:17 PDT 2010
+logged in
+0:8:2:0:5:42:-2:148:2314:232 GPS,200810,160840,4743.004,-12223.995,8,2.5,27,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4729.297363,-12222.378906,200810,160506
+Fri Aug 20 09:11:29 2010 [sg160] Sending 309 bytes of cmdfile
+Fri Aug 20 09:11:29 2010 [sg160] Sent 309 bytes of cmdfile
+0:8:2:0:5:42:1 logout
+Disconnected at Fri Aug 20 09:12:07 PDT 2010
+Connected at Fri Aug 20 09:15:34 PDT 2010
+logged in
+0:9:1:0:5:42:0:148:2314:234 GPS,200810,161426,4743.029,-12224.006,11,1.4,11,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4726.107422,-12227.781250,200810,161110
+Fri Aug 20 09:15:45 2010 [sg160] Sending 311 bytes of cmdfile
+Fri Aug 20 09:15:45 2010 [sg160] Sent 311 bytes of cmdfile
+0:9:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 09:16:23 PDT 2010
+Connected at Fri Aug 20 09:45:06 PDT 2010
+logged in
+1:0:1:0:5:42:0:142:2316:229 GPS,200810,164302,4742.997,-12224.250,10,2.0,10,18.2
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 4 geolocation: 4722.920898,-12223.367188,200810,161506
+Fri Aug 20 09:45:15 2010 [sg160] Sending 309 bytes of cmdfile
+Fri Aug 20 09:45:15 2010 [sg160] Sent 309 bytes of cmdfile
+Fri Aug 20 09:45:51 2010 [sg160] ready to receive sg0001lz.x00
+Fri Aug 20 09:45:53 2010 [sg160] received four size bytes 0 0 10 240
+Fri Aug 20 09:45:53 2010 [sg160] Receiving 2800 bytes of sg0001lz.x00
+Fri Aug 20 09:46:17 2010 [sg160] Received 1484 bytes of sg0001lz.x00
+Reconnected at Fri Aug 20 09:48:05 PDT 2010
+logged in
+1:0:2:0:5:42:0:142:2316:229 GPS,200810,164302,4742.997,-12224.250,10,2.0,10,18.2
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4719.737305,-12359.110352,200810,164438
+Fri Aug 20 09:48:15 2010 [sg160] Sending 309 bytes of cmdfile
+Fri Aug 20 09:48:15 2010 [sg160] Sent 309 bytes of cmdfile
+Fri Aug 20 09:48:48 2010 [sg160] ready to receive sg0001lz.x00
+Fri Aug 20 09:48:50 2010 [sg160] received four size bytes 0 0 10 240
+Fri Aug 20 09:48:50 2010 [sg160] Receiving 2800 bytes of sg0001lz.x00
+Fri Aug 20 09:48:58 2010 [sg160] Received 2800 bytes of sg0001lz.x00
+Fri Aug 20 09:49:02 2010 [sg160] ready to receive sg0001dz.x00
+Fri Aug 20 09:49:04 2010 [sg160] received four size bytes 0 0 14 234
+Fri Aug 20 09:49:04 2010 [sg160] Receiving 3818 bytes of sg0001dz.x00
+Fri Aug 20 09:49:15 2010 [sg160] Received 3818 bytes of sg0001dz.x00
+1:0:2:0:5:42:1 logout
+Disconnected at Fri Aug 20 09:49:24 PDT 2010
+Connected at Fri Aug 20 09:51:21 PDT 2010
+logged in
+1:1:1:0:5:42:0:141:2316:227 GPS,200810,165014,4743.001,-12224.288,8,2.0,8,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4726.107422,-12213.548828,200810,164758
+Fri Aug 20 09:51:32 2010 [sg160] Sending 309 bytes of cmdfile
+Fri Aug 20 09:51:32 2010 [sg160] Sent 309 bytes of cmdfile
+1:1:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 09:52:09 PDT 2010
+Connected at Fri Aug 20 09:57:48 PDT 2010
+logged in
+1:2:2:0:5:42:-4:141:2316:226 GPS,200810,165452,4743.005,-12224.317,9,2.1,28,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4700.703125,-12245.067383,200810,165529
+Fri Aug 20 09:57:58 2010 [sg160] Sending 312 bytes of cmdfile
+Fri Aug 20 09:57:58 2010 [sg160] Sent 312 bytes of cmdfile
+Fri Aug 20 09:58:31 2010 [sg160] Sending 10 bytes of pdoscmds.bat
+Fri Aug 20 09:58:31 2010 [sg160] Sent 10 bytes of pdoscmds.bat
+Fri Aug 20 09:58:50 2010 [sg160] ready to receive sg0001pz.002
+Fri Aug 20 09:58:52 2010 [sg160] received four size bytes 0 0 1 58
+Fri Aug 20 09:58:52 2010 [sg160] Receiving 314 bytes of sg0001pz.002
+Fri Aug 20 09:58:53 2010 [sg160] Received 314 bytes of sg0001pz.002
+1:2:2:0:5:42:1 logout
+Disconnected at Fri Aug 20 09:58:56 PDT 2010
+Connected at Fri Aug 20 10:48:31 PDT 2010
+logged in
+2:0:1:0:5:42:0:147:2320:229 GPS,200810,174638,4743.131,-12224.388,13,1.9,13,18.2
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4726.107422,-12220.666992,200810,165741
+Fri Aug 20 10:48:43 2010 [sg160] Sending 308 bytes of cmdfile
+Fri Aug 20 10:48:43 2010 [sg160] Sent 308 bytes of cmdfile
+Fri Aug 20 10:49:18 2010 [sg160] ready to receive sg0002lz.x00
+Fri Aug 20 10:49:20 2010 [sg160] received four size bytes 0 0 12 98
+Fri Aug 20 10:49:20 2010 [sg160] Receiving 3170 bytes of sg0002lz.x00
+Fri Aug 20 10:49:29 2010 [sg160] Received 3170 bytes of sg0002lz.x00
+Fri Aug 20 10:49:33 2010 [sg160] ready to receive sg0002dz.x00
+Fri Aug 20 10:49:35 2010 [sg160] received four size bytes 0 0 29 17
+Fri Aug 20 10:49:35 2010 [sg160] Receiving 7441 bytes of sg0002dz.x00
+Fri Aug 20 10:49:57 2010 [sg160] Received 7441 bytes of sg0002dz.x00
+Fri Aug 20 10:50:00 2010 [sg160] Sending 10 bytes of pdoscmds.bat
+Fri Aug 20 10:50:00 2010 [sg160] Sent 10 bytes of pdoscmds.bat
+Fri Aug 20 10:50:19 2010 [sg160] ready to receive sg0002pz.000
+Fri Aug 20 10:50:21 2010 [sg160] received four size bytes 0 0 1 56
+Fri Aug 20 10:50:21 2010 [sg160] Receiving 312 bytes of sg0002pz.000
+Fri Aug 20 10:50:22 2010 [sg160] Received 312 bytes of sg0002pz.000
+2:0:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 10:50:25 PDT 2010
+Connected at Fri Aug 20 11:38:27 PDT 2010
+logged in
+3:0:1:0:5:42:0:145:2285:229 GPS,200810,183622,4743.171,-12224.330,9,2.4,28,18.2
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4726.107422,-12225.081055,200810,174803
+Fri Aug 20 11:38:37 2010 [sg160] Sending 308 bytes of cmdfile
+Fri Aug 20 11:38:37 2010 [sg160] Sent 308 bytes of cmdfile
+Fri Aug 20 11:39:11 2010 [sg160] ready to receive sg0003lz.x00
+Fri Aug 20 11:39:13 2010 [sg160] received four size bytes 0 0 12 157
+Fri Aug 20 11:39:13 2010 [sg160] Receiving 3229 bytes of sg0003lz.x00
+Fri Aug 20 11:39:22 2010 [sg160] Received 3229 bytes of sg0003lz.x00
+Fri Aug 20 11:39:27 2010 [sg160] ready to receive sg0003dz.x00
+Fri Aug 20 11:39:28 2010 [sg160] received four size bytes 0 0 28 113
+Fri Aug 20 11:39:28 2010 [sg160] Receiving 7281 bytes of sg0003dz.x00
+Fri Aug 20 11:39:49 2010 [sg160] Received 7281 bytes of sg0003dz.x00
+Fri Aug 20 11:39:52 2010 [sg160] Sending 10 bytes of pdoscmds.bat
+Fri Aug 20 11:39:52 2010 [sg160] Sent 10 bytes of pdoscmds.bat
+Fri Aug 20 11:40:11 2010 [sg160] ready to receive sg0003pz.000
+Fri Aug 20 11:40:13 2010 [sg160] received four size bytes 0 0 1 57
+Fri Aug 20 11:40:13 2010 [sg160] Receiving 313 bytes of sg0003pz.000
+Fri Aug 20 11:40:14 2010 [sg160] Received 313 bytes of sg0003pz.000
+3:0:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 11:40:17 PDT 2010
+Connected at Fri Aug 20 11:41:57 PDT 2010
+logged in
+3:1:1:0:5:42:0:144:2285:226 GPS,200810,184104,4743.156,-12224.359,9,2.5,28,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4726.107422,-12114.846680,200810,183759
+Fri Aug 20 11:42:09 2010 [sg160] Sending 308 bytes of cmdfile
+Fri Aug 20 11:42:09 2010 [sg160] Sent 308 bytes of cmdfile
+Fri Aug 20 11:42:39 2010 [sg160] Sending 10 bytes of pdoscmds.bat
+Fri Aug 20 11:42:39 2010 [sg160] Sent 10 bytes of pdoscmds.bat
+Fri Aug 20 11:42:59 2010 [sg160] ready to receive sg0003pz.001
+Fri Aug 20 11:43:00 2010 [sg160] received four size bytes 0 0 1 56
+Fri Aug 20 11:43:00 2010 [sg160] Receiving 312 bytes of sg0003pz.001
+Fri Aug 20 11:43:01 2010 [sg160] Received 312 bytes of sg0003pz.001
+3:1:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 11:43:04 PDT 2010
+Connected at Fri Aug 20 11:46:33 PDT 2010
+logged in
+3:2:1:0:5:42:0:145:2285:226 GPS,200810,184520,4743.140,-12224.385,7,1.4,7,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4713.379883,-12307.839844,200810,184151
+Fri Aug 20 11:46:45 2010 [sg160] Sending 308 bytes of cmdfile
+Fri Aug 20 11:46:45 2010 [sg160] Sent 308 bytes of cmdfile
+3:2:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 11:47:27 PDT 2010
+Connected at Fri Aug 20 11:51:08 PDT 2010
+logged in
+3:3:1:0:5:42:0:145:2285:226 GPS,200810,184950,4743.128,-12224.410,9,1.2,9,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4729.297363,-12018.842773,200810,184602
+Fri Aug 20 11:51:18 2010 [sg160] Sending 308 bytes of cmdfile
+Fri Aug 20 11:51:18 2010 [sg160] Sent 308 bytes of cmdfile
+3:3:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 11:51:56 PDT 2010
+Connected at Fri Aug 20 11:55:40 PDT 2010
+logged in
+3:4:1:0:5:42:0:144:2285:226 GPS,200810,185419,4743.114,-12224.431,11,1.0,11,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4726.107422,-12209.137695,200810,185039
+Fri Aug 20 11:55:51 2010 [sg160] Sending 312 bytes of cmdfile
+Fri Aug 20 11:55:51 2010 [sg160] Sent 312 bytes of cmdfile
+3:4:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 11:56:29 PDT 2010
+Connected at Fri Aug 20 12:46:07 PDT 2010
+logged in
+4:0:1:0:5:42:0:147:2610:229 GPS,200810,194438,4743.181,-12224.474,7,1.6,7,18.2
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4713.379883,-12535.599609,200810,185512
+Fri Aug 20 12:46:20 2010 [sg160] Sending 308 bytes of cmdfile
+Fri Aug 20 12:46:20 2010 [sg160] Sent 308 bytes of cmdfile
+Fri Aug 20 12:46:53 2010 [sg160] ready to receive sg0004lz.x00
+Fri Aug 20 12:46:54 2010 [sg160] received four size bytes 0 0 12 70
+Fri Aug 20 12:46:54 2010 [sg160] Receiving 3142 bytes of sg0004lz.x00
+Fri Aug 20 12:47:03 2010 [sg160] Received 3142 bytes of sg0004lz.x00
+Fri Aug 20 12:47:08 2010 [sg160] ready to receive sg0004dz.x00
+Fri Aug 20 12:47:09 2010 [sg160] received four size bytes 0 0 29 116
+Fri Aug 20 12:47:09 2010 [sg160] Receiving 7540 bytes of sg0004dz.x00
+Fri Aug 20 12:47:31 2010 [sg160] Received 7540 bytes of sg0004dz.x00
+4:0:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 12:47:41 PDT 2010
+Connected at Fri Aug 20 13:35:38 PDT 2010
+logged in
+5:0:1:0:5:42:0:143:2606:229 GPS,200810,203338,4743.184,-12224.422,8,1.4,8,18.2
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4726.107422,-12226.066406,200810,194600
+Fri Aug 20 13:35:50 2010 [sg160] Sending 308 bytes of cmdfile
+Fri Aug 20 13:35:50 2010 [sg160] Sent 308 bytes of cmdfile
+Fri Aug 20 13:36:24 2010 [sg160] ready to receive sg0005lz.x00
+Fri Aug 20 13:36:25 2010 [sg160] received four size bytes 0 0 12 130
+Fri Aug 20 13:36:25 2010 [sg160] Receiving 3202 bytes of sg0005lz.x00
+Fri Aug 20 13:36:35 2010 [sg160] Received 3202 bytes of sg0005lz.x00
+Fri Aug 20 13:36:40 2010 [sg160] ready to receive sg0005dz.x00
+Fri Aug 20 13:36:41 2010 [sg160] received four size bytes 0 0 28 238
+Fri Aug 20 13:36:41 2010 [sg160] Receiving 7406 bytes of sg0005dz.x00
+Fri Aug 20 13:37:03 2010 [sg160] Received 7406 bytes of sg0005dz.x00
+5:0:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 13:37:12 PDT 2010
+Connected at Fri Aug 20 14:24:49 PDT 2010
+logged in
+6:0:1:0:5:42:0:146:2617:229 GPS,200810,212320,4743.210,-12224.268,11,2.0,11,18.2
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4713.379883,-12223.627930,200810,203507
+Fri Aug 20 14:25:02 2010 [sg160] Sending 308 bytes of cmdfile
+Fri Aug 20 14:25:02 2010 [sg160] Sent 308 bytes of cmdfile
+Fri Aug 20 14:25:35 2010 [sg160] ready to receive sg0006lz.x00
+Fri Aug 20 14:25:36 2010 [sg160] received four size bytes 0 0 12 73
+Fri Aug 20 14:25:36 2010 [sg160] Receiving 3145 bytes of sg0006lz.x00
+Fri Aug 20 14:25:45 2010 [sg160] Received 3145 bytes of sg0006lz.x00
+Fri Aug 20 14:25:50 2010 [sg160] ready to receive sg0006dz.x00
+Fri Aug 20 14:25:52 2010 [sg160] received four size bytes 0 0 29 156
+Fri Aug 20 14:25:52 2010 [sg160] Receiving 7580 bytes of sg0006dz.x00
+Fri Aug 20 14:26:25 2010 [sg160] Received 7580 bytes of sg0006dz.x00
+6:0:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 14:26:41 PDT 2010
+Connected at Fri Aug 20 15:14:54 PDT 2010
+logged in
+7:0:1:0:5:42:0:155:2592:230 GPS,200810,221324,4743.322,-12224.191,25,1.4,42,18.2
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4726.107422,-12225.081055,200810,212442
+Fri Aug 20 15:15:06 2010 [sg160] Sending 310 bytes of cmdfile
+Fri Aug 20 15:15:06 2010 [sg160] Sent 310 bytes of cmdfile
+Fri Aug 20 15:15:40 2010 [sg160] ready to receive sg0007lz.x00
+Fri Aug 20 15:15:42 2010 [sg160] received four size bytes 0 0 12 146
+Fri Aug 20 15:15:42 2010 [sg160] Receiving 3218 bytes of sg0007lz.x00
+Fri Aug 20 15:15:51 2010 [sg160] Received 3218 bytes of sg0007lz.x00
+Fri Aug 20 15:15:56 2010 [sg160] ready to receive sg0007dz.x00
+Fri Aug 20 15:15:58 2010 [sg160] received four size bytes 0 0 29 16
+Fri Aug 20 15:15:58 2010 [sg160] Receiving 7440 bytes of sg0007dz.x00
+Fri Aug 20 15:16:20 2010 [sg160] Received 7440 bytes of sg0007dz.x00
+7:0:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 15:16:31 PDT 2010
+Connected at Fri Aug 20 15:18:07 PDT 2010
+logged in
+7:1:1:0:5:42:0:154:2592:225 GPS,200810,221725,4743.328,-12224.176,8,1.4,13,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 4 geolocation: 4726.107422,-12225.081055,200810,221447
+Fri Aug 20 15:18:20 2010 [sg160] Sending 310 bytes of cmdfile
+Fri Aug 20 15:18:20 2010 [sg160] Sent 310 bytes of cmdfile
+7:1:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 15:19:00 PDT 2010
+Connected at Fri Aug 20 15:22:29 PDT 2010
+logged in
+7:2:1:0:5:42:0:154:2592:226 GPS,200810,222125,4743.333,-12224.158,12,1.8,12,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4726.107422,-12220.666992,200810,221759
+Fri Aug 20 15:22:44 2010 [sg160] Sending 310 bytes of cmdfile
+Fri Aug 20 15:22:44 2010 [sg160] Sent 310 bytes of cmdfile
+7:2:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 15:23:22 PDT 2010
+Connected at Fri Aug 20 15:26:46 PDT 2010
+logged in
+7:3:1:0:5:42:0:154:2592:226 GPS,200810,222537,4743.337,-12224.138,7,1.9,7,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4726.107422,-12227.781250,200810,222201
+Fri Aug 20 15:26:58 2010 [sg160] Sending 310 bytes of cmdfile
+Fri Aug 20 15:26:58 2010 [sg160] Sent 310 bytes of cmdfile
+7:3:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 15:27:38 PDT 2010
+Connected at Fri Aug 20 15:30:50 PDT 2010
+logged in
+7:4:1:0:5:42:0:154:2592:226 GPS,200810,223002,4743.348,-12224.111,11,1.4,11,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 4 geolocation: 4726.107422,-12220.666992,200810,222615
+Fri Aug 20 15:31:00 2010 [sg160] Sending 310 bytes of cmdfile
+Fri Aug 20 15:31:00 2010 [sg160] Sent 310 bytes of cmdfile
+7:4:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 15:31:37 PDT 2010
+Connected at Fri Aug 20 15:34:56 PDT 2010
+logged in
+7:5:1:0:5:42:0:154:2592:226 GPS,200810,223356,4743.357,-12224.092,11,1.8,11,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4726.107422,-12227.781250,200810,223043
+Fri Aug 20 15:35:06 2010 [sg160] Sending 310 bytes of cmdfile
+Fri Aug 20 15:35:06 2010 [sg160] Sent 310 bytes of cmdfile
+7:5:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 15:35:44 PDT 2010
+Connected at Fri Aug 20 15:39:36 PDT 2010
+logged in
+7:6:1:0:5:42:0:155:2592:226 GPS,200810,223808,4743.363,-12224.072,10,1.3,10,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4726.107422,-12223.367188,200810,223428
+Fri Aug 20 15:39:46 2010 [sg160] Sending 310 bytes of cmdfile
+Fri Aug 20 15:39:46 2010 [sg160] Sent 310 bytes of cmdfile
+7:6:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 15:40:23 PDT 2010
+Connected at Fri Aug 20 15:43:32 PDT 2010
+logged in
+7:7:1:0:5:42:0:154:2592:226 GPS,200810,224244,4743.373,-12224.053,7,1.6,7,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.08,rev=2375:2385M,frag=8,launch=200810:153733
+Iridium bars: 5 geolocation: 4726.107422,-11958.579102,200810,223908
+Fri Aug 20 15:43:46 2010 [sg160] Sending 310 bytes of cmdfile
+Fri Aug 20 15:43:46 2010 [sg160] Sent 310 bytes of cmdfile
+7:7:1:0:5:42:1 logout
+Disconnected at Fri Aug 20 15:44:26 PDT 2010
+Connected at Fri Nov 19 16:26:07 PST 2010
+logged in
+7:0:2:0:5:56:-2:804:2620:231 ver=66.08,rev=2426:2429M,frag=8,launch=031110:132657
+Iridium bars: 5 geolocation: -7708.231445,16642.630859,201110,002356
+Fri Nov 19 16:26:39 2010 [sg160] Sending 310 bytes of cmdfile
+Fri Nov 19 16:26:39 2010 [sg160] Sent 310 bytes of cmdfile
+Fri Nov 19 16:27:36 2010 [sg160] ready to receive st0016lu.x00
+Fri Nov 19 16:27:54 2010 [sg160] received four size bytes 85 85 85 85
+Fri Nov 19 16:27:54 2010 [sg160] Receiving 1431655765 bytes of st0016lu.x00
+Disconnected at Fri Nov 19 16:27:54 PST 2010
+Connected at Fri Nov 19 16:30:04 PST 2010
+logged in
+7:0:3:0:5:56:0:804:2620:231 ver=66.08,rev=2426:2429M,frag=8,launch=031110:132657
+Iridium bars: 5 geolocation: -7658.603027,16637.394531,201110,002547
+Fri Nov 19 16:30:16 2010 [sg160] Sending 310 bytes of cmdfile
+Fri Nov 19 16:30:16 2010 [sg160] Sent 310 bytes of cmdfile
+Fri Nov 19 16:30:59 2010 [sg160] ready to receive st0016lu.x00
+Fri Nov 19 16:31:01 2010 [sg160] received four size bytes 0 0 16 44
+Fri Nov 19 16:31:01 2010 [sg160] Receiving 4140 bytes of st0016lu.x00
+Fri Nov 19 16:31:12 2010 [sg160] Received 4140 bytes of st0016lu.x00
+Fri Nov 19 16:31:17 2010 [sg160] ready to receive st0016du.x00
+Fri Nov 19 16:31:19 2010 [sg160] received four size bytes 0 0 4 43
+Fri Nov 19 16:31:19 2010 [sg160] Receiving 1067 bytes of st0016du.x00
+Fri Nov 19 16:31:22 2010 [sg160] Received 1067 bytes of st0016du.x00
+7:0:3:0:5:56:1 logout
+Disconnected at Fri Nov 19 16:31:26 PST 2010
+Connected at Mon Feb 25 12:28:26 PST 2013
+logged in
+0:0:1:0:5:105:0:802:2601:189:0.37:-0.03:14.78:14.90:9.27:30.42 GPS,250213,201833,4739.294,-12219.030,8,99.0,27,18.2
+ver=66.11,rev=3489M,frag=8,launch=290113:165457
+Iridium bars: 5 geolocation: 4722.920898,-12218.956055,250213,202704
+Mon Feb 25 12:28:40 2013 [sg160] Sending 310 bytes of cmdfile
+Mon Feb 25 12:28:40 2013 [sg160] Sent 310 bytes of cmdfile
+Mon Feb 25 12:29:39 2013 [sg160] ready to receive st0018lz.x00
+Mon Feb 25 12:29:40 2013 [sg160] received four size bytes 0 0 7 217
+Mon Feb 25 12:29:40 2013 [sg160] Receiving 2009 bytes of st0018lz.x00
+Mon Feb 25 12:29:47 2013 [sg160] Received 2009 bytes of st0018lz.x00
+Mon Feb 25 12:29:51 2013 [sg160] ready to receive st0017lz.x00
+Mon Feb 25 12:29:53 2013 [sg160] received four size bytes 0 0 7 245
+Mon Feb 25 12:29:53 2013 [sg160] Receiving 2037 bytes of st0017lz.x00
+Mon Feb 25 12:29:59 2013 [sg160] Received 2037 bytes of st0017lz.x00
+Mon Feb 25 12:30:04 2013 [sg160] ready to receive st0018dz.x00
+Mon Feb 25 12:30:06 2013 [sg160] received four size bytes 0 0 1 9
+Mon Feb 25 12:30:06 2013 [sg160] Receiving 265 bytes of st0018dz.x00
+Mon Feb 25 12:30:06 2013 [sg160] Received 265 bytes of st0018dz.x00
+Mon Feb 25 12:30:10 2013 [sg160] ready to receive st0017dz.x00
+Mon Feb 25 12:30:12 2013 [sg160] received four size bytes 0 0 0 244
+Mon Feb 25 12:30:12 2013 [sg160] Receiving 244 bytes of st0017dz.x00
+Mon Feb 25 12:30:12 2013 [sg160] Received 244 bytes of st0017dz.x00
+Mon Feb 25 12:30:16 2013 [sg160] ready to receive sc0009ag.x00
+Mon Feb 25 12:30:17 2013 [sg160] received four size bytes 0 0 7 176
+Mon Feb 25 12:30:17 2013 [sg160] Receiving 1968 bytes of sc0009ag.x00
+Mon Feb 25 12:30:29 2013 [sg160] Received 1968 bytes of sc0009ag.x00
+Mon Feb 25 12:30:34 2013 [sg160] ready to receive sc0009bg.x00
+Mon Feb 25 12:30:36 2013 [sg160] received four size bytes 0 0 7 149
+Mon Feb 25 12:30:36 2013 [sg160] Receiving 1941 bytes of sc0009bg.x00
+Mon Feb 25 12:30:41 2013 [sg160] Received 1941 bytes of sc0009bg.x00
+Mon Feb 25 12:30:50 2013 [sg160] ready to receive st0018kz.x
+Mon Feb 25 12:30:55 2013 [sg160] received four size bytes 0 0 56 233
+Mon Feb 25 12:30:55 2013 [sg160] Receiving 14569 bytes of st0018kz.x
+Mon Feb 25 12:32:09 2013 [sg160] Received 14569 bytes of st0018kz.x
+0:0:1:0:5:105:1 logout
+Disconnected at Mon Feb 25 12:32:14 PST 2013
+Connected at Tue Feb 26 09:01:15 PST 2013
+logged in
+0:0:1:0:5:113:0:770:2613:190:-33.84:0.09:14.82:14.93:9.21:35.58 GPS,260213,165039,4741.235,-12224.239,8,2.2,27,18.2
+ver=66.11,rev=3531M,frag=8,launch=250213:140724
+Iridium bars: 5 geolocation: 4722.920898,-12226.066406,260213,170015
+Tue Feb 26 09:01:32 2013 [sg160] Sending 344 bytes of cmdfile
+Tue Feb 26 09:01:32 2013 [sg160] Sent 344 bytes of cmdfile
+Tue Feb 26 09:01:58 2013 [sg160] Sending 225 bytes of targets
+Tue Feb 26 09:01:58 2013 [sg160] Sent 225 bytes of targets
+Tue Feb 26 09:02:07 2013 [sg160] Sending 84 bytes of science
+Tue Feb 26 09:02:07 2013 [sg160] Sent 84 bytes of science
+Tue Feb 26 09:02:12 2013 [sg160] Sending 141 bytes of scicon.sch
+Tue Feb 26 09:02:12 2013 [sg160] Sent 141 bytes of scicon.sch
+Tue Feb 26 09:02:35 2013 [sg160] ready to receive st0019lz.x00
+Tue Feb 26 09:02:37 2013 [sg160] received four size bytes 0 0 7 235
+Tue Feb 26 09:02:37 2013 [sg160] Receiving 2027 bytes of st0019lz.x00
+Tue Feb 26 09:02:42 2013 [sg160] Received 2027 bytes of st0019lz.x00
+Tue Feb 26 09:02:46 2013 [sg160] ready to receive st0019dz.x00
+Tue Feb 26 09:02:48 2013 [sg160] received four size bytes 0 0 1 21
+Tue Feb 26 09:02:48 2013 [sg160] Receiving 277 bytes of st0019dz.x00
+Tue Feb 26 09:02:48 2013 [sg160] Received 277 bytes of st0019dz.x00
+Tue Feb 26 09:02:57 2013 [sg160] ready to receive st0019kz.x
+Tue Feb 26 09:02:59 2013 [sg160] received four size bytes 0 0 58 131
+Tue Feb 26 09:02:59 2013 [sg160] Receiving 14979 bytes of st0019kz.x
+Tue Feb 26 09:03:42 2013 [sg160] Received 14979 bytes of st0019kz.x
+0:0:1:0:5:113:1 logout
+Disconnected at Tue Feb 26 09:03:47 PST 2013
+Connected at Tue Feb 26 09:20:58 PST 2013
+logged in
+0:1:1:0:5:113:0:770:2613:190:-33.71:0.13:15.03:15.15:9.20:38.81 GPS,260213,171951,4741.249,-12224.206,9,99.0,28,18.2
+ver=66.11,rev=3531M,frag=8,launch=250213:140724
+Iridium bars: 5 geolocation: 4722.920898,-12218.956055,260213,170105
+Tue Feb 26 09:21:08 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 09:21:08 2013 [sg160] Sent 407 bytes of cmdfile
+Tue Feb 26 09:21:34 2013 [sg160] Sending 225 bytes of targets
+Tue Feb 26 09:21:34 2013 [sg160] Sent 225 bytes of targets
+Tue Feb 26 09:21:42 2013 [sg160] Sending 84 bytes of science
+Tue Feb 26 09:21:42 2013 [sg160] Sent 84 bytes of science
+Tue Feb 26 09:21:46 2013 [sg160] Sending 141 bytes of scicon.sch
+Tue Feb 26 09:21:46 2013 [sg160] Sent 141 bytes of scicon.sch
+Tue Feb 26 09:22:07 2013 [sg160] ready to receive sg0000kl.x
+Tue Feb 26 09:22:09 2013 [sg160] received four size bytes 0 0 23 226
+Tue Feb 26 09:22:09 2013 [sg160] Receiving 6114 bytes of sg0000kl.x
+Tue Feb 26 09:22:26 2013 [sg160] Received 6114 bytes of sg0000kl.x
+0:1:1:0:5:113:1 logout
+Disconnected at Tue Feb 26 09:22:30 PST 2013
+Connected at Tue Feb 26 09:30:03 PST 2013
+logged in
+0:2:1:0:6:113:0:155:2619:230:-33.82:0.08:14.99:15.12:9.19:38.14 GPS,260213,172851,4741.250,-12224.208,11,99.0,30,18.2
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4722.920898,-12237.584961,260213,172049
+Tue Feb 26 09:30:15 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 09:30:15 2013 [sg160] Sent 407 bytes of cmdfile
+Tue Feb 26 09:30:35 2013 [sg160] ready to receive sg0000lz.x00
+Tue Feb 26 09:30:37 2013 [sg160] received four size bytes 0 0 5 211
+Tue Feb 26 09:30:37 2013 [sg160] Receiving 1491 bytes of sg0000lz.x00
+Tue Feb 26 09:30:41 2013 [sg160] Received 1491 bytes of sg0000lz.x00
+0:2:1:0:6:113:1 logout
+Disconnected at Tue Feb 26 09:30:44 PST 2013
+
+
+Connected at Tue Feb 26 09:32:41 PST 2013
+logged in
+0:3:1:0:6:113:0:155:2618:230:-33.68:0.17:14.94:15.08:9.18:37.79 GPS,260213,173151,4741.252,-12224.205,10,99.0,29,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4722.920898,-12230.477539,260213,172956
+Tue Feb 26 09:32:52 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 09:32:52 2013 [sg160] Sent 407 bytes of cmdfile
+0:3:1:0:6:113:1 logout
+Disconnected at Tue Feb 26 09:33:11 PST 2013
+
+
+Connected at Tue Feb 26 09:37:14 PST 2013
+logged in
+0:4:1:0:6:113:0:155:2617:231:-34.54:0.24:14.95:15.08:9.18:38.54 GPS,260213,173551,4741.252,-12224.201,12,99.0,31,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4726.107422,-12220.666992,260213,173233
+Tue Feb 26 09:37:25 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 09:37:25 2013 [sg160] Sent 407 bytes of cmdfile
+0:4:1:0:6:113:1 logout
+Disconnected at Tue Feb 26 09:37:45 PST 2013
+
+
+Connected at Tue Feb 26 09:41:35 PST 2013
+logged in
+0:5:1:0:6:113:0:156:2618:230:-41.11:0.17:14.93:15.07:9.18:38.54 GPS,260213,174020,4741.219,-12224.221,7,99.0,26,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4722.920898,-12223.367188,260213,173643
+Tue Feb 26 09:41:46 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 09:41:46 2013 [sg160] Sent 407 bytes of cmdfile
+0:5:1:0:6:113:1 logout
+Disconnected at Tue Feb 26 09:42:05 PST 2013
+
+
+Connected at Tue Feb 26 09:46:08 PST 2013
+logged in
+0:6:1:0:6:113:0:155:2618:230:-30.45:0.22:14.92:15.07:9.17:37.63 GPS,260213,174447,4741.224,-12224.238,13,99.0,32,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4726.107422,-12223.367188,260213,174103
+Tue Feb 26 09:46:19 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 09:46:19 2013 [sg160] Sent 407 bytes of cmdfile
+0:6:1:0:6:113:1 logout
+Disconnected at Tue Feb 26 09:46:38 PST 2013
+
+
+Connected at Tue Feb 26 09:50:05 PST 2013
+logged in
+0:7:1:0:6:113:0:155:2620:228:-31.55:0.22:14.92:15.07:9.17:37.71 GPS,260213,174915,4741.819,-12224.631,8,99.0,27,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4722.920898,-12221.656250,260213,174538
+Tue Feb 26 09:50:16 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 09:50:16 2013 [sg160] Sent 407 bytes of cmdfile
+0:7:1:0:6:113:1 logout
+Disconnected at Tue Feb 26 09:50:36 PST 2013
+
+
+Connected at Tue Feb 26 09:55:50 PST 2013
+logged in
+0:8:2:0:6:113:-2:154:2619:227:-34.41:0.26:14.93:15.07:9.17:38.38 GPS,260213,175315,4742.887,-12224.412,10,99.0,29,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4722.920898,-12227.781250,260213,174958
+Tue Feb 26 09:56:03 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 09:56:03 2013 [sg160] Sent 407 bytes of cmdfile
+0:8:2:0:6:113:1 logout
+Disconnected at Tue Feb 26 09:56:23 PST 2013
+
+
+Connected at Tue Feb 26 09:59:59 PST 2013
+logged in
+0:9:1:0:6:113:0:154:2620:228:-30.15:0.24:14.93:15.07:9.16:38.89 GPS,260213,175905,4743.225,-12224.382,29,1.7,33,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4726.107422,-12227.781250,260213,175542
+Tue Feb 26 10:00:13 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 10:00:13 2013 [sg160] Sent 407 bytes of cmdfile
+0:9:1:0:6:113:1 logout
+Disconnected at Tue Feb 26 10:00:32 PST 2013
+
+
+Connected at Tue Feb 26 10:03:46 PST 2013
+logged in
+0:10:1:0:6:113:0:154:2614:229:-42.87:0.30:14.92:15.07:9.16:37.87 GPS,260213,180249,4743.279,-12224.371,7,1.7,7,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4726.107422,-12227.781250,260213,175950
+Tue Feb 26 10:04:00 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 10:04:00 2013 [sg160] Sent 407 bytes of cmdfile
+Disconnected at Tue Feb 26 10:04:32 PST 2013
+
+
+Connected at Tue Feb 26 10:09:45 PST 2013
+logged in
+0:11:2:0:6:113:-2:152:2620:229:-78.82:1.14:14.91:15.06:9.12:36.25 GPS,260213,180648,4743.336,-12224.400,5,1.6,10,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4726.107422,-12223.367188,260213,180336
+Tue Feb 26 10:09:58 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 10:09:58 2013 [sg160] Sent 407 bytes of cmdfile
+Tue Feb 26 10:10:17 2013 [sg160] Sending 183 bytes of tmicl.cnf
+Tue Feb 26 10:10:17 2013 [sg160] Sent 183 bytes of tmicl.cnf
+Tue Feb 26 10:10:21 2013 [sg160] Sending 26 bytes of pdoscmds.bat
+Tue Feb 26 10:10:21 2013 [sg160] Sent 26 bytes of pdoscmds.bat
+Tue Feb 26 10:10:43 2013 [sg160] ready to receive sg0000pz.011
+Tue Feb 26 10:10:45 2013 [sg160] received four size bytes 0 0 2 12
+Tue Feb 26 10:10:45 2013 [sg160] Receiving 524 bytes of sg0000pz.011
+Tue Feb 26 10:10:46 2013 [sg160] Received 524 bytes of sg0000pz.011
+0:11:2:0:6:113:1 logout
+Disconnected at Tue Feb 26 10:10:49 PST 2013
+
+
+Connected at Tue Feb 26 10:14:00 PST 2013
+logged in
+0:12:1:0:6:113:0:152:2620:229:-75.96:1.08:14.88:15.03:9.11:37.39 GPS,260213,181307,4743.407,-12224.431,6,1.7,6,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4726.107422,-12220.666992,260213,180917
+Tue Feb 26 10:14:11 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 10:14:11 2013 [sg160] Sent 407 bytes of cmdfile
+Tue Feb 26 10:14:30 2013 [sg160] Sending 26 bytes of pdoscmds.bat
+Tue Feb 26 10:14:30 2013 [sg160] Sent 26 bytes of pdoscmds.bat
+Tue Feb 26 10:14:52 2013 [sg160] ready to receive sg0000pz.012
+Tue Feb 26 10:14:54 2013 [sg160] received four size bytes 0 0 2 6
+Tue Feb 26 10:14:54 2013 [sg160] Receiving 518 bytes of sg0000pz.012
+Tue Feb 26 10:14:55 2013 [sg160] Received 518 bytes of sg0000pz.012
+0:12:1:0:6:113:1 logout
+Disconnected at Tue Feb 26 10:14:59 PST 2013
+
+
+Connected at Tue Feb 26 10:18:33 PST 2013
+logged in
+0:13:1:0:6:113:0:152:2620:229:-76.82:1.19:14.88:15.02:9.10:36.84 GPS,260213,181719,4743.450,-12224.447,11,1.4,11,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4745.296387,-12215.679688,260213,181352
+Tue Feb 26 10:18:44 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 10:18:44 2013 [sg160] Sent 407 bytes of cmdfile
+Tue Feb 26 10:19:04 2013 [sg160] Sending 183 bytes of tmicl.cnf
+Tue Feb 26 10:19:04 2013 [sg160] Sent 183 bytes of tmicl.cnf
+0:13:1:0:6:113:1 logout
+Disconnected at Tue Feb 26 10:19:08 PST 2013
+
+
+Connected at Tue Feb 26 10:22:57 PST 2013
+logged in
+0:14:1:0:6:113:0:152:2621:228:-73.87:1.21:14.88:15.03:9.10:37.51 GPS,260213,182131,4743.495,-12224.467,11,1.3,11,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4735.687012,-12246.234375,260213,181804
+Tue Feb 26 10:23:08 2013 [sg160] Sending 409 bytes of cmdfile
+Tue Feb 26 10:23:08 2013 [sg160] Sent 409 bytes of cmdfile
+Tue Feb 26 10:23:27 2013 [sg160] Sending 183 bytes of tmicl.cnf
+Tue Feb 26 10:23:27 2013 [sg160] Sent 183 bytes of tmicl.cnf
+0:14:1:0:6:113:1 logout
+Disconnected at Tue Feb 26 10:23:32 PST 2013
+
+
+Connected at Tue Feb 26 10:43:58 PST 2013
+logged in
+1:0:1:0:6:113:0:159:2395:185:-82.84:1.57:14.69:14.80:9.08:36.02 GPS,260213,184225,4743.631,-12224.521,12,1.6,12,18.2
+EOP_CODE=MOTOR_MAX_ERRORS_EXCEEDED
+RECOV_CODE=MAX_PITCH_ERRORS
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4745.296387,-12208.514648,260213,182228
+Tue Feb 26 10:44:09 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 10:44:09 2013 [sg160] Sent 407 bytes of cmdfile
+Tue Feb 26 10:44:28 2013 [sg160] ready to receive sg0001lz.x00
+Tue Feb 26 10:44:30 2013 [sg160] received four size bytes 0 0 10 172
+Tue Feb 26 10:44:30 2013 [sg160] Receiving 2732 bytes of sg0001lz.x00
+Tue Feb 26 10:44:37 2013 [sg160] Received 2732 bytes of sg0001lz.x00
+Tue Feb 26 10:44:41 2013 [sg160] ready to receive sg0001dz.x00
+Tue Feb 26 10:44:42 2013 [sg160] received four size bytes 0 0 2 6
+Tue Feb 26 10:44:42 2013 [sg160] Receiving 518 bytes of sg0001dz.x00
+Tue Feb 26 10:44:44 2013 [sg160] Received 518 bytes of sg0001dz.x00
+Tue Feb 26 10:44:47 2013 [sg160] ready to receive sg0001kz.x00
+Tue Feb 26 10:44:49 2013 [sg160] received four size bytes 0 0 32 0
+Tue Feb 26 10:44:49 2013 [sg160] Receiving 8192 bytes of sg0001kz.x00
+Tue Feb 26 10:45:12 2013 [sg160] Received 8192 bytes of sg0001kz.x00
+Tue Feb 26 10:45:16 2013 [sg160] ready to receive sg0001kz.x01
+Tue Feb 26 10:45:20 2013 [sg160] received four size bytes 0 0 24 166
+Tue Feb 26 10:45:20 2013 [sg160] Receiving 6310 bytes of sg0001kz.x01
+Tue Feb 26 10:45:38 2013 [sg160] Received 6310 bytes of sg0001kz.x01
+Tue Feb 26 10:45:43 2013 [sg160] Sending 183 bytes of tmicl.cnf
+Tue Feb 26 10:45:43 2013 [sg160] Sent 183 bytes of tmicl.cnf
+Tue Feb 26 10:45:48 2013 [sg160] ready to receive sc0001ag.x00
+Tue Feb 26 10:45:50 2013 [sg160] received four size bytes 0 0 0 173
+Tue Feb 26 10:45:50 2013 [sg160] Receiving 173 bytes of sc0001ag.x00
+Tue Feb 26 10:45:50 2013 [sg160] Received 173 bytes of sc0001ag.x00
+1:0:1:0:6:113:1 logout
+Disconnected at Tue Feb 26 10:45:54 PST 2013
+
+
+Connected at Tue Feb 26 10:49:10 PST 2013
+logged in
+1:1:1:0:6:113:0:158:2396:185:-71.81:1.62:14.77:14.88:9.08:37.95 GPS,260213,184813,4743.686,-12224.551,7,1.6,7,18.2
+EOP_CODE=MOTOR_MAX_ERRORS_EXCEEDED
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4726.107422,-12225.081055,260213,184351
+Tue Feb 26 10:49:24 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 10:49:24 2013 [sg160] Sent 407 bytes of cmdfile
+Tue Feb 26 10:49:44 2013 [sg160] Sending 183 bytes of tmicl.cnf
+Tue Feb 26 10:49:44 2013 [sg160] Sent 183 bytes of tmicl.cnf
+Tue Feb 26 10:49:49 2013 [sg160] ready to receive tm0001ag.x00
+Tue Feb 26 10:49:52 2013 [sg160] received four size bytes 0 0 0 155
+Tue Feb 26 10:49:52 2013 [sg160] Receiving 155 bytes of tm0001ag.x00
+Tue Feb 26 10:49:52 2013 [sg160] Received 155 bytes of tm0001ag.x00
+1:1:1:0:6:113:1 logout
+Disconnected at Tue Feb 26 10:49:56 PST 2013
+
+
+Connected at Tue Feb 26 10:54:01 PST 2013
+logged in
+1:2:1:0:6:113:0:158:2396:184:-78.13:1.70:14.82:14.94:9.08:37.79 GPS,260213,185235,4743.730,-12224.562,12,2.0,27,18.2
+EOP_CODE=MOTOR_MAX_ERRORS_EXCEEDED
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4726.107422,-12223.367188,260213,184900
+Tue Feb 26 10:54:14 2013 [sg160] Sending 407 bytes of cmdfile
+Tue Feb 26 10:54:14 2013 [sg160] Sent 407 bytes of cmdfile
+Tue Feb 26 10:54:34 2013 [sg160] Sending 183 bytes of tmicl.cnf
+Tue Feb 26 10:54:34 2013 [sg160] Sent 183 bytes of tmicl.cnf
+1:2:1:0:6:113:1 logout
+Disconnected at Tue Feb 26 10:54:40 PST 2013
+
+
+Connected at Tue Feb 26 11:00:21 PST 2013
+logged in
+1:3:2:0:6:113:-2:158:2396:184:-75.45:1.64:14.83:14.97:9.08:38.06 GPS,260213,185707,4743.780,-12224.578,12,1.7,12,18.2
+EOP_CODE=MOTOR_MAX_ERRORS_EXCEEDED
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4726.107422,-12227.781250,260213,185326
+Tue Feb 26 11:00:36 2013 [sg160] Sending 457 bytes of cmdfile
+Tue Feb 26 11:00:36 2013 [sg160] Sent 457 bytes of cmdfile
+Tue Feb 26 11:00:57 2013 [sg160] Sending 183 bytes of tmicl.cnf
+Tue Feb 26 11:00:57 2013 [sg160] Sent 183 bytes of tmicl.cnf
+1:3:2:0:6:113:1 logout
+Disconnected at Tue Feb 26 11:01:02 PST 2013
+
+
+Connected at Tue Feb 26 11:06:07 PST 2013
+logged in
+1:4:1:0:6:113:0:152:2398:183:-76.68:1.69:14.85:14.97:9.08:39.05 GPS,260213,190501,4743.858,-12224.601,9,2.0,9,18.2
+EOP_CODE=MOTOR_MAX_ERRORS_EXCEEDED
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4726.107422,-12223.367188,260213,185949
+Tue Feb 26 11:06:20 2013 [sg160] Sending 456 bytes of cmdfile
+Tue Feb 26 11:06:20 2013 [sg160] Sent 456 bytes of cmdfile
+1:4:1:0:6:113:1 logout
+Disconnected at Tue Feb 26 11:06:40 PST 2013
+
+
+Connected at Tue Feb 26 11:10:20 PST 2013
+logged in
+1:5:1:0:6:113:0:150:2397:182:-27.91:0.62:14.85:14.97:9.08:38.22 GPS,260213,190918,4743.927,-12224.599,13,1.1,28,18.2
+EOP_CODE=MOTOR_MAX_ERRORS_EXCEEDED
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=260213:172703
+Iridium bars: 5 geolocation: 4722.920898,-12211.843750,260213,190557
+Tue Feb 26 11:10:34 2013 [sg160] Sending 456 bytes of cmdfile
+Tue Feb 26 11:10:34 2013 [sg160] Sent 456 bytes of cmdfile
+1:5:1:0:6:113:1 logout
+Disconnected at Tue Feb 26 11:10:54 PST 2013
+
+
+Connected at Wed Feb 27 08:21:38 PST 2013
+logged in
+0:0:1:0:6:118:0:770:2604:189:-48.03:0.10:14.74:14.85:9.23:35.90 GPS,270213,160913,4741.258,-12224.198,8,1.7,8,18.2
+ver=66.11,rev=3531M,frag=8,launch=250213:140727
+Iridium bars: 5 geolocation: 4726.107422,-12225.081055,270213,162038
+Wed Feb 27 08:21:54 2013 [sg160] Sending 456 bytes of cmdfile
+Wed Feb 27 08:21:54 2013 [sg160] Sent 456 bytes of cmdfile
+Wed Feb 27 08:22:23 2013 [sg160] ready to receive st0020lz.x00
+Wed Feb 27 08:22:25 2013 [sg160] received four size bytes 0 0 7 236
+Wed Feb 27 08:22:25 2013 [sg160] Receiving 2028 bytes of st0020lz.x00
+Wed Feb 27 08:22:31 2013 [sg160] Received 2028 bytes of st0020lz.x00
+Wed Feb 27 08:22:34 2013 [sg160] ready to receive st0020dz.x00
+Wed Feb 27 08:22:36 2013 [sg160] received four size bytes 0 0 1 44
+Wed Feb 27 08:22:36 2013 [sg160] Receiving 300 bytes of st0020dz.x00
+Wed Feb 27 08:22:36 2013 [sg160] Received 300 bytes of st0020dz.x00
+Wed Feb 27 08:22:45 2013 [sg160] ready to receive st0020kz.x
+Wed Feb 27 08:22:47 2013 [sg160] received four size bytes 0 0 55 46
+Wed Feb 27 08:22:47 2013 [sg160] Receiving 14126 bytes of st0020kz.x
+Wed Feb 27 08:23:43 2013 [sg160] Received 14126 bytes of st0020kz.x
+0:0:1:0:6:118:1 logout
+Disconnected at Wed Feb 27 08:23:50 PST 2013
+
+
+Connected at Wed Feb 27 08:37:01 PST 2013
+logged in
+0:1:1:0:6:118:0:770:2604:189:-48.01:0.04:15.02:15.13:9.22:38.18 GPS,270213,163600,4741.255,-12224.204,7,1.8,12,18.2
+ver=66.11,rev=3531M,frag=8,launch=250213:140727
+Iridium bars: 5 geolocation: 4726.107422,-12225.081055,270213,162130
+Wed Feb 27 08:37:13 2013 [sg160] Sending 474 bytes of cmdfile
+Wed Feb 27 08:37:13 2013 [sg160] Sent 474 bytes of cmdfile
+Wed Feb 27 08:37:45 2013 [sg160] ready to receive sg0000kl.x
+Wed Feb 27 08:37:46 2013 [sg160] received four size bytes 0 0 17 210
+Wed Feb 27 08:37:46 2013 [sg160] Receiving 4562 bytes of sg0000kl.x
+Wed Feb 27 08:38:01 2013 [sg160] Received 4562 bytes of sg0000kl.x
+0:1:1:0:6:118:1 logout
+Disconnected at Wed Feb 27 08:38:05 PST 2013
+
+
+Connected at Wed Feb 27 08:42:50 PST 2013
+logged in
+0:2:1:0:7:118:0:141:2605:230:-48.03:0.11:14.98:15.10:9.22:38.06 GPS,270213,164149,4741.256,-12224.197,11,1.1,11,18.2
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4722.920898,-12223.367188,270213,163653
+Wed Feb 27 08:43:01 2013 [sg160] Sending 474 bytes of cmdfile
+Wed Feb 27 08:43:01 2013 [sg160] Sent 474 bytes of cmdfile
+Wed Feb 27 08:43:24 2013 [sg160] ready to receive sg0000lz.x00
+Wed Feb 27 08:43:25 2013 [sg160] received four size bytes 0 0 5 213
+Wed Feb 27 08:43:25 2013 [sg160] Receiving 1493 bytes of sg0000lz.x00
+Wed Feb 27 08:43:29 2013 [sg160] Received 1493 bytes of sg0000lz.x00
+0:2:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 08:43:33 PST 2013
+
+
+Connected at Wed Feb 27 08:45:40 PST 2013
+logged in
+0:3:1:0:7:118:0:141:2604:231:-48.01:0.20:14.93:15.07:9.22:37.63 GPS,270213,164419,4741.252,-12224.193,11,1.3,11,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4732.490723,-12237.371094,270213,164242
+Wed Feb 27 08:45:52 2013 [sg160] Sending 474 bytes of cmdfile
+Wed Feb 27 08:45:52 2013 [sg160] Sent 474 bytes of cmdfile
+0:3:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 08:46:13 PST 2013
+
+
+Connected at Wed Feb 27 08:49:26 PST 2013
+logged in
+0:4:1:0:7:118:0:141:2604:231:-47.99:0.09:14.93:15.07:9.20:37.99 GPS,270213,164831,4741.255,-12224.198,9,1.1,9,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 4 geolocation: 4722.920898,-12226.066406,270213,164510
+Wed Feb 27 08:49:37 2013 [sg160] Sending 474 bytes of cmdfile
+Wed Feb 27 08:49:37 2013 [sg160] Sent 474 bytes of cmdfile
+0:4:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 08:49:57 PST 2013
+
+
+Connected at Wed Feb 27 08:53:16 PST 2013
+logged in
+0:5:1:0:7:118:0:141:2610:231:-21.99:0.08:14.94:15.08:9.20:37.75 GPS,270213,165219,4741.253,-12224.188,8,1.4,13,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4726.107422,-12227.781250,270213,164921
+Wed Feb 27 08:53:27 2013 [sg160] Sending 474 bytes of cmdfile
+Wed Feb 27 08:53:27 2013 [sg160] Sent 474 bytes of cmdfile
+0:5:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 08:53:47 PST 2013
+
+
+Connected at Wed Feb 27 09:01:23 PST 2013
+logged in
+0:6:3:0:7:118:-2:141:2610:231:-21.07:0.14:14.94:15.08:9.20:37.71 GPS,270213,165633,4741.218,-12224.219,12,3.7,31,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4722.920898,-12230.477539,270213,165310
+Wed Feb 27 09:01:34 2013 [sg160] Sending 474 bytes of cmdfile
+Wed Feb 27 09:01:34 2013 [sg160] Sent 474 bytes of cmdfile
+0:6:3:0:7:118:1 logout
+Disconnected at Wed Feb 27 09:02:01 PST 2013
+
+
+Connected at Wed Feb 27 09:06:03 PST 2013
+logged in
+0:7:1:0:7:118:0:141:2609:231:-24.30:0.15:14.92:15.07:9.19:37.99 GPS,270213,170436,4741.887,-12224.591,9,1.2,26,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4722.920898,-12218.956055,270213,170050
+Wed Feb 27 09:06:13 2013 [sg160] Sending 474 bytes of cmdfile
+Wed Feb 27 09:06:13 2013 [sg160] Sent 474 bytes of cmdfile
+0:7:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 09:06:33 PST 2013
+
+
+Connected at Wed Feb 27 09:10:16 PST 2013
+logged in
+0:8:1:0:7:118:0:141:2610:231:-73.32:1.26:14.92:15.06:9.15:37.47 GPS,270213,170918,4742.997,-12224.512,13,1.3,30,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4726.107422,-12202.018555,270213,170534
+Wed Feb 27 09:10:27 2013 [sg160] Sending 474 bytes of cmdfile
+Wed Feb 27 09:10:27 2013 [sg160] Sent 474 bytes of cmdfile
+0:8:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 09:10:47 PST 2013
+
+
+Connected at Wed Feb 27 09:14:20 PST 2013
+logged in
+0:9:1:0:7:118:0:141:2610:232:-73.41:0.92:14.92:15.07:9.14:36.69 GPS,270213,171324,4743.046,-12224.481,10,1.3,27,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4726.107422,-12216.253906,270213,171007
+Wed Feb 27 09:14:31 2013 [sg160] Sending 476 bytes of cmdfile
+Wed Feb 27 09:14:31 2013 [sg160] Sent 476 bytes of cmdfile
+0:9:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 09:14:51 PST 2013
+
+
+Connected at Wed Feb 27 09:43:07 PST 2013
+logged in
+1:0:1:0:7:118:0:156:2599:229:-72.27:1.48:14.79:14.90:9.09:36.41 GPS,270213,174107,4743.299,-12224.412,9,1.9,9,18.2
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4722.920898,-12234.892578,270213,171412
+Wed Feb 27 09:43:18 2013 [sg160] Sending 474 bytes of cmdfile
+Wed Feb 27 09:43:18 2013 [sg160] Sent 474 bytes of cmdfile
+Wed Feb 27 09:43:38 2013 [sg160] ready to receive sg0001lz.x00
+Wed Feb 27 09:43:40 2013 [sg160] received four size bytes 0 0 12 16
+Wed Feb 27 09:43:40 2013 [sg160] Receiving 3088 bytes of sg0001lz.x00
+Wed Feb 27 09:43:49 2013 [sg160] Received 3088 bytes of sg0001lz.x00
+Wed Feb 27 09:43:52 2013 [sg160] ready to receive sg0001dz.x00
+Wed Feb 27 09:43:54 2013 [sg160] received four size bytes 0 0 7 86
+Wed Feb 27 09:43:54 2013 [sg160] Receiving 1878 bytes of sg0001dz.x00
+Wed Feb 27 09:43:59 2013 [sg160] Received 1878 bytes of sg0001dz.x00
+Wed Feb 27 09:44:03 2013 [sg160] ready to receive sc0001ag.x00
+Wed Feb 27 09:44:04 2013 [sg160] received four size bytes 0 0 8 236
+Wed Feb 27 09:44:04 2013 [sg160] Receiving 2284 bytes of sc0001ag.x00
+Wed Feb 27 09:44:11 2013 [sg160] Received 2284 bytes of sc0001ag.x00
+Wed Feb 27 09:44:14 2013 [sg160] ready to receive sc0001bg.x00
+Wed Feb 27 09:44:16 2013 [sg160] received four size bytes 0 0 10 24
+Wed Feb 27 09:44:16 2013 [sg160] Receiving 2584 bytes of sc0001bg.x00
+Wed Feb 27 09:44:23 2013 [sg160] Received 2584 bytes of sc0001bg.x00
+Wed Feb 27 09:44:27 2013 [sg160] ready to receive tm0001ag.x00
+Wed Feb 27 09:44:28 2013 [sg160] received four size bytes 0 0 8 147
+Wed Feb 27 09:44:28 2013 [sg160] Receiving 2195 bytes of tm0001ag.x00
+Wed Feb 27 09:44:35 2013 [sg160] Received 2195 bytes of tm0001ag.x00
+Wed Feb 27 09:44:38 2013 [sg160] ready to receive tm0001bg.x00
+Wed Feb 27 09:44:40 2013 [sg160] received four size bytes 0 0 10 197
+Wed Feb 27 09:44:40 2013 [sg160] Receiving 2757 bytes of tm0001bg.x00
+Wed Feb 27 09:44:47 2013 [sg160] Received 2757 bytes of tm0001bg.x00
+1:0:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 09:44:51 PST 2013
+
+
+Connected at Wed Feb 27 09:46:47 PST 2013
+logged in
+1:1:1:0:7:118:0:156:2598:229:-72.53:1.51:14.76:14.88:9.09:37.16 GPS,270213,174554,4743.349,-12224.387,11,1.9,28,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4726.107422,-12227.781250,270213,174300
+Wed Feb 27 09:46:58 2013 [sg160] Sending 474 bytes of cmdfile
+Wed Feb 27 09:46:58 2013 [sg160] Sent 474 bytes of cmdfile
+1:1:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 09:47:18 PST 2013
+
+
+Connected at Wed Feb 27 09:51:13 PST 2013
+logged in
+1:2:1:0:7:118:0:156:2598:229:-72.77:1.41:14.83:14.97:9.09:38.22 GPS,270213,175000,4743.396,-12224.362,12,1.9,29,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4726.107422,-12220.666992,270213,174639
+Wed Feb 27 09:51:23 2013 [sg160] Sending 474 bytes of cmdfile
+Wed Feb 27 09:51:23 2013 [sg160] Sent 474 bytes of cmdfile
+1:2:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 09:51:43 PST 2013
+
+
+Connected at Wed Feb 27 09:55:21 PST 2013
+logged in
+Reconnected at Wed Feb 27 09:55:24 PST 2013
+1:3:1:0:7:118:0:156:2598:229:-72.69:1.52:14.85:14.99:9.09:38.46 GPS,270213,175407,4743.443,-12224.339,10,1.9,10,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Disconnected at Wed Feb 27 09:55:27 PST 2013
+
+
+Iridium bars: 5 geolocation: 4742.089844,-12228.271484,270213,175044
+Wed Feb 27 09:55:32 2013 [sg160] Sending 503 bytes of cmdfile
+Wed Feb 27 09:55:32 2013 [sg160] Sent 503 bytes of cmdfile
+1:3:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 09:55:52 PST 2013
+
+
+Connected at Wed Feb 27 09:55:58 PST 2013
+Disconnected at Wed Feb 27 09:56:03 PST 2013
+
+
+Connected at Wed Feb 27 10:43:15 PST 2013
+logged in
+2:0:2:0:7:118:-2:149:2616:230:-70.80:1.76:14.81:14.92:9.07:37.43 GPS,270213,183924,4743.568,-12224.434,37,1.7,37,18.2
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 3 geolocation: 4726.107422,-12220.666992,270213,175451
+Wed Feb 27 10:43:26 2013 [sg160] Sending 501 bytes of cmdfile
+Wed Feb 27 10:43:26 2013 [sg160] Sent 501 bytes of cmdfile
+Wed Feb 27 10:43:46 2013 [sg160] ready to receive sg0002lz.x00
+Wed Feb 27 10:43:47 2013 [sg160] received four size bytes 0 0 13 28
+Wed Feb 27 10:43:47 2013 [sg160] Receiving 3356 bytes of sg0002lz.x00
+Wed Feb 27 10:43:57 2013 [sg160] Received 3356 bytes of sg0002lz.x00
+Wed Feb 27 10:44:00 2013 [sg160] ready to receive sg0002dz.x00
+Wed Feb 27 10:44:02 2013 [sg160] received four size bytes 0 0 11 140
+Wed Feb 27 10:44:02 2013 [sg160] Receiving 2956 bytes of sg0002dz.x00
+Wed Feb 27 10:44:10 2013 [sg160] Received 2956 bytes of sg0002dz.x00
+Wed Feb 27 10:44:14 2013 [sg160] ready to receive sc0002ag.x00
+Wed Feb 27 10:44:15 2013 [sg160] received four size bytes 0 0 12 208
+Wed Feb 27 10:44:15 2013 [sg160] Receiving 3280 bytes of sc0002ag.x00
+Wed Feb 27 10:44:25 2013 [sg160] Received 3280 bytes of sc0002ag.x00
+Wed Feb 27 10:44:28 2013 [sg160] ready to receive sc0002bg.x00
+Wed Feb 27 10:44:30 2013 [sg160] received four size bytes 0 0 14 106
+Wed Feb 27 10:44:30 2013 [sg160] Receiving 3690 bytes of sc0002bg.x00
+Wed Feb 27 10:44:40 2013 [sg160] Received 3690 bytes of sc0002bg.x00
+Wed Feb 27 10:44:44 2013 [sg160] ready to receive tm0002ag.x00
+Wed Feb 27 10:44:46 2013 [sg160] received four size bytes 0 0 13 202
+Wed Feb 27 10:44:46 2013 [sg160] Receiving 3530 bytes of tm0002ag.x00
+Wed Feb 27 10:44:56 2013 [sg160] Received 3530 bytes of tm0002ag.x00
+Wed Feb 27 10:44:59 2013 [sg160] ready to receive tm0002bg.x00
+Wed Feb 27 10:45:01 2013 [sg160] received four size bytes 0 0 16 6
+Wed Feb 27 10:45:01 2013 [sg160] Receiving 4102 bytes of tm0002bg.x00
+Wed Feb 27 10:45:12 2013 [sg160] Received 4102 bytes of tm0002bg.x00
+2:0:2:0:7:118:1 logout
+Disconnected at Wed Feb 27 10:45:15 PST 2013
+
+
+Connected at Wed Feb 27 10:47:16 PST 2013
+logged in
+2:1:1:0:7:118:0:149:2615:231:-72.16:1.78:14.72:14.85:9.07:37.87 GPS,270213,184600,4743.627,-12224.403,9,1.3,9,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4729.297363,-12225.081055,270213,184307
+Wed Feb 27 10:47:26 2013 [sg160] Sending 501 bytes of cmdfile
+Wed Feb 27 10:47:26 2013 [sg160] Sent 501 bytes of cmdfile
+2:1:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 10:47:46 PST 2013
+
+
+Connected at Wed Feb 27 10:50:51 PST 2013
+logged in
+2:2:1:0:7:118:0:150:2615:232:-72.99:1.81:14.78:14.91:9.07:39.99 GPS,270213,185006,4743.663,-12224.381,12,1.2,12,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 4 geolocation: 4735.687012,-12241.800781,270213,184642
+Wed Feb 27 10:51:01 2013 [sg160] Sending 500 bytes of cmdfile
+Wed Feb 27 10:51:01 2013 [sg160] Sent 500 bytes of cmdfile
+2:2:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 10:51:21 PST 2013
+
+
+Connected at Wed Feb 27 10:55:09 PST 2013
+logged in
+2:3:1:0:7:118:0:149:2615:232:-73.10:1.80:14.82:14.95:9.07:39.13 GPS,270213,185348,4743.695,-12224.360,7,2.0,13,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4735.687012,-12351.190430,270213,185043
+Wed Feb 27 10:55:20 2013 [sg160] Sending 500 bytes of cmdfile
+Wed Feb 27 10:55:20 2013 [sg160] Sent 500 bytes of cmdfile
+2:3:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 10:55:40 PST 2013
+
+
+Connected at Wed Feb 27 10:58:59 PST 2013
+logged in
+2:4:1:0:7:118:0:149:2615:232:-71.85:1.84:14.82:14.95:9.07:39.05 GPS,270213,185806,4743.734,-12224.338,7,1.7,12,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4732.490723,-12225.812500,270213,185440
+Wed Feb 27 10:59:10 2013 [sg160] Sending 515 bytes of cmdfile
+Wed Feb 27 10:59:10 2013 [sg160] Sent 515 bytes of cmdfile
+2:4:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 10:59:30 PST 2013
+
+
+Connected at Wed Feb 27 12:00:18 PST 2013
+logged in
+3:0:1:0:7:118:0:153:2612:1043:-77.43:2.29:14.83:14.94:9.13:38.50 GPS,270213,195727,4743.596,-12224.554,12,3.1,31,18.2
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4726.107422,-12220.666992,270213,185850
+Wed Feb 27 12:00:29 2013 [sg160] Sending 500 bytes of cmdfile
+Wed Feb 27 12:00:29 2013 [sg160] Sent 500 bytes of cmdfile
+Wed Feb 27 12:00:49 2013 [sg160] ready to receive sg0003lz.x00
+Wed Feb 27 12:00:51 2013 [sg160] received four size bytes 0 0 13 243
+Wed Feb 27 12:00:51 2013 [sg160] Receiving 3571 bytes of sg0003lz.x00
+Wed Feb 27 12:01:01 2013 [sg160] Received 3571 bytes of sg0003lz.x00
+Wed Feb 27 12:01:05 2013 [sg160] ready to receive sg0003dz.x00
+Wed Feb 27 12:01:07 2013 [sg160] received four size bytes 0 0 15 144
+Wed Feb 27 12:01:07 2013 [sg160] Receiving 3984 bytes of sg0003dz.x00
+Wed Feb 27 12:01:18 2013 [sg160] Received 3984 bytes of sg0003dz.x00
+Wed Feb 27 12:01:22 2013 [sg160] ready to receive sc0003ag.x00
+Wed Feb 27 12:01:23 2013 [sg160] received four size bytes 0 0 17 84
+Wed Feb 27 12:01:23 2013 [sg160] Receiving 4436 bytes of sc0003ag.x00
+Wed Feb 27 12:01:36 2013 [sg160] Received 4436 bytes of sc0003ag.x00
+Wed Feb 27 12:01:40 2013 [sg160] ready to receive sc0003bg.x00
+Wed Feb 27 12:01:41 2013 [sg160] received four size bytes 0 0 17 166
+Wed Feb 27 12:01:41 2013 [sg160] Receiving 4518 bytes of sc0003bg.x00
+Wed Feb 27 12:01:54 2013 [sg160] Received 4518 bytes of sc0003bg.x00
+Wed Feb 27 12:01:58 2013 [sg160] ready to receive tm0003ag.x00
+Wed Feb 27 12:02:00 2013 [sg160] received four size bytes 0 0 20 6
+Wed Feb 27 12:02:00 2013 [sg160] Receiving 5126 bytes of tm0003ag.x00
+Wed Feb 27 12:02:14 2013 [sg160] Received 5126 bytes of tm0003ag.x00
+Wed Feb 27 12:02:18 2013 [sg160] ready to receive tm0003bg.x00
+Wed Feb 27 12:02:20 2013 [sg160] received four size bytes 0 0 20 199
+Wed Feb 27 12:02:20 2013 [sg160] Receiving 5319 bytes of tm0003bg.x00
+Wed Feb 27 12:02:35 2013 [sg160] Received 5319 bytes of tm0003bg.x00
+3:0:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 12:02:38 PST 2013
+
+
+Connected at Wed Feb 27 12:56:12 PST 2013
+logged in
+4:0:1:0:7:118:0:150:2611:1044:-75.23:2.36:14.81:14.92:9.12:37.91 GPS,270213,205354,4743.363,-12224.793,8,1.1,13,18.2
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 4 geolocation: 4713.379883,-12305.171875,270213,195947
+Wed Feb 27 12:56:26 2013 [sg160] Sending 437 bytes of cmdfile
+Wed Feb 27 12:56:26 2013 [sg160] Sent 437 bytes of cmdfile
+Wed Feb 27 12:56:46 2013 [sg160] ready to receive sg0004lz.x00
+Wed Feb 27 12:56:48 2013 [sg160] received four size bytes 0 0 13 242
+Wed Feb 27 12:56:48 2013 [sg160] Receiving 3570 bytes of sg0004lz.x00
+Wed Feb 27 12:56:58 2013 [sg160] Received 3570 bytes of sg0004lz.x00
+Wed Feb 27 12:57:02 2013 [sg160] ready to receive sg0004dz.x00
+Wed Feb 27 12:57:05 2013 [sg160] received four size bytes 0 0 14 7
+Wed Feb 27 12:57:05 2013 [sg160] Receiving 3591 bytes of sg0004dz.x00
+Wed Feb 27 12:57:15 2013 [sg160] Received 3591 bytes of sg0004dz.x00
+Wed Feb 27 12:57:19 2013 [sg160] ready to receive sc0004ag.x00
+Wed Feb 27 12:57:21 2013 [sg160] received four size bytes 0 0 15 209
+Wed Feb 27 12:57:21 2013 [sg160] Receiving 4049 bytes of sc0004ag.x00
+Wed Feb 27 12:57:33 2013 [sg160] Received 4049 bytes of sc0004ag.x00
+Wed Feb 27 12:57:37 2013 [sg160] ready to receive sc0004bg.x00
+Wed Feb 27 12:57:39 2013 [sg160] received four size bytes 0 0 16 190
+Wed Feb 27 12:57:39 2013 [sg160] Receiving 4286 bytes of sc0004bg.x00
+Wed Feb 27 12:57:52 2013 [sg160] Received 4286 bytes of sc0004bg.x00
+Wed Feb 27 12:57:56 2013 [sg160] ready to receive tm0004ag.x00
+Wed Feb 27 12:57:58 2013 [sg160] received four size bytes 0 0 17 89
+Wed Feb 27 12:57:58 2013 [sg160] Receiving 4441 bytes of tm0004ag.x00
+Wed Feb 27 12:58:10 2013 [sg160] Received 4441 bytes of tm0004ag.x00
+Wed Feb 27 12:58:15 2013 [sg160] ready to receive tm0004bg.x00
+Wed Feb 27 12:58:16 2013 [sg160] received four size bytes 0 0 19 122
+Wed Feb 27 12:58:16 2013 [sg160] Receiving 4986 bytes of tm0004bg.x00
+Wed Feb 27 12:58:31 2013 [sg160] Received 4986 bytes of tm0004bg.x00
+4:0:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 12:58:35 PST 2013
+
+
+Connected at Wed Feb 27 13:41:34 PST 2013
+logged in
+5:0:1:0:7:118:0:149:1987:814:-75.04:2.50:14.77:14.88:9.10:37.79 GPS,270213,213927,4743.297,-12225.319,8,2.5,27,18.2
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4726.107422,-12225.081055,270213,205602
+Wed Feb 27 13:41:49 2013 [sg160] Sending 437 bytes of cmdfile
+Wed Feb 27 13:41:49 2013 [sg160] Sent 437 bytes of cmdfile
+Wed Feb 27 13:42:09 2013 [sg160] ready to receive sg0005lz.x00
+Wed Feb 27 13:42:13 2013 [sg160] received four size bytes 0 0 13 169
+Wed Feb 27 13:42:13 2013 [sg160] Receiving 3497 bytes of sg0005lz.x00
+Wed Feb 27 13:42:23 2013 [sg160] Received 3497 bytes of sg0005lz.x00
+Wed Feb 27 13:42:26 2013 [sg160] ready to receive sg0005dz.x00
+Wed Feb 27 13:42:28 2013 [sg160] received four size bytes 0 0 11 73
+Wed Feb 27 13:42:28 2013 [sg160] Receiving 2889 bytes of sg0005dz.x00
+Wed Feb 27 13:42:36 2013 [sg160] Received 2889 bytes of sg0005dz.x00
+Wed Feb 27 13:42:40 2013 [sg160] ready to receive sc0005ag.x00
+Wed Feb 27 13:42:42 2013 [sg160] received four size bytes 0 0 14 99
+Wed Feb 27 13:42:42 2013 [sg160] Receiving 3683 bytes of sc0005ag.x00
+Wed Feb 27 13:42:52 2013 [sg160] Received 3683 bytes of sc0005ag.x00
+Wed Feb 27 13:42:56 2013 [sg160] ready to receive sc0005bg.x00
+Wed Feb 27 13:42:57 2013 [sg160] received four size bytes 0 0 13 7
+Wed Feb 27 13:42:57 2013 [sg160] Receiving 3335 bytes of sc0005bg.x00
+Wed Feb 27 13:43:07 2013 [sg160] Received 3335 bytes of sc0005bg.x00
+Wed Feb 27 13:43:10 2013 [sg160] ready to receive tm0005ag.x00
+Wed Feb 27 13:43:12 2013 [sg160] received four size bytes 0 0 15 253
+Wed Feb 27 13:43:12 2013 [sg160] Receiving 4093 bytes of tm0005ag.x00
+Wed Feb 27 13:43:24 2013 [sg160] Received 4093 bytes of tm0005ag.x00
+Wed Feb 27 13:43:28 2013 [sg160] ready to receive tm0005bg.x00
+Wed Feb 27 13:43:29 2013 [sg160] received four size bytes 0 0 13 240
+Wed Feb 27 13:43:29 2013 [sg160] Receiving 3568 bytes of tm0005bg.x00
+Wed Feb 27 13:43:40 2013 [sg160] Received 3568 bytes of tm0005bg.x00
+5:0:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 13:43:43 PST 2013
+
+
+Connected at Wed Feb 27 14:29:26 PST 2013
+logged in
+6:0:1:0:7:118:0:148:1934:814:-74.62:2.47:14.77:14.88:9.10:37.39 GPS,270213,222645,4743.148,-12225.179,10,3.1,29,18.2
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4729.297363,-12222.378906,270213,214126
+Wed Feb 27 14:29:38 2013 [sg160] Sending 437 bytes of cmdfile
+Wed Feb 27 14:29:38 2013 [sg160] Sent 437 bytes of cmdfile
+Wed Feb 27 14:29:57 2013 [sg160] ready to receive sg0006lz.x00
+Wed Feb 27 14:29:58 2013 [sg160] received four size bytes 0 0 13 170
+Wed Feb 27 14:29:58 2013 [sg160] Receiving 3498 bytes of sg0006lz.x00
+Wed Feb 27 14:30:10 2013 [sg160] Received 3498 bytes of sg0006lz.x00
+Wed Feb 27 14:30:14 2013 [sg160] ready to receive sg0006dz.x00
+Wed Feb 27 14:30:16 2013 [sg160] received four size bytes 0 0 11 103
+Wed Feb 27 14:30:16 2013 [sg160] Receiving 2919 bytes of sg0006dz.x00
+Wed Feb 27 14:30:25 2013 [sg160] Received 2919 bytes of sg0006dz.x00
+Wed Feb 27 14:30:29 2013 [sg160] ready to receive sc0006ag.x00
+Wed Feb 27 14:30:30 2013 [sg160] received four size bytes 0 0 15 58
+Wed Feb 27 14:30:30 2013 [sg160] Receiving 3898 bytes of sc0006ag.x00
+Wed Feb 27 14:30:42 2013 [sg160] Received 3898 bytes of sc0006ag.x00
+Wed Feb 27 14:30:45 2013 [sg160] ready to receive sc0006bg.x00
+Wed Feb 27 14:30:47 2013 [sg160] received four size bytes 0 0 12 175
+Wed Feb 27 14:30:47 2013 [sg160] Receiving 3247 bytes of sc0006bg.x00
+Wed Feb 27 14:30:58 2013 [sg160] Received 3247 bytes of sc0006bg.x00
+Wed Feb 27 14:31:02 2013 [sg160] ready to receive tm0006ag.x00
+Wed Feb 27 14:31:04 2013 [sg160] received four size bytes 0 0 17 28
+Wed Feb 27 14:31:04 2013 [sg160] Receiving 4380 bytes of tm0006ag.x00
+Wed Feb 27 14:31:17 2013 [sg160] Received 4380 bytes of tm0006ag.x00
+Wed Feb 27 14:31:23 2013 [sg160] ready to receive tm0006bg.x00
+Wed Feb 27 14:31:25 2013 [sg160] received four size bytes 0 0 13 129
+Wed Feb 27 14:31:25 2013 [sg160] Receiving 3457 bytes of tm0006bg.x00
+Wed Feb 27 14:31:35 2013 [sg160] Received 3457 bytes of tm0006bg.x00
+6:0:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 14:31:39 PST 2013
+
+
+Connected at Wed Feb 27 15:28:44 PST 2013
+logged in
+7:0:1:0:7:118:0:154:1925:813:-75.45:2.62:14.76:14.86:9.08:38.02 GPS,270213,232625,4743.092,-12225.414,11,1.4,11,18.2
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4726.107422,-12220.666992,270213,222856
+Wed Feb 27 15:28:56 2013 [sg160] Sending 439 bytes of cmdfile
+Wed Feb 27 15:28:56 2013 [sg160] Sent 439 bytes of cmdfile
+Wed Feb 27 15:29:15 2013 [sg160] ready to receive sg0007lz.x00
+Wed Feb 27 15:29:17 2013 [sg160] received four size bytes 0 0 14 124
+Wed Feb 27 15:29:17 2013 [sg160] Receiving 3708 bytes of sg0007lz.x00
+Wed Feb 27 15:29:28 2013 [sg160] Received 3708 bytes of sg0007lz.x00
+Wed Feb 27 15:29:31 2013 [sg160] ready to receive sg0007dz.x00
+Wed Feb 27 15:29:33 2013 [sg160] received four size bytes 0 0 14 103
+Wed Feb 27 15:29:33 2013 [sg160] Receiving 3687 bytes of sg0007dz.x00
+Wed Feb 27 15:29:43 2013 [sg160] Received 3687 bytes of sg0007dz.x00
+Wed Feb 27 15:29:47 2013 [sg160] ready to receive sc0007ag.x00
+Wed Feb 27 15:29:48 2013 [sg160] received four size bytes 0 0 17 139
+Wed Feb 27 15:29:48 2013 [sg160] Receiving 4491 bytes of sc0007ag.x00
+Wed Feb 27 15:30:01 2013 [sg160] Received 4491 bytes of sc0007ag.x00
+Wed Feb 27 15:30:04 2013 [sg160] ready to receive sc0007bg.x00
+Wed Feb 27 15:30:06 2013 [sg160] received four size bytes 0 0 16 133
+Wed Feb 27 15:30:06 2013 [sg160] Receiving 4229 bytes of sc0007bg.x00
+Wed Feb 27 15:30:18 2013 [sg160] Received 4229 bytes of sc0007bg.x00
+Wed Feb 27 15:30:21 2013 [sg160] ready to receive tm0007ag.x00
+Wed Feb 27 15:30:23 2013 [sg160] received four size bytes 0 0 20 21
+Wed Feb 27 15:30:23 2013 [sg160] Receiving 5141 bytes of tm0007ag.x00
+Wed Feb 27 15:30:38 2013 [sg160] Received 5141 bytes of tm0007ag.x00
+Wed Feb 27 15:30:41 2013 [sg160] ready to receive tm0007bg.x00
+Wed Feb 27 15:30:43 2013 [sg160] received four size bytes 0 0 18 231
+Wed Feb 27 15:30:43 2013 [sg160] Receiving 4839 bytes of tm0007bg.x00
+Wed Feb 27 15:30:56 2013 [sg160] Received 4839 bytes of tm0007bg.x00
+7:0:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 15:31:00 PST 2013
+
+
+Connected at Wed Feb 27 15:32:37 PST 2013
+logged in
+7:1:1:0:7:118:0:154:1924:807:-75.76:2.58:14.63:14.76:9.09:37.63 GPS,270213,233142,4743.076,-12225.430,8,1.4,8,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4726.107422,-12227.781250,270213,232836
+Wed Feb 27 15:32:48 2013 [sg160] Sending 439 bytes of cmdfile
+Wed Feb 27 15:32:48 2013 [sg160] Sent 439 bytes of cmdfile
+7:1:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 15:33:07 PST 2013
+
+
+Connected at Wed Feb 27 15:36:42 PST 2013
+logged in
+7:2:1:0:7:118:0:154:1925:806:-74.84:2.52:14.69:14.83:9.10:39.25 GPS,270213,233530,4743.065,-12225.438,9,1.3,9,18.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.11,rev=3531M,frag=8,launch=270213:164119
+Iridium bars: 5 geolocation: 4729.297363,-12225.081055,270213,233229
+Wed Feb 27 15:36:53 2013 [sg160] Sending 439 bytes of cmdfile
+Wed Feb 27 15:36:53 2013 [sg160] Sent 439 bytes of cmdfile
+7:2:1:0:7:118:1 logout
+Disconnected at Wed Feb 27 15:37:13 PST 2013
+
+
+Connected at Fri Mar 1 16:58:04 PST 2013
+logged in
+0:0:1:0:7:126:0:799:1954:188:-4.11:-0.02:14.83:14.95:9.16:33.46 GPS,020313,004509,4739.299,-12219.048,12,3.0,31,18.2
+ver=66.11,rev=3531M,frag=8,launch=250213:140725
+Iridium bars: 5 geolocation: 4722.920898,-12217.249023,020313,005713
+Fri Mar  1 16:58:16 2013 [sg160] Sending 439 bytes of cmdfile
+Fri Mar  1 16:58:16 2013 [sg160] Sent 439 bytes of cmdfile
+Fri Mar  1 16:58:46 2013 [sg160] ready to receive st0021lz.x00
+Fri Mar  1 16:58:48 2013 [sg160] received four size bytes 0 0 7 232
+Fri Mar  1 16:58:48 2013 [sg160] Receiving 2024 bytes of st0021lz.x00
+Fri Mar  1 16:58:54 2013 [sg160] Received 2024 bytes of st0021lz.x00
+Fri Mar  1 16:58:58 2013 [sg160] ready to receive st0021dz.x00
+Fri Mar  1 16:59:00 2013 [sg160] received four size bytes 0 0 1 53
+Fri Mar  1 16:59:00 2013 [sg160] Receiving 309 bytes of st0021dz.x00
+Fri Mar  1 16:59:03 2013 [sg160] Received 309 bytes of st0021dz.x00
+Fri Mar  1 16:59:12 2013 [sg160] ready to receive st0021kz.x
+Fri Mar  1 16:59:14 2013 [sg160] received four size bytes 0 0 58 229
+Fri Mar  1 16:59:14 2013 [sg160] Receiving 15077 bytes of st0021kz.x
+Fri Mar  1 16:59:58 2013 [sg160] Received 15077 bytes of st0021kz.x
+0:0:1:0:7:126:1 logout
+Disconnected at Fri Mar 1 17:00:03 PST 2013
+
+

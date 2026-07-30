@@ -72,12 +72,7 @@ def plot_sbe43(
 
     if not generate_plots:
         return ([], [])
-    is_scicon = False
-    if "sbe43_time" in dive_nc_file.variables:
-        is_scicon = True
-    elif "sbe43" in "".join(dive_nc_file.variables):
-        pass
-    else:
+    if "sbe43" not in "".join(dive_nc_file.variables):
         return ([], [])
 
     sbe43_correctedO2 = None
@@ -109,32 +104,59 @@ def plot_sbe43(
 
         if binned_profile:
             bin_width = np.round(np.average(np.diff(sg_depth[0, :])), decimals=1)
+
         if "sbe43_dissolved_oxygen" in dive_nc_file.variables:
-            sbe43_correctedO2 = dive_nc_file.variables["sbe43_dissolved_oxygen"][:]
+            sbe43_correctedO2_var = dive_nc_file.variables["sbe43_dissolved_oxygen"]
+            sbe43_correctedO2 = sbe43_correctedO2_var[:]
         else:
+            sbe43_correctedO2_var = None
             log_warning("Did not find corrected sbe43 O2")
 
-        if is_scicon and not binned_profile:
-            sbe43_instrument_O2_time = dive_nc_file.variables["sbe43_time"][:]
+        if "dissolved_oxygen_sat" in dive_nc_file.variables:
+            sat_O2_var = dive_nc_file.variables["dissolved_oxygen_sat"]
+            sat_O2 = sat_O2_var[:]
+        else:
+            sat_O2_var = None
 
-            if "dissolved_oxygen_sat" in dive_nc_file.variables:
-                sat_O2 = dive_nc_file.variables["dissolved_oxygen_sat"]
-                sat_O2_time = find_matching_time(dive_nc_file, sat_O2)
-                sat_O2 = sat_O2[:]
-
+        if binned_profile:
+            # Binned profiles put every variable on the same common
+            # dive/climb x depth-bin grid as sg_time/sg_depth
+            sbe43_instrument_O2_time = sat_O2_time = sg_time
+            sbe43_instrument_O2_depth = sat_O2_depth = sg_depth
+        else:
+            # sbe43_dissolved_oxygen and dissolved_oxygen_sat are NOT
+            # necessarily on the same time/depth grid as the glider's own
+            # "time"/"depth" (sg_data_point) - that's only true for
+            # eng-based (unpumped, truck-wired) SBE43. scicon SBE43 is on
+            # its own sbe43_data_point/sbe43_result_data_point grid, and
+            # gpctd-based SBE43 is on the ctd_data_point grid - both
+            # different lengths and sample times than sg_time/sg_depth.
+            # Always locate each variable's own matching time coordinate
+            # and interpolate the glider depth onto it, rather than
+            # assuming a shared grid (a prior version of this code did
+            # that and produced mismatched-length, misaligned dive/climb
+            # traces for gpctd missions).
             f = scipy.interpolate.interp1d(
                 sg_time, sg_depth, kind="linear", bounds_error=False, fill_value=0.0
             )
-            sbe43_instrument_O2_depth = f(sbe43_instrument_O2_time)
-            if sat_O2 is not None:
-                sat_O2_depth = f(sat_O2_time)
-        else:
-            # Truck
-            sbe43_instrument_O2_time = sg_time
-            sat_O2_depth = sbe43_instrument_O2_depth = sg_depth
-            sat_O2_time = sg_time
-            if "dissolved_oxygen_sat" in dive_nc_file.variables:
-                sat_O2 = dive_nc_file.variables["dissolved_oxygen_sat"][:]
+
+            if sbe43_correctedO2_var is not None:
+                sbe43_instrument_O2_time = find_matching_time(
+                    dive_nc_file, sbe43_correctedO2_var
+                )
+                if sbe43_instrument_O2_time is None:
+                    sbe43_instrument_O2_time = sg_time
+                    sbe43_instrument_O2_depth = sg_depth
+                else:
+                    sbe43_instrument_O2_depth = f(sbe43_instrument_O2_time)
+
+            if sat_O2_var is not None:
+                sat_O2_time = find_matching_time(dive_nc_file, sat_O2_var)
+                if sat_O2_time is None:
+                    sat_O2_time = sg_time
+                    sat_O2_depth = sg_depth
+                else:
+                    sat_O2_depth = f(sat_O2_time)
     except Exception:
         log_warning("Could not load oxygen data", "exc")
 

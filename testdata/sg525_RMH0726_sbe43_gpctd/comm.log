@@ -1,0 +1,1105 @@
+Connected at 2026-07-22T13:52:06Z (sg535)
+logged in
+0:0:2:0:63:188:-2:241:2300:600:0.7:0.12:10.87:26.54:9.16:54.9 GPS,220726,134948,-41.275,-9009.922,25,1.4,25,4.0,3.5,15.8,5,68.6
+ver=66.12,rev=eAGLERAY,frag=8,launch=080419:132213
+Iridium bars: 5 geolocation: -40.978,-9019.410,151015,205519
+cmdfile
+2026-07-22T13:52:35Z [sg535] Sent 487 bytes of cmdfile/XMODEM: 512 Bytes, 39 BPS
+Received cmdfile 487 bytes
+science
+2026-07-22T13:53:25Z [sg535] Sent 180 bytes of science/XMODEM: 256 Bytes, 16 BPS
+Received science 180 bytes
+2026-07-22T13:53:49Z [sg535] sector number = 1, block length = 1024
+2026-07-22T13:53:56Z [sg535] sector number = 2, block length = 1024
+2026-07-22T13:54:02Z [sg535] sector number = 3, block length = 1024
+2026-07-22T13:54:09Z [sg535] sector number = 4, block length = 1024
+2026-07-22T13:54:16Z [sg535] sector number = 5, block length = 1024
+2026-07-22T13:54:22Z [sg535] sector number = 6, block length = 1024
+2026-07-22T13:54:28Z [sg535] sector number = 7, block length = 1024
+2026-07-22T13:54:34Z [sg535] sector number = 8, block length = 1024
+2026-07-22T13:54:40Z [sg535] sector number = 9, block length = 1024
+2026-07-22T13:54:46Z [sg535] sector number = 10, block length = 1024
+2026-07-22T13:54:52Z [sg535] sector number = 11, block length = 1024
+2026-07-22T13:54:58Z [sg535] sector number = 12, block length = 1024
+2026-07-22T13:55:04Z [sg535] sector number = 13, block length = 1024
+2026-07-22T13:55:10Z [sg535] sector number = 14, block length = 1024
+2026-07-22T13:55:16Z [sg535] sector number = 15, block length = 1024
+2026-07-22T13:55:22Z [sg535] sector number = 16, block length = 1024
+2026-07-22T13:55:31Z [sg535] sector number = 17, block length = 1024
+2026-07-22T13:55:37Z [sg535] sector number = 18, block length = 1024
+2026-07-22T13:55:43Z [sg535] sector number = 19, block length = 1024
+2026-07-22T13:55:49Z [sg535] sector number = 20, block length = 1024
+2026-07-22T13:55:55Z [sg535] sector number = 21, block length = 1024
+2026-07-22T13:56:01Z [sg535] sector number = 22, block length = 1024
+2026-07-22T13:56:07Z [sg535] sector number = 23, block length = 1024
+2026-07-22T13:56:13Z [sg535] sector number = 24, block length = 1024
+2026-07-22T13:56:19Z [sg535] sector number = 25, block length = 1024
+2026-07-22T13:56:26Z [sg535] sector number = 26, block length = 1024
+2026-07-22T13:56:33Z [sg535] sector number = 27, block length = 1024
+2026-07-22T13:56:39Z [sg535] sector number = 28, block length = 1024
+2026-07-22T13:56:47Z [sg535] sector number = 29, block length = 1024
+2026-07-22T13:56:53Z [sg535] sector number = 30, block length = 1024
+2026-07-22T13:56:59Z [sg535] sector number = 31, block length = 1024
+2026-07-22T13:57:05Z [sg535] sector number = 32, block length = 1024
+2026-07-22T13:57:14Z [sg535] sector number = 33, block length = 1024
+2026-07-22T13:57:21Z [sg535] sector number = 34, block length = 1024
+2026-07-22T13:57:27Z [sg535] sector number = 35, block length = 1024
+2026-07-22T13:57:33Z [sg535] sector number = 36, block length = 1024
+2026-07-22T13:57:41Z [sg535] sector number = 37, block length = 1024
+2026-07-22T13:57:45Z [sg535] sector number = 38, block length = 128
+2026-07-22T13:57:48Z [sg535] received EOT and read timed out
+2026-07-22T13:57:48Z [sg535] sector number = -10, block length = 128
+2026-07-22T13:57:48Z [sg535] done - sending ACK
+2026-07-22T13:57:48Z [sg535] sg0000kl.x/XMODEM: 38016 Bytes, 155 BPS
+2026-07-22T13:57:48Z [sg535] Exiting (0)
+Sent sg0000kl.x
+0:0:2:0:63:188:1 logout
+Disconnected at 2026-07-22T13:57:55Z (normal)
+
+
+Connected at 2026-07-22T14:02:28Z (sg535)
+logged in
+0:1:1:0:64:188:0:241:2302:637:3.6:0.13:10.89:26.48:9.18:54.5 GPS,220726,140128,-39.585,-9008.841,41,1.3,41,4.0,6.3,339.1,6,26.5
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:135932
+Iridium bars: 5 geolocation: -38.821,-9006.470,161015,100127
+cmdfile
+2026-07-22T14:03:00Z [sg535] Sent 487 bytes of cmdfile/XMODEM: 512 Bytes, 34 BPS
+Received cmdfile 487 bytes
+2026-07-22T14:03:23Z [sg535] sector number = 1, block length = 1024
+2026-07-22T14:03:29Z [sg535] sector number = 2, block length = 1024
+2026-07-22T14:03:32Z [sg535] received EOT and read timed out
+2026-07-22T14:03:32Z [sg535] sector number = -10, block length = 1024
+2026-07-22T14:03:32Z [sg535] done - sending ACK
+2026-07-22T14:03:32Z [sg535] sg0000lz.x00/XMODEM: 2048 Bytes, 135 BPS
+2026-07-22T14:03:32Z [sg535] Exiting (0)
+Sent sg0000lz.x00
+0:1:1:0:64:188:1 logout
+Disconnected at 2026-07-22T14:03:37Z (normal)
+
+
+Connected at 2026-07-22T14:05:45Z (sg535)
+logged in
+0:2:1:0:64:188:0:241:2302:597:-0.8:0.13:10.88:26.39:9.17:54.6 GPS,220726,140453,-38.963,-9008.728,5,1.7,5,4.0,2.1,359.2,6,115.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:135932
+Iridium bars: 5 geolocation: -38.821,-9006.470,161015,101154
+cmdfile
+2026-07-22T14:06:14Z [sg535] Sent 488 bytes of cmdfile/XMODEM: 512 Bytes, 34 BPS
+Received cmdfile 488 bytes
+0:2:1:0:64:188:1 logout
+Disconnected at 2026-07-22T14:06:33Z (normal)
+
+
+Connected at 2026-07-22T14:30:14Z (sg535)
+logged in
+0:3:2:0:64:188:-2:241:2302:599:1.3:0.18:11.03:26.79:9.20:55.5 GPS,220726,142735,-34.704,-9007.957,44,1.8,44,3.9,6.5,2.3,5,30.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:135932
+Iridium bars: 5 geolocation: -38.821,-9008.627,161015,101511
+cmdfile
+2026-07-22T14:30:53Z [sg535] Sent 488 bytes of cmdfile/XMODEM: 512 Bytes, 33 BPS
+Received cmdfile 488 bytes
+0:3:2:0:64:188:1 logout
+Disconnected at 2026-07-22T14:31:12Z (normal)
+
+
+Connected at 2026-07-22T14:52:50Z (sg535)
+logged in
+0:4:1:0:64:188:0:241:2302:600:-1.3:0.28:11.04:26.80:9.23:54.3 GPS,220726,145205,-29.802,-9007.128,35,1.2,35,3.9,5.8,16.2,6,23.8
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:135932
+Iridium bars: 5 geolocation: -32.351,-9012.940,161015,103941
+cmdfile
+2026-07-22T14:53:21Z [sg535] Sent 488 bytes of cmdfile/XMODEM: 512 Bytes, 35 BPS
+Received cmdfile 488 bytes
+0:4:1:0:64:188:1 logout
+Disconnected at 2026-07-22T14:53:44Z (normal)
+
+
+Connected at 2026-07-22T15:10:31Z (sg535)
+logged in
+0:0:1:0:64:189:0:240:2302:601:0.4:0.01:10.96:26.80:9.24:53.3 GPS,220726,150933,-28.376,-9006.976,42,1.1,45,3.9,0.5,340.4,7,20.3
+ver=66.12,rev=eAGLERAY,frag=8,launch=080419:132212
+Iridium bars: 5 geolocation: -30.194,-9008.627,161015,110216
+cmdfile
+2026-07-22T15:10:58Z [sg535] Sent 485 bytes of cmdfile/XMODEM: 512 Bytes, 41 BPS
+Received cmdfile 485 bytes
+2026-07-22T15:11:38Z [sg535] sector number = 1, block length = 1024
+2026-07-22T15:11:44Z [sg535] sector number = 2, block length = 1024
+2026-07-22T15:11:51Z [sg535] sector number = 3, block length = 1024
+2026-07-22T15:11:58Z [sg535] sector number = 4, block length = 1024
+2026-07-22T15:12:06Z [sg535] sector number = 5, block length = 1024
+2026-07-22T15:12:12Z [sg535] sector number = 6, block length = 1024
+2026-07-22T15:12:18Z [sg535] sector number = 7, block length = 1024
+2026-07-22T15:12:26Z [sg535] sector number = 8, block length = 1024
+2026-07-22T15:12:32Z [sg535] sector number = 9, block length = 1024
+2026-07-22T15:12:41Z [sg535] sector number = 10, block length = 1024
+2026-07-22T15:12:43Z [sg535] received EOT and read timed out
+2026-07-22T15:12:43Z [sg535] sector number = -10, block length = 1024
+2026-07-22T15:12:43Z [sg535] done - sending ACK
+2026-07-22T15:12:43Z [sg535] sg0000kl.x/XMODEM: 10240 Bytes, 143 BPS
+2026-07-22T15:12:43Z [sg535] Exiting (0)
+Sent sg0000kl.x
+0:0:1:0:64:189:1 logout
+Disconnected at 2026-07-22T15:12:50Z (normal)
+
+
+Connected at 2026-07-22T15:19:25Z (sg535)
+logged in
+0:1:2:0:65:189:-2:241:2302:640:-0.7:-0.00:10.93:26.61:9.25:52.8 GPS,220726,151634,-28.335,-9006.916,42,1.0,42,3.9,0.6,201.5,7,29.0
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -25.880,-9004.313,161015,111958
+cmdfile
+2026-07-22T15:20:00Z [sg535] Sent 485 bytes of cmdfile/XMODEM: 512 Bytes, 39 BPS
+Received cmdfile 485 bytes
+2026-07-22T15:20:25Z [sg535] sector number = 1, block length = 1024
+2026-07-22T15:20:32Z [sg535] sector number = 2, block length = 1024
+2026-07-22T15:20:35Z [sg535] received EOT and read timed out
+2026-07-22T15:20:35Z [sg535] sector number = -10, block length = 1024
+2026-07-22T15:20:35Z [sg535] done - sending ACK
+2026-07-22T15:20:35Z [sg535] sg0000lz.x00/XMODEM: 2048 Bytes, 125 BPS
+2026-07-22T15:20:35Z [sg535] Exiting (0)
+Sent sg0000lz.x00
+0:1:2:0:65:189:1 logout
+Disconnected at 2026-07-22T15:20:41Z (normal)
+
+
+Connected at 2026-07-22T15:24:08Z (sg535)
+logged in
+0:2:1:0:65:189:0:241:2305:598:-1.9:-0.01:10.92:26.50:9.25:52.0 GPS,220726,152257,-28.184,-9006.902,46,1.3,66,3.9,1.1,349.7,5,14.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -25.880,-9004.313,161015,112851
+cmdfile
+Disconnected at 2026-07-22T15:25:48Z (hangup)
+
+
+Connected at 2026-07-22T15:37:41Z (sg535)
+logged in
+0:3:1:0:65:189:0:243:2373:599:-0.5:-0.01:10.90:26.74:9.26:52.4 GPS,220726,153634,-27.816,-9007.029,349,1.0,349,3.9,0.0,0.0,7,161.4
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -30.194,-9006.470,161015,113329
+cmdfile
+Disconnected at 2026-07-22T15:38:26Z (hangup)
+
+
+Connected at 2026-07-22T15:48:14Z (sg535)
+logged in
+0:4:2:0:65:189:-2:240:2307:601:-3.8:0.01:10.97:26.71:9.27:51.5 GPS,220726,154524,-27.572,-9007.153,44,3.0,64,3.9,4.1,350.9,4,14.1
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -25.880,-9006.470,161015,114704
+cmdfile
+2026-07-22T15:48:54Z [sg535] Sent 485 bytes of cmdfile/XMODEM: 512 Bytes, 28 BPS
+Received cmdfile 485 bytes
+0:4:2:0:65:189:1 logout
+Disconnected at 2026-07-22T15:49:17Z (normal)
+
+
+Connected at 2026-07-22T15:58:21Z (sg535)
+logged in
+0:5:1:0:65:189:0:234:2307:602:-7.6:0.14:10.95:26.72:9.24:51.1 GPS,220726,155723,-27.374,-9007.232,167,1.6,167,3.9,0.5,5.4,4,44.4
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 4 geolocation: -23.724,-9006.470,161015,115732
+cmdfile
+2026-07-22T15:59:06Z [sg535] Sent 485 bytes of cmdfile/XMODEM: 512 Bytes, 34 BPS
+Received cmdfile 485 bytes
+0:5:1:0:65:189:1 logout
+Disconnected at 2026-07-22T15:59:25Z (normal)
+
+
+Connected at 2026-07-22T16:07:24Z (sg535)
+logged in
+0:6:1:0:65:189:0:227:2313:602:-50.5:0.98:10.96:26.72:9.23:52.5 GPS,220726,160628,-27.169,-9007.249,105,0.9,105,3.9,0.9,311.1,7,29.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 3 geolocation: -23.724,-9006.470,161015,120742
+cmdfile
+2026-07-22T16:07:58Z [sg535] Sent 485 bytes of cmdfile/XMODEM: 512 Bytes, 32 BPS
+Received cmdfile 485 bytes
+0:6:1:0:65:189:1 logout
+Disconnected at 2026-07-22T16:08:19Z (normal)
+
+
+Connected at 2026-07-22T16:15:20Z (sg535)
+logged in
+0:7:1:0:65:189:0:224:2308:602:-13.1:0.16:10.99:26.71:9.22:52.1 GPS,220726,161422,-27.019,-9007.280,45,0.8,45,3.9,0.5,344.8,10,21.9
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -23.724,-9006.470,161015,121649
+cmdfile
+2026-07-22T16:15:51Z [sg535] Sent 485 bytes of cmdfile/XMODEM: 512 Bytes, 38 BPS
+Received cmdfile 485 bytes
+0:7:1:0:65:189:1 logout
+Disconnected at 2026-07-22T16:16:10Z (normal)
+
+
+Connected at 2026-07-22T16:25:02Z (sg535)
+logged in
+0:8:2:0:65:189:-2:241:2312:597:-51.4:0.97:10.98:26.70:9.22:52.4 GPS,220726,162235,-26.844,-9007.311,46,0.7,46,3.9,0.6,331.7,11,14.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -23.724,-9010.783,161015,122446
+cmdfile
+2026-07-22T16:25:33Z [sg535] Sent 485 bytes of cmdfile/XMODEM: 512 Bytes, 37 BPS
+Received cmdfile 485 bytes
+0:8:2:0:65:189:1 logout
+Disconnected at 2026-07-22T16:25:54Z (normal)
+
+
+Connected at 2026-07-22T16:32:54Z (sg535)
+logged in
+0:9:1:0:65:189:0:239:2319:600:-58.8:0.95:11.00:26.70:9.22:53.7 GPS,220726,163157,-26.761,-9007.380,42,1.3,45,3.9,0.0,347.9,6,18.0
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -23.724,-9030.192,161015,123427
+cmdfile
+2026-07-22T16:34:02Z [sg535] XMODEM/cmdfile: error occured
+2026-07-22T16:34:19Z [sg535] Sent 487 bytes of cmdfile/XMODEM: 512 Bytes, 37 BPS
+Received cmdfile 487 bytes
+0:9:1:0:65:189:1 logout
+Disconnected at 2026-07-22T16:34:43Z (normal)
+
+
+Connected at 2026-07-22T16:57:39Z (sg535)
+logged in
+1:0:1:0:65:189:0:248:2306:601:-47.3:0.86:10.87:26.48:9.21:52.0 GPS,220726,165605,-26.610,-9007.531,35,0.8,35,3.9,0.0,0.0,9,20.5
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -23.724,-9004.313,161015,124220
+cmdfile
+2026-07-22T16:58:11Z [sg535] Sent 450 bytes of cmdfile/XMODEM: 512 Bytes, 28 BPS
+Received cmdfile 450 bytes
+2026-07-22T16:58:35Z [sg535] sector number = 1, block length = 1024
+2026-07-22T16:58:41Z [sg535] sector number = 2, block length = 1024
+2026-07-22T16:58:47Z [sg535] sector number = 3, block length = 1024
+2026-07-22T16:58:55Z [sg535] sector number = 4, block length = 1024
+2026-07-22T16:58:57Z [sg535] received EOT and read timed out
+2026-07-22T16:58:57Z [sg535] sector number = -10, block length = 1024
+2026-07-22T16:58:57Z [sg535] done - sending ACK
+2026-07-22T16:58:57Z [sg535] sg0001lz.x00/XMODEM: 4096 Bytes, 142 BPS
+2026-07-22T16:58:57Z [sg535] Exiting (0)
+Sent sg0001lz.x00
+2026-07-22T16:59:08Z [sg535] sector number = 1, block length = 1024
+2026-07-22T16:59:14Z [sg535] sector number = 2, block length = 1024
+2026-07-22T16:59:20Z [sg535] sector number = 3, block length = 1024
+2026-07-22T16:59:26Z [sg535] sector number = 4, block length = 1024
+2026-07-22T16:59:29Z [sg535] received EOT and read timed out
+2026-07-22T16:59:29Z [sg535] sector number = -10, block length = 1024
+2026-07-22T16:59:29Z [sg535] done - sending ACK
+2026-07-22T16:59:29Z [sg535] sg0001dz.x00/XMODEM: 4096 Bytes, 146 BPS
+2026-07-22T16:59:29Z [sg535] Exiting (0)
+Sent sg0001dz.x00
+2026-07-22T16:59:40Z [sg535] sector number = 1, block length = 1024
+2026-07-22T16:59:46Z [sg535] sector number = 2, block length = 1024
+2026-07-22T16:59:48Z [sg535] received EOT and read timed out
+2026-07-22T16:59:48Z [sg535] sector number = -10, block length = 1024
+2026-07-22T16:59:48Z [sg535] done - sending ACK
+2026-07-22T16:59:48Z [sg535] pc0001az.x00/XMODEM: 2048 Bytes, 133 BPS
+2026-07-22T16:59:48Z [sg535] Exiting (0)
+Sent pc0001az.x00
+2026-07-22T16:59:59Z [sg535] sector number = 1, block length = 1024
+2026-07-22T17:00:01Z [sg535] sector number = 2, block length = 128
+2026-07-22T17:00:03Z [sg535] received EOT and read timed out
+2026-07-22T17:00:03Z [sg535] sector number = -10, block length = 128
+2026-07-22T17:00:03Z [sg535] done - sending ACK
+2026-07-22T17:00:03Z [sg535] pc0001bz.x00/XMODEM: 1152 Bytes, 103 BPS
+2026-07-22T17:00:03Z [sg535] Exiting (0)
+Sent pc0001bz.x00
+1:0:1:0:65:189:1 logout
+Disconnected at 2026-07-22T17:00:09Z (normal)
+
+
+Connected at 2026-07-22T17:02:20Z (sg535)
+logged in
+1:1:1:0:65:189:0:247:2306:592:-49.6:1.00:10.86:26.40:9.22:52.9 GPS,220726,170059,-26.563,-9007.569,7,0.9,7,3.9,0.5,310.3,8,72.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -25.880,-9004.313,161015,130704
+cmdfile
+2026-07-22T17:02:55Z [sg535] Sent 450 bytes of cmdfile/XMODEM: 512 Bytes, 37 BPS
+Received cmdfile 450 bytes
+2026-07-22T17:03:19Z [sg535] sector number = 1, block length = 1024
+2026-07-22T17:03:26Z [sg535] sector number = 2, block length = 1024
+2026-07-22T17:03:29Z [sg535] received EOT and read timed out
+2026-07-22T17:03:29Z [sg535] sector number = -10, block length = 1024
+2026-07-22T17:03:29Z [sg535] done - sending ACK
+2026-07-22T17:03:29Z [sg535] pc0001az.x00/XMODEM: 2048 Bytes, 123 BPS
+2026-07-22T17:03:29Z [sg535] Exiting (0)
+Sent pc0001az.x00
+2026-07-22T17:03:40Z [sg535] sector number = 1, block length = 1024
+2026-07-22T17:03:42Z [sg535] sector number = 2, block length = 128
+2026-07-22T17:03:44Z [sg535] received EOT and read timed out
+2026-07-22T17:03:44Z [sg535] sector number = -10, block length = 128
+2026-07-22T17:03:44Z [sg535] done - sending ACK
+2026-07-22T17:03:44Z [sg535] pc0001bz.x00/XMODEM: 1152 Bytes, 98 BPS
+2026-07-22T17:03:44Z [sg535] Exiting (0)
+Sent pc0001bz.x00
+1:1:1:0:65:189:1 logout
+Disconnected at 2026-07-22T17:03:55Z (normal)
+
+
+Connected at 2026-07-22T17:11:10Z (sg535)
+logged in
+1:2:1:0:65:189:0:247:2306:592:-61.6:0.99:10.91:26.65:9.19:53.1 GPS,220726,170959,-26.487,-9007.633,47,1.5,47,3.9,0.5,308.8,6,39.8
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -23.724,-9006.470,161015,131141
+cmdfile
+cmdfile
+Disconnected at 2026-07-22T17:12:39Z (hangup)
+
+
+Connected at 2026-07-22T17:14:06Z (sg535)
+logged in
+1:2:2:0:65:189:0:247:2306:592:-61.6:0.99:10.91:26.65:9.19:53.1 GPS,220726,170959,-26.487,-9007.633,47,1.5,47,3.9,0.5,308.8,6,39.8
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 4 geolocation: -21.567,-9004.313,161015,132036
+cmdfile
+2026-07-22T17:14:46Z [sg535] Sent 454 bytes of cmdfile/XMODEM: 512 Bytes, 37 BPS
+Received cmdfile 454 bytes
+2026-07-22T17:15:10Z [sg535] sector number = 1, block length = 1024
+2026-07-22T17:15:16Z [sg535] sector number = 2, block length = 1024
+2026-07-22T17:15:18Z [sg535] received EOT and read timed out
+2026-07-22T17:15:18Z [sg535] sector number = -10, block length = 1024
+2026-07-22T17:15:18Z [sg535] done - sending ACK
+2026-07-22T17:15:18Z [sg535] pc0001az.x00/XMODEM: 2048 Bytes, 132 BPS
+2026-07-22T17:15:18Z [sg535] Exiting (0)
+Sent pc0001az.x00
+2026-07-22T17:15:32Z [sg535] sector number = 1, block length = 1024
+2026-07-22T17:15:34Z [sg535] sector number = 2, block length = 128
+2026-07-22T17:15:37Z [sg535] received EOT and read timed out
+2026-07-22T17:15:37Z [sg535] sector number = -10, block length = 128
+2026-07-22T17:15:37Z [sg535] done - sending ACK
+2026-07-22T17:15:37Z [sg535] pc0001bz.x00/XMODEM: 1152 Bytes, 80 BPS
+2026-07-22T17:15:37Z [sg535] Exiting (0)
+Sent pc0001bz.x00
+1:2:2:0:65:189:1 logout
+Disconnected at 2026-07-22T17:15:43Z (normal)
+
+
+Connected at 2026-07-22T18:01:03Z (sg535)
+logged in
+2:0:1:0:65:189:0:251:2294:597:-50.7:0.86:10.85:26.47:9.17:56.2 GPS,220726,175923,-26.399,-9007.748,44,1.3,44,3.9,0.0,0.0,5,39.6
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 4 geolocation: -25.880,-9004.313,161015,132333
+cmdfile
+2026-07-22T18:01:31Z [sg535] Sent 452 bytes of cmdfile/XMODEM: 512 Bytes, 39 BPS
+Received cmdfile 452 bytes
+2026-07-22T18:01:56Z [sg535] sector number = 1, block length = 1024
+2026-07-22T18:02:02Z [sg535] sector number = 2, block length = 1024
+2026-07-22T18:02:08Z [sg535] sector number = 3, block length = 1024
+2026-07-22T18:02:15Z [sg535] sector number = 4, block length = 1024
+2026-07-22T18:02:18Z [sg535] received EOT and read timed out
+2026-07-22T18:02:18Z [sg535] sector number = -10, block length = 1024
+2026-07-22T18:02:18Z [sg535] done - sending ACK
+2026-07-22T18:02:18Z [sg535] sg0002lz.x00/XMODEM: 4096 Bytes, 135 BPS
+2026-07-22T18:02:18Z [sg535] Exiting (0)
+Sent sg0002lz.x00
+2026-07-22T18:02:29Z [sg535] sector number = 1, block length = 1024
+2026-07-22T18:02:35Z [sg535] sector number = 2, block length = 1024
+2026-07-22T18:02:41Z [sg535] sector number = 3, block length = 1024
+2026-07-22T18:02:48Z [sg535] sector number = 4, block length = 1024
+2026-07-22T18:02:54Z [sg535] sector number = 5, block length = 1024
+2026-07-22T18:02:56Z [sg535] received EOT and read timed out
+2026-07-22T18:02:56Z [sg535] sector number = -10, block length = 1024
+2026-07-22T18:02:56Z [sg535] done - sending ACK
+2026-07-22T18:02:56Z [sg535] sg0002dz.x00/XMODEM: 5120 Bytes, 146 BPS
+2026-07-22T18:02:56Z [sg535] Exiting (0)
+Sent sg0002dz.x00
+2026-07-22T18:03:07Z [sg535] sector number = 1, block length = 1024
+2026-07-22T18:03:13Z [sg535] sector number = 2, block length = 1024
+2026-07-22T18:03:21Z [sg535] sector number = 3, block length = 1024
+2026-07-22T18:03:23Z [sg535] received EOT and read timed out
+2026-07-22T18:03:23Z [sg535] sector number = -10, block length = 1024
+2026-07-22T18:03:23Z [sg535] done - sending ACK
+2026-07-22T18:03:23Z [sg535] pc0002az.x00/XMODEM: 3072 Bytes, 133 BPS
+2026-07-22T18:03:23Z [sg535] Exiting (0)
+Sent pc0002az.x00
+2026-07-22T18:03:36Z [sg535] sector number = 1, block length = 1024
+2026-07-22T18:03:43Z [sg535] sector number = 2, block length = 1024
+2026-07-22T18:03:51Z [sg535] sector number = 3, block length = 1024
+2026-07-22T18:03:53Z [sg535] received EOT and read timed out
+2026-07-22T18:03:53Z [sg535] sector number = -10, block length = 1024
+2026-07-22T18:03:53Z [sg535] done - sending ACK
+2026-07-22T18:03:53Z [sg535] pc0002bz.x00/XMODEM: 3072 Bytes, 129 BPS
+2026-07-22T18:03:53Z [sg535] Exiting (0)
+Sent pc0002bz.x00
+2:0:1:0:65:189:1 logout
+Disconnected at 2026-07-22T18:03:59Z (normal)
+
+
+Connected at 2026-07-22T18:06:52Z (sg535)
+logged in
+2:1:1:0:65:189:0:250:2294:589:-57.8:0.95:10.84:26.44:9.18:55.9 GPS,220726,180529,-26.325,-9007.783,42,1.9,42,3.9,0.0,0.0,5,79.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -23.724,-9006.470,161015,141029
+cmdfile
+2026-07-22T18:07:18Z [sg535] Sent 452 bytes of cmdfile/XMODEM: 512 Bytes, 40 BPS
+Received cmdfile 452 bytes
+2026-07-22T18:07:42Z [sg535] sector number = 1, block length = 1024
+2026-07-22T18:07:48Z [sg535] sector number = 2, block length = 1024
+2026-07-22T18:07:54Z [sg535] sector number = 3, block length = 1024
+2026-07-22T18:07:57Z [sg535] received EOT and read timed out
+2026-07-22T18:07:57Z [sg535] sector number = -10, block length = 1024
+2026-07-22T18:07:57Z [sg535] done - sending ACK
+2026-07-22T18:07:57Z [sg535] pc0002az.x00/XMODEM: 3072 Bytes, 142 BPS
+2026-07-22T18:07:57Z [sg535] Exiting (0)
+Sent pc0002az.x00
+2026-07-22T18:08:08Z [sg535] sector number = 1, block length = 1024
+2026-07-22T18:08:14Z [sg535] sector number = 2, block length = 1024
+2026-07-22T18:08:20Z [sg535] sector number = 3, block length = 1024
+2026-07-22T18:08:22Z [sg535] received EOT and read timed out
+2026-07-22T18:08:22Z [sg535] sector number = -10, block length = 1024
+2026-07-22T18:08:22Z [sg535] done - sending ACK
+2026-07-22T18:08:22Z [sg535] pc0002bz.x00/XMODEM: 3072 Bytes, 139 BPS
+2026-07-22T18:08:22Z [sg535] Exiting (0)
+Sent pc0002bz.x00
+2:1:1:0:65:189:1 logout
+Disconnected at 2026-07-22T18:08:29Z (normal)
+
+
+Connected at 2026-07-22T18:18:06Z (sg535)
+logged in
+2:2:2:0:65:189:-3:250:2295:589:-51.5:0.87:10.90:26.65:9.19:56.0 GPS,220726,181433,-26.227,-9007.838,43,1.1,48,3.9,0.0,330.7,8,17.8
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -25.880,-9008.627,161015,142519
+cmdfile
+2026-07-22T18:18:33Z [sg535] Sent 469 bytes of cmdfile/XMODEM: 512 Bytes, 40 BPS
+Received cmdfile 469 bytes
+2026-07-22T18:18:56Z [sg535] sector number = 1, block length = 1024
+2026-07-22T18:19:03Z [sg535] sector number = 2, block length = 1024
+2026-07-22T18:19:09Z [sg535] sector number = 3, block length = 1024
+2026-07-22T18:19:11Z [sg535] received EOT and read timed out
+2026-07-22T18:19:11Z [sg535] sector number = -10, block length = 1024
+2026-07-22T18:19:11Z [sg535] done - sending ACK
+2026-07-22T18:19:11Z [sg535] pc0002az.x00/XMODEM: 3072 Bytes, 145 BPS
+2026-07-22T18:19:11Z [sg535] Exiting (0)
+Sent pc0002az.x00
+2026-07-22T18:19:21Z [sg535] sector number = 1, block length = 1024
+2026-07-22T18:19:27Z [sg535] sector number = 2, block length = 1024
+2026-07-22T18:19:33Z [sg535] sector number = 3, block length = 1024
+2026-07-22T18:19:36Z [sg535] received EOT and read timed out
+2026-07-22T18:19:36Z [sg535] sector number = -10, block length = 1024
+2026-07-22T18:19:36Z [sg535] done - sending ACK
+2026-07-22T18:19:36Z [sg535] pc0002bz.x00/XMODEM: 3072 Bytes, 144 BPS
+2026-07-22T18:19:36Z [sg535] Exiting (0)
+Sent pc0002bz.x00
+2:2:2:0:65:189:1 logout
+Disconnected at 2026-07-22T18:19:41Z (normal)
+
+
+Connected at 2026-07-22T18:54:37Z (sg535)
+logged in
+3:0:1:0:65:189:0:251:2309:609:-48.3:0.83:10.85:26.47:9.16:55.9 GPS,220726,185304,-26.081,-9007.961,39,1.0,39,3.9,0.6,306.1,8,20.2
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -23.724,-9010.783,161015,142733
+cmdfile
+2026-07-22T18:55:06Z [sg535] Sent 467 bytes of cmdfile/XMODEM: 512 Bytes, 34 BPS
+Received cmdfile 467 bytes
+2026-07-22T18:55:32Z [sg535] sector number = 1, block length = 1024
+2026-07-22T18:55:38Z [sg535] sector number = 2, block length = 1024
+2026-07-22T18:55:45Z [sg535] sector number = 3, block length = 1024
+2026-07-22T18:55:51Z [sg535] sector number = 4, block length = 1024
+2026-07-22T18:55:53Z [sg535] received EOT and read timed out
+2026-07-22T18:55:53Z [sg535] sector number = -10, block length = 1024
+2026-07-22T18:55:53Z [sg535] done - sending ACK
+2026-07-22T18:55:53Z [sg535] sg0003lz.x00/XMODEM: 4096 Bytes, 137 BPS
+2026-07-22T18:55:53Z [sg535] Exiting (0)
+Sent sg0003lz.x00
+2026-07-22T18:56:05Z [sg535] sector number = 1, block length = 1024
+2026-07-22T18:56:11Z [sg535] sector number = 2, block length = 1024
+2026-07-22T18:56:18Z [sg535] sector number = 3, block length = 1024
+2026-07-22T18:56:24Z [sg535] sector number = 4, block length = 1024
+2026-07-22T18:56:26Z [sg535] received EOT and read timed out
+2026-07-22T18:56:26Z [sg535] sector number = -10, block length = 1024
+2026-07-22T18:56:26Z [sg535] done - sending ACK
+2026-07-22T18:56:26Z [sg535] sg0003dz.x00/XMODEM: 4096 Bytes, 137 BPS
+2026-07-22T18:56:26Z [sg535] Exiting (0)
+Sent sg0003dz.x00
+2026-07-22T18:56:37Z [sg535] sector number = 1, block length = 1024
+2026-07-22T18:56:43Z [sg535] sector number = 2, block length = 1024
+2026-07-22T18:56:45Z [sg535] received EOT and read timed out
+2026-07-22T18:56:45Z [sg535] sector number = -10, block length = 1024
+2026-07-22T18:56:45Z [sg535] done - sending ACK
+2026-07-22T18:56:45Z [sg535] pc0003az.x00/XMODEM: 2048 Bytes, 136 BPS
+2026-07-22T18:56:45Z [sg535] Exiting (0)
+Sent pc0003az.x00
+2026-07-22T18:56:55Z [sg535] sector number = 1, block length = 1024
+2026-07-22T18:57:01Z [sg535] sector number = 2, block length = 1024
+2026-07-22T18:57:04Z [sg535] received EOT and read timed out
+2026-07-22T18:57:04Z [sg535] sector number = -10, block length = 1024
+2026-07-22T18:57:04Z [sg535] done - sending ACK
+2026-07-22T18:57:04Z [sg535] pc0003bz.x00/XMODEM: 2048 Bytes, 136 BPS
+2026-07-22T18:57:04Z [sg535] Exiting (0)
+Sent pc0003bz.x00
+3:0:1:0:65:189:1 logout
+Disconnected at 2026-07-22T18:57:09Z (normal)
+
+
+Connected at 2026-07-22T18:59:23Z (sg535)
+logged in
+3:1:1:0:65:189:0:250:2308:597:-55.8:0.79:10.84:26.39:9.17:56.2 GPS,220726,185802,-26.045,-9008.001,10,1.0,10,3.9,4.7,96.5,8,33.1
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -23.724,-9004.313,161015,150403
+cmdfile
+2026-07-22T18:59:56Z [sg535] Sent 467 bytes of cmdfile/XMODEM: 512 Bytes, 33 BPS
+Received cmdfile 467 bytes
+2026-07-22T19:00:20Z [sg535] sector number = 1, block length = 1024
+2026-07-22T19:00:26Z [sg535] sector number = 2, block length = 1024
+2026-07-22T19:00:28Z [sg535] received EOT and read timed out
+2026-07-22T19:00:28Z [sg535] sector number = -10, block length = 1024
+2026-07-22T19:00:28Z [sg535] done - sending ACK
+2026-07-22T19:00:28Z [sg535] pc0003az.x00/XMODEM: 2048 Bytes, 133 BPS
+2026-07-22T19:00:28Z [sg535] Exiting (0)
+Sent pc0003az.x00
+2026-07-22T19:00:39Z [sg535] sector number = 1, block length = 1024
+2026-07-22T19:00:46Z [sg535] sector number = 2, block length = 1024
+2026-07-22T19:00:48Z [sg535] received EOT and read timed out
+2026-07-22T19:00:48Z [sg535] sector number = -10, block length = 1024
+2026-07-22T19:00:48Z [sg535] done - sending ACK
+2026-07-22T19:00:48Z [sg535] pc0003bz.x00/XMODEM: 2048 Bytes, 126 BPS
+2026-07-22T19:00:48Z [sg535] Exiting (0)
+Sent pc0003bz.x00
+3:1:1:0:65:189:1 logout
+Disconnected at 2026-07-22T19:00:54Z (normal)
+
+
+Connected at 2026-07-22T19:08:12Z (sg535)
+logged in
+3:2:1:0:65:189:0:251:2307:596:-52.6:0.81:10.90:26.63:9.18:56.1 GPS,220726,190657,-25.974,-9008.074,44,1.2,48,3.9,0.0,321.6,7,16.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -25.880,-9006.470,161015,150849
+cmdfile
+2026-07-22T19:08:39Z [sg535] Sent 467 bytes of cmdfile/XMODEM: 512 Bytes, 41 BPS
+Received cmdfile 467 bytes
+2026-07-22T19:09:04Z [sg535] sector number = 1, block length = 1024
+2026-07-22T19:09:11Z [sg535] sector number = 2, block length = 1024
+2026-07-22T19:09:13Z [sg535] received EOT and read timed out
+2026-07-22T19:09:13Z [sg535] sector number = -10, block length = 1024
+2026-07-22T19:09:13Z [sg535] done - sending ACK
+2026-07-22T19:09:13Z [sg535] pc0003az.x00/XMODEM: 2048 Bytes, 130 BPS
+2026-07-22T19:09:13Z [sg535] Exiting (0)
+Sent pc0003az.x00
+2026-07-22T19:09:23Z [sg535] sector number = 1, block length = 1024
+2026-07-22T19:09:29Z [sg535] sector number = 2, block length = 1024
+2026-07-22T19:09:31Z [sg535] received EOT and read timed out
+2026-07-22T19:09:31Z [sg535] sector number = -10, block length = 1024
+2026-07-22T19:09:31Z [sg535] done - sending ACK
+2026-07-22T19:09:31Z [sg535] pc0003bz.x00/XMODEM: 2048 Bytes, 138 BPS
+2026-07-22T19:09:31Z [sg535] Exiting (0)
+Sent pc0003bz.x00
+3:2:1:0:65:189:1 logout
+Disconnected at 2026-07-22T19:09:39Z (normal)
+
+
+Connected at 2026-07-22T19:16:54Z (sg535)
+logged in
+3:3:1:0:65:189:0:251:2306:596:-50.8:0.89:10.90:26.67:9.20:56.5 GPS,220726,191535,-25.903,-9008.147,40,1.0,40,3.9,0.0,0.0,8,20.0
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -19.410,-9010.783,161015,151736
+cmdfile
+2026-07-22T19:17:22Z [sg535] Sent 469 bytes of cmdfile/XMODEM: 512 Bytes, 41 BPS
+Received cmdfile 469 bytes
+2026-07-22T19:17:47Z [sg535] sector number = 1, block length = 1024
+2026-07-22T19:17:54Z [sg535] sector number = 2, block length = 1024
+2026-07-22T19:17:56Z [sg535] received EOT and read timed out
+2026-07-22T19:17:56Z [sg535] sector number = -10, block length = 1024
+2026-07-22T19:17:56Z [sg535] done - sending ACK
+2026-07-22T19:17:56Z [sg535] pc0003az.x00/XMODEM: 2048 Bytes, 134 BPS
+2026-07-22T19:17:56Z [sg535] Exiting (0)
+Sent pc0003az.x00
+2026-07-22T19:18:07Z [sg535] sector number = 1, block length = 1024
+2026-07-22T19:18:15Z [sg535] sector number = 2, block length = 1024
+2026-07-22T19:18:17Z [sg535] received EOT and read timed out
+2026-07-22T19:18:17Z [sg535] sector number = -10, block length = 1024
+2026-07-22T19:18:17Z [sg535] done - sending ACK
+2026-07-22T19:18:17Z [sg535] pc0003bz.x00/XMODEM: 2048 Bytes, 114 BPS
+2026-07-22T19:18:17Z [sg535] Exiting (0)
+Sent pc0003bz.x00
+3:3:1:0:65:189:1 logout
+Disconnected at 2026-07-22T19:18:22Z (normal)
+
+
+Connected at 2026-07-22T19:25:34Z (sg535)
+logged in
+3:4:1:0:65:189:0:250:2306:597:-54.1:0.96:10.90:26.67:9.21:55.2 GPS,220726,192422,-25.827,-9008.224,45,0.9,45,3.9,0.0,0.0,8,20.8
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -21.567,-9006.470,161015,152620
+cmdfile
+2026-07-22T19:26:05Z [sg535] Sent 471 bytes of cmdfile/XMODEM: 512 Bytes, 33 BPS
+Received cmdfile 471 bytes
+2026-07-22T19:26:29Z [sg535] sector number = 1, block length = 1024
+2026-07-22T19:26:35Z [sg535] sector number = 2, block length = 1024
+2026-07-22T19:26:38Z [sg535] received EOT and read timed out
+2026-07-22T19:26:38Z [sg535] sector number = -10, block length = 1024
+2026-07-22T19:26:38Z [sg535] done - sending ACK
+2026-07-22T19:26:38Z [sg535] pc0003az.x00/XMODEM: 2048 Bytes, 129 BPS
+2026-07-22T19:26:38Z [sg535] Exiting (0)
+Sent pc0003az.x00
+2026-07-22T19:26:55Z [sg535] sector number = 1, block length = 1024
+2026-07-22T19:27:02Z [sg535] sector number = 2, block length = 1024
+2026-07-22T19:27:04Z [sg535] received EOT and read timed out
+2026-07-22T19:27:04Z [sg535] sector number = -10, block length = 1024
+2026-07-22T19:27:04Z [sg535] done - sending ACK
+2026-07-22T19:27:04Z [sg535] pc0003bz.x00/XMODEM: 2048 Bytes, 121 BPS
+2026-07-22T19:27:04Z [sg535] Exiting (0)
+Sent pc0003bz.x00
+3:4:1:0:65:189:1 logout
+Disconnected at 2026-07-22T19:27:09Z (normal)
+
+
+Connected at 2026-07-22T23:19:46Z (sg535)
+logged in
+4:0:1:0:65:189:0:248:2318:610:-58.0:0.86:10.72:26.31:8.94:64.2 GPS,220726,231634,-27.313,-9008.285,46,1.0,46,3.9,0.0,0.0,7,30.3
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 4 geolocation: -23.724,-9008.627,161015,153500
+cmdfile
+2026-07-22T23:20:17Z [sg535] Sent 469 bytes of cmdfile/XMODEM: 512 Bytes, 41 BPS
+Received cmdfile 469 bytes
+2026-07-22T23:20:42Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:20:47Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:20:56Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:21:02Z [sg535] sector number = 4, block length = 1024
+2026-07-22T23:21:08Z [sg535] sector number = 5, block length = 1024
+2026-07-22T23:21:16Z [sg535] sector number = 6, block length = 1024
+2026-07-22T23:21:22Z [sg535] sector number = 7, block length = 1024
+2026-07-22T23:21:29Z [sg535] sector number = 8, block length = 1024
+2026-07-22T23:21:31Z [sg535] received EOT and read timed out
+2026-07-22T23:21:31Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:21:31Z [sg535] done - sending ACK
+2026-07-22T23:21:31Z [sg535] sg0004lz.x00/XMODEM: 8192 Bytes, 147 BPS
+2026-07-22T23:21:31Z [sg535] Exiting (0)
+Sent sg0004lz.x00
+2026-07-22T23:21:41Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:21:47Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:21:55Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:22:01Z [sg535] sector number = 4, block length = 1024
+2026-07-22T23:22:08Z [sg535] sector number = 5, block length = 1024
+2026-07-22T23:22:15Z [sg535] sector number = 6, block length = 1024
+2026-07-22T23:22:23Z [sg535] sector number = 7, block length = 1024
+2026-07-22T23:22:28Z [sg535] sector number = 8, block length = 1024
+2026-07-22T23:22:31Z [sg535] received EOT and read timed out
+2026-07-22T23:22:31Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:22:31Z [sg535] done - sending ACK
+2026-07-22T23:22:31Z [sg535] sg0004dz.x00/XMODEM: 8192 Bytes, 145 BPS
+2026-07-22T23:22:31Z [sg535] Exiting (0)
+Sent sg0004dz.x00
+2026-07-22T23:22:42Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:22:51Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:22:57Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:23:06Z [sg535] sector number = 4, block length = 1024
+2026-07-22T23:23:14Z [sg535] sector number = 5, block length = 1024
+2026-07-22T23:23:20Z [sg535] sector number = 6, block length = 1024
+2026-07-22T23:23:26Z [sg535] sector number = 7, block length = 1024
+2026-07-22T23:23:32Z [sg535] sector number = 8, block length = 1024
+2026-07-22T23:23:34Z [sg535] received EOT and read timed out
+2026-07-22T23:23:34Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:23:34Z [sg535] done - sending ACK
+2026-07-22T23:23:34Z [sg535] sg0004dz.x01/XMODEM: 8192 Bytes, 137 BPS
+2026-07-22T23:23:34Z [sg535] Exiting (0)
+Sent sg0004dz.x01
+2026-07-22T23:23:51Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:23:57Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:24:03Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:24:05Z [sg535] received EOT and read timed out
+2026-07-22T23:24:05Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:24:05Z [sg535] done - sending ACK
+2026-07-22T23:24:05Z [sg535] sg0004dz.x02/XMODEM: 3072 Bytes, 134 BPS
+2026-07-22T23:24:05Z [sg535] Exiting (0)
+Sent sg0004dz.x02
+2026-07-22T23:24:18Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:24:24Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:24:30Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:24:37Z [sg535] sector number = 4, block length = 1024
+2026-07-22T23:24:43Z [sg535] sector number = 5, block length = 1024
+2026-07-22T23:24:49Z [sg535] sector number = 6, block length = 1024
+2026-07-22T23:24:55Z [sg535] sector number = 7, block length = 1024
+2026-07-22T23:25:03Z [sg535] sector number = 8, block length = 1024
+2026-07-22T23:25:05Z [sg535] received EOT and read timed out
+2026-07-22T23:25:05Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:25:05Z [sg535] done - sending ACK
+2026-07-22T23:25:05Z [sg535] pc0004az.x00/XMODEM: 8192 Bytes, 151 BPS
+2026-07-22T23:25:05Z [sg535] Exiting (0)
+Sent pc0004az.x00
+2026-07-22T23:25:14Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:25:20Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:25:26Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:25:33Z [sg535] sector number = 4, block length = 1024
+2026-07-22T23:25:38Z [sg535] sector number = 5, block length = 1024
+2026-07-22T23:25:45Z [sg535] sector number = 6, block length = 1024
+2026-07-22T23:25:50Z [sg535] sector number = 7, block length = 1024
+2026-07-22T23:25:58Z [sg535] sector number = 8, block length = 1024
+2026-07-22T23:26:00Z [sg535] received EOT and read timed out
+2026-07-22T23:26:00Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:26:00Z [sg535] done - sending ACK
+2026-07-22T23:26:00Z [sg535] pc0004az.x01/XMODEM: 8192 Bytes, 155 BPS
+2026-07-22T23:26:00Z [sg535] Exiting (0)
+Sent pc0004az.x01
+2026-07-22T23:26:10Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:26:15Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:26:21Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:26:27Z [sg535] sector number = 4, block length = 1024
+2026-07-22T23:26:33Z [sg535] sector number = 5, block length = 1024
+2026-07-22T23:26:39Z [sg535] sector number = 6, block length = 1024
+2026-07-22T23:26:45Z [sg535] sector number = 7, block length = 1024
+2026-07-22T23:26:51Z [sg535] sector number = 8, block length = 1024
+2026-07-22T23:26:53Z [sg535] received EOT and read timed out
+2026-07-22T23:26:53Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:26:53Z [sg535] done - sending ACK
+2026-07-22T23:26:53Z [sg535] pc0004bz.x00/XMODEM: 8192 Bytes, 164 BPS
+2026-07-22T23:26:53Z [sg535] Exiting (0)
+Sent pc0004bz.x00
+4:0:1:0:65:189:1 logout
+Disconnected at 2026-07-22T23:26:58Z (normal)
+
+
+Connected at 2026-07-22T23:30:51Z (sg535)
+logged in
+4:1:1:0:65:189:0:248:2317:599:-50.5:0.80:10.74:26.22:9.01:60.1 GPS,220726,232828,-27.213,-9008.326,41,1.3,41,3.9,0.0,0.0,6,30.0
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -25.880,-9004.313,161015,192909
+cmdfile
+2026-07-22T23:31:22Z [sg535] Sent 469 bytes of cmdfile/XMODEM: 512 Bytes, 33 BPS
+Received cmdfile 469 bytes
+2026-07-22T23:31:46Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:31:52Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:31:58Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:32:04Z [sg535] sector number = 4, block length = 1024
+2026-07-22T23:32:11Z [sg535] sector number = 5, block length = 1024
+2026-07-22T23:32:17Z [sg535] sector number = 6, block length = 1024
+2026-07-22T23:32:23Z [sg535] sector number = 7, block length = 1024
+2026-07-22T23:32:30Z [sg535] sector number = 8, block length = 1024
+2026-07-22T23:32:32Z [sg535] received EOT and read timed out
+2026-07-22T23:32:32Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:32:32Z [sg535] done - sending ACK
+2026-07-22T23:32:32Z [sg535] pc0004az.x00/XMODEM: 8192 Bytes, 154 BPS
+2026-07-22T23:32:32Z [sg535] Exiting (0)
+Sent pc0004az.x00
+2026-07-22T23:32:43Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:32:49Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:32:55Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:33:01Z [sg535] sector number = 4, block length = 1024
+2026-07-22T23:33:08Z [sg535] sector number = 5, block length = 1024
+2026-07-22T23:33:17Z [sg535] sector number = 6, block length = 1024
+2026-07-22T23:33:26Z [sg535] sector number = 7, block length = 1024
+2026-07-22T23:33:32Z [sg535] sector number = 8, block length = 1024
+2026-07-22T23:33:34Z [sg535] received EOT and read timed out
+2026-07-22T23:33:34Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:33:34Z [sg535] done - sending ACK
+2026-07-22T23:33:34Z [sg535] pc0004az.x01/XMODEM: 8192 Bytes, 141 BPS
+2026-07-22T23:33:34Z [sg535] Exiting (0)
+Sent pc0004az.x01
+2026-07-22T23:33:47Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:33:53Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:33:59Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:34:05Z [sg535] sector number = 4, block length = 1024
+2026-07-22T23:34:11Z [sg535] sector number = 5, block length = 1024
+2026-07-22T23:34:17Z [sg535] sector number = 6, block length = 1024
+2026-07-22T23:34:28Z [sg535] sector number = 7, block length = 1024
+2026-07-22T23:34:35Z [sg535] sector number = 8, block length = 1024
+2026-07-22T23:34:37Z [sg535] received EOT and read timed out
+2026-07-22T23:34:37Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:34:37Z [sg535] done - sending ACK
+2026-07-22T23:34:37Z [sg535] pc0004bz.x00/XMODEM: 8192 Bytes, 137 BPS
+2026-07-22T23:34:37Z [sg535] Exiting (0)
+Sent pc0004bz.x00
+4:1:1:0:65:189:1 logout
+Disconnected at 2026-07-22T23:34:48Z (normal)
+
+
+Connected at 2026-07-22T23:43:18Z (sg535)
+logged in
+4:2:1:0:65:189:0:248:2317:602:-58.6:0.96:10.79:26.45:9.07:57.0 GPS,220726,234052,-27.107,-9008.356,43,1.0,43,3.9,0.0,0.0,9,19.2
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -23.724,-9006.470,161015,194015
+cmdfile
+2026-07-22T23:43:54Z [sg535] Sent 469 bytes of cmdfile/XMODEM: 512 Bytes, 26 BPS
+Received cmdfile 469 bytes
+2026-07-22T23:44:28Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:44:35Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:44:43Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:44:50Z [sg535] sector number = 4, block length = 1024
+2026-07-22T23:44:56Z [sg535] sector number = 5, block length = 1024
+2026-07-22T23:45:04Z [sg535] sector number = 6, block length = 1024
+2026-07-22T23:45:10Z [sg535] sector number = 7, block length = 1024
+2026-07-22T23:45:16Z [sg535] sector number = 8, block length = 1024
+2026-07-22T23:45:18Z [sg535] received EOT and read timed out
+2026-07-22T23:45:18Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:45:18Z [sg535] done - sending ACK
+2026-07-22T23:45:18Z [sg535] pc0004az.x00/XMODEM: 8192 Bytes, 129 BPS
+2026-07-22T23:45:18Z [sg535] Exiting (0)
+Sent pc0004az.x00
+2026-07-22T23:45:33Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:45:40Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:45:48Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:45:54Z [sg535] sector number = 4, block length = 1024
+2026-07-22T23:46:00Z [sg535] sector number = 5, block length = 1024
+2026-07-22T23:46:06Z [sg535] sector number = 6, block length = 1024
+2026-07-22T23:46:12Z [sg535] sector number = 7, block length = 1024
+2026-07-22T23:46:18Z [sg535] sector number = 8, block length = 1024
+2026-07-22T23:46:20Z [sg535] received EOT and read timed out
+2026-07-22T23:46:20Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:46:20Z [sg535] done - sending ACK
+2026-07-22T23:46:20Z [sg535] pc0004az.x01/XMODEM: 8192 Bytes, 144 BPS
+2026-07-22T23:46:20Z [sg535] Exiting (0)
+Sent pc0004az.x01
+2026-07-22T23:46:34Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:46:40Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:46:47Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:46:53Z [sg535] sector number = 4, block length = 1024
+2026-07-22T23:46:59Z [sg535] sector number = 5, block length = 1024
+2026-07-22T23:47:04Z [sg535] sector number = 6, block length = 1024
+2026-07-22T23:47:11Z [sg535] sector number = 7, block length = 1024
+2026-07-22T23:47:19Z [sg535] sector number = 8, block length = 1024
+2026-07-22T23:47:21Z [sg535] received EOT and read timed out
+2026-07-22T23:47:21Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:47:21Z [sg535] done - sending ACK
+2026-07-22T23:47:21Z [sg535] pc0004bz.x00/XMODEM: 8192 Bytes, 143 BPS
+2026-07-22T23:47:21Z [sg535] Exiting (0)
+Sent pc0004bz.x00
+4:2:1:0:65:189:1 logout
+Disconnected at 2026-07-22T23:47:30Z (normal)
+
+
+Connected at 2026-07-22T23:55:52Z (sg535)
+logged in
+4:3:1:0:65:189:0:249:2317:605:-62.4:0.96:10.81:26.47:9.09:55.1 GPS,220726,235334,-26.990,-9008.390,43,1.0,43,3.9,0.0,0.0,8,20.4
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -23.724,-9008.627,161015,195240
+cmdfile
+2026-07-22T23:56:31Z [sg535] Sent 469 bytes of cmdfile/XMODEM: 512 Bytes, 39 BPS
+Received cmdfile 469 bytes
+2026-07-22T23:56:56Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:57:02Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:57:09Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:57:16Z [sg535] sector number = 4, block length = 1024
+2026-07-22T23:57:22Z [sg535] sector number = 5, block length = 1024
+2026-07-22T23:57:28Z [sg535] sector number = 6, block length = 1024
+2026-07-22T23:57:35Z [sg535] sector number = 7, block length = 1024
+2026-07-22T23:57:41Z [sg535] sector number = 8, block length = 1024
+2026-07-22T23:57:43Z [sg535] received EOT and read timed out
+2026-07-22T23:57:43Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:57:43Z [sg535] done - sending ACK
+2026-07-22T23:57:43Z [sg535] pc0004az.x00/XMODEM: 8192 Bytes, 153 BPS
+2026-07-22T23:57:43Z [sg535] Exiting (0)
+Sent pc0004az.x00
+2026-07-22T23:57:53Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:57:59Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:58:05Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:58:11Z [sg535] sector number = 4, block length = 1024
+2026-07-22T23:58:17Z [sg535] sector number = 5, block length = 1024
+2026-07-22T23:58:23Z [sg535] sector number = 6, block length = 1024
+2026-07-22T23:58:29Z [sg535] sector number = 7, block length = 1024
+2026-07-22T23:58:35Z [sg535] sector number = 8, block length = 1024
+2026-07-22T23:58:37Z [sg535] received EOT and read timed out
+2026-07-22T23:58:37Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:58:37Z [sg535] done - sending ACK
+2026-07-22T23:58:37Z [sg535] pc0004az.x01/XMODEM: 8192 Bytes, 162 BPS
+2026-07-22T23:58:37Z [sg535] Exiting (0)
+Sent pc0004az.x01
+2026-07-22T23:58:47Z [sg535] sector number = 1, block length = 1024
+2026-07-22T23:58:53Z [sg535] sector number = 2, block length = 1024
+2026-07-22T23:59:00Z [sg535] sector number = 3, block length = 1024
+2026-07-22T23:59:08Z [sg535] sector number = 4, block length = 1024
+2026-07-22T23:59:14Z [sg535] sector number = 5, block length = 1024
+2026-07-22T23:59:20Z [sg535] sector number = 6, block length = 1024
+2026-07-22T23:59:26Z [sg535] sector number = 7, block length = 1024
+2026-07-22T23:59:32Z [sg535] sector number = 8, block length = 1024
+2026-07-22T23:59:34Z [sg535] received EOT and read timed out
+2026-07-22T23:59:34Z [sg535] sector number = -10, block length = 1024
+2026-07-22T23:59:34Z [sg535] done - sending ACK
+2026-07-22T23:59:34Z [sg535] pc0004bz.x00/XMODEM: 8192 Bytes, 153 BPS
+2026-07-22T23:59:34Z [sg535] Exiting (0)
+Sent pc0004bz.x00
+4:3:1:0:65:189:1 logout
+Disconnected at 2026-07-22T23:59:39Z (normal)
+
+
+Connected at 2026-07-23T00:07:52Z (sg535)
+logged in
+4:4:1:0:65:189:0:248:2317:607:-57.6:0.93:10.84:26.48:9.10:53.8 GPS,230726,000534,-26.877,-9008.433,35,1.0,35,3.9,0.0,0.0,9,18.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -28.037,-9006.470,161015,200517
+cmdfile
+2026-07-23T00:08:19Z [sg535] Sent 469 bytes of cmdfile/XMODEM: 512 Bytes, 39 BPS
+Received cmdfile 469 bytes
+2026-07-23T00:08:43Z [sg535] sector number = 1, block length = 1024
+2026-07-23T00:08:51Z [sg535] sector number = 2, block length = 1024
+2026-07-23T00:08:59Z [sg535] sector number = 3, block length = 1024
+2026-07-23T00:09:05Z [sg535] sector number = 4, block length = 1024
+2026-07-23T00:09:14Z [sg535] sector number = 5, block length = 1024
+2026-07-23T00:09:20Z [sg535] sector number = 6, block length = 1024
+2026-07-23T00:09:26Z [sg535] sector number = 7, block length = 1024
+2026-07-23T00:09:33Z [sg535] sector number = 8, block length = 1024
+2026-07-23T00:09:35Z [sg535] received EOT and read timed out
+2026-07-23T00:09:35Z [sg535] sector number = -10, block length = 1024
+2026-07-23T00:09:35Z [sg535] done - sending ACK
+2026-07-23T00:09:35Z [sg535] pc0004az.x00/XMODEM: 8192 Bytes, 140 BPS
+2026-07-23T00:09:35Z [sg535] Exiting (0)
+Sent pc0004az.x00
+2026-07-23T00:09:45Z [sg535] sector number = 1, block length = 1024
+2026-07-23T00:09:52Z [sg535] sector number = 2, block length = 1024
+2026-07-23T00:09:58Z [sg535] sector number = 3, block length = 1024
+2026-07-23T00:10:04Z [sg535] sector number = 4, block length = 1024
+2026-07-23T00:10:11Z [sg535] sector number = 5, block length = 1024
+2026-07-23T00:10:20Z [sg535] sector number = 6, block length = 1024
+2026-07-23T00:10:26Z [sg535] sector number = 7, block length = 1024
+2026-07-23T00:10:32Z [sg535] sector number = 8, block length = 1024
+2026-07-23T00:10:34Z [sg535] received EOT and read timed out
+2026-07-23T00:10:34Z [sg535] sector number = -10, block length = 1024
+2026-07-23T00:10:34Z [sg535] done - sending ACK
+2026-07-23T00:10:34Z [sg535] pc0004az.x01/XMODEM: 8192 Bytes, 147 BPS
+2026-07-23T00:10:34Z [sg535] Exiting (0)
+Sent pc0004az.x01
+2026-07-23T00:10:45Z [sg535] sector number = 1, block length = 1024
+2026-07-23T00:10:51Z [sg535] sector number = 2, block length = 1024
+2026-07-23T00:10:59Z [sg535] sector number = 3, block length = 1024
+2026-07-23T00:11:05Z [sg535] sector number = 4, block length = 1024
+2026-07-23T00:11:12Z [sg535] sector number = 5, block length = 1024
+2026-07-23T00:11:18Z [sg535] sector number = 6, block length = 1024
+2026-07-23T00:11:24Z [sg535] sector number = 7, block length = 1024
+2026-07-23T00:11:31Z [sg535] sector number = 8, block length = 1024
+2026-07-23T00:11:33Z [sg535] received EOT and read timed out
+2026-07-23T00:11:33Z [sg535] sector number = -10, block length = 1024
+2026-07-23T00:11:33Z [sg535] done - sending ACK
+2026-07-23T00:11:33Z [sg535] pc0004bz.x00/XMODEM: 8192 Bytes, 149 BPS
+2026-07-23T00:11:33Z [sg535] Exiting (0)
+Sent pc0004bz.x00
+4:4:1:0:65:189:1 logout
+Disconnected at 2026-07-23T00:11:38Z (normal)
+
+
+Connected at 2026-07-23T00:19:48Z (sg535)
+logged in
+4:5:1:0:65:189:0:222:2279:609:-4.9:-0.12:10.85:26.50:9.11:52.6 GPS,230726,001734,-26.659,-9008.487,35,1.0,35,3.9,0.8,20.0,7,18.1
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -25.880,-9008.627,161015,201718
+cmdfile
+2026-07-23T00:20:12Z [sg535] Sent 469 bytes of cmdfile/XMODEM: 512 Bytes, 44 BPS
+Received cmdfile 469 bytes
+2026-07-23T00:20:38Z [sg535] sector number = 1, block length = 1024
+2026-07-23T00:20:44Z [sg535] sector number = 2, block length = 1024
+2026-07-23T00:20:49Z [sg535] sector number = 3, block length = 1024
+2026-07-23T00:20:55Z [sg535] sector number = 4, block length = 1024
+2026-07-23T00:21:01Z [sg535] sector number = 5, block length = 1024
+2026-07-23T00:21:07Z [sg535] sector number = 6, block length = 1024
+2026-07-23T00:21:13Z [sg535] sector number = 7, block length = 1024
+2026-07-23T00:21:20Z [sg535] sector number = 8, block length = 1024
+2026-07-23T00:21:22Z [sg535] received EOT and read timed out
+2026-07-23T00:21:22Z [sg535] sector number = -10, block length = 1024
+2026-07-23T00:21:22Z [sg535] done - sending ACK
+2026-07-23T00:21:22Z [sg535] pc0004az.x00/XMODEM: 8192 Bytes, 159 BPS
+2026-07-23T00:21:22Z [sg535] Exiting (0)
+Sent pc0004az.x00
+2026-07-23T00:21:32Z [sg535] sector number = 1, block length = 1024
+2026-07-23T00:21:40Z [sg535] sector number = 2, block length = 1024
+2026-07-23T00:21:47Z [sg535] sector number = 3, block length = 1024
+2026-07-23T00:21:53Z [sg535] sector number = 4, block length = 1024
+2026-07-23T00:21:59Z [sg535] sector number = 5, block length = 1024
+2026-07-23T00:22:05Z [sg535] sector number = 6, block length = 1024
+2026-07-23T00:22:10Z [sg535] sector number = 7, block length = 1024
+2026-07-23T00:22:16Z [sg535] sector number = 8, block length = 1024
+2026-07-23T00:22:18Z [sg535] received EOT and read timed out
+2026-07-23T00:22:18Z [sg535] sector number = -10, block length = 1024
+2026-07-23T00:22:18Z [sg535] done - sending ACK
+2026-07-23T00:22:18Z [sg535] pc0004az.x01/XMODEM: 8192 Bytes, 154 BPS
+2026-07-23T00:22:18Z [sg535] Exiting (0)
+Sent pc0004az.x01
+2026-07-23T00:22:37Z [sg535] timeout trying to read first sector
+2026-07-23T00:22:38Z [sg535] finished waiting for next line - cnt = 999
+2026-07-23T00:22:46Z [sg535] got 0x65 sector header
+2026-07-23T00:22:48Z [sg535] finished waiting for next line - cnt = 958
+2026-07-23T00:22:49Z [sg535] got 0x6c sector header
+2026-07-23T00:22:51Z [sg535] finished waiting for next line - cnt = 990
+2026-07-23T00:23:00Z [sg535] got 0x41 sector header
+2026-07-23T00:23:01Z [sg535] finished waiting for next line - cnt = 996
+2026-07-23T00:23:14Z [sg535] timeout trying to read first sector
+2026-07-23T00:23:15Z [sg535] finished waiting for next line - cnt = 999
+Disconnected at 2026-07-23T00:23:17Z (hangup)
+
+
+Connected at 2026-07-23T00:39:33Z (sg535)
+logged in
+4:6:1:1:65:189:-2:222:2284:611:-0.6:-0.15:10.86:26.58:9.12:52.4 GPS,230726,003656,-25.703,-9009.604,37,3.0,57,3.9,5.6,305.7,4,11.9
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=66.12,rev=eAGLERAY,frag=8,launch=220726:151436
+Iridium bars: 5 geolocation: -21.567,-9004.313,161015,203412
+cmdfile
+2026-07-23T00:40:00Z [sg535] Sent 469 bytes of cmdfile/XMODEM: 512 Bytes, 41 BPS
+Received cmdfile 469 bytes
+2026-07-23T00:40:26Z [sg535] sector number = 1, block length = 1024
+2026-07-23T00:40:32Z [sg535] sector number = 2, block length = 1024
+2026-07-23T00:40:38Z [sg535] sector number = 3, block length = 1024
+2026-07-23T00:40:44Z [sg535] sector number = 4, block length = 1024
+2026-07-23T00:40:50Z [sg535] sector number = 5, block length = 1024
+2026-07-23T00:40:57Z [sg535] sector number = 6, block length = 1024
+2026-07-23T00:41:03Z [sg535] sector number = 7, block length = 1024
+2026-07-23T00:41:09Z [sg535] sector number = 8, block length = 1024
+2026-07-23T00:41:11Z [sg535] received EOT and read timed out
+2026-07-23T00:41:11Z [sg535] sector number = -10, block length = 1024
+2026-07-23T00:41:11Z [sg535] done - sending ACK
+2026-07-23T00:41:11Z [sg535] pc0004az.x00/XMODEM: 8192 Bytes, 157 BPS
+2026-07-23T00:41:11Z [sg535] Exiting (0)
+Sent pc0004az.x00
+2026-07-23T00:41:21Z [sg535] sector number = 1, block length = 1024
+2026-07-23T00:41:27Z [sg535] sector number = 2, block length = 1024
+2026-07-23T00:41:33Z [sg535] sector number = 3, block length = 1024
+2026-07-23T00:41:39Z [sg535] sector number = 4, block length = 1024
+2026-07-23T00:41:47Z [sg535] sector number = 5, block length = 1024
+2026-07-23T00:41:53Z [sg535] sector number = 6, block length = 1024
+2026-07-23T00:42:01Z [sg535] sector number = 7, block length = 1024
+2026-07-23T00:42:09Z [sg535] sector number = 8, block length = 1024
+2026-07-23T00:42:11Z [sg535] received EOT and read timed out
+2026-07-23T00:42:11Z [sg535] sector number = -10, block length = 1024
+2026-07-23T00:42:11Z [sg535] done - sending ACK
+2026-07-23T00:42:11Z [sg535] pc0004az.x01/XMODEM: 8192 Bytes, 145 BPS
+2026-07-23T00:42:11Z [sg535] Exiting (0)
+Sent pc0004az.x01
+2026-07-23T00:42:31Z [sg535] timeout trying to read first sector
+2026-07-23T00:42:32Z [sg535] finished waiting for next line - cnt = 999
+2026-07-23T00:42:36Z [sg535] got 0x65 sector header
+2026-07-23T00:42:37Z [sg535] finished waiting for next line - cnt = 958
+Disconnected at 2026-07-23T00:42:48Z (hangup)
+
+
+2026-07-23T00:42:50Z [sg535] timeout trying to read first sector
