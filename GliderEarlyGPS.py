@@ -146,8 +146,13 @@ class GliderEarlyGPSClient:
                     self.__base_opts.csh_pid
                 ):
                     shell_missing_count += 1
+                    logout_seen = (
+                        self._commlog_session.logout_seen
+                        if self._commlog_session is not None
+                        else "unknown - no session"
+                    )
                     log_info(
-                        f"login shell has gone away ({shell_missing_count}, logout_seen:{self._commlog_session.logout_seen})"
+                        f"login shell has gone away ({shell_missing_count}, logout_seen:{logout_seen})"
                     )
                     # Wait 4 seconds before doing anything
                     if shell_missing_count >= 4:
@@ -158,6 +163,19 @@ class GliderEarlyGPSClient:
             except KeyboardInterrupt:
                 log_error("Interupted by operator")
                 break
+            except Exception:
+                log_error("Unexpected error in main processing loop", "exc")
+                comm_log_error_count += 1
+                if comm_log_error_count > 5:
+                    log_error(
+                        f"Error processing comm.log {comm_log_error_count} times - bailing out"
+                    )
+                    self.cleanup_shutdown()
+                try:
+                    time.sleep(1)
+                except KeyboardInterrupt:
+                    log_error("Interupted by operator")
+                    break
 
         log_info("Disconnected ....")
         return True
@@ -217,7 +235,7 @@ class GliderEarlyGPSClient:
 
         # If above fails, fall through to here and do what is possible
         connected_file = self.__base_opts.mission_dir / ".connected"
-        if connected_file.exixts():
+        if connected_file.exists():
             try:
                 connected_file.unlink()
             except Exception:
@@ -336,7 +354,11 @@ class GliderEarlyGPSClient:
                     return
                 backup_filename = self.__base_opts.mission_dir / filename
                 if backup_filename.exists():
-                    if self._commlog_session.dive_num is not None and self._commlog_session.call_cycle is not None:
+                    if (
+                        self._commlog_session is not None
+                        and self._commlog_session.dive_num is not None
+                        and self._commlog_session.call_cycle is not None
+                    ):
                         backup_target_filename = backup_filename.with_suffix(backup_filename.suffix + f".{self._commlog_session.dive_num:04d}.{self._commlog_session.call_cycle:04d}")
                         log_info(
                             f"Backing up {backup_filename} to {backup_target_filename}"
