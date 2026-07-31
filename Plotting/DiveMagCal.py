@@ -34,6 +34,7 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import json
 import pathlib
 import typing
 
@@ -52,6 +53,8 @@ import PlotUtils
 import PlotUtilsPlotly
 from Plotting import plotdivesingle
 
+_HELP_SLUG = "dv_magcal"
+
 
 @plotdivesingle
 def plot_mag(
@@ -64,9 +67,27 @@ def plot_mag(
     if "eng_mag_x" not in dive_nc_file.variables or not generate_plots:
         return ([], [])
 
-    hard, soft, cover, circ, fig = Magcal.magcal_worker([dive_nc_file], True, 'html', PlotUtils.get_mission_dive(dive_nc_file))
+    hard, soft, cover, circ, fig, copy_text = Magcal.magcal_worker(
+        [dive_nc_file], True, "html", PlotUtils.get_mission_dive(dive_nc_file)
+    )
+    if fig is None:
+        return ([], [])
 
-    fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_magcal"))
+    fig.add_annotation(PlotUtilsPlotly.add_help_link(_HELP_SLUG))
+
+    copy_post_script = PlotUtilsPlotly.build_clipboard_button_post_script(
+        button_label="Copy calibration",
+        get_copy_text_js=f"return {json.dumps(copy_text)};",
+        # Anchored to the x-axis title group ("X field") with
+        # placement="below_centered" - lands the button below the plot,
+        # horizontally centered under the x-axis label. Anchoring to the
+        # title group itself (rather than a fixed offset from rect.bg)
+        # means the button always clears the tick labels too, since the
+        # title is reliably drawn below them.
+        anchor_element_js="return gd.querySelector('g.g-xtitle');\n",
+        is_visible_js="return true;",
+        placement="below_centered",
+    )
 
     return (
         [fig],
@@ -74,5 +95,6 @@ def plot_mag(
             base_opts,
             "dv%04d_magcal" % (dive_nc_file.dive_number,),
             fig,
+            post_script=copy_post_script,
         ),
     )

@@ -30,12 +30,16 @@
 import pathlib
 
 import numpy as np
+import playwright.sync_api
 import pytest
 import testutils
 
 import Base
 import BaseMagCal
+import BasePlot
+import Magcal
 import MakeDiveProfiles
+import Utils
 
 test_cases = (
     ("tcm2mat.cal.0001.0004", ["tcm2mat.cal.0001.0004 to correct heading"], [""]),
@@ -110,3 +114,169 @@ def test_simpleplotextensionMDP(caplog, magcal_filename, required_msgs, allowed_
         allowed_msgs,
         required_msgs=required_msgs,
     )
+
+
+# (baseplot_options, testdata_dir, per-dive nc filename)
+_MAGCAL_DIVE = (
+    "p6860005.nc --plot_types dives --dive_plot plot_mag --full_html",
+    "sg686_Shilshole_28Oct25",
+    "p6860005.nc",
+)
+
+
+def test_build_fit_line_text_softiron() -> None:
+    """With soft-iron correction, both hard0 and soft0 are present.
+
+    fit_line_html joins them with "<br>" (for the Plotly title); copy_text
+    joins the identical content with "\\n" instead (for the clipboard).
+    """
+    hard = [12.3, -4.6, 78.9]
+    abc0 = np.array(
+        [
+            [1.001, 0.002, -0.003],
+            [0.004, 0.995, 0.006],
+            [-0.007, 0.008, 1.009],
+        ]
+    )
+
+    fit_line, copy_text = Magcal.build_fit_line_text(hard, abc0, True)
+
+    assert fit_line == (
+        'hard0="12.3 -4.6 78.9"<br>'
+        'soft0="1.001 0.002 -0.003 0.004 0.995 0.006 -0.007 0.008 1.009"'
+    )
+    assert copy_text == fit_line.replace("<br>", "\n")
+    assert "<br>" not in copy_text
+    assert "\n" in copy_text
+
+
+def test_build_fit_line_text_no_softiron() -> None:
+    """Without soft-iron correction, only the hard0 line is present."""
+    hard = [1.0, -2.0, 3.0]
+
+    fit_line, copy_text = Magcal.build_fit_line_text(hard, np.eye(3), False)
+
+    assert fit_line == 'hard0="1.0 -2.0 3.0"'
+    assert copy_text == fit_line
+    assert "soft0" not in fit_line
+
+
+def test_build_fit_line_text_negative_values_not_swallowed() -> None:
+    """Negative fitted values keep their sign - regression guard against a
+    string-formatting slip that could drop the minus sign."""
+    hard = [-1.5, -20.2, -100.0]
+
+    fit_line, _ = Magcal.build_fit_line_text(hard, np.eye(3), False)
+
+    assert fit_line == 'hard0="-1.5 -20.2 -100.0"'
+
+
+def test_copy_button_copies_hard0_soft0(caplog: pytest.LogCaptureFixture) -> None:
+    """The magcal plot's "Copy calibration" button copies the exact
+    hard0=/soft0= text shown in the title to the clipboard, as plain
+    (non-HTML) text.
+
+    Generates a real dive's magcal plot HTML end to end (Plotting.DiveMagCal
+    via BasePlot.main), then drives a headless Chromium browser (Playwright)
+    against the standalone output: clicks the button and reads back the
+    clipboard, comparing it against Magcal.magcal_worker's own copy_text
+    computed directly against the same dive - so this doesn't hardcode the
+    fitted numeric values, which would make the test brittle to any future
+    change in the fit itself.
+
+    Skips (rather than fails) if a Chromium binary isn't available locally
+    - playwright is a project dependency, but `playwright install chromium`
+    is a separate provisioning step (already done in CI, see
+    .github/workflows/action.yml).
+    """
+    baseplot_options, data_dir_name, nc_filename = _MAGCAL_DIVE
+    data_dir = pathlib.Path("testdata").joinpath(data_dir_name)
+    mission_dir = data_dir.joinpath("mission_dir")
+
+    cmd_line = ["--verbose", "--mission_dir", str(mission_dir)]
+    cmd_line += baseplot_options.split(" ")
+    testutils.run_mission(data_dir, mission_dir, BasePlot.main, cmd_line, caplog, [""])
+
+    html_path = (mission_dir / "plots" / "dv0005_magcal.html").resolve()
+    assert html_path.exists()
+
+    # Cast to str at the boundary - Utils.open_netcdf_file requires it.
+    nc_file = Utils.open_netcdf_file(str(mission_dir / nc_filename))
+    try:
+        *_, expected_copy_text = Magcal.magcal_worker(
+            [nc_file], True, "html", "test title"
+        )
+    finally:
+        nc_file.close()
+    assert expected_copy_text
+
+    try:
+        with playwright.sync_api.sync_playwright() as p:
+            p.chromium.launch(headless=True).close()
+    except Exception as exc:
+        pytest.skip(f"Chromium not available for Playwright ({exc})")
+
+    with playwright.sync_api.sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        try:
+            context = browser.new_context()
+            context.grant_permissions(["clipboard-read", "clipboard-write"])
+            page = context.new_page()
+            console_errors = []
+            page.on(
+                "console",
+                lambda msg: console_errors.append(msg.text)
+                if msg.type == "error"
+                else None,
+            )
+            page.on("pageerror", lambda exc: console_errors.append(str(exc)))
+
+            page.goto(html_path.as_uri())
+
+            copy_btn = page.get_by_role(
+                "button", name="Copy calibration", exact=True
+            )
+            copy_btn.wait_for(state="visible", timeout=10000)
+            # Positioning settles asynchronously (rAF + staggered retries up
+            # to 1500ms, see PlotUtilsPlotly._CLIPBOARD_BUTTON_TEMPLATE) -
+            # wait it out before asserting on the button's final position.
+            page.wait_for_timeout(1700)
+
+            plot_div = page.locator(".plotly-graph-div")
+            xtitle = page.locator("g.g-xtitle")
+            plot_box = plot_div.bounding_box()
+            xtitle_box = xtitle.bounding_box()
+            copy_box = copy_btn.bounding_box()
+            assert plot_box is not None
+            assert xtitle_box is not None
+            assert copy_box is not None
+            # placement="below_centered", anchored to the x-axis title
+            # group: button sits below the plot, horizontally centered
+            # under the x-axis label - anchoring to the title itself
+            # (rather than a fixed offset from rect.bg) means it always
+            # clears the tick labels too, since the title is reliably
+            # drawn below them.
+            assert copy_box["y"] >= xtitle_box["y"] + xtitle_box["height"] - 1
+            copy_center_x = copy_box["x"] + copy_box["width"] / 2
+            xtitle_center_x = xtitle_box["x"] + xtitle_box["width"] / 2
+            assert abs(copy_center_x - xtitle_center_x) < 3
+            # Must land fully inside the plot div's own (visible) bounds -
+            # gd fills the whole standalone page with no scrollable room
+            # below it (Plotly's own full_html template), so anything
+            # positioned past gd's own bottom edge is clipped, not just
+            # scrolled off (confirmed against a real dive's plot when an
+            # earlier version anchored below gd itself).
+            assert (
+                copy_box["y"] + copy_box["height"]
+                <= plot_box["y"] + plot_box["height"] + 1
+            )
+
+            copy_btn.click()
+            page.wait_for_timeout(200)
+            clipboard_text = page.evaluate("navigator.clipboard.readText()")
+
+            assert not console_errors, console_errors
+        finally:
+            browser.close()
+
+    assert clipboard_text == expected_copy_text

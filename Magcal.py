@@ -84,7 +84,7 @@ def magcal(
     dives: list[int],
     softiron: bool,
     doplot: str
-) -> tuple[list, np.array, float, float, Any]:
+) -> tuple[list, np.ndarray, float, float, Any]:
 
     nc_files = []
     for d in dives:
@@ -93,14 +93,14 @@ def magcal(
             nc_files.append(Utils.open_netcdf_file(fname))
 
     if len(nc_files) == 0:
-        return ([], [], 0, 0, None)
+        return ([], np.array([]), 0, 0, None)
 
     if len(nc_files) == 1:
         title = PlotUtils.get_mission_dive(nc_files[0])
     else:
         title = PlotUtils.get_mission_str(nc_files[0]) + f' dives {dives}'
 
-    hard, soft, cover, circ, fig = magcal_worker(nc_files, softiron, doplot, title)
+    hard, soft, cover, circ, fig, _copy_text = magcal_worker(nc_files, softiron, doplot, title)
 
     if fig and doplot == 'png':
         imgs = fig.to_image(format="png")
@@ -120,15 +120,43 @@ def magcal(
 
     return (hard, soft, cover, circ, imgs)
 
+def build_fit_line_text(
+    hard: list[float], abc0: np.ndarray, softiron: bool
+) -> tuple[str, str]:
+    """Formats the fitted hard0 (and soft0, when computed) calibration text.
+
+    Args:
+        hard: Fitted hard-iron offset, [x, y, z].
+        abc0: Fitted soft-iron 3x3 matrix. Only read when softiron is True.
+        softiron: Whether soft-iron correction was computed.
+
+    Returns:
+        A (fit_line_html, copy_text_plain) tuple: fit_line_html is the
+        hard0=/soft0= text joined with "<br>" for use in a Plotly title;
+        copy_text_plain is the same content joined with "\\n" instead, for
+        copying to the clipboard as plain text.
+    """
+    if softiron:
+        fit_line = (
+            f'hard0="{hard[0]:.1f} {hard[1]:.1f} {hard[2]:.1f}"<br>'
+            f'soft0="{abc0[0][0]:.3f} {abc0[0][1]:.3f} {abc0[0][2]:.3f} '
+            f'{abc0[1][0]:.3f} {abc0[1][1]:.3f} {abc0[1][2]:.3f} '
+            f'{abc0[2][0]:.3f} {abc0[2][1]:.3f} {abc0[2][2]:.3f}"'
+        )
+    else:
+        fit_line = f'hard0="{hard[0]:.1f} {hard[1]:.1f} {hard[2]:.1f}"'
+    return fit_line, fit_line.replace("<br>", "\n")
+
+
 def magcal_worker(
     dive_nc_file: list[scipy.io._netcdf.netcdf_file],
     softiron: bool,
     doplot: str,
     title: str
-) -> tuple[list, np.array, float, float, plotly.graph_object.Figure]:
-    
+) -> tuple[list, np.ndarray, float, float, plotly.graph_objects.Figure | None, str]:
+
     if "eng_mag_x" not in dive_nc_file[0].variables:
-        return ([], [], 0, 0, None)
+        return ([], np.array([]), 0, 0, None, "")
    
     npts      = 0
     for f in dive_nc_file:
@@ -730,14 +758,12 @@ def magcal_worker(
     minlim = min([minx, miny])
     maxlim = max([maxx, maxy])
     lim = max([abs(minlim), abs(maxlim)])*1.05
-    if softiron:
-        fit_line = (
-            f'hard0="{P.item(0):.1f} {P.item(1):.1f} {P.item(2):.1f}"<br>soft0="{abc0[0][0]:.3f} {abc0[0][1]:.3f} {abc0[0][2]:.3f} {abc0[1][0]:.3f} {abc0[1][1]:.3f} {abc0[1][2]:.3f} {abc0[2][0]:.3f} {abc0[2][1]:.3f} {abc0[2][2]:.3f}"'
-        )
-    else:
-        fit_line = (
-            f'hard0="{Ph.item(0):.1f} {Ph.item(1):.1f} {Ph.item(2):.1f}"'
-        )
+    hard_for_fit = P if softiron else Ph
+    fit_line, copy_text = build_fit_line_text(
+        [hard_for_fit.item(0), hard_for_fit.item(1), hard_for_fit.item(2)],
+        abc0,
+        softiron,
+    )
 
     title_text = f"{title}<br>compass calibration<br>{fit_line}"
 
@@ -781,6 +807,7 @@ def magcal_worker(
         cover,
         circ_pqr if softiron else circ_h,
         fig,
+        copy_text,
     )
 
 def main():

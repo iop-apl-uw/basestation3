@@ -39,7 +39,7 @@ import pathlib
 import threading
 import time
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import brotli
 import kaleido
@@ -291,6 +291,216 @@ def add_help_link(
         "xanchor": "left",
         "yanchor": "top",
     }
+
+
+_CLIPBOARD_BUTTON_TEMPLATE = """
+(function() {
+  // plotly.py replaces the literal "{plot_id}" token below with this
+  // specific plot's own div id before this script ever runs - do not use
+  // document.getElementsByClassName('plotly-graph-div')[0] here, which
+  // would silently grab a *different* plot's div (and mismatch its own
+  // annotations/elements) on any page showing more than one plot.
+  var gd = document.getElementById('{plot_id}');
+  var label = __BUTTON_LABEL_JSON__;
+  var btn = document.createElement('button');
+  btn.textContent = label;
+  btn.style.cssText = 'position:absolute;display:none;padding:6px 14px;'
+    + 'font-family:monospace;font-size:12px;cursor:pointer;z-index:10;';
+
+  function getCopyText() { __GET_COPY_TEXT_JS__ }
+  function findAnchorElement() { __ANCHOR_ELEMENT_JS__ }
+  function isVisible() { __IS_VISIBLE_JS__ }
+
+  btn.addEventListener('click', function() {
+    var text = getCopyText();
+    if (!text) {
+      btn.textContent = 'Nothing shown to copy';
+    } else {
+      navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = 'Copied!';
+      }, function() {
+        btn.textContent = 'Copy failed';
+      });
+    }
+    setTimeout(function() { btn.textContent = label; }, 1500);
+  });
+  gd.insertAdjacentElement('afterend', btn);
+
+  function updateVisibility() {
+    btn.style.display = isVisible() ? '' : 'none';
+  }
+
+  // Finds the CSS containing-block origin for an absolutely positioned
+  // element the same way the spec does: the padding edge of the nearest
+  // ancestor that is itself positioned (non-static) OR establishes a new
+  // containing block via transform/perspective/filter/will-change/contain
+  // (yes, even a no-op transform like matrix(1,0,0,1,0,0) counts - found
+  // empirically via vis.py's real dashboard, which applies exactly that
+  // to <body>, unlike its bare standalone plot page). offsetParent alone
+  // isn't enough to detect this: it reports <body> as a DOM API fallback
+  // whether or not <body> is actually such an ancestor, and body's own
+  // rect is offset by its default browser margin - not the same origin
+  // position:absolute measures from when there's truly no such ancestor
+  // (that case instead falls back to the initial containing block, i.e.
+  // the viewport origin adjusted for the page's current scroll).
+  function establishesContainingBlock(el) {
+    var cs = getComputedStyle(el);
+    return cs.position !== 'static'
+      || cs.transform !== 'none'
+      || cs.perspective !== 'none'
+      || cs.filter !== 'none'
+      || /transform|perspective|filter/.test(cs.willChange)
+      || (cs.contain && /layout|paint|strict|content/.test(cs.contain));
+  }
+  function containingBlockOrigin(el) {
+    var ancestor = el.parentElement;
+    while (ancestor && ancestor !== document.documentElement) {
+      if (establishesContainingBlock(ancestor)) {
+        var r = ancestor.getBoundingClientRect();
+        var cs = getComputedStyle(ancestor);
+        return {left: r.left + parseFloat(cs.borderLeftWidth) || 0, top: r.top + parseFloat(cs.borderTopWidth) || 0};
+      }
+      ancestor = ancestor.parentElement;
+    }
+    return {left: -window.scrollX, top: -window.scrollY};
+  }
+
+  function positionButton() {
+    // Scoped to gd's own DOM subtree, not document, so this can't find
+    // some *other* plot's anchor element if the page shows more than
+    // one plot.
+    var target = findAnchorElement();
+    if (!target) return;
+    var targetRect = target.getBoundingClientRect();
+    var origin = containingBlockOrigin(btn);
+    __PLACEMENT_OFFSET_JS__
+  }
+
+  // The anchor element isn't necessarily in the DOM yet the instant
+  // newPlot resolves (post_script runs before Plotly's own layout pass),
+  // and even once plotly_afterplot fires, this plot's own responsive
+  // resize (fit to its container) can still be pending for another frame
+  // or two - measuring synchronously inside the plotly_afterplot handler
+  // reads stale rects whenever this plot is embedded in a page with its
+  // own layout (e.g. a dashboard, as opposed to a bare standalone plot
+  // page), silently leaving the button mispositioned with no error. A
+  // couple of animation frames covers Plotly's own resize; a dashboard
+  // page can *also* have its own outer panel/layout code that settles
+  // the plot's container size later still (confirmed empirically against
+  // vis.py's real pilot dashboard - a plain rAF-based reposition was
+  // still off by ~20px there), on a timeline this script has no way to
+  // know in advance - so re-check a few more times over the following
+  // second and a half as a pragmatic catch-all, on top of the
+  // event-driven repositioning below.
+  function positionButtonSettled() {
+    requestAnimationFrame(function() { requestAnimationFrame(positionButton); });
+  }
+  [50, 200, 500, 1000, 1500].forEach(function(delay) { setTimeout(positionButton, delay); });
+  gd.on('plotly_afterplot', function() { positionButtonSettled(); updateVisibility(); });
+  gd.on('plotly_relayout', function() { positionButtonSettled(); updateVisibility(); });
+  gd.on('plotly_autosize', positionButtonSettled);
+  window.addEventListener('resize', positionButtonSettled);
+  positionButtonSettled();
+  updateVisibility();
+})();
+"""
+
+_CLIPBOARD_BUTTON_PLACEMENT_OFFSETS: dict[str, str] = {
+    "right_of": (
+        "btn.style.left = (targetRect.right - origin.left + {gap}) + 'px';"
+        "btn.style.top = (targetRect.top - origin.top) + 'px';"
+    ),
+    "below": (
+        "btn.style.left = (targetRect.left - origin.left) + 'px';"
+        "btn.style.top = (targetRect.bottom - origin.top + {gap}) + 'px';"
+    ),
+    # translateY(-100%) shifts the button up by its own rendered height
+    # after positioning `top` at the desired *bottom* edge - avoids
+    # needing to know the button's pixel height in advance (it can't be
+    # measured reliably while display:none, which it is until
+    # updateVisibility() first runs).
+    "above": (
+        "btn.style.left = (targetRect.left - origin.left) + 'px';"
+        "btn.style.top = (targetRect.top - origin.top - {gap}) + 'px';"
+        "btn.style.transform = 'translateY(-100%)';"
+    ),
+    # translateX(-50%) centers the button on the target's horizontal
+    # center after positioning `left` there - same not-knowing-the-
+    # button's-own-size trick as "above"'s translateY(-100%).
+    "below_centered": (
+        "btn.style.left = (targetRect.left + targetRect.width / 2 - origin.left) + 'px';"
+        "btn.style.top = (targetRect.bottom - origin.top + {gap}) + 'px';"
+        "btn.style.transform = 'translateX(-50%)';"
+    ),
+}
+
+
+def build_clipboard_button_post_script(
+    button_label: str,
+    get_copy_text_js: str,
+    anchor_element_js: str,
+    is_visible_js: str,
+    placement: Literal["right_of", "below", "above", "below_centered"] = "right_of",
+    gap_px: int = 8,
+) -> str:
+    """Builds a post_script that adds a positioned clipboard-copy button.
+
+    The button is injected via Plotly's post_script hook (see
+    write_output_files), correctly positioned regardless of what page the
+    plot ends up embedded in (a CSS containing-block-aware algorithm, not
+    just offsetParent), and safely scoped to its own plot's div even on a
+    page showing more than one plot (via Plotly's "{plot_id}" post_script
+    substitution and gd-scoped DOM queries only - see the generated
+    script's inline comments for why each of those matters).
+
+    Args:
+        button_label: Text shown on the button, and restored after the
+            "Copied!"/"Copy failed"/"Nothing shown to copy" feedback
+            message times out.
+        get_copy_text_js: JS statements, forming the body of a function
+            closing over `gd` (this plot's own div), that must `return`
+            the string to copy, or a falsy value if nothing is currently
+            copyable.
+        anchor_element_js: JS statements (same calling convention) that
+            must `return` the DOM element the button should be
+            positioned next to, or a falsy value if it isn't found yet.
+        is_visible_js: JS statements (same calling convention) that must
+            `return` whether the button should currently be shown.
+        placement: "right_of" positions the button immediately to the
+            right of the anchor element, top-aligned with it; "below"
+            positions it directly under the anchor element's left edge;
+            "above" positions it directly above the anchor element's own
+            top-left corner (e.g. anchoring to a plot's rect.bg puts the
+            button just above the chart's own drawing area, left-aligned
+            with it - the same conventional spot Plotly's own default
+            updatemenu buttons use, e.g. Plotting/DiveOCR504i.py's
+            Linear/Log Scale buttons); "below_centered" positions it
+            under the anchor element, horizontally centered on it rather
+            than left-aligned (e.g. anchoring to a plot's x-axis title
+            group puts the button below the plot, centered under the
+            x-axis label - see DiveMagCal.py's plot_mag). Prefer
+            anchoring to the actual element whose bottom/top edge should
+            be cleared (an axis title, a chart's rect.bg) over a fixed
+            pixel offset from some other element - axis label/margin
+            content sizes vary by dataset and can collide with a naive
+            fixed gap.
+        gap_px: Pixel gap between the anchor element and the button.
+
+    Returns:
+        A post_script string for PlotUtilsPlotly.write_output_files.
+    """
+    return (
+        _CLIPBOARD_BUTTON_TEMPLATE.replace(
+            "__BUTTON_LABEL_JSON__", json.dumps(button_label)
+        )
+        .replace("__GET_COPY_TEXT_JS__", get_copy_text_js)
+        .replace("__ANCHOR_ELEMENT_JS__", anchor_element_js)
+        .replace("__IS_VISIBLE_JS__", is_visible_js)
+        .replace(
+            "__PLACEMENT_OFFSET_JS__",
+            _CLIPBOARD_BUTTON_PLACEMENT_OFFSETS[placement].format(gap=gap_px),
+        )
+    )
 
 
 class KaleidoServer:

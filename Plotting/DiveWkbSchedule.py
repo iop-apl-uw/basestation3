@@ -196,125 +196,6 @@ def _note_annotation(dive_nc_file: scipy.io._netcdf.netcdf_file) -> dict:
     }
 
 
-_COPY_BUTTON_POST_SCRIPT = """
-(function() {{
-  // plotly.py replaces the literal "{{plot_id}}" token below with this
-  // specific plot's own div id before this script ever runs - do not use
-  // document.getElementsByClassName('plotly-graph-div')[0] here, which
-  // would silently grab a *different* plot's div (and mismatch its own
-  // annotations/updatemenus) on any page showing more than one plot.
-  var gd = document.getElementById('{{plot_id}}');
-  var texts = {texts_json};
-  var btn = document.createElement('button');
-  var label = 'Copy schedule';
-  btn.textContent = label;
-  btn.style.cssText = 'position:absolute;display:none;padding:6px 14px;'
-    + 'font-family:monospace;font-size:12px;cursor:pointer;z-index:10;';
-  btn.addEventListener('click', function() {{
-    var idx = Object.keys(texts).find(function(i) {{
-      var a = gd.layout.annotations[i];
-      return a && a.visible;
-    }});
-    if (idx === undefined) {{
-      btn.textContent = 'Nothing shown to copy';
-    }} else {{
-      navigator.clipboard.writeText(texts[idx]).then(function() {{
-        btn.textContent = 'Copied!';
-      }}, function() {{
-        btn.textContent = 'Copy failed';
-      }});
-    }}
-    setTimeout(function() {{ btn.textContent = label; }}, 1500);
-  }});
-  gd.insertAdjacentElement('afterend', btn);
-
-  function updateVisibility() {{
-    var anyVisible = Object.keys(texts).some(function(i) {{
-      var a = gd.layout.annotations[i];
-      return a && a.visible;
-    }});
-    btn.style.display = anyVisible ? '' : 'none';
-  }}
-
-  // Finds the CSS containing-block origin for an absolutely positioned
-  // element the same way the spec does: the padding edge of the nearest
-  // ancestor that is itself positioned (non-static) OR establishes a new
-  // containing block via transform/perspective/filter/will-change/contain
-  // (yes, even a no-op transform like matrix(1,0,0,1,0,0) counts - found
-  // empirically via vis.py's real dashboard, which applies exactly that
-  // to <body>, unlike its bare standalone plot page). offsetParent alone
-  // isn't enough to detect this: it reports <body> as a DOM API fallback
-  // whether or not <body> is actually such an ancestor, and body's own
-  // rect is offset by its default browser margin - not the same origin
-  // position:absolute measures from when there's truly no such ancestor
-  // (that case instead falls back to the initial containing block, i.e.
-  // the viewport origin adjusted for the page's current scroll).
-  function establishesContainingBlock(el) {{
-    var cs = getComputedStyle(el);
-    return cs.position !== 'static'
-      || cs.transform !== 'none'
-      || cs.perspective !== 'none'
-      || cs.filter !== 'none'
-      || /transform|perspective|filter/.test(cs.willChange)
-      || (cs.contain && /layout|paint|strict|content/.test(cs.contain));
-  }}
-  function containingBlockOrigin(el) {{
-    var ancestor = el.parentElement;
-    while (ancestor && ancestor !== document.documentElement) {{
-      if (establishesContainingBlock(ancestor)) {{
-        var r = ancestor.getBoundingClientRect();
-        var cs = getComputedStyle(ancestor);
-        return {{left: r.left + parseFloat(cs.borderLeftWidth) || 0, top: r.top + parseFloat(cs.borderTopWidth) || 0}};
-      }}
-      ancestor = ancestor.parentElement;
-    }}
-    return {{left: -window.scrollX, top: -window.scrollY}};
-  }}
-
-  function positionButton() {{
-    // Scoped to gd's own SVG, not document, so this can't find some
-    // *other* plot's "Option 2" button if the page shows more than one.
-    var opt2 = Array.from(gd.querySelectorAll('g.updatemenu-button')).find(function(g) {{
-      var t = g.querySelector('text');
-      return t && t.textContent.trim() === 'Option 2';
-    }});
-    if (!opt2) return;
-    var targetRect = opt2.getBoundingClientRect();
-    var origin = containingBlockOrigin(btn);
-    btn.style.left = (targetRect.right - origin.left + 8) + 'px';
-    btn.style.top = (targetRect.top - origin.top) + 'px';
-  }}
-
-  // The updatemenu buttons aren't in the DOM yet the instant newPlot
-  // resolves (post_script runs before Plotly's own layout pass), and even
-  // once plotly_afterplot fires, this plot's own responsive resize (fit
-  // to its container) can still be pending for another frame or two -
-  // measuring synchronously inside the plotly_afterplot handler reads
-  // stale rects whenever this plot is embedded in a page with its own
-  // layout (e.g. a dashboard, as opposed to a bare standalone plot page),
-  // silently leaving the button mispositioned relative to Option 2 with
-  // no error. A couple of animation frames covers Plotly's own resize;
-  // a dashboard page can *also* have its own outer panel/layout code
-  // that settles the plot's container size later still (confirmed
-  // empirically against vis.py's real pilot dashboard - a plain rAF-based
-  // reposition was still off by ~20px there), on a timeline this script
-  // has no way to know in advance - so re-check a few more times over the
-  // following second and a half as a pragmatic catch-all, on top of the
-  // event-driven repositioning below.
-  function positionButtonSettled() {{
-    requestAnimationFrame(function() {{ requestAnimationFrame(positionButton); }});
-  }}
-  [50, 200, 500, 1000, 1500].forEach(function(delay) {{ setTimeout(positionButton, delay); }});
-  gd.on('plotly_afterplot', function() {{ positionButtonSettled(); updateVisibility(); }});
-  gd.on('plotly_relayout', function() {{ positionButtonSettled(); updateVisibility(); }});
-  gd.on('plotly_autosize', positionButtonSettled);
-  window.addEventListener('resize', positionButtonSettled);
-  positionButtonSettled();
-  updateVisibility();
-}})();
-"""
-
-
 def _add_config_annotations(
     fig: plotly.graph_objects.Figure,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
@@ -332,7 +213,8 @@ def _add_config_annotations(
         result: WKB schedule result, as returned by compute_wkb_schedule.
 
     Returns:
-        A post_script (for PlotUtilsPlotly.write_output_files) that adds a
+        A post_script (for PlotUtilsPlotly.write_output_files, built via
+        PlotUtilsPlotly.build_clipboard_button_post_script) that adds a
         "Copy schedule" button copying whichever text is currently visible.
     """
     buckets_depths = np.array(base_opts.wkb_buckets_depths)
@@ -397,7 +279,41 @@ def _add_config_annotations(
         button["args"] = [button["args"][0], args_relayout, *button["args"][1:]]
         button["args2"] = [button["args2"][0], args2_relayout, *button["args2"][1:]]
 
-    return _COPY_BUTTON_POST_SCRIPT.format(texts_json=json.dumps(raw_text_by_idx))
+    texts_json = json.dumps(raw_text_by_idx)
+    # Plain string concatenation, not an f-string/.format() call, so the JS
+    # braces below need no doubling - texts_json is the only interpolated
+    # piece, spliced in directly.
+    get_copy_text_js = (
+        "var texts = " + texts_json + ";\n"
+        "var idx = Object.keys(texts).find(function(i) {\n"
+        "  var a = gd.layout.annotations[i];\n"
+        "  return a && a.visible;\n"
+        "});\n"
+        "if (idx === undefined) return null;\n"
+        "return texts[idx];\n"
+    )
+    is_visible_js = (
+        "var texts = " + texts_json + ";\n"
+        "return Object.keys(texts).some(function(i) {\n"
+        "  var a = gd.layout.annotations[i];\n"
+        "  return a && a.visible;\n"
+        "});\n"
+    )
+    # Scoped to gd's own DOM subtree, not document, so this can't find some
+    # *other* plot's "Option 2" button if the page shows more than one.
+    anchor_element_js = (
+        "return Array.from(gd.querySelectorAll('g.updatemenu-button')).find(function(g) {\n"
+        "  var t = g.querySelector('text');\n"
+        "  return t && t.textContent.trim() === 'Option 2';\n"
+        "}) || null;\n"
+    )
+    return PlotUtilsPlotly.build_clipboard_button_post_script(
+        button_label="Copy schedule",
+        get_copy_text_js=get_copy_text_js,
+        anchor_element_js=anchor_element_js,
+        is_visible_js=is_visible_js,
+        placement="right_of",
+    )
 
 
 @add_arguments(
