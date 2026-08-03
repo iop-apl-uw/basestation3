@@ -48,8 +48,8 @@ quality_control_version = "1.12"
 required_nc_fileversion = "2.7"  #  (August, 2011)
 
 # Version stamps for various packages
-required_python_version = (3, 14, 2)
-recommended_python_version = (3, 14, 2)
+required_python_version = (3, 14, 0)
+recommended_python_version = (3, 14, 0)
 required_numpy_version = "2.5.0"
 required_scipy_version = "1.18.0"
 
