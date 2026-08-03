@@ -760,7 +760,7 @@ global_options_dict: dict[str, options_t] = {
     ),
     "queue_length": options_t(
         0,
-        {"Base", "GliderEarlyGPS", "BaseLogin"},
+        {"Base"},
         ("--queue_length",),
         int,
         {"help": "Length of processing queue from BaseRunner"},
