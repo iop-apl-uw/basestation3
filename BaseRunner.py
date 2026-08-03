@@ -67,8 +67,22 @@ base_runner_lockfile_name = ".base_runner_lockfile"
 previous_runner_time_out = 10
 
 known_scripts = ("BaseLogin.py", "GliderEarlyGPS.py", "Base.py")
-queued_scripts = ("Base.py",)
+queued_scripts = ("BaseLogin.py", "GliderEarlyGPS.py", "Base.py")
 docker_scripts = ("Base.py",)
+
+# Scripts whose queued dispatch should receive Base.py-specific CLI flags
+# and vis-progress notifications. BaseLogin.py/GliderEarlyGPS.py are queued
+# (above) purely to avoid blocking BaseRunner's event loop - they don't
+# declare --job_id/--queue_length support and don't need vis progress UI.
+job_id_scripts = ("Base.py",)
+queue_length_scripts = ("Base.py",)
+vis_notify_scripts = ("Base.py",)
+
+# Scripts whose successful completion gets a timing line appended directly
+# to the glider's own log_file (baselog.log), independent of BaseRunner's
+# own log level, so the launch-latency floor stays visible for routine
+# review without needing BaseRunner's daemon log turned up.
+timing_log_scripts = ("BaseLogin.py", "GliderEarlyGPS.py")
 
 dog_stroke_interval = 10
 inotify_read_timeout = 1 * 1000  # In milliseconds
@@ -262,6 +276,9 @@ def main():
         if time.time() > next_stroke_time:
             notifier.notify("WATCHDOG=1")
             next_stroke_time = time.time() + dog_stroke_interval
+        #
+        # Look for new .run files to process
+        #
         for event in inotify.read(timeout=inotify_read_timeout):
             run_file = base_opts.mission_dir / event.name
             # log_info(f"Received {event.name} {run_file}")
@@ -335,46 +352,53 @@ def main():
                             base_opts.jail_root, seaglider_mission_dir[1:]
                         )
 
-                    # If this is a script to be queued, do that here.
+                    # If this is a script to be queued, do that here, instead of running in blocking mode
                     if base_opts.queue_scripts and script_name in queued_scripts:
                         job_id = str(uuid.uuid4())
                         cmd_line_parts = cmd_line.split()
                         if "--daemon" in cmd_line_parts:
                             cmd_line_parts.pop(cmd_line_parts.index("--daemon"))
-                        cmd_line_parts.append("--job_id")
-                        cmd_line_parts.append(job_id)
-                        cmd_line_parts.append("--queue_length")
-                        cmd_line_parts.append("0")
+                        if script_name in job_id_scripts:
+                            cmd_line_parts.append("--job_id")
+                            cmd_line_parts.append(job_id)
+                        if script_name in queue_length_scripts:
+                            cmd_line_parts.append("--queue_length")
+                            cmd_line_parts.append("0")
                         cmd_line = " ".join(cmd_line_parts)
                         cmd_line += f" >> {log_file} 2>&1"
                         log_info(
                             f"Enqueuing job_id:{job_id} in [{seaglider_mission_dir}:{script_name}] cmd_line:{cmd_line}"
                         )
                         que = (seaglider_mission_dir, script_name, glider_id)
-                        job_queues[que].appendleft((job_id, cmd_line))
+                        job_queues[que].appendleft((job_id, cmd_line, log_file))
 
-                        uuids = []
-                        for job in job_queues[que]:
-                            uuids.append(job[0])
-                        if que in running_jobs:
-                            uuids.append(running_jobs[que][0])
-                        msg = {
-                            "glider": glider_id,
-                            "queue_id": f"{seaglider_mission_dir}||{script_name}",
-                            "time": time.time(),
-                            "uuids": uuids,
-                            "action": "queued",
-                            "target": job_id,
-                        }
-                        payload = orjson.dumps(msg).decode("utf-8")
-                        log_debug(payload)
-                        Utils.notifyVis(
-                            glider_id,
-                            "proc-queue",
-                            payload,
-                        )
+                        if script_name in vis_notify_scripts:
+                            uuids = []
+                            for job in job_queues[que]:
+                                uuids.append(job[0])
+                            if que in running_jobs:
+                                uuids.append(running_jobs[que][0])
+                            msg = {
+                                "glider": glider_id,
+                                "queue_id": f"{seaglider_mission_dir}||{script_name}",
+                                "time": time.time(),
+                                "uuids": uuids,
+                                "action": "queued",
+                                "target": job_id,
+                            }
+                            payload = orjson.dumps(msg).decode("utf-8")
+                            log_debug(payload)
+                            Utils.notifyVis(
+                                glider_id,
+                                "proc-queue",
+                                payload,
+                            )
 
                         continue
+
+                    #
+                    # Run the script in blocking mode
+                    #
 
                     # Re-direct on the cmdline, so scripts run with --daemon launch async and return right away
                     cmd_line = cmd_line.rstrip() + f" >> {log_file} 2>&1"
@@ -455,13 +479,17 @@ def main():
                             os.unlink(run_file)
                         except Exception:
                             log_critical(f"Failed to remove {run_file}", "exc")
+        #
+        # End check for new .run files
+        #
 
-        ## Check for process completion here
-        # log_debug("Checking running jobs")
+        #
+        # Check for queued process completion here
+        #
         for que in list(running_jobs):
             try:
                 sg_mission_dir, script_name, glider_id = que
-                job_id, popen, cmd_line = running_jobs[que]
+                job_id, popen, cmd_line, log_file, start_time = running_jobs[que]
                 returncode = popen.poll()
                 if returncode is not None:
                     if returncode:
@@ -471,39 +499,64 @@ def main():
                     # TODO: Check for any pid files left behind
                     running_jobs.pop(que)
 
-                    uuids = []
-                    for job in job_queues[que]:
-                        uuids.append(job[0])
-                    uuids.append(job_id)
+                    if script_name in timing_log_scripts:
+                        try:
+                            duration = time.time() - start_time
+                            now_str = time.strftime("%H:%M:%S %d %b %Y", time.gmtime())
+                            start_str = time.strftime(
+                                "%H:%M:%S %d %b %Y", time.gmtime(start_time)
+                            )
+                            with open(log_file, "a") as fo:
+                                fo.write(
+                                    f"{now_str} UTC: INFO: BaseRunner: "
+                                    f"{script_name} (job_id={job_id}) started "
+                                    f"{start_str} UTC, completed in {duration:.2f}s, "
+                                    f"returncode={returncode}\n"
+                                )
+                        except Exception:
+                            log_error(
+                                f"Failed to write timing line to {log_file}", "exc"
+                            )
 
-                    msg = {
-                        "glider": glider_id,
-                        "queue_id": f"{seaglider_mission_dir}||{script_name}",
-                        "time": time.time(),
-                        "uuids": uuids,
-                        "action": "complete",
-                        "returncode": returncode,
-                        "target": job_id,
-                    }
-                    payload = orjson.dumps(msg).decode("utf-8")
-                    log_debug(payload)
-                    Utils.notifyVis(
-                        glider_id,
-                        "proc-queue",
-                        payload,
-                    )
+                    if script_name in vis_notify_scripts:
+                        uuids = []
+                        for job in job_queues[que]:
+                            uuids.append(job[0])
+                        uuids.append(job_id)
+
+                        msg = {
+                            "glider": glider_id,
+                            "queue_id": f"{seaglider_mission_dir}||{script_name}",
+                            "time": time.time(),
+                            "uuids": uuids,
+                            "action": "complete",
+                            "returncode": returncode,
+                            "target": job_id,
+                        }
+                        payload = orjson.dumps(msg).decode("utf-8")
+                        log_debug(payload)
+                        Utils.notifyVis(
+                            glider_id,
+                            "proc-queue",
+                            payload,
+                        )
             except KeyboardInterrupt:
                 exit_event.set()
             except Exception:
                 log_error(f"Error processing {que}", "exc")
 
-        ## Deque and launch here
-        # log_debug("Checking for new jobs to launch")
+        #
+        # End check for queued process completion here
+        #
+
+        #
+        # Deque and launch queued jobs here
+        #
         for que in list(job_queues):
             try:
                 if que not in running_jobs:
                     try:
-                        job_id, cmd_line = job_queues[que].pop()
+                        job_id, cmd_line, log_file = job_queues[que].pop()
                     except IndexError:
                         continue
 
@@ -517,6 +570,7 @@ def main():
                     if "PYTHONUNBUFFERED" in my_env:
                         del my_env["PYTHONUNBUFFERED"]
                     log_info(f"Starting {job_id}:{cmd_line}")
+                    start_time = time.time()
                     popen = subprocess.Popen(
                         cmd_line,
                         shell=True,
@@ -524,33 +578,37 @@ def main():
                         # TODO - check if this is needed
                         start_new_session=True,
                     )
-                    running_jobs[que] = (job_id, popen, cmd_line)
+                    running_jobs[que] = (job_id, popen, cmd_line, log_file, start_time)
 
-                    uuids = []
-                    for job in job_queues[que]:
-                        uuids.append(job[0])
-                    uuids.append(job_id)
+                    if script_name in vis_notify_scripts:
+                        uuids = []
+                        for job in job_queues[que]:
+                            uuids.append(job[0])
+                        uuids.append(job_id)
 
-                    msg = {
-                        "glider": glider_id,
-                        "queue_id": f"{seaglider_mission_dir}||{script_name}",
-                        "time": time.time(),
-                        "uuids": uuids,
-                        "action": "start",
-                        "target": job_id,
-                    }
-                    payload = orjson.dumps(msg).decode("utf-8")
-                    log_debug(payload)
-                    Utils.notifyVis(
-                        glider_id,
-                        "proc-queue",
-                        payload,
-                    )
+                        msg = {
+                            "glider": glider_id,
+                            "queue_id": f"{seaglider_mission_dir}||{script_name}",
+                            "time": time.time(),
+                            "uuids": uuids,
+                            "action": "start",
+                            "target": job_id,
+                        }
+                        payload = orjson.dumps(msg).decode("utf-8")
+                        log_debug(payload)
+                        Utils.notifyVis(
+                            glider_id,
+                            "proc-queue",
+                            payload,
+                        )
 
             except KeyboardInterrupt:
                 exit_event.set()
             except Exception:
                 log_error(f"Error processing {que}", "exc")
+        #
+        # Edn deque and launch queued jobs here
+        #
 
     log_info("Shutdown signal received")
 
