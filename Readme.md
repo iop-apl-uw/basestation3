@@ -232,11 +232,11 @@ playwright install-deps
 playwright install chromium
 sudo chmod -R o+rx /opt/playwright-browsers
 ```
-Next, setup the site sitecustomize.py script in the virtual env
+Next, setup the site sitecustomize.py script in the virtual env.
 ```
 python3 -c "import site; print(site.getsitepackages()[0])" | xargs -I{} sh -c 'cat >> {}/sitecustomize.py << "EOF"
 import os, glob
-_matches = sorted(glob.glob("/opt/playwright-browsers/chromium-*/chrome-linux/chrome"))
+_matches = sorted(glob.glob("/opt/playwright-browsers/chromium-*/*/chrome"))
 if _matches:
     os.environ.setdefault("BROWSER_PATH", _matches[-1])
 EOF'

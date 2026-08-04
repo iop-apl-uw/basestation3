@@ -286,7 +286,7 @@ configure_browser_path_hook() {
     log_info "adding BROWSER_PATH hook to $sitecustomize"
     cat >>"$sitecustomize" <<EOF
 import os, glob
-_matches = sorted(glob.glob("$PLAYWRIGHT_BROWSERS_DIR/chromium-*/chrome-linux/chrome"))
+_matches = sorted(glob.glob("$PLAYWRIGHT_BROWSERS_DIR/chromium-*/*/chrome"))
 if _matches:
     os.environ.setdefault("BROWSER_PATH", _matches[-1])
 EOF
@@ -346,7 +346,7 @@ smoke_test() {
 
     log_info "running Chromium smoke test: static plot image export"
     local browser_path="" f
-    for f in "$PLAYWRIGHT_BROWSERS_DIR"/chromium-*/chrome-linux/chrome; do
+    for f in "$PLAYWRIGHT_BROWSERS_DIR"/chromium-*/*/chrome; do
         [ -x "$f" ] && browser_path="$f"
     done
     if [ -z "$browser_path" ] || [ ! -x "$browser_path" ]; then
