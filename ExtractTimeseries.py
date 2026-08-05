@@ -142,12 +142,13 @@ def timeSeriesToProfile(var, which,
             message['which'].append(1)
             message['avg_time'].append(x['time'][ixs].mean())
             d = None
-            if sum(1 for x in ixs if x) > 0:
+            valid = ixs & ~numpy.isnan(x['depth'])
+            if sum(1 for x in valid if x) > 0:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", category=RuntimeWarning)
 
-                    d = scipy.stats.binned_statistic(x['depth'][ixs],
-                                                     x[var][ixs], statistic=numpy.nanmean, bins=bins).statistic
+                    d = scipy.stats.binned_statistic(x['depth'][valid],
+                                                     x[var][valid], statistic=numpy.nanmean, bins=bins).statistic
 
             if d is not None:
                 arr[:,i] = d.T
@@ -162,12 +163,13 @@ def timeSeriesToProfile(var, which,
             message['which'].append(4)
             message['avg_time'].append(x['time'][ixs].mean())
             d = None
-            if sum(1 for x in ixs if x) > 0:
+            valid = ixs & ~numpy.isnan(x['depth'])
+            if sum(1 for x in valid if x) > 0:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", category=RuntimeWarning)
 
-                    d = scipy.stats.binned_statistic(x['depth'][ixs],
-                                                     x[var][ixs], statistic=numpy.nanmean, bins=bins).statistic
+                    d = scipy.stats.binned_statistic(x['depth'][valid],
+                                                     x[var][valid], statistic=numpy.nanmean, bins=bins).statistic
 
             if d is not None:
                 arr[:,i] = d.T
@@ -184,11 +186,12 @@ def timeSeriesToProfile(var, which,
                 warnings.simplefilter("ignore", category=RuntimeWarning)
                 message['avg_time'].append(x['time'][ixs].mean())
             d = None
-            if sum(1 for x in ixs if x) > 0:
+            valid = ixs & ~numpy.isnan(x['depth'])
+            if sum(1 for x in valid if x) > 0:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", category=RuntimeWarning)
-                    d = scipy.stats.binned_statistic(x['depth'][ixs],
-                                                     x[var][ixs], statistic=numpy.nanmean, bins=bins).statistic
+                    d = scipy.stats.binned_statistic(x['depth'][valid],
+                                                     x[var][valid], statistic=numpy.nanmean, bins=bins).statistic
 
             if d is not None:
                 arr[:,i] = d.T
