@@ -26,5 +26,11 @@ def load_dive_variables(file_nc: Path, variables: Sequence[str]) -> dict[str, np
     Raises:
         KeyError: If a requested variable is not present in the file.
     """
-    with xr.open_dataset(file_nc, decode_timedelta=False) as ds:
+    # CF time decoding is applied only to the requested subset, not the
+    # whole file: some Seaglider profiles carry unrelated variables (e.g.
+    # compass_timeouts_times_truck) whose "seconds since ..." units
+    # attribute is stale/mismatched with their actual (character) storage,
+    # which raises if xarray tries to CF-decode them on open.
+    with xr.open_dataset(file_nc, decode_times=False, decode_timedelta=False) as raw:
+        ds = xr.decode_cf(raw[list(variables)], decode_timedelta=False)
         return {name: ds[name].to_numpy() for name in variables}
