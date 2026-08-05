@@ -86,7 +86,9 @@ def _fill_gaps(z: NDArray[np.float64], values: NDArray[np.float64]) -> NDArray[n
     """Linearly interpolates interior NaN gaps; holds the leading value constant before the first finite sample.
 
     Trailing NaNs (after the last finite sample) are left as NaN, matching
-    MATLAB's default (non-extrapolating) ``interp1``.
+    MATLAB's default (non-extrapolating) ``interp1``. A cast with no finite
+    samples at all (e.g. too short/shallow to land in this depth bin) comes
+    back all-NaN rather than raising.
 
     Args:
         z: Depth grid corresponding to ``values``.
@@ -97,8 +99,10 @@ def _fill_gaps(z: NDArray[np.float64], values: NDArray[np.float64]) -> NDArray[n
     """
     finite = np.isfinite(values)
     finite_idx = np.flatnonzero(finite)
-    first, last = finite_idx[0], finite_idx[-1]
     filled = np.full_like(values, np.nan)
+    if finite_idx.size == 0:
+        return filled
+    first, last = finite_idx[0], finite_idx[-1]
     filled[first : last + 1] = np.interp(z[first : last + 1], z[finite], values[finite])
     filled[:first] = filled[first]
     return filled

@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from ctd_sampling.wkb import GriddedDives, WkbResult, _flip_prefix, build_dive_stack, compute_wkb_schedule
+from ctd_sampling.wkb import GriddedDives, WkbResult, _fill_gaps, _flip_prefix, build_dive_stack, compute_wkb_schedule
 
 _FIXTURES = Path(__file__).parent / "fixtures"
 _DIVE_NUMBERS = (93, 94, 95, 96, 97)
@@ -120,6 +120,17 @@ def test_flip_prefix_keeps_valid_data_anchored_for_a_partial_array() -> None:
     arr = np.array([30.0, 20.0, 10.0, 0.0, np.nan])
     result = _flip_prefix(arr)
     np.testing.assert_array_equal(result, np.array([0.0, 10.0, 20.0, 30.0, np.nan]))
+
+
+def test_fill_gaps_all_nan_cast_returns_all_nan() -> None:
+    """A cast with no finite samples (too short/shallow to land in this bin) comes back all-NaN, not a crash.
+
+    Regression test: build_dive_stack used to raise IndexError from
+    _fill_gaps when a binned cast's values were entirely NaN.
+    """
+    z = np.array([0.0, 10.0, 20.0, 30.0])
+    values = np.full_like(z, np.nan)
+    np.testing.assert_array_equal(_fill_gaps(z, values), values)
 
 
 def test_too_many_points_in_top_zone_raises(gridded_dives: GriddedDives) -> None:
