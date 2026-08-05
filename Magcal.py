@@ -62,6 +62,7 @@ import Utils
 from BaseLog import (
     BaseLogger,
     log_critical,
+    log_debug,
     log_error,
     log_info,
 )
@@ -216,6 +217,32 @@ def magcal_worker(
     pitch_deg = pitch_deg[:npts]
     roll_deg  = roll_deg[:npts]
     obs_num   = obs_num[:npts]
+
+    valid = np.logical_and.reduce(
+        (
+            np.logical_not(np.isnan(fxm)),
+            np.logical_not(np.isnan(fym)),
+            np.logical_not(np.isnan(fzm)),
+            np.logical_not(np.isnan(pitch)),
+            np.logical_not(np.isnan(roll)),
+        )
+    )
+    if not valid.all():
+        log_debug(
+            f"magcal: dropping {int((~valid).sum())} of {npts} points with NaN mag/pitch/roll data"
+        )
+        pitch     = pitch[valid]
+        roll      = roll[valid]
+        fxm       = fxm[valid]
+        fym       = fym[valid]
+        fzm       = fzm[valid]
+        pitch_deg = pitch_deg[valid]
+        roll_deg  = roll_deg[valid]
+        obs_num   = obs_num[valid]
+        npts      = int(valid.sum())
+
+    if npts == 0:
+        return ([], np.array([]), 0, 0, None, "")
 
     norm = 0
     mx = 0

@@ -171,6 +171,49 @@ def test_build_fit_line_text_negative_values_not_swallowed() -> None:
     assert fit_line == 'hard0="-1.5 -20.2 -100.0"'
 
 
+def test_magcal_handles_nan_magnetometer_sample(caplog: pytest.LogCaptureFixture) -> None:
+    """A single NaN sample in eng_mag_x must not poison the whole hard-iron
+    fit into an all-NaN result - regression test for a bug (sg196 dive 13)
+    where a NaN anywhere in eng_mag_x/y/z propagated, via an unguarded
+    scalar normalization in Magcal.magcal_worker, into every downstream
+    sample: the fitted hard-iron vector, the plot's axis range, and the
+    title ended up NaN (`hard0="nan nan nan"`), rendering an empty plot.
+    """
+    baseplot_options, data_dir_name, nc_filename = _MAGCAL_DIVE
+    data_dir = pathlib.Path("testdata").joinpath(data_dir_name)
+    mission_dir = data_dir.joinpath("mission_dir")
+
+    def inject_nan(mission_dir: pathlib.Path) -> None:
+        nc_file = Utils.open_netcdf_file(str(mission_dir / nc_filename), mode="r+")
+        nc_file.variables["eng_mag_x"][0] = float("nan")
+        nc_file.close()
+
+    cmd_line = ["--verbose", "--mission_dir", str(mission_dir)]
+    cmd_line += baseplot_options.split(" ")
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        BasePlot.main,
+        cmd_line,
+        caplog,
+        [""],
+        pre_test_hook=inject_nan,
+    )
+
+    nc_file = Utils.open_netcdf_file(str(mission_dir / nc_filename))
+    try:
+        hard, _soft, _cover, _circ, fig, copy_text = Magcal.magcal_worker(
+            [nc_file], True, "html", "test title"
+        )
+    finally:
+        nc_file.close()
+
+    assert fig is not None
+    assert copy_text
+    assert "nan" not in copy_text.lower()
+    assert np.isfinite(hard).all()
+
+
 def test_copy_button_copies_hard0_soft0(caplog: pytest.LogCaptureFixture) -> None:
     """The magcal plot's "Copy calibration" button copies the exact
     hard0=/soft0= text shown in the title to the clipboard, as plain
