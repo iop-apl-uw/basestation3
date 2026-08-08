@@ -4383,7 +4383,13 @@ def create_nc_var(
                 complevel=9,
                 fill_value=meta_data_d.get("_FillValue", False),
             )
-            value = netCDF4.stringtochar(value)
+            # netCDF4.stringtochar() with encoding="bytes" returns a flat array
+            # instead of shape value.shape + (itemsize,) - reshape it ourselves
+            orig_shape = value.shape
+            itemsize = value.dtype.itemsize
+            value = netCDF4.stringtochar(value, encoding="bytes").reshape(
+                orig_shape + (itemsize,)
+            )
         else:
             nc_var = nc_file.createVariable(
                 var_name,
