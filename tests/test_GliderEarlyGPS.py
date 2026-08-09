@@ -222,6 +222,49 @@ def test_run_bails_out_after_repeated_unexpected_exceptions(
     cleanup_shutdown_mock.assert_called_once()
 
 
+def test_process_comm_log_wrapper_dispatches_received_for_extension_known_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Regression test for process_comm_log_wrapper not forwarding known_files
+    to CommLog.process_comm_log as known_commlog_files. Without that, CommLog
+    falls back to its own hardcoded default (cmdfile/science/targets/
+    pdoscmds.bat), so a file registered only via a sensor extension - here
+    modeled on tcm2mat.cal, one of the entries in Globals.known_files - gets
+    dispatched as callback_transfered instead of callback_received when it's
+    sent via X/YMODEM (the only path in CommLog.py gated by that list; the
+    raw-send path dispatches callback_received unconditionally, so a raw
+    example wouldn't exercise this bug)."""
+    base_opts = _make_base_opts(tmp_path)
+    comm_log_file = tmp_path / "comm.log"
+    comm_log_file.write_text(
+        "Connected at 2026-08-08T11:21:07Z (sg180)\n"
+        "logged in\n"
+        "ver=67.01,rev=7538:7540M,frag=8,launch=040826:133554\n"
+        "2026-08-08T11:22:30Z [sg180] Sent 392 bytes of tcm2mat.cal/YMODEM: 512 Bytes, 50 BPS\n"
+    )
+
+    calls: list[tuple[str, str, int]] = []
+
+    def fake_received(self, filename, size):
+        calls.append(("received", filename, size))
+
+    def fake_transfered(self, filename, size):
+        calls.append(("transfered", filename, size))
+
+    monkeypatch.setattr(
+        GliderEarlyGPS.GliderEarlyGPSClient, "callback_received", fake_received
+    )
+    monkeypatch.setattr(
+        GliderEarlyGPS.GliderEarlyGPSClient, "callback_transfered", fake_transfered
+    )
+
+    client = _make_client(tmp_path, base_opts, known_files=["tcm2mat.cal"])
+    client._first_time = False
+
+    assert client.process_comm_log_wrapper() == 0
+    assert calls == [("received", "tcm2mat.cal", 392)]
+
+
 def test_run_survives_unexpected_exception_in_loop(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

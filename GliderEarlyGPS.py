@@ -200,6 +200,7 @@ class GliderEarlyGPSClient:
             ) = CommLog.process_comm_log(
                 self.__comm_log_file_name,
                 self.__base_opts,
+                known_commlog_files=self.__known_files,
                 start_pos=self._start_pos,
                 call_back=self,
                 session=self._commlog_session,
