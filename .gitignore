@@ -17,7 +17,6 @@ rawxfer/rawrcv2
 rawxfer/rawsend
 etc
 /local/
-ssh
 microstructure
 adcp
 data/

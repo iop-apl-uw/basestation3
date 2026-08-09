@@ -72,6 +72,9 @@ dependencies = [
     "pillow",  # Used it image verification on the CI pipeline
     # WKB-stretched CTD sampling schedule dive plot
     "ctd_sampling",
+    # For ssh/AvisoUtils.py and ssh/MakeKMLSSH.py
+    "scikit-image",
+    "copernicusmarine==2.0.0",
 ]
 
 [tool.uv.sources]
