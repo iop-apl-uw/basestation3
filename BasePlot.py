@@ -39,11 +39,9 @@ import os
 import pathlib
 import pdb
 import pstats
-import signal
 import sys
 import time
 import traceback
-import types
 
 import numpy as np
 import plotly
@@ -92,17 +90,6 @@ def DEBUG_PDB_F() -> None:
         _, __, traceb = sys.exc_info()
         traceback.print_exc()
         pdb.post_mortem(traceb)
-
-
-# Extend from BaseException so cathches to Exception (which are everywhere)
-# are bypassed.
-class Timeout(BaseException):
-    """Defines an exception for timeout to system call"""
-
-
-def _timeout(signum: int, frame: types.FrameType | None) -> None:
-    """Raises the timeout exception"""
-    raise Timeout()
 
 
 def get_dive_plots(base_opts: BaseOpts.BaseOptions) -> dict:
@@ -164,9 +151,6 @@ def plot_dives(
                 #             max_count=1,
                 #         )
                 try:
-                    if base_opts.plot_dive_timeout:
-                        prev_handler = signal.signal(signal.SIGALRM, _timeout)
-                        signal.alarm(base_opts.plot_dive_timeout)
                     t0 = time.time()
                     if (
                         hasattr(base_opts, "stop_processing_event")
@@ -178,17 +162,22 @@ def plot_dives(
                     pass
                 log_debug(f"Trying Dive Plot :{plot_name}")
                 try:
-                    fig_list, file_list = plot_func(
-                        base_opts,
-                        dive_ncf,
-                        generate_plots=generate_plots,
-                        dbcon=con,
-                    )
-                except Timeout:
+                    with PlotUtilsPlotly.static_image_timeout(
+                        base_opts.plot_dive_timeout
+                    ):
+                        fig_list, file_list = plot_func(
+                            base_opts,
+                            dive_ncf,
+                            generate_plots=generate_plots,
+                            dbcon=con,
+                        )
+                except PlotUtilsPlotly.PlotTimeout:
                     log_error(
                         f"Timeout: dive plot {plot_name} exceeded timeout ({base_opts.plot_dive_timeout})",
                         alert="PLOT_TIMEOUT",
                     )
+                    if kaleido_server is not None:
+                        kaleido_server.reset_kaleido_server()
                 except KeyboardInterrupt:
                     return (figs, output_files)
                 except Exception:
@@ -200,9 +189,6 @@ def plot_dives(
                     for file_name in Utils.flatten(file_list):
                         output_files.append(file_name)
                 finally:
-                    if base_opts.plot_dive_timeout:
-                        signal.alarm(0)
-                        signal.signal(signal.SIGALRM, prev_handler)
                     dive_plot_times[plot_name] += time.time() - t0
     finally:
         if kaleido_server is not None:
@@ -273,22 +259,24 @@ def plot_mission(
                 pass
             log_debug(f"Trying Mission Plot: {plot_name}")
             try:
-                if base_opts.plot_mission_timeout:
-                    prev_handler = signal.signal(signal.SIGALRM, _timeout)
-                    signal.alarm(base_opts.plot_mission_timeout)
                 t0 = time.time()
-                fig_list, file_list = plot_func(
-                    base_opts,
-                    mission_str,
-                    dive=dive,
-                    generate_plots=generate_plots,
-                    dbcon=con,
-                )
-            except Timeout:
+                with PlotUtilsPlotly.static_image_timeout(
+                    base_opts.plot_mission_timeout
+                ):
+                    fig_list, file_list = plot_func(
+                        base_opts,
+                        mission_str,
+                        dive=dive,
+                        generate_plots=generate_plots,
+                        dbcon=con,
+                    )
+            except PlotUtilsPlotly.PlotTimeout:
                 log_error(
                     f"Timeout: mission plot {plot_name} exceeded timeout ({base_opts.plot_mission_timeout})",
                     alert="PLOT_TIMEOUT",
                 )
+                if kaleido_server is not None:
+                    kaleido_server.reset_kaleido_server()
             except KeyboardInterrupt:
                 return (figs, output_files)
             except Exception:
@@ -300,9 +288,6 @@ def plot_mission(
                 for file_name in file_list:
                     output_files.append(file_name)
             finally:
-                if base_opts.plot_mission_timeout:
-                    signal.alarm(0)
-                    signal.signal(signal.SIGALRM, prev_handler)
                 mission_plot_times[plot_name] = time.time() - t0
     finally:
         if kaleido_server is not None:

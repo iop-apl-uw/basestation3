@@ -57,6 +57,7 @@ import BaseOpts
 import BaseOptsType
 import CommLog
 import PlotUtils
+import PlotUtilsPlotly
 import RegressVBD
 import Utils
 from BaseLog import (
@@ -104,7 +105,18 @@ def magcal(
     hard, soft, cover, circ, fig, _copy_text = magcal_worker(nc_files, softiron, doplot, title)
 
     if fig and doplot == 'png':
-        imgs = fig.to_image(format="png")
+        try:
+            with PlotUtilsPlotly.static_image_timeout(
+                PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS
+            ):
+                imgs = fig.to_image(format="png")
+        except PlotUtilsPlotly.PlotTimeout:
+            log_error(
+                f"Timeout: magcal plot for {title} exceeded timeout "
+                f"({PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS})",
+                alert="PLOT_TIMEOUT",
+            )
+            imgs = None
     elif fig and doplot == 'html':
         imgs = fig.to_html(
                             include_plotlyjs="cdn",

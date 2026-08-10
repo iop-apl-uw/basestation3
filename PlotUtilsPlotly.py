@@ -36,9 +36,12 @@ import contextlib
 import io
 import json
 import pathlib
+import signal
 import threading
 import time
+import types
 import warnings
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, Literal
 
 import brotli
@@ -68,6 +71,81 @@ std_scale = 1.0
 # Matches what vis is expecting
 thumbnail_width = 185
 thumbnail_height = 185
+
+# Matches BaseOpts.plot_dive_timeout's default; used as the timeout for static
+# image generation in call sites that have no base_opts (and thus no
+# plot_dive_timeout/plot_mission_timeout) available.
+DEFAULT_STATIC_IMAGE_TIMEOUT_SECS = 120
+
+# Closing a healthy kaleido server (sentinel + thread exit) is near-instant;
+# this only needs to be long enough to not fire on a healthy shutdown.
+DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS = 30
+
+
+class PlotTimeout(BaseException):
+    """Raised when static image generation (kaleido/Chrome) exceeds its allotted time.
+
+    Extends BaseException, not Exception, so the broad ``except Exception``
+    blocks common throughout the plotting pipeline don't accidentally swallow
+    it before it reaches the caller responsible for handling a timeout.
+    """
+
+
+def _raise_plot_timeout(signum: int, frame: types.FrameType | None) -> None:
+    """Signal handler installed by static_image_timeout(); raises PlotTimeout.
+
+    Args:
+        signum: Signal number delivered (always signal.SIGALRM here).
+        frame: Interrupted stack frame. Unused.
+
+    Returns:
+        None.
+
+    Raises:
+        PlotTimeout: Always.
+    """
+    raise PlotTimeout()
+
+
+@contextlib.contextmanager
+def static_image_timeout(seconds: int | None) -> Iterator[None]:
+    """Bounds a block that may call into kaleido/Chrome with a SIGALRM timeout.
+
+    Only one SIGALRM can be outstanding per process, so if an outer caller
+    (e.g. BasePlot.py's plot_dives()/plot_mission()) already has an alarm
+    running, this becomes a no-op passthrough that restores the outer alarm
+    unchanged rather than clobbering it with a shorter- or longer-lived one.
+
+    Args:
+        seconds: Timeout in seconds. A falsy value (0 or None) disables the
+            timeout entirely.
+
+    Yields:
+        None.
+
+    Raises:
+        PlotTimeout: If the protected block doesn't complete within
+            `seconds` and no outer timeout is already active.
+    """
+    if not seconds:
+        yield
+        return
+
+    remaining = signal.alarm(0)
+    if remaining:
+        # An outer static_image_timeout() (or BasePlot.py's own alarm) already
+        # owns the process's single SIGALRM; defer to it instead of nesting.
+        signal.alarm(remaining)
+        yield
+        return
+
+    prev_handler = signal.signal(signal.SIGALRM, _raise_plot_timeout)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, prev_handler)
 
 
 #
@@ -245,12 +323,26 @@ def write_output_files(
         ("save_svg", "svg"),
     ]
 
-    for opt_name, ext in formats:
-        if getattr(base_opts, opt_name):
-            try:
-                ret_list.append(save_img_file(ext))
-            except Exception as e:
-                log_error(f"Failed to write out {base_file_name}.{ext}: {e}")
+    # Not every base_opts has plot_dive_timeout (only apps that add the
+    # "Base"/"Reprocess"/"BasePlot"/"BaseDB" option groups do) - fall back to
+    # the shared default so standalone callers (e.g. SimplePlotExtension.py,
+    # MakePlotTSProfile.py, FlightModel.py) still get protection.
+    image_timeout = getattr(
+        base_opts, "plot_dive_timeout", DEFAULT_STATIC_IMAGE_TIMEOUT_SECS
+    )
+    try:
+        with static_image_timeout(image_timeout):
+            for opt_name, ext in formats:
+                if getattr(base_opts, opt_name):
+                    try:
+                        ret_list.append(save_img_file(ext))
+                    except Exception as e:
+                        log_error(f"Failed to write out {base_file_name}.{ext}: {e}")
+    except PlotTimeout:
+        log_error(
+            f"Timeout: static image generation for {base_file_name} exceeded timeout ({image_timeout})",
+            alert="PLOT_TIMEOUT",
+        )
 
     def isnotebook():
         try:
@@ -503,6 +595,50 @@ def build_clipboard_button_post_script(
     )
 
 
+def _bounded_close_global_server(timeout: float) -> None:
+    """Best-effort close of kaleido's global server singleton, bounded by a timeout.
+
+    kaleido's own ``GlobalKaleidoServer.close()`` joins its background render
+    thread with no timeout, so a wedged thread (e.g. left mid-render by a
+    previously-interrupted static_image_timeout()) hangs the caller forever.
+    This runs that close() in a daemon thread and only waits up to `timeout`
+    seconds for it, so callers can never be blocked longer than that no
+    matter how wedged the background thread is.
+
+    Args:
+        timeout: Seconds to wait for the close to complete before giving up
+            on it.
+
+    Returns:
+        None.
+    """
+    server = getattr(kaleido, "_global_server", None)
+    if server is None:
+        return
+
+    def _close() -> None:
+        with contextlib.suppress(Exception):
+            server.close()
+
+    closer = threading.Thread(target=_close, daemon=True)
+    closer.start()
+    closer.join(timeout)
+    if closer.is_alive():
+        log_error(
+            f"Timeout: kaleido server shutdown did not complete within "
+            f"{timeout}s (background render thread likely wedged) - "
+            "abandoning it and starting fresh",
+            alert="PLOT_TIMEOUT",
+        )
+
+    # Dynamically capture the true class type (independent of Kaleido
+    # version) and re-instantiate a completely fresh copy - unconditionally,
+    # since the old instance may still be wedged in the abandoned close()
+    # above and must never be reused as the process-wide singleton.
+    ServerClass = server if isinstance(server, type) else server.__class__
+    kaleido._global_server = ServerClass()
+
+
 class KaleidoServer:
     """Manages the lifecycle, exception handling, and health of the global Kaleido server.
 
@@ -552,26 +688,19 @@ class KaleidoServer:
     def reset_kaleido_server(self) -> None:
         """Resets the global Kaleido server instance to a clean post-import state.
 
-        Safely breaks down any open communication channels before re-instantiating
-        a fresh copy of the server class type.
+        Safely breaks down any open communication channels (bounded, so a
+        wedged background render thread can't hang this call - see
+        _bounded_close_global_server()) before re-instantiating a fresh copy
+        of the server class type.
         """
-        server = getattr(kaleido, "_global_server", None)
-
-        if server is not None:
-            with contextlib.suppress(Exception):
-                # 1. Safely break down any open communication channels
-                server.close()
-
-            # 2. Dynamically capture the true Class type (independent of Kaleido version)
-            ServerClass = server if isinstance(server, type) else server.__class__
-
-            # 3. Re-instantiate a completely fresh copy of that class using ()
-            kaleido._global_server = ServerClass()
-            log_debug(
-                "Kaleido global server has been dynamically reset to a clean post-import state."
-            )
-        else:
+        if getattr(kaleido, "_global_server", None) is None:
             log_info("No global server instance found to reset.")
+            return
+
+        _bounded_close_global_server(DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS)
+        log_debug(
+            "Kaleido global server has been dynamically reset to a clean post-import state."
+        )
 
     def is_kaleido_global_server_running(self) -> tuple[bool, str]:
         """Checks if the persistent global server thread is active and warm.
@@ -666,7 +795,14 @@ class KaleidoServer:
         threading.excepthook = original_hook
 
     def stop_kaleido_global_server(self) -> None:
-        """Stops the underlying synchronized server execution."""
+        """Stops the underlying synchronized server execution.
+
+        Bounded (see _bounded_close_global_server()) so a wedged background
+        render thread can't hang the caller forever - this was the root
+        cause of a multi-hour production hang (sg180, 2026-08-09) where an
+        earlier per-plot timeout left the shared kaleido thread wedged, and
+        the unguarded shutdown here then blocked forever.
+        """
         if self.server_running:
-            kaleido.stop_sync_server()
+            _bounded_close_global_server(DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS)
             self.server_running = False

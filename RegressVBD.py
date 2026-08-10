@@ -57,6 +57,7 @@ from BaseLog import (
 )
 
 import BaseOpts
+import PlotUtilsPlotly
 import scipy
 
 import math
@@ -477,7 +478,18 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
     imgs = None
 
     if doplot == 'png':
-        imgs = [fig.to_image(format="png")]
+        try:
+            with PlotUtilsPlotly.static_image_timeout(
+                PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS
+            ):
+                imgs = [fig.to_image(format="png")]
+        except PlotUtilsPlotly.PlotTimeout:
+            log_error(
+                f"Timeout: regress plot for {title} exceeded timeout "
+                f"({PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS})",
+                alert="PLOT_TIMEOUT",
+            )
+            imgs = []  # keep list type so the per-dive loop below can still append
     elif doplot == 'html':
         imgs = [fig.to_html(
                             include_plotlyjs="cdn",
@@ -583,7 +595,17 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
         figs.append(fig)
 
         if doplot == 'png':
-            imgs.append(fig.to_image(format="png"))
+            try:
+                with PlotUtilsPlotly.static_image_timeout(
+                    PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS
+                ):
+                    imgs.append(fig.to_image(format="png"))
+            except PlotUtilsPlotly.PlotTimeout:
+                log_error(
+                    f"Timeout: regress plot for {title} exceeded timeout "
+                    f"({PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS})",
+                    alert="PLOT_TIMEOUT",
+                )
         elif doplot == 'html':
             imgs.append(fig.to_html(
                                 include_plotlyjs="cdn",
