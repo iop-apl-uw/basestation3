@@ -1201,9 +1201,11 @@ def make_netcdf_network_file(
         for ll in lp.state_table:
             ll[0] += start_time
             gc_time.append(ll[0])
-            full_gc_table = np.vstack(  # ty: ignore[no-matching-overload]
-                [full_gc_table, np.append(ll[0], np.append([np.nan] * 9, ll[1:]))]
-            )
+            new_row = np.append(ll[0], np.append([np.nan] * 9, ll[1:]))
+            if full_gc_table is None:
+                full_gc_table = new_row
+            else:
+                full_gc_table = np.vstack([full_gc_table, new_row])
         rc = np.array(gc_time, np.float32)
         # Wrong solution - complete sorts rows and coloumns
         # data = np.sort(full_gc_table, axis=0)

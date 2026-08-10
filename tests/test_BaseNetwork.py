@@ -398,6 +398,120 @@ def test_cdf_subparser_reproduces_and_fixes_crash(tmp_path, caplog):
         ds.close()
 
 
+def test_cdf_subparser_state_only_dive_no_gc_table(tmp_path, caplog):
+    """Regression test for a `.nlog` with $STATE lines but zero $GC lines
+    (e.g. a pressure-timeout/aborted dive) - previously crashed with
+    `ValueError: ... array at index 0 has size 1 and the array at index 1
+    has size 12` because `full_gc_table` was still `None` when the
+    state-table loop ran its first `np.vstack`.
+    """
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    nlog_path = data_dir / "p2720002.nlog"
+    nlog_path.write_text(
+        "$ID,272\n"
+        "$DIVE,2\n"
+        "start:01 01 26 00 00 00\n"
+        "$STATE,10.0,begin dive,CONTROL_FINISHED_OK\n"
+        "$STATE,20.0,end dive,CONTROL_FINISHED_OK\n"
+    )
+    mission_dir = tmp_path / "mission_dir"
+
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        _main_with_argv,
+        [
+            "--verbose",
+            "cdf",
+            str(mission_dir / "p2720002.nlog"),
+        ],
+        caplog,
+        [
+            "not found - skipping",  # expected: no paired .npro file
+            "no depth",  # expected: BaseDB, minimal fixture has no depth data
+            "gps fixes not in",  # expected: BaseDB, minimal fixture has no GPS fixes
+        ],
+    )
+
+    ncdf_file = mission_dir / "p2720002.ncdf"
+    assert ncdf_file.exists()
+    ds = xr.open_dataset(ncdf_file)
+    try:
+        assert int(ds["dive_number"].item()) == 2
+        assert "log_GC" in ds.variables
+        gc = ds["log_GC"].values
+        assert gc.shape == (2, 12)
+        # time (col 0) is populated; the 9 GC columns (1-9) are nan for a
+        # state-only dive with no $GC lines.
+        assert not np.any(np.isnan(gc[:, 0]))
+        assert np.all(np.isnan(gc[:, 1:10]))
+        # state (col 10) and eop_code (col 11) are populated, not nan.
+        assert not np.any(np.isnan(gc[:, 10:12]))
+    finally:
+        ds.close()
+
+
+def test_cdf_subparser_state_and_gc_table_merge(tmp_path, caplog):
+    """A dive with both $GC and $STATE lines must merge both into log_GC -
+    guards against a regression re-introducing the workaround that
+    commented out the $STATE merge entirely (which silently dropped
+    state/eop_code data even for normal dives that do have GC data).
+    """
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    nlog_path = data_dir / "p2720002.nlog"
+    nlog_path.write_text(
+        "$ID,272\n"
+        "$DIVE,2\n"
+        "start:01 01 26 00 00 00\n"
+        "$GC,5.0,1,2,3,4,5,6,7,8,9\n"
+        "$STATE,10.0,begin dive,CONTROL_FINISHED_OK\n"
+        "$STATE,20.0,end dive,CONTROL_FINISHED_OK\n"
+    )
+    mission_dir = tmp_path / "mission_dir"
+
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        _main_with_argv,
+        [
+            "--verbose",
+            "cdf",
+            str(mission_dir / "p2720002.nlog"),
+        ],
+        caplog,
+        [
+            "not found - skipping",  # expected: no paired .npro file
+            "no depth",  # expected: BaseDB, minimal fixture has no depth data
+            "gps fixes not in",  # expected: BaseDB, minimal fixture has no GPS fixes
+        ],
+    )
+
+    ncdf_file = mission_dir / "p2720002.ncdf"
+    assert ncdf_file.exists()
+    ds = xr.open_dataset(ncdf_file)
+    try:
+        gc = ds["log_GC"].values
+        # One GC row plus two STATE rows, sorted by time.
+        assert gc.shape == (3, 12)
+        # The single $GC row has real values in columns 1-9, and nan
+        # state/eop_code columns.
+        is_gc_row = ~np.isnan(gc[:, 1])
+        assert is_gc_row.sum() == 1
+        gc_row = gc[is_gc_row][0]
+        assert not np.any(np.isnan(gc_row[1:10]))
+        assert np.all(np.isnan(gc_row[10:12]))
+        # The two $STATE rows have nan GC columns and populated
+        # state/eop_code columns.
+        state_rows = gc[~is_gc_row]
+        assert state_rows.shape == (2, 12)
+        assert np.all(np.isnan(state_rows[:, 1:10]))
+        assert not np.any(np.isnan(state_rows[:, 10:12]))
+    finally:
+        ds.close()
+
+
 def test_cdf_subparser_with_nlog_and_npro(tmp_path, caplog):
     data_dir = tmp_path / "data"
     data_dir.mkdir()
