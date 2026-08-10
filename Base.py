@@ -1044,7 +1044,7 @@ def process_file_group(
                     processed_other_files.append(fc.mk_base_logfile_name())
                 elif fc.is_network_profile():
                     BaseNetwork.convert_network_profile(
-                        in_file_name, fc.mk_base_datfile_name()
+                        base_opts, in_file_name, fc.mk_base_datfile_name()
                     )
                     processed_other_files.append(fc.mk_base_datfile_name())
             else:

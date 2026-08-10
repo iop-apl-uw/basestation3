@@ -198,5 +198,5 @@ omit = [
 # TODO - see if this can be scoped to just that class in future releases
 #unresolved-attribute = "ignore"
 [tool.ty.src]
-include = ["BaseLog.py", "CalibConst.py", "Utils.py", "Utils2.py"]
+include = ["BaseLog.py", "BaseNetwork.py", "CalibConst.py", "Utils.py", "Utils2.py"]
 #include = ["Utils.py", "Base.py"]

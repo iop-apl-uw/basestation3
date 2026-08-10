@@ -1752,6 +1752,20 @@ global_options_dict: dict[str, options_t] = {
             "action": FullPathlibAction,
         },
     ),
+    "network_profile_decompressor": options_t(
+        "",
+        {
+            "Base",
+            "BaseNetwork",
+        },
+        ("--network_profile_decompressor",),
+        FullPathlib,
+        {
+            "help": "Compressed ct profile decompressor path",
+            "section": "network",
+            "action": FullPathlibAction,
+        },
+    ),
     # Hook script timeouts
     "pre_login_timeout": options_t(
         3,
