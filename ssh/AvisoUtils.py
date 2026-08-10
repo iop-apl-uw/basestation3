@@ -38,6 +38,7 @@ import shutil
 import sys
 import time
 import traceback
+import warnings
 
 import copernicusmarine
 import netCDF4
@@ -266,10 +267,20 @@ def decimate_nrt_netcdf(
             if a != "_FillValue":
                 nco_v.setncattr(a, nc_var.getncattr(a))
 
-        if acc:
-            nco_v[:] = nc_var.__getitem__(acc)
-        else:
-            nco_v[:] = nc_var[:]
+        # netCDF4 1.7.4 (latest as of this writing) internally reshapes arrays via
+        # `data.shape = ...` on a view, which NumPy 2.5 deprecated in favor of
+        # np.reshape(copy=False). This is upstream (Unidata/netcdf4-python), not our
+        # code - already suppressed for tests via pyproject.toml's filterwarnings.
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="Setting the shape on a NumPy array has been deprecated",
+                category=DeprecationWarning,
+            )
+            if acc:
+                nco_v[:] = nc_var.__getitem__(acc)
+            else:
+                nco_v[:] = nc_var[:]
 
     # Copy over global variables
     for a in dsi.ncattrs():
