@@ -1417,8 +1417,11 @@ global_options_dict: dict[str, options_t] = {
             "option_group": "plotting",
         },
     ),
+    # After profiling on an AWS EC2 instanace on NFS mounted drive, typical
+    # max times are 85 secs - so lower from 300 to stall less on an actual
+    # timeout
     "plot_mission_timeout": options_t(
-        300,
+        150, 
         {
             "Base",
             "Reprocess",
@@ -1446,7 +1449,7 @@ global_options_dict: dict[str, options_t] = {
         {
             "section": "plotting",
             "option_group": "plotting",
-            "help": "Timeout in seconds for the any individual mission plot",
+            "help": "Timeout in seconds for the any individual dive plot",
         },
     ),
     # End plotting related
