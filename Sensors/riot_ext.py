@@ -55,7 +55,8 @@ def init_logger(module_name, init_dict=None):
 
     init_dict[module_name] = {
         "logger_prefix": ri_prefix,
-        "known_files": ["atm.cfg", "riot.cfg", "rtcc.cfg"],
+        "known_files": [],
+        # "known_files": ["atm.cfg", "riot.cfg", "rtcc.cfg"],
         "netcdf_metadata_adds": {
             "log_RI_RECORDABOVE": [
                 False,
