@@ -1,4 +1,4 @@
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2026  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -46,6 +46,13 @@
 #
 # sudo cp baserunner@.service /etc/systemd/system/baserunner@.service
 #
+# This unit also joins system-baserunner.slice, which bounds the *combined*
+# CPU consumed by every site's baserunner@ instance (the guard against many
+# sites bursting at once, e.g. at boot - a per-unit CPUQuota alone only
+# guards against one runaway site). Install that file too:
+#
+# sudo cp system-baserunner.slice /etc/systemd/system/system-baserunner.slice
+#
 # Replace the following strings below:
 # 
 # {glider_jail_root} - the root of the gliders jail, if using a jail.  Otherwise "/" for the root of the filesystem
@@ -82,6 +89,14 @@ After=network.target
 Environment=PYTHONUNBUFFERED=true
 User=%i
 ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunner.py --jail_root {glider_jail_root} --base_log {user_homedir}/baserunner.log {rundir}
+# Per-site CPU accounting/cap - see system-baserunner.slice for the
+# aggregate cap across all sites combined. CPUQuota=100% here guards
+# against one runaway job (stuck FlightModel/plotting run) within this
+# one site; it does not by itself bound simultaneous multi-site bursts.
+#Slice=system-baserunner.slice
+#CPUAccounting=yes
+#CPUQuota=100%
+
 WatchdogSec=30
 Restart=always
 RuntimeMaxSec=86400

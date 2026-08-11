@@ -1,0 +1,61 @@
+## Copyright (c) 2026  University of Washington.
+##
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
+##
+## 1. Redistributions of source code must retain the above copyright notice, this
+##    list of conditions and the following disclaimer.
+##
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
+##
+## 3. Neither the name of the University of Washington nor the names of its
+##    contributors may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+##
+## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
+## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR CONTRIBUTORS BE
+## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+## GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#
+# Aggregate CPU budget for every baserunner@<site>.service instance combined.
+#
+# Each baserunner@.service instance sets its own per-site CPUQuota=100% (one
+# runaway job guard), but that alone does not bound what happens when many
+# sites burst at once (e.g. at boot) - this slice does. Sized for a
+# t4g.xlarge (4 vCPUs = 400% in systemd terms): CPUQuota=300% leaves
+# headroom for vis.py, interactive pilot logins, and AUV logins even if
+# every site is busy simultaneously. CPUWeight=50 (half the systemd
+# default of 100) means this slice yields CPU to those other consumers
+# under contention rather than competing evenly with them.
+#
+# Both values are a starting point - retune using real data once
+# CPUAccounting is live for a few days:
+#
+#   systemctl show system-baserunner.slice -p CPUQuota,CPUUsageNSec
+#   systemd-cgtop
+#
+# Installation:
+#
+# sudo cp system-baserunner.slice /etc/systemd/system/system-baserunner.slice
+# sudo systemctl daemon-reload
+#
+# baserunner@.service already references this slice via Slice=; each site's
+# unit joins it the next time that site's baserunner@<site>.service is
+# (re)started.
+#
+[Unit]
+Description=Aggregate CPU budget for all baserunner@ site instances
+
+[Slice]
+CPUAccounting=yes
+CPUQuota=300%
+CPUWeight=50
