@@ -215,6 +215,35 @@ def mk_jail(
                 os.chown(tgt_file, stat_info.st_uid, stat_info.st_gid)
 
 
+def update_glider_scripts(jail_root_name: str) -> None:
+    """Copies only glider_login and glider_logout into an existing jail.
+
+    Unlike --update, this does not touch anything else in the jail (no
+    directory tree recreation, no seaglider_files/pam libs recopy) - it's
+    for the common case of picking up script-only edits without paying
+    the cost of a full jail update.
+
+    Args:
+        jail_root_name: Root of the existing jail to update.
+
+    Returns:
+        None.
+
+    Raises:
+        No exceptions are raised beyond whatever shutil.copy2 itself
+        raises (e.g. FileNotFoundError if the jail's
+        usr/local/basestation3 directory doesn't exist yet).
+    """
+    jail_root = pathlib.Path(jail_root_name)
+    for script_file in (
+        pathlib.Path("/usr/local/basestation3/glider_login"),
+        pathlib.Path("/usr/local/basestation3/glider_logout"),
+    ):
+        tgt_file = jail_root.joinpath(str(script_file)[1:])
+        print(script_file, tgt_file)
+        shutil.copy2(script_file, tgt_file)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__)
     # Add verbosity arguments
@@ -240,6 +269,12 @@ if __name__ == "__main__":
         default=False,
     )
     ap.add_argument(
+        "--update_glider_scripts",
+        help="Update only glider_login and glider_logout in an existing jail",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
+    ap.add_argument(
         "--glider_dir",
         help="Path to glider directory to include in the jail",
         action=FullPaths,
@@ -254,25 +289,29 @@ if __name__ == "__main__":
 
     args = ap.parse_args()
 
-    # Add option to include a glider directory in the jail
+    if args.update_glider_scripts:
+        update_glider_scripts(args.jail_root)
+        print(f"Updated glider_login/glider_logout in {args.jail_root}")
+    else:
+        # Add option to include a glider directory in the jail
 
-    mk_jail(
-        args.jail_root,
-        args.glider_dir,
-        args.glider_dir_target,
-        args.create,
-        args.update,
-    )
-    if args.create:
-        print(f"Jail created in {args.jail_root}")
+        mk_jail(
+            args.jail_root,
+            args.glider_dir,
+            args.glider_dir_target,
+            args.create,
+            args.update,
+        )
+        if args.create:
+            print(f"Jail created in {args.jail_root}")
 
-    if args.glider_dir:
-        jailed_passwd = os.path.join(args.jail_root, "/etc/passwd")
-        jailed_group = os.path.join(args.jail_root, "/etc/group")
-        print(
-            f"{jailed_passwd} and {jailed_group} are not created by this script - they updated by Commission.py for new gliders"
-        )
-        print("For existing gliders, you need to do the updates yourself")
-        print(
-            f"Note that for the jail to work, entries /etc/password for glider accounts must have {args.jail_root} for the home directory and /sbin/chrootshell for the shell"
-        )
+        if args.glider_dir:
+            jailed_passwd = os.path.join(args.jail_root, "/etc/passwd")
+            jailed_group = os.path.join(args.jail_root, "/etc/group")
+            print(
+                f"{jailed_passwd} and {jailed_group} are not created by this script - they updated by Commission.py for new gliders"
+            )
+            print("For existing gliders, you need to do the updates yourself")
+            print(
+                f"Note that for the jail to work, entries /etc/password for glider accounts must have {args.jail_root} for the home directory and /sbin/chrootshell for the shell"
+            )
