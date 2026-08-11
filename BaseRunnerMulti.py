@@ -91,7 +91,6 @@ from BaseLog import (
 basestation_dir = str(pathlib.Path(__file__).parent.resolve())
 
 base_runner_lockfile_name = ".base_runner_lockfile"
-previous_runner_time_out = 10
 
 known_scripts = ("BaseLogin.py", "GliderEarlyGPS.py", "Base.py")
 queued_scripts = ("BaseLogin.py", "GliderEarlyGPS.py", "Base.py")
@@ -134,32 +133,30 @@ def quit_func(signo: int, _frame: object) -> None:
     exit_event.set()
 
 
-def _try_activate_site(site: SiteConfig.SiteConfig, priv_client: PrivExecClient) -> bool:
+def _try_activate_site(site: SiteConfig.SiteConfig) -> bool:
     """Checks a site's watch_dir exists and acquires its lock file.
 
-    Mirrors BaseRunner.py's single-site startup lock sequence, just scoped
-    to one site among many - a lock-acquisition problem is logged and
-    treated as non-fatal here (matching BaseRunner.py's own behavior), but
-    a missing watch_dir means this site isn't ready yet.
-
-    Signaling a stale lock-holding process is routed through priv_client
-    rather than a direct os.kill - this process (baserunner) generally
-    cannot signal a process owned by a different uid (the stale process,
-    if it's an old per-site BaseRunner.py instance, runs as that site's
-    own runner_user), so the actual kill has to happen as that account
-    (see PrivExecClient.signal and BaseRunnerPrivExec.PrivExecServer.
-    handle_signal). Confirmed on a real multipass VM during migration/
-    rollback testing - a plain os.kill here fails with EPERM.
+    Migrating a site is a manual, operator-driven cutover: stop the old
+    per-site BaseRunner.py unit, then (re)start BaseRunnerMulti with that
+    site in sites.yaml - see docs/BaseRunnerMulti.md's "Migrating a
+    site". If a stale lock is still held by a live process, this refuses
+    to activate the site rather than trying to evict it automatically:
+    an earlier version of this function did that (signaling the old
+    process, escalating to SIGKILL), but that mechanism required routing
+    every eviction through BaseRunnerPrivExec (this process can't signal
+    a different uid's process directly) and, per real multipass VM
+    testing, still wasn't reliable against a still-enabled unit with
+    Restart=always - systemd just restarts it. A loud "still running,
+    fix it yourself" is simpler and more honest than a self-healing path
+    that doesn't reliably self-heal.
 
     Args:
         site: The site to attempt to activate.
-        priv_client: Used to signal a stale lock-holding process as this
-            site's own runner account.
 
     Returns:
-        True if the site's watch_dir exists (lock issues are logged but
-        don't block activation, matching BaseRunner.py), False if the
-        site isn't ready yet and should stay pending.
+        True if the site's watch_dir exists and its lock was acquired,
+        False if the site isn't ready yet (missing watch_dir, or a live
+        process still holds its lock) and should stay pending.
     """
     if not site.watch_dir.exists():
         log_error(f"[{site.name}] {site.watch_dir} does not exist - skipping for now")
@@ -172,25 +169,12 @@ def _try_activate_site(site: SiteConfig.SiteConfig, priv_client: PrivExecClient)
     if lock_file_pid < 0:
         log_error(f"[{site.name}] Error accessing the lockfile - proceeding anyway...")
     elif lock_file_pid > 0:
-        log_warning(
-            f"[{site.name}] Previous runner process (pid:{lock_file_pid}) still "
-            "exists - signalling process to complete"
+        log_error(
+            f"[{site.name}] pid:{lock_file_pid} still holds this site's lock - "
+            "stop the old BaseRunner.py unit for this site first, then it will "
+            "be picked up on the next retry"
         )
-        try:
-            priv_client.signal(site.name, lock_file_pid, "TERM")
-        except PrivExecError:
-            log_error(f"[{site.name}] Could not signal pid:{lock_file_pid}", "exc")
-        if Utils.wait_for_pid(lock_file_pid, previous_runner_time_out):
-            log_error(
-                f"[{site.name}] Process pid:{lock_file_pid} did not respond to "
-                f"sighup after {previous_runner_time_out} seconds - trying to kill"
-            )
-            try:
-                priv_client.signal(site.name, lock_file_pid, "KILL")
-            except PrivExecError:
-                log_error(f"[{site.name}] Could not kill pid:{lock_file_pid}", "exc")
-        else:
-            log_info(f"[{site.name}] {lock_file_pid} responded to sighup")
+        return False
 
     Utils.create_lock_file(site, base_runner_lockfile_name)  # ty: ignore[invalid-argument-type]
     return True
@@ -211,22 +195,16 @@ class SiteRegistry:
     """Tracks which sites are actively watched vs. still pending activation."""
 
     def __init__(
-        self,
-        sites: dict[str, SiteConfig.SiteConfig],
-        inotify: InotifyLike,
-        priv_client: PrivExecClient,
+        self, sites: dict[str, SiteConfig.SiteConfig], inotify: InotifyLike
     ) -> None:
         """Builds the registry and makes an initial activation pass.
 
         Args:
             sites: Every site loaded from sites.yaml.
             inotify: The single shared INotify instance to register watches on.
-            priv_client: Used to signal a stale lock-holding process as
-                its own site's runner account (see _try_activate_site).
         """
         self._sites = sites
         self._inotify = inotify
-        self._priv_client = priv_client
         self._wd_to_site: dict[int, SiteConfig.SiteConfig] = {}
         self._pending: set[str] = set(sites)
         self.activate_pending()
@@ -252,7 +230,7 @@ class SiteRegistry:
         """
         for name in list(self._pending):
             site = self._sites[name]
-            if not _try_activate_site(site, self._priv_client):
+            if not _try_activate_site(site):
                 continue
             try:
                 wd = self._inotify.add_watch(str(site.watch_dir), flags.CLOSE_WRITE)
@@ -317,31 +295,6 @@ class PrivExecClient(Protocol):
 
         Returns:
             (done, returncode) - returncode is None while still running.
-
-        Raises:
-            PrivExecError: If the helper rejects or fails the request.
-        """
-        ...
-
-    def signal(self, site: str, pid: int, sig: str) -> None:
-        """Signals a process as site's runner account.
-
-        Needed because this process (baserunner) generally cannot signal
-        a process owned by a different uid (e.g. a stale lock-holding
-        process from a not-yet-migrated site, still running as that
-        site's own runner_user) - only the target account itself, or a
-        process with CAP_KILL, can. Routing through the privileged helper
-        avoids granting CAP_KILL anywhere: it already holds
-        CAP_SETUID/CAP_SETGID and can just become that account first,
-        after which the signal is an ordinary same-uid operation.
-
-        Args:
-            site: Site name whose runner account should send the signal.
-            pid: Target pid.
-            sig: "TERM" or "KILL".
-
-        Returns:
-            None.
 
         Raises:
             PrivExecError: If the helper rejects or fails the request.
@@ -461,10 +414,6 @@ class UnixSocketPrivExecClient:
         """See PrivExecClient.status."""
         response = self._request({"query": "status", "pid": pid})
         return response["done"], response.get("returncode")
-
-    def signal(self, site: str, pid: int, sig: str) -> None:
-        """See PrivExecClient.signal."""
-        self._request({"query": "signal", "site": site, "pid": pid, "signal": sig})
 
 
 @dataclasses.dataclass
@@ -943,14 +892,13 @@ def main() -> int:
 
     os.umask(0o002)
 
-    priv_client = UnixSocketPrivExecClient(base_opts.priv_exec_socket)
-
     inotify = INotify()
-    registry = SiteRegistry(sites, inotify, priv_client)
+    registry = SiteRegistry(sites, inotify)
     if not registry.active_sites:
         log_error("No sites could be activated - exiting")
         return 1
 
+    priv_client = UnixSocketPrivExecClient(base_opts.priv_exec_socket)
     dispatcher = Dispatcher(priv_client)
 
     notifier = sdnotify.SystemdNotifier()

@@ -256,36 +256,6 @@ class PrivilegeDropper:
         os.setuid(uid)
         os.execve(argv[0], argv, env)
 
-    def drop_and_signal(self, uid: int, gid: int, pid: int, sig: int) -> None:
-        """Drops privileges to uid/gid and sends sig to pid.
-
-        Used to signal a process owned by a different uid than this
-        helper's own (e.g. a stale lock-holding process from a
-        not-yet-migrated site) - this process itself generally cannot
-        signal across uids without CAP_KILL, which this helper does not
-        hold. Becoming that uid first (via the same setgroups/setgid/
-        setuid ordering as drop_and_exec, for the same reasons) makes the
-        signal an ordinary same-uid operation instead, so no additional
-        capability is needed.
-
-        Args:
-            uid: Target uid to become (a site's runner_uid).
-            gid: Target gid to become (a site's runner_gid).
-            pid: Target pid to signal.
-            sig: Signal number to send (e.g. signal.SIGTERM).
-
-        Returns:
-            None.
-
-        Raises:
-            OSError: If setgroups/setgid/setuid/kill fails (e.g. pid
-                doesn't exist, or belongs to yet another uid).
-        """
-        os.setgroups([gid])
-        os.setgid(gid)
-        os.setuid(uid)
-        os.kill(pid, sig)
-
 
 class CgroupJoiner:
     """Thin, mockable boundary around joining a per-site delegated cgroup.
@@ -614,69 +584,8 @@ class PrivExecServer:
             return {"ok": False, "error": f"unknown pid {pid}"}
         return {"ok": True, "done": done, "returncode": returncode}
 
-    def handle_signal(self, request: dict) -> dict:
-        """Answers a {"query": "signal", "site", "pid", "signal"} request.
-
-        Sends the signal AS the target site's own runner account (see
-        PrivilegeDropper.drop_and_signal) - the request carries a site
-        *name*, never a uid/gid, resolved only against this helper's own
-        table, the same invariant handle_dispatch enforces for exec
-        requests.
-
-        Args:
-            request: Raw request dict.
-
-        Returns:
-            {"ok": True} if the signal was sent successfully, or
-            {"ok": False, "error": <message>} otherwise.
-        """
-        site_name = request.get("site")
-        if not isinstance(site_name, str) or site_name not in self._sites:
-            return {"ok": False, "error": f"unknown site {site_name!r}"}
-        pid = request.get("pid")
-        if not isinstance(pid, int):
-            return {"ok": False, "error": "pid must be an int"}
-        sig_name = request.get("signal")
-        if sig_name not in ("TERM", "KILL"):
-            return {"ok": False, "error": f"unsupported signal {sig_name!r}"}
-
-        site = self._sites[site_name]
-        sig = getattr(signal, f"SIG{sig_name}")
-
-        try:
-            child_pid = self._fork()
-        except OSError as exc:
-            log_error(f"[{site_name}] fork() failed for signal request: {exc}")
-            return {"ok": False, "error": f"fork failed: {exc}"}
-
-        if child_pid == 0:
-            self._run_signal_child(site, pid, sig)  # never returns
-
-        _reaped_pid, status = os.waitpid(child_pid, 0)
-        ok = os.waitstatus_to_exitcode(status) == 0
-        if not ok:
-            log_warning(f"[{site_name}] could not signal pid {pid} with SIG{sig_name}")
-        return {"ok": ok} if ok else {"ok": False, "error": f"could not signal pid {pid}"}
-
-    def _run_signal_child(self, site: SiteConfig.SiteConfig, pid: int, sig: int) -> None:
-        """Runs only inside the forked child; always exits, never returns.
-
-        Args:
-            site: The site whose runner account should send the signal.
-            pid: Target pid.
-            sig: Signal number to send.
-
-        Returns:
-            Never returns - always calls os._exit.
-        """
-        try:
-            self._dropper.drop_and_signal(site.runner_uid, site.runner_gid, pid, sig)
-        except Exception:
-            os._exit(1)
-        os._exit(0)
-
     def handle_request(self, request: dict) -> dict:
-        """Routes a raw request to the dispatch, status, or signal handler.
+        """Routes a raw request to the dispatch or status handler.
 
         Args:
             request: Raw request dict.
@@ -684,11 +593,8 @@ class PrivExecServer:
         Returns:
             The handler's response dict.
         """
-        query = request.get("query")
-        if query == "status":
+        if request.get("query") == "status":
             return self.handle_status(request)
-        if query == "signal":
-            return self.handle_signal(request)
         return self.handle_dispatch(request)
 
     def handle_connection(self, conn: socket.socket) -> None:

@@ -91,8 +91,6 @@ class FakePrivExecClient:
         self._statuses: dict[int, tuple[bool, int | None]] = {}
         self.raise_on_dispatch: Exception | None = None
         self.raise_on_status: Exception | None = None
-        self.raise_on_signal: Exception | None = None
-        self.signalled: list[tuple[str, int, str]] = []
         # Optional hooks so individual tests can override behavior without
         # reassigning (and thereby shadowing) the dispatch/status methods.
         self.dispatch_override: Callable[[str, list[str], pathlib.Path], int] | None = None
@@ -118,11 +116,6 @@ class FakePrivExecClient:
 
     def set_status(self, pid: int, done: bool, returncode: int | None) -> None:
         self._statuses[pid] = (done, returncode)
-
-    def signal(self, site: str, pid: int, sig: str) -> None:
-        if self.raise_on_signal:
-            raise self.raise_on_signal
-        self.signalled.append((site, pid, sig))
 
 
 class _FakeInotify:
@@ -166,71 +159,25 @@ def test_try_activate_site_missing_watch_dir(tmp_path):
         runner_uid=1,
         runner_gid=1,
     )
-    assert BaseRunnerMulti._try_activate_site(site, FakePrivExecClient()) is False
+    assert BaseRunnerMulti._try_activate_site(site) is False
 
 
 def test_try_activate_site_with_ignore_lock(tmp_path):
     site = _site(tmp_path / "seaglider", ignore_lock=True)
-    assert BaseRunnerMulti._try_activate_site(site, FakePrivExecClient()) is True
+    assert BaseRunnerMulti._try_activate_site(site) is True
     assert (site.watch_dir / BaseRunnerMulti.base_runner_lockfile_name).exists()
 
 
-def test_try_activate_site_kills_stale_but_live_pid(tmp_path, monkeypatch):
+def test_try_activate_site_stays_pending_when_lock_held_by_live_pid(tmp_path, caplog):
     site = _site(tmp_path / "seaglider", ignore_lock=False)
     lock_file = site.watch_dir / BaseRunnerMulti.base_runner_lockfile_name
     lock_file.write_text(str(os.getpid()))  # a real, live pid (ourselves)
 
-    # check_for_pid's existence probe (os.kill(pid, 0)) is untouched by
-    # this change and runs for real - only the actual signal-sending is
-    # routed through priv_client (this process generally can't os.kill a
-    # different uid's process, per PrivExecClient.signal's docstring).
-    monkeypatch.setattr(Utils, "wait_for_pid", lambda pid, timeout: False)
-    priv_client = FakePrivExecClient()
-
-    assert BaseRunnerMulti._try_activate_site(site, priv_client) is True
-    assert (site.name, os.getpid(), "TERM") in priv_client.signalled
-    assert (site.name, os.getpid(), "KILL") not in priv_client.signalled
-    assert lock_file.read_text() == str(os.getpid())
-
-
-def test_try_activate_site_sigkills_unresponsive_pid(tmp_path, monkeypatch):
-    site = _site(tmp_path / "seaglider", ignore_lock=False)
-    lock_file = site.watch_dir / BaseRunnerMulti.base_runner_lockfile_name
-    lock_file.write_text(str(os.getpid()))
-
-    monkeypatch.setattr(Utils, "wait_for_pid", lambda pid, timeout: True)  # still alive
-    priv_client = FakePrivExecClient()
-
-    assert BaseRunnerMulti._try_activate_site(site, priv_client) is True
-    assert (site.name, os.getpid(), "TERM") in priv_client.signalled
-    assert (site.name, os.getpid(), "KILL") in priv_client.signalled
-
-
-def test_try_activate_site_term_signal_failure_is_non_fatal(tmp_path, monkeypatch, caplog):
-    site = _site(tmp_path / "seaglider", ignore_lock=False)
-    lock_file = site.watch_dir / BaseRunnerMulti.base_runner_lockfile_name
-    lock_file.write_text(str(os.getpid()))
-
-    monkeypatch.setattr(Utils, "wait_for_pid", lambda pid, timeout: False)
-    priv_client = FakePrivExecClient()
-    priv_client.raise_on_signal = BaseRunnerMulti.PrivExecError("unreachable")
-
-    assert BaseRunnerMulti._try_activate_site(site, priv_client) is True
+    assert BaseRunnerMulti._try_activate_site(site) is False
     assert any(r.levelname == "ERROR" for r in caplog.records)
+    # The stale lock is left untouched - the operator, not this process,
+    # is responsible for stopping whatever still holds it.
     assert lock_file.read_text() == str(os.getpid())
-
-
-def test_try_activate_site_kill_signal_failure_is_non_fatal(tmp_path, monkeypatch, caplog):
-    site = _site(tmp_path / "seaglider", ignore_lock=False)
-    lock_file = site.watch_dir / BaseRunnerMulti.base_runner_lockfile_name
-    lock_file.write_text(str(os.getpid()))
-
-    monkeypatch.setattr(Utils, "wait_for_pid", lambda pid, timeout: True)  # still alive
-    priv_client = FakePrivExecClient()
-    priv_client.raise_on_signal = BaseRunnerMulti.PrivExecError("unreachable")
-
-    assert BaseRunnerMulti._try_activate_site(site, priv_client) is True
-    assert any(r.levelname == "ERROR" for r in caplog.records)
 
 
 # --- SiteRegistry ---
@@ -248,7 +195,7 @@ def test_site_registry_activates_available_sites(tmp_path):
         ignore_lock=True,
     )
     inotify = _FakeInotify()
-    registry = BaseRunnerMulti.SiteRegistry({"seaglider": ready, "caricoos": missing}, inotify, FakePrivExecClient())
+    registry = BaseRunnerMulti.SiteRegistry({"seaglider": ready, "caricoos": missing}, inotify)
 
     active_names = {s.name for s in registry.active_sites}
     assert active_names == {"seaglider"}
@@ -266,7 +213,7 @@ def test_site_registry_retries_pending_sites(tmp_path):
         ignore_lock=True,
     )
     inotify = _FakeInotify()
-    registry = BaseRunnerMulti.SiteRegistry({"caricoos": site}, inotify, FakePrivExecClient())
+    registry = BaseRunnerMulti.SiteRegistry({"caricoos": site}, inotify)
     assert registry.active_sites == []
 
     site.watch_dir.mkdir()
@@ -278,14 +225,14 @@ def test_site_registry_add_watch_failure_stays_pending(tmp_path):
     site = _site(tmp_path / "seaglider")
     inotify = _FakeInotify()
     inotify.fail_paths.add(str(site.watch_dir))
-    registry = BaseRunnerMulti.SiteRegistry({"seaglider": site}, inotify, FakePrivExecClient())
+    registry = BaseRunnerMulti.SiteRegistry({"seaglider": site}, inotify)
     assert registry.active_sites == []
 
 
 def test_site_registry_site_for_wd(tmp_path):
     site = _site(tmp_path / "seaglider")
     inotify = _FakeInotify()
-    registry = BaseRunnerMulti.SiteRegistry({"seaglider": site}, inotify, FakePrivExecClient())
+    registry = BaseRunnerMulti.SiteRegistry({"seaglider": site}, inotify)
     wd = next(iter(inotify.watches))
     assert registry.site_for_wd(wd) is site
     assert registry.site_for_wd(9999) is None
@@ -694,30 +641,6 @@ def test_unix_socket_priv_exec_client_status(short_socket_path):
     assert (done, returncode) == (True, 1)
 
 
-def test_unix_socket_priv_exec_client_signal(short_socket_path):
-    listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    listener.bind(str(short_socket_path))
-    listener.listen(1)
-    received = []
-
-    def _server():
-        conn, _ = listener.accept()
-        with conn:
-            data = BaseRunnerMulti._recv_frame(conn)
-            assert data is not None
-            received.append(orjson.loads(data))
-            BaseRunnerMulti._send_frame(conn, orjson.dumps({"ok": True}))
-
-    thread = threading.Thread(target=_server)
-    thread.start()
-    client = BaseRunnerMulti.UnixSocketPrivExecClient(str(short_socket_path))
-    client.signal("seaglider", 555, "TERM")
-    thread.join(timeout=5)
-    listener.close()
-
-    assert received == [{"query": "signal", "site": "seaglider", "pid": 555, "signal": "TERM"}]
-
-
 def test_unix_socket_priv_exec_client_raises_on_error_response(short_socket_path):
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     listener.bind(str(short_socket_path))
@@ -773,7 +696,7 @@ def test_unix_socket_priv_exec_client_raises_on_no_response(short_socket_path):
 def test_check_lock_file_access_error_is_non_fatal(tmp_path, monkeypatch):
     site = _site(tmp_path / "seaglider", ignore_lock=False)
     monkeypatch.setattr(Utils, "check_lock_file", lambda *_a, **_k: -1)
-    assert BaseRunnerMulti._try_activate_site(site, FakePrivExecClient()) is True
+    assert BaseRunnerMulti._try_activate_site(site) is True
 
 
 def test_handle_run_file_event_keyboard_interrupt_sets_exit_event(tmp_path, monkeypatch):

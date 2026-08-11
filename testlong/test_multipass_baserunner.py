@@ -343,18 +343,16 @@ def test_so_peercred_rejects_wrong_uid(running_baserunner: multipassutils.Vm) ->
 def test_migration_takeover_after_documented_stop_disable(
     baserunner_vm: multipassutils.Vm,
 ) -> None:
-    """Item 7a: the documented migration procedure (stop+disable old unit FIRST) works cleanly.
+    """Item 7: the documented migration procedure (stop+disable old unit FIRST) works cleanly.
 
-    This is the reliable, documented path (docs/BaseRunnerMulti.md's
-    "Migrating a site") - confirmed on a real VM that a bare SIGTERM to a
-    still-*enabled* legacy unit is NOT sufficient on its own: every unit
-    here has Restart=always, so systemd just restarts it, and the
-    restarted instance then crashes trying to signal BaseRunnerMulti's
-    own pid across uids (the same EPERM problem, mirrored - see
-    test_signal_reaches_cross_uid_stale_process for the mechanism that
-    prevents *that* direction). An explicit `systemctl stop` (not a raw
-    signal) is the only thing that reliably keeps a Restart=always unit
-    down, which is exactly what step 1 of the documented procedure does.
+    This is the only supported migration path (docs/BaseRunnerMulti.md's
+    "Migrating a site") - BaseRunnerMulti never signals or evicts a
+    legacy BaseRunner.py process on its own; it only detects a live,
+    lock-holding pid and stays pending, logging an error, until the
+    operator has stopped it. Every legacy unit here has Restart=always,
+    so a bare `systemctl stop` without `disable` would not reliably keep
+    it down either. Both steps together are what step 1 of the
+    documented procedure requires.
     """
     vm = baserunner_vm
     legacy_unit = "baserunner-legacy@runner-alpha.service"
@@ -395,66 +393,6 @@ def test_migration_takeover_after_documented_stop_disable(
         # Restore the normal running state for any tests that run after
         # this one (module-scoped running_baserunner may already have
         # started these; starting an already-active unit is a no-op).
-        multipassutils.exec_in(vm, ["sudo", "systemctl", "start", "baserunnerprivexec"])
-        multipassutils.exec_in(vm, ["sudo", "systemctl", "start", "baserunnermulti"])
-
-
-def test_signal_reaches_cross_uid_stale_process(baserunner_vm: multipassutils.Vm) -> None:
-    """Item 7b: the stale-lock SIGTERM actually reaches a process under a different uid.
-
-    This is the mechanism `_try_activate_site`/`PrivExecServer.handle_signal`
-    fix: BaseRunnerMulti (running as baserunner) cannot os.kill a process
-    owned by a different uid (runner-alpha here) directly - confirmed on
-    a real VM this raises EPERM. Routing the signal through the
-    privileged helper, which drops to the target site's own account
-    first, makes it an ordinary same-uid operation. This test only
-    proves the signal reaches the *original* pid (it does not assert the
-    unit "stays down", since Restart=always means it won't on its own -
-    see test_migration_takeover_after_documented_stop_disable for the
-    reliable procedure).
-    """
-    vm = baserunner_vm
-    legacy_unit = "baserunner-legacy@runner-alpha.service"
-    try:
-        multipassutils.exec_in(
-            vm, ["sudo", "systemctl", "stop", "baserunnermulti", "baserunnerprivexec"]
-        )
-        _run(vm, ["sudo", "systemctl", "enable", legacy_unit])
-        _run(vm, ["sudo", "systemctl", "start", legacy_unit])
-        legacy_active = _wait_until(
-            lambda: _run(
-                vm, ["systemctl", "show", legacy_unit, "--property=ActiveState", "--value"]
-            ).strip()
-            == "active"
-        )
-        assert legacy_active, "legacy per-site unit never became active"
-
-        original_pid = _run(
-            vm, ["systemctl", "show", legacy_unit, "--property=MainPID", "--value"]
-        ).strip()
-        assert original_pid and original_pid != "0"
-
-        _run(vm, ["sudo", "systemctl", "start", "baserunnerprivexec"])
-        _run(vm, ["sudo", "systemctl", "start", "baserunnermulti"])
-
-        original_pid_gone = _wait_until(
-            lambda: multipassutils.exec_in(
-                vm, ["sudo", "kill", "-0", original_pid]
-            ).returncode
-            != 0,
-            timeout=15.0,
-        )
-        assert original_pid_gone, (
-            f"original legacy pid {original_pid} was never signalled - "
-            "cross-uid signal delivery failed"
-        )
-    finally:
-        multipassutils.exec_in(vm, ["sudo", "systemctl", "stop", legacy_unit])
-        multipassutils.exec_in(vm, ["sudo", "systemctl", "disable", legacy_unit])
-        multipassutils.exec_in(vm, ["sudo", "systemctl", "reset-failed", legacy_unit])
-        multipassutils.exec_in(
-            vm, ["sudo", "rm", "-f", "/home/jails/alpha/gliderjail/home/rundir/.base_runner_lockfile"]
-        )
         multipassutils.exec_in(vm, ["sudo", "systemctl", "start", "baserunnerprivexec"])
         multipassutils.exec_in(vm, ["sudo", "systemctl", "start", "baserunnermulti"])
 

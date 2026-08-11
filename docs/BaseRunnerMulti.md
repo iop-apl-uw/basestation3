@@ -241,12 +241,21 @@ throttling" above.
 
 ## Migrating a site
 
-Sites move from `BaseRunner.py` to `BaseRunnerMulti.py` one at a time:
+Sites move from `BaseRunner.py` to `BaseRunnerMulti.py` one at a time,
+manually - there is no automatic takeover:
 
 1. **Stop and disable that site's old `baserunner-<site>@.service`
    unit first** - `sudo systemctl stop baserunner-<site>@runner-<site>.service`
-   then `disable`, in that order. This step is not optional and not
-   just cleanup - see the warning below.
+   then `disable`, in that order. This step is required: both processes
+   use the same lock-file name (`.base_runner_lockfile`) as
+   `BaseRunner.py`, and `BaseRunnerMulti.py` will not evict or signal
+   whatever still holds it - if the old unit is still running when
+   `BaseRunnerMulti.py` starts watching that site, it detects the live
+   lock, logs an error, and leaves the site pending (retried on its
+   normal interval) until an operator stops the old unit. `disable`
+   matters too: every unit in this system, old and new, has
+   `Restart=always`, so a bare `stop` without `disable` risks the old
+   unit coming back on its own later.
 2. Add the site's entry to `sites.yaml` (or confirm it's already there -
    `BaseRunnerMulti.py` can be started with a partial `sites.yaml` and
    will pick up new sites on its periodic retry, no restart needed to
@@ -255,30 +264,9 @@ Sites move from `BaseRunner.py` to `BaseRunnerMulti.py` one at a time:
    won't see edits to *existing* entries or removed sites without a
    restart).
 3. Confirm `BaseRunnerMulti.service`/`baserunnerprivexec.service` are
-   running (or start them, if this is the very first site migrated).
-
-**Do not rely on the automatic stale-lock takeover described below as a
-substitute for step 1.** Both processes use the same lock-file name
-(`.base_runner_lockfile`) as `BaseRunner.py` on purpose: if the old
-per-site unit is *still running* when `BaseRunnerMulti.py` starts
-watching that site, it detects the stale lock and signals the old
-process (SIGTERM, then SIGKILL after a timeout if unresponsive) -
-confirmed on a real VM to correctly reach the old process despite
-running as a different uid (routed through
-`BaseRunnerPrivExec.PrivExecServer.handle_signal`, which drops to that
-site's own account first - a plain `os.kill` from `BaseRunnerMulti`
-itself would get `EPERM`). This is a courtesy for a narrow race (e.g.
-the old unit was already stopped and is mid-shutdown), **not a reliable
-eviction mechanism**: every unit in this system, old and new, has
-`Restart=always`, and systemd restarts a `Restart=always` unit after
-*any* exit that wasn't caused by an explicit `systemctl stop` - including
-one caused by this SIGTERM. Confirmed the hard way on a real VM: SIGTERM
-the still-enabled old unit, systemd restarts it within a second, the
-restarted `BaseRunner.py` then finds `BaseRunnerMulti`'s own pid in the
-lock file and crashes trying to signal it (the same cross-uid `EPERM`,
-mirrored), tripping `StartLimitBurst` after a few cycles and leaving the
-unit in `failed` state. An explicit `systemctl stop` (not a raw signal)
-is the only thing that actually keeps a `Restart=always` unit down.
+   running (or start them, if this is the very first site migrated). If
+   they were already running, the site is picked up on the next retry
+   pass once step 1's lock is clear - no restart needed.
 
 Rollback is the reverse: stop `BaseRunnerMulti.py`'s watch of that site
 (or the whole process, if only one site is affected), then re-enable and
