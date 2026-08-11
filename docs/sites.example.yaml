@@ -83,3 +83,14 @@ example-with-all-fields:
   # Use the basestation installation baked into the docker image rather
   # than mounting this checkout into the container. Default: false.
   use_docker_basestation: false
+
+  # Hard CPU cap for this site's jobs, as a percentage of one core (e.g.
+  # 60 -> 60%). Requires BaseRunnerPrivExec.py's own systemd unit to have
+  # Delegate=yes and --cgroup_root set - see docs/BaseRunnerMulti.md's
+  # "Per-site CPU throttling" section. Default: null (unthrottled).
+  cpu_quota_pct: null
+
+  # Relative systemd cgroup CPUWeight for this site's jobs (systemd's own
+  # default is 100 when unset). Same Delegate=yes requirement as
+  # cpu_quota_pct above. Default: null (systemd default weight).
+  cpu_weight: null

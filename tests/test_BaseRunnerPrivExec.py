@@ -28,6 +28,7 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import ctypes
+import dataclasses
 import os
 import pathlib
 import socket
@@ -197,6 +198,39 @@ def test_privilege_dropper_call_order(monkeypatch):
         ("setuid", 4242),
         ("execve", "/bin/true", ["/bin/true"], {"PATH": "/bin"}),
     ]
+
+
+def test_privilege_dropper_signal_call_order(monkeypatch):
+    calls = []
+    monkeypatch.setattr(os, "setgroups", lambda groups: calls.append(("setgroups", groups)))
+    monkeypatch.setattr(os, "setgid", lambda gid: calls.append(("setgid", gid)))
+    monkeypatch.setattr(os, "setuid", lambda uid: calls.append(("setuid", uid)))
+    monkeypatch.setattr(os, "kill", lambda pid, sig: calls.append(("kill", pid, sig)))
+
+    BaseRunnerPrivExec.PrivilegeDropper().drop_and_signal(4242, 4343, 555, 15)
+
+    assert calls == [
+        ("setgroups", [4343]),
+        ("setgid", 4343),
+        ("setuid", 4242),
+        ("kill", 555, 15),
+    ]
+
+
+# --- _move_self_into_leaf_cgroup ---
+
+
+def test_move_self_into_leaf_cgroup_writes_own_pid(tmp_path):
+    cgroup_root = tmp_path / "cgroup"
+    BaseRunnerPrivExec._move_self_into_leaf_cgroup(cgroup_root)
+    assert (cgroup_root / "supervisor" / "cgroup.procs").read_text() == f"{os.getpid()}\n"
+
+
+def test_move_self_into_leaf_cgroup_failure_is_caught_and_logged(monkeypatch, tmp_path, caplog):
+    blocker = tmp_path / "cgroup"
+    blocker.write_text("not a directory")  # mkdir(parents=True) will raise
+    BaseRunnerPrivExec._move_self_into_leaf_cgroup(blocker)
+    assert any(r.levelname == "WARNING" for r in caplog.records)
 
 
 # --- ChildTable ---
@@ -455,6 +489,274 @@ def test_run_child_exits_127_on_exception(monkeypatch, tmp_path):
 
     assert excinfo.value.code == 127
     dropper.drop_and_exec.assert_not_called()
+
+
+def test_run_child_joins_cgroup_before_dropping_privilege(monkeypatch, tmp_path):
+    monkeypatch.setattr(os, "dup2", lambda fd, target: None)
+    monkeypatch.setattr(os, "close", lambda fd: None)
+    monkeypatch.setattr(os, "_exit", lambda code: (_ for _ in ()).throw(_ExitCalled(code)))
+
+    calls = []
+    dropper = mock.Mock(spec=BaseRunnerPrivExec.PrivilegeDropper)
+    dropper.drop_and_exec.side_effect = lambda *a, **k: calls.append("drop_and_exec")
+    joiner = mock.Mock(spec=BaseRunnerPrivExec.CgroupJoiner)
+    joiner.join.side_effect = lambda *a, **k: calls.append("join")
+
+    site = _make_site(tmp_path)
+    cgroup_root = tmp_path / "cgroup"
+    server = BaseRunnerPrivExec.PrivExecServer(
+        {"seaglider": site}, dropper, joiner=joiner, cgroup_root=cgroup_root
+    )
+    req = BaseRunnerPrivExec.DispatchRequest(
+        site=site, argv=["/bin/true"], log_file=site.watch_dir / "baselog.log"
+    )
+
+    with pytest.raises(_ExitCalled) as excinfo:
+        server._run_child(req, log_fd=99)
+
+    assert excinfo.value.code == 126
+    assert calls == ["join", "drop_and_exec"]
+    joiner.join.assert_called_once_with(site, cgroup_root)
+
+
+def test_run_child_skips_join_when_no_cgroup_root(monkeypatch, tmp_path):
+    monkeypatch.setattr(os, "dup2", lambda fd, target: None)
+    monkeypatch.setattr(os, "close", lambda fd: None)
+    monkeypatch.setattr(os, "_exit", lambda code: (_ for _ in ()).throw(_ExitCalled(code)))
+
+    dropper = mock.Mock(spec=BaseRunnerPrivExec.PrivilegeDropper)
+    joiner = mock.Mock(spec=BaseRunnerPrivExec.CgroupJoiner)
+    site = _make_site(tmp_path)
+    server = BaseRunnerPrivExec.PrivExecServer(
+        {"seaglider": site}, dropper, joiner=joiner, cgroup_root=None
+    )
+    req = BaseRunnerPrivExec.DispatchRequest(
+        site=site, argv=["/bin/true"], log_file=site.watch_dir / "baselog.log"
+    )
+
+    with pytest.raises(_ExitCalled):
+        server._run_child(req, log_fd=99)
+
+    joiner.join.assert_not_called()
+    dropper.drop_and_exec.assert_called_once()
+
+
+def test_run_child_still_execs_when_joiner_raises(monkeypatch, tmp_path, caplog):
+    monkeypatch.setattr(os, "dup2", lambda fd, target: None)
+    monkeypatch.setattr(os, "close", lambda fd: None)
+    monkeypatch.setattr(os, "_exit", lambda code: (_ for _ in ()).throw(_ExitCalled(code)))
+
+    dropper = mock.Mock(spec=BaseRunnerPrivExec.PrivilegeDropper)
+    joiner = mock.Mock(spec=BaseRunnerPrivExec.CgroupJoiner)
+    joiner.join.side_effect = RuntimeError("simulated cgroup failure")
+
+    site = _make_site(tmp_path)
+    server = BaseRunnerPrivExec.PrivExecServer(
+        {"seaglider": site},
+        dropper,
+        joiner=joiner,
+        cgroup_root=tmp_path / "cgroup",
+    )
+    req = BaseRunnerPrivExec.DispatchRequest(
+        site=site, argv=["/bin/true"], log_file=site.watch_dir / "baselog.log"
+    )
+
+    with pytest.raises(_ExitCalled) as excinfo:
+        server._run_child(req, log_fd=99)
+
+    # Fail-open: a raising joiner must never prevent the job from launching.
+    assert excinfo.value.code == 126
+    dropper.drop_and_exec.assert_called_once()
+    assert any(r.levelname == "WARNING" for r in caplog.records)
+
+
+# --- CgroupJoiner ---
+
+
+def test_cgroup_joiner_writes_cpu_max_for_quota(tmp_path):
+    site = _make_site(tmp_path)
+    site = dataclasses.replace(site, cpu_quota_pct=60)
+    cgroup_root = tmp_path / "cgroup"
+
+    BaseRunnerPrivExec.CgroupJoiner().join(site, cgroup_root)
+
+    site_cgroup = cgroup_root / f"site-{site.name}"
+    assert (site_cgroup / "cpu.max").read_text() == "60000 100000\n"
+
+
+def test_cgroup_joiner_no_cpu_max_when_quota_unset(tmp_path):
+    site = _make_site(tmp_path)  # cpu_quota_pct defaults to None
+    cgroup_root = tmp_path / "cgroup"
+
+    BaseRunnerPrivExec.CgroupJoiner().join(site, cgroup_root)
+
+    site_cgroup = cgroup_root / f"site-{site.name}"
+    assert not (site_cgroup / "cpu.max").exists()
+
+
+def test_cgroup_joiner_writes_cpu_weight(tmp_path):
+    site = _make_site(tmp_path)
+    site = dataclasses.replace(site, cpu_weight=50)
+    cgroup_root = tmp_path / "cgroup"
+
+    BaseRunnerPrivExec.CgroupJoiner().join(site, cgroup_root)
+
+    site_cgroup = cgroup_root / f"site-{site.name}"
+    assert (site_cgroup / "cpu.weight").read_text() == "50\n"
+
+
+def test_cgroup_joiner_no_cpu_weight_when_unset(tmp_path):
+    site = _make_site(tmp_path)  # cpu_weight defaults to None
+    cgroup_root = tmp_path / "cgroup"
+
+    BaseRunnerPrivExec.CgroupJoiner().join(site, cgroup_root)
+
+    site_cgroup = cgroup_root / f"site-{site.name}"
+    assert not (site_cgroup / "cpu.weight").exists()
+
+
+def test_cgroup_joiner_writes_own_pid_to_cgroup_procs(tmp_path):
+    site = _make_site(tmp_path)
+    cgroup_root = tmp_path / "cgroup"
+
+    BaseRunnerPrivExec.CgroupJoiner().join(site, cgroup_root)
+
+    site_cgroup = cgroup_root / f"site-{site.name}"
+    assert (site_cgroup / "cgroup.procs").read_text() == f"{os.getpid()}\n"
+
+
+def test_cgroup_joiner_write_failure_is_caught_and_logged(tmp_path, caplog):
+    site = _make_site(tmp_path)
+    # A file where a directory needs to go - mkdir(parents=True) raises
+    # NotADirectoryError (an OSError subclass) instead of succeeding.
+    blocker = tmp_path / "cgroup"
+    blocker.write_text("not a directory")
+
+    BaseRunnerPrivExec.CgroupJoiner().join(site, blocker)
+
+    assert any(r.levelname == "WARNING" for r in caplog.records)
+
+
+# --- PrivExecServer.handle_signal / _run_signal_child ---
+
+
+def test_run_signal_child_drops_privilege_and_signals(monkeypatch, tmp_path):
+    monkeypatch.setattr(os, "_exit", lambda code: (_ for _ in ()).throw(_ExitCalled(code)))
+    dropper = mock.Mock(spec=BaseRunnerPrivExec.PrivilegeDropper)
+    site = _make_site(tmp_path)
+    server = BaseRunnerPrivExec.PrivExecServer({"seaglider": site}, dropper)
+
+    with pytest.raises(_ExitCalled) as excinfo:
+        server._run_signal_child(site, 555, 15)
+
+    assert excinfo.value.code == 0
+    dropper.drop_and_signal.assert_called_once_with(
+        site.runner_uid, site.runner_gid, 555, 15
+    )
+
+
+def test_run_signal_child_exits_1_on_exception(monkeypatch, tmp_path):
+    monkeypatch.setattr(os, "_exit", lambda code: (_ for _ in ()).throw(_ExitCalled(code)))
+    dropper = mock.Mock(spec=BaseRunnerPrivExec.PrivilegeDropper)
+    dropper.drop_and_signal.side_effect = OSError("no such process")
+    site = _make_site(tmp_path)
+    server = BaseRunnerPrivExec.PrivExecServer({"seaglider": site}, dropper)
+
+    with pytest.raises(_ExitCalled) as excinfo:
+        server._run_signal_child(site, 555, 15)
+
+    assert excinfo.value.code == 1
+
+
+def test_handle_signal_unknown_site(tmp_path):
+    server = BaseRunnerPrivExec.PrivExecServer({}, mock.Mock())
+    response = server.handle_signal({"site": "nope", "pid": 1, "signal": "TERM"})
+    assert response["ok"] is False
+    assert "unknown site" in response["error"]
+
+
+def test_handle_signal_bad_pid_type(tmp_path):
+    site = _make_site(tmp_path)
+    server = BaseRunnerPrivExec.PrivExecServer({"seaglider": site}, mock.Mock())
+    response = server.handle_signal({"site": "seaglider", "pid": "x", "signal": "TERM"})
+    assert response["ok"] is False
+    assert "pid must be an int" in response["error"]
+
+
+def test_handle_signal_unsupported_signal(tmp_path):
+    site = _make_site(tmp_path)
+    server = BaseRunnerPrivExec.PrivExecServer({"seaglider": site}, mock.Mock())
+    response = server.handle_signal({"site": "seaglider", "pid": 1, "signal": "HUP"})
+    assert response["ok"] is False
+    assert "unsupported signal" in response["error"]
+
+
+def test_handle_signal_success(monkeypatch, tmp_path):
+    site = _make_site(tmp_path)
+    server = BaseRunnerPrivExec.PrivExecServer(
+        {"seaglider": site}, mock.Mock(), fork_fn=lambda: 4242
+    )
+    monkeypatch.setattr(os, "waitpid", lambda pid, opts: (pid, 0))
+    monkeypatch.setattr(os, "waitstatus_to_exitcode", lambda status: 0)
+
+    response = server.handle_signal({"site": "seaglider", "pid": 555, "signal": "TERM"})
+
+    assert response == {"ok": True}
+
+
+def test_handle_signal_child_failure_reported(monkeypatch, tmp_path):
+    site = _make_site(tmp_path)
+    server = BaseRunnerPrivExec.PrivExecServer(
+        {"seaglider": site}, mock.Mock(), fork_fn=lambda: 4242
+    )
+    monkeypatch.setattr(os, "waitpid", lambda pid, opts: (pid, 256))
+    monkeypatch.setattr(os, "waitstatus_to_exitcode", lambda status: 1)
+
+    response = server.handle_signal({"site": "seaglider", "pid": 555, "signal": "TERM"})
+
+    assert response["ok"] is False
+    assert "could not signal" in response["error"]
+
+
+def test_handle_signal_fork_failure(tmp_path):
+    site = _make_site(tmp_path)
+
+    def _raise_fork():
+        raise OSError("out of resources")
+
+    server = BaseRunnerPrivExec.PrivExecServer(
+        {"seaglider": site}, mock.Mock(), fork_fn=_raise_fork
+    )
+    response = server.handle_signal({"site": "seaglider", "pid": 555, "signal": "TERM"})
+    assert response["ok"] is False
+    assert "fork failed" in response["error"]
+
+
+def test_handle_signal_child_branch_calls_run_signal_child(monkeypatch, tmp_path):
+    site = _make_site(tmp_path)
+    server = BaseRunnerPrivExec.PrivExecServer(
+        {"seaglider": site}, mock.Mock(), fork_fn=lambda: 0
+    )
+    calls = []
+
+    def fake_run_signal_child(s, pid, sig):
+        calls.append((s, pid, sig))
+        raise SystemExit(0)
+
+    monkeypatch.setattr(server, "_run_signal_child", fake_run_signal_child)
+
+    with pytest.raises(SystemExit):
+        server.handle_signal({"site": "seaglider", "pid": 555, "signal": "TERM"})
+
+    assert len(calls) == 1
+
+
+def test_handle_request_routes_signal():
+    site_table = {}
+    server = BaseRunnerPrivExec.PrivExecServer(site_table, mock.Mock())
+    response = server.handle_request({"query": "signal", "site": "nope", "pid": 1, "signal": "TERM"})
+    assert response["ok"] is False
+    assert "unknown site" in response["error"]
 
 
 # --- PrivExecServer.handle_status / handle_request ---

@@ -123,6 +123,8 @@ sample. Top-level mapping keyed by site name; each entry:
 | `docker_image` | no | `""` | Docker image to launch `Base.py` under, if used. |
 | `docker_uid` / `docker_gid` | no | `-1` | uid/gid to run the docker container as. |
 | `use_docker_basestation` | no | `false` | Use the basestation install baked into the docker image instead of mounting this checkout. |
+| `cpu_quota_pct` | no | `null` | Hard CPU cap for this site's jobs, as a percentage of one core (e.g. `60` -> 60%). See "Per-site CPU throttling" below. |
+| `cpu_weight` | no | `null` | Relative cgroup `CPUWeight` for this site's jobs (systemd default is 100 when unset). |
 
 Loading is **fail-closed**: any single malformed or unresolvable entry
 (e.g. an unknown `runner_user`) aborts loading the whole file rather than
@@ -133,6 +135,32 @@ A missing `watch_dir` for an otherwise-valid site is different: that site
 is logged and left pending rather than failing the whole process, and
 `BaseRunnerMulti.py` retries pending sites periodically (once per minute)
 so a site coming online later doesn't require a daemon restart.
+
+## Per-site CPU throttling
+
+The one-process-per-site `BaseRunner.py` model got per-site CPU isolation
+for free: each site was already its own systemd unit/cgroup, and a
+runaway site's process couldn't starve another site's, since they were
+never in the same cgroup to begin with. Consolidating into one process
+loses that for free lunch - a unit-level `CPUQuota` on `BaseRunnerMulti`'s
+own unit would cap the *combined* total of every site's jobs together,
+not each site individually.
+
+`BaseRunnerPrivExec.py` restores it: since it already forks a child
+per dispatched job before dropping privilege, that child joins a
+site-scoped delegated cgroup (`CgroupJoiner`) while still running as the
+unprivileged `baserunner` account, writing `cpu.max`/`cpu.weight` from a
+site's `cpu_quota_pct`/`cpu_weight` config, then drops privilege and execs
+- remaining in the cgroup it already joined (cgroup membership is
+independent of uid). This is fail-open by design: any failure to join or
+configure the cgroup is logged and the job still launches unthrottled -
+throttling must never be able to prevent a job from running at all.
+
+This requires the helper's own systemd unit to delegate a cgroup subtree
+to it (`Delegate=yes`, see the unit example below) and `--cgroup_root` to
+point at that subtree. Neither field is set by default (`cpu_quota_pct`/
+`cpu_weight` both default to `null`, meaning unthrottled) - only set them
+for a site that's shown to actually need it.
 
 ## Deployment
 
@@ -150,9 +178,14 @@ User=baserunner
 Group=baserunner
 AmbientCapabilities=CAP_SETUID CAP_SETGID
 CapabilityBoundingSet=CAP_SETUID CAP_SETGID
+# Delegates a cgroup subtree to this unit so CgroupJoiner can create
+# per-site child cgroups and write cpu.max/cpu.weight/cgroup.procs
+# without needing any additional Linux capability.
+Delegate=yes
 ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunnerPrivExec.py \
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \
+    --cgroup_root /sys/fs/cgroup/system.slice/baserunnerprivexec.service \
     --base_log /var/log/baserunner-privexec.log
 RuntimeDirectory=baserunner
 Restart=always
@@ -197,31 +230,59 @@ On a scratch host: start `baserunnerprivexec.service`, then
 real site's rundir to confirm the resulting job's output files are owned
 by that site's `runner-<site>` uid/gid, not `baserunner`.
 
+If using per-site CPU throttling, validate that chain too: with
+`cpu_quota_pct`/`cpu_weight` set for a test site, confirm
+`/sys/fs/cgroup/.../baserunnerprivexec.service/site-<name>/cgroup.procs`
+actually contains the dispatched job's pid after it launches, and that
+`cpu.max`/`cpu.weight` under that path match what `sites.yaml` asked for
+- `Delegate=yes` and cgroup v2 write permissions are worth confirming
+empirically rather than trusting the derivation in "Per-site CPU
+throttling" above.
+
 ## Migrating a site
 
 Sites move from `BaseRunner.py` to `BaseRunnerMulti.py` one at a time:
 
-1. Add the site's entry to `sites.yaml` (or confirm it's already there -
+1. **Stop and disable that site's old `baserunner-<site>@.service`
+   unit first** - `sudo systemctl stop baserunner-<site>@runner-<site>.service`
+   then `disable`, in that order. This step is not optional and not
+   just cleanup - see the warning below.
+2. Add the site's entry to `sites.yaml` (or confirm it's already there -
    `BaseRunnerMulti.py` can be started with a partial `sites.yaml` and
    will pick up new sites on its periodic retry, no restart needed to
    pick up a *new* site once it's already running - though `sites.yaml`
    is only read once at startup today, so an already-running instance
    won't see edits to *existing* entries or removed sites without a
    restart).
-2. Confirm `BaseRunnerMulti.service`/`baserunnerprivexec.service` are
-   running.
-3. Stop and disable that site's old `baserunner-<site>@.service` unit.
+3. Confirm `BaseRunnerMulti.service`/`baserunnerprivexec.service` are
+   running (or start them, if this is the very first site migrated).
 
-Both processes use the **same lock-file name**
+**Do not rely on the automatic stale-lock takeover described below as a
+substitute for step 1.** Both processes use the same lock-file name
 (`.base_runner_lockfile`) as `BaseRunner.py` on purpose: if the old
-per-site unit is still running when `BaseRunnerMulti.py` starts watching
-that site, it detects the stale lock, signals the old process to stop
-(SIGTERM, then SIGKILL after a timeout if unresponsive), and takes over -
-the same self-healing behavior `BaseRunner.py` already has against a
-stale instance of itself. This makes cutover close to automatic and
-rollback just as simple: stop `BaseRunnerMulti.py`'s watch of that site
-(or the whole process, if only one site is affected) and re-enable the
-old per-site unit.
+per-site unit is *still running* when `BaseRunnerMulti.py` starts
+watching that site, it detects the stale lock and signals the old
+process (SIGTERM, then SIGKILL after a timeout if unresponsive) -
+confirmed on a real VM to correctly reach the old process despite
+running as a different uid (routed through
+`BaseRunnerPrivExec.PrivExecServer.handle_signal`, which drops to that
+site's own account first - a plain `os.kill` from `BaseRunnerMulti`
+itself would get `EPERM`). This is a courtesy for a narrow race (e.g.
+the old unit was already stopped and is mid-shutdown), **not a reliable
+eviction mechanism**: every unit in this system, old and new, has
+`Restart=always`, and systemd restarts a `Restart=always` unit after
+*any* exit that wasn't caused by an explicit `systemctl stop` - including
+one caused by this SIGTERM. Confirmed the hard way on a real VM: SIGTERM
+the still-enabled old unit, systemd restarts it within a second, the
+restarted `BaseRunner.py` then finds `BaseRunnerMulti`'s own pid in the
+lock file and crashes trying to signal it (the same cross-uid `EPERM`,
+mirrored), tripping `StartLimitBurst` after a few cycles and leaving the
+unit in `failed` state. An explicit `systemctl stop` (not a raw signal)
+is the only thing that actually keeps a `Restart=always` unit down.
+
+Rollback is the reverse: stop `BaseRunnerMulti.py`'s watch of that site
+(or the whole process, if only one site is affected), then re-enable and
+start the old per-site unit.
 
 ## Operational notes
 

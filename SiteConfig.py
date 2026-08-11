@@ -75,6 +75,10 @@ class SiteConfig:
         docker_gid: gid to run the docker image as, if docker_image is set.
         use_docker_basestation: Whether to use the basestation installed in
             the docker container rather than mounting this checkout.
+        cpu_quota_pct: Hard CPU cap for this site's jobs, as a percentage of
+            one core (e.g. 60 -> 60%); None means unthrottled.
+        cpu_weight: Relative systemd cgroup CPUWeight for this site's jobs
+            (below/above the default of 100); None means default.
         runner_uid: Resolved uid of runner_user; -1 until resolve_ids() runs.
         runner_gid: Resolved gid of runner_user; -1 until resolve_ids() runs.
     """
@@ -91,6 +95,8 @@ class SiteConfig:
     docker_uid: int = -1
     docker_gid: int = -1
     use_docker_basestation: bool = False
+    cpu_quota_pct: int | None = None
+    cpu_weight: int | None = None
     runner_uid: int = dataclasses.field(default=-1, compare=False)
     runner_gid: int = dataclasses.field(default=-1, compare=False)
 
@@ -188,6 +194,26 @@ def _resolve_path(entry: dict, key: str) -> pathlib.Path | None:
     return pathlib.Path(value).expanduser().resolve()
 
 
+def _optional_int(entry: dict, key: str) -> int | None:
+    """Resolves an optional int-valued key from a sites.yaml entry.
+
+    Args:
+        entry: One site's raw mapping, as loaded from YAML.
+        key: Key to look up.
+
+    Returns:
+        The value cast to int, or None if key is absent.
+
+    Raises:
+        TypeError: If the value has the wrong shape to convert to int.
+        ValueError: If the value can't be converted to int.
+    """
+    value = entry.get(key)
+    if value is None:
+        return None
+    return int(value)
+
+
 def _build_site(name: str, entry: dict) -> SiteConfig:
     """Builds one SiteConfig from its raw sites.yaml mapping.
 
@@ -216,6 +242,8 @@ def _build_site(name: str, entry: dict) -> SiteConfig:
         docker_uid=int(entry.get("docker_uid", -1)),
         docker_gid=int(entry.get("docker_gid", -1)),
         use_docker_basestation=bool(entry.get("use_docker_basestation", False)),
+        cpu_quota_pct=_optional_int(entry, "cpu_quota_pct"),
+        cpu_weight=_optional_int(entry, "cpu_weight"),
     )
 
 

@@ -175,6 +175,45 @@ def _set_child_subreaper() -> None:
         log_warning(f"prctl(PR_SET_CHILD_SUBREAPER) failed: errno={errno}")
 
 
+def _move_self_into_leaf_cgroup(cgroup_root: pathlib.Path) -> None:
+    """Moves this process into its own leaf child cgroup under cgroup_root.
+
+    cgroup v2's "no internal process" constraint means a cgroup can't both
+    hold member processes directly AND have a controller enabled in its
+    own cgroup.subtree_control for children - and systemd starts a
+    unit's main process directly inside that unit's own cgroup
+    (cgroup_root here). Without this, CgroupJoiner.join()'s later attempt
+    to enable "cpu" in cgroup_root/cgroup.subtree_control fails with
+    ENOTSUP, because this daemon's own pid is still sitting directly in
+    cgroup_root. Confirmed empirically on a real cgroup v2 mount (see
+    .claude/plans/2026-08-11-multipass-baserunner-validation.md) - not
+    something the original design derivation anticipated.
+
+    Called once at startup, before any CgroupJoiner.join() call.
+
+    Args:
+        cgroup_root: Root of this process's own delegated cgroup subtree.
+
+    Returns:
+        None.
+
+    Raises:
+        No exceptions are raised - failure here just means per-site CPU
+        throttling won't work (CgroupJoiner.join() will itself fail-open
+        the same way it does for any other cgroup error), not that the
+        daemon can't run.
+    """
+    leaf = cgroup_root / "supervisor"
+    try:
+        leaf.mkdir(parents=True, exist_ok=True)
+        (leaf / "cgroup.procs").write_text(f"{os.getpid()}\n")
+    except OSError as exc:
+        log_warning(
+            f"Could not move into leaf cgroup {leaf}: {exc} - "
+            "per-site CPU throttling will not be available"
+        )
+
+
 class PrivilegeDropper:
     """Thin, mockable boundary around the actual privilege-drop syscalls.
 
@@ -216,6 +255,106 @@ class PrivilegeDropper:
         os.setgid(gid)
         os.setuid(uid)
         os.execve(argv[0], argv, env)
+
+    def drop_and_signal(self, uid: int, gid: int, pid: int, sig: int) -> None:
+        """Drops privileges to uid/gid and sends sig to pid.
+
+        Used to signal a process owned by a different uid than this
+        helper's own (e.g. a stale lock-holding process from a
+        not-yet-migrated site) - this process itself generally cannot
+        signal across uids without CAP_KILL, which this helper does not
+        hold. Becoming that uid first (via the same setgroups/setgid/
+        setuid ordering as drop_and_exec, for the same reasons) makes the
+        signal an ordinary same-uid operation instead, so no additional
+        capability is needed.
+
+        Args:
+            uid: Target uid to become (a site's runner_uid).
+            gid: Target gid to become (a site's runner_gid).
+            pid: Target pid to signal.
+            sig: Signal number to send (e.g. signal.SIGTERM).
+
+        Returns:
+            None.
+
+        Raises:
+            OSError: If setgroups/setgid/setuid/kill fails (e.g. pid
+                doesn't exist, or belongs to yet another uid).
+        """
+        os.setgroups([gid])
+        os.setgid(gid)
+        os.setuid(uid)
+        os.kill(pid, sig)
+
+
+class CgroupJoiner:
+    """Thin, mockable boundary around joining a per-site delegated cgroup.
+
+    Restores the per-site CPU isolation the one-process-per-site
+    BaseRunner.py model got for free from each site being its own systemd
+    unit/cgroup: once every site's jobs are forked from this single
+    process, a unit-level CPUQuota would cap the combined total of every
+    site together, not each site individually, letting one noisy site
+    starve the rest. Joining each job into its own site-scoped cgroup
+    before exec restores that isolation.
+
+    Isolating exactly these filesystem operations behind one seam is what
+    lets the surrounding dispatch logic be unit tested via a fake/mock,
+    without requiring a real delegated cgroupfs (which needs root/
+    Delegate=yes and isn't available inside a pytest sandbox).
+    """
+
+    def join(self, site: SiteConfig.SiteConfig, cgroup_root: pathlib.Path) -> None:
+        """Creates (if needed) and joins this process into site's own cgroup.
+
+        Must be called BEFORE PrivilegeDropper.drop_and_exec - cgroup
+        membership is independent of uid, so this process can move itself
+        into a delegated cgroup while still running as the unprivileged
+        helper account, then drop to the site's runner_uid/runner_gid
+        afterward and remain in the cgroup it already joined.
+
+        Args:
+            site: The site whose job this process will become, via a
+                later drop_and_exec call.
+            cgroup_root: Root of this helper's own delegated cgroup
+                subtree (requires Delegate=yes on this process's own
+                systemd unit).
+
+        Returns:
+            None.
+
+        Raises:
+            No exceptions are raised - all failures are logged and
+            treated as non-fatal (fail-open: throttling must never be
+            able to block a job from running at all), matching this
+            codebase's existing philosophy for other non-critical
+            per-site setup (see BaseRunnerMulti.py's _try_activate_site
+            for the same pattern applied to a bad site's watch_dir).
+        """
+        site_cgroup = cgroup_root / f"site-{site.name}"
+        try:
+            site_cgroup.mkdir(parents=True, exist_ok=True)
+            if site.cpu_quota_pct is not None or site.cpu_weight is not None:
+                # cgroup v2 requires the "cpu" controller to be explicitly
+                # enabled in the PARENT's cgroup.subtree_control before a
+                # child cgroup's own cpu.max/cpu.weight become writable -
+                # Delegate=yes only grants write access to make that
+                # happen ourselves, it does not enable anything by
+                # default. Idempotent: re-enabling an already-enabled
+                # controller is a harmless no-op.
+                (cgroup_root / "cgroup.subtree_control").write_text("+cpu\n")
+            if site.cpu_quota_pct is not None:
+                (site_cgroup / "cpu.max").write_text(
+                    f"{site.cpu_quota_pct * 1000} 100000\n"
+                )
+            if site.cpu_weight is not None:
+                (site_cgroup / "cpu.weight").write_text(f"{site.cpu_weight}\n")
+            (site_cgroup / "cgroup.procs").write_text(f"{os.getpid()}\n")
+        except OSError as exc:
+            log_warning(
+                f"[{site.name}] Could not join cgroup {site_cgroup}: {exc} "
+                "- job will run unthrottled"
+            )
 
 
 class ChildTable:
@@ -345,6 +484,8 @@ class PrivExecServer:
         sites: dict[str, SiteConfig.SiteConfig],
         dropper: PrivilegeDropper,
         fork_fn=os.fork,
+        joiner: CgroupJoiner | None = None,
+        cgroup_root: pathlib.Path | None = None,
     ) -> None:
         """Initializes the server.
 
@@ -357,10 +498,18 @@ class PrivExecServer:
             fork_fn: os.fork-compatible callable; overridable for testing
                 so the parent-side dispatch logic can be exercised without
                 a real fork.
+            joiner: The CgroupJoiner used to throttle each dispatched job.
+                Defaults to a real CgroupJoiner() if not given.
+            cgroup_root: Root of this helper's own delegated cgroup
+                subtree. Required for joiner.join() to do anything useful;
+                a missing/unwritable root just means jobs run unthrottled
+                (logged, not fatal - see CgroupJoiner.join).
         """
         self._sites = sites
         self._dropper = dropper
         self._fork = fork_fn
+        self._joiner = joiner if joiner is not None else CgroupJoiner()
+        self._cgroup_root = cgroup_root
         self._children = ChildTable()
 
     def handle_dispatch(self, request: dict) -> dict:
@@ -425,6 +574,18 @@ class PrivExecServer:
             os.dup2(log_fd, 2)
             if log_fd not in (1, 2):
                 os.close(log_fd)
+            if self._cgroup_root is not None:
+                # Must happen before drop_and_exec - cgroup membership is
+                # independent of uid, so this still-unprivileged process
+                # can join the cgroup now and remain in it after dropping.
+                # Caught separately (belt-and-suspenders on top of
+                # CgroupJoiner's own internal fail-open behavior): a
+                # throttling failure must never prevent the job itself
+                # from launching.
+                try:
+                    self._joiner.join(req.site, self._cgroup_root)
+                except Exception:
+                    log_warning(f"[{req.site.name}] cgroup join raised - continuing unthrottled")
             env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin")}
             self._dropper.drop_and_exec(
                 req.site.runner_uid, req.site.runner_gid, req.argv, env
@@ -453,8 +614,69 @@ class PrivExecServer:
             return {"ok": False, "error": f"unknown pid {pid}"}
         return {"ok": True, "done": done, "returncode": returncode}
 
+    def handle_signal(self, request: dict) -> dict:
+        """Answers a {"query": "signal", "site", "pid", "signal"} request.
+
+        Sends the signal AS the target site's own runner account (see
+        PrivilegeDropper.drop_and_signal) - the request carries a site
+        *name*, never a uid/gid, resolved only against this helper's own
+        table, the same invariant handle_dispatch enforces for exec
+        requests.
+
+        Args:
+            request: Raw request dict.
+
+        Returns:
+            {"ok": True} if the signal was sent successfully, or
+            {"ok": False, "error": <message>} otherwise.
+        """
+        site_name = request.get("site")
+        if not isinstance(site_name, str) or site_name not in self._sites:
+            return {"ok": False, "error": f"unknown site {site_name!r}"}
+        pid = request.get("pid")
+        if not isinstance(pid, int):
+            return {"ok": False, "error": "pid must be an int"}
+        sig_name = request.get("signal")
+        if sig_name not in ("TERM", "KILL"):
+            return {"ok": False, "error": f"unsupported signal {sig_name!r}"}
+
+        site = self._sites[site_name]
+        sig = getattr(signal, f"SIG{sig_name}")
+
+        try:
+            child_pid = self._fork()
+        except OSError as exc:
+            log_error(f"[{site_name}] fork() failed for signal request: {exc}")
+            return {"ok": False, "error": f"fork failed: {exc}"}
+
+        if child_pid == 0:
+            self._run_signal_child(site, pid, sig)  # never returns
+
+        _reaped_pid, status = os.waitpid(child_pid, 0)
+        ok = os.waitstatus_to_exitcode(status) == 0
+        if not ok:
+            log_warning(f"[{site_name}] could not signal pid {pid} with SIG{sig_name}")
+        return {"ok": ok} if ok else {"ok": False, "error": f"could not signal pid {pid}"}
+
+    def _run_signal_child(self, site: SiteConfig.SiteConfig, pid: int, sig: int) -> None:
+        """Runs only inside the forked child; always exits, never returns.
+
+        Args:
+            site: The site whose runner account should send the signal.
+            pid: Target pid.
+            sig: Signal number to send.
+
+        Returns:
+            Never returns - always calls os._exit.
+        """
+        try:
+            self._dropper.drop_and_signal(site.runner_uid, site.runner_gid, pid, sig)
+        except Exception:
+            os._exit(1)
+        os._exit(0)
+
     def handle_request(self, request: dict) -> dict:
-        """Routes a raw request to the dispatch or status handler.
+        """Routes a raw request to the dispatch, status, or signal handler.
 
         Args:
             request: Raw request dict.
@@ -462,8 +684,11 @@ class PrivExecServer:
         Returns:
             The handler's response dict.
         """
-        if request.get("query") == "status":
+        query = request.get("query")
+        if query == "status":
             return self.handle_status(request)
+        if query == "signal":
+            return self.handle_signal(request)
         return self.handle_dispatch(request)
 
     def handle_connection(self, conn: socket.socket) -> None:
@@ -551,6 +776,19 @@ def main() -> int:
                 str,
                 {"help": "UNIX socket path to listen on"},
             ),
+            "cgroup_root": BaseOptsType.options_t(
+                "/sys/fs/cgroup/system.slice/baserunnerprivexec.service",
+                {"BaseRunnerPrivExec"},
+                ("--cgroup_root",),
+                str,
+                {
+                    "help": "Root of this process's own delegated cgroup "
+                    "subtree (requires Delegate=yes on its systemd unit) - "
+                    "each dispatched job is joined into a site-scoped "
+                    "child cgroup under this root for per-site CPU "
+                    "throttling"
+                },
+            ),
         },
     )
     BaseLogger(base_opts, include_time=True)
@@ -561,6 +799,7 @@ def main() -> int:
         return 1
 
     _set_child_subreaper()
+    _move_self_into_leaf_cgroup(pathlib.Path(base_opts.cgroup_root))
 
     socket_path = pathlib.Path(base_opts.priv_exec_socket)
     if socket_path.exists():
@@ -581,7 +820,12 @@ def main() -> int:
     for sig in ("TERM", "INT"):
         signal.signal(getattr(signal, "SIG" + sig), _handle_signal)
 
-    server = PrivExecServer(sites, PrivilegeDropper())
+    server = PrivExecServer(
+        sites,
+        PrivilegeDropper(),
+        joiner=CgroupJoiner(),
+        cgroup_root=pathlib.Path(base_opts.cgroup_root),
+    )
     try:
         server.serve_forever(sock, stop_event)
     finally:

@@ -100,6 +100,8 @@ def test_load_sites_config_valid(tmp_path, patch_lookup_user):
     assert seaglider.python_version == "/opt/basestation/bin/python"
     assert seaglider.queue_scripts is True
     assert seaglider.docker_uid == -1
+    assert seaglider.cpu_quota_pct is None
+    assert seaglider.cpu_weight is None
 
     ioptest = sites["ioptest"]
     assert ioptest.archive is True
@@ -165,6 +167,51 @@ def test_load_sites_config_bad_scalar_value(tmp_path, caplog, patch_lookup_user)
         f"  watch_dir: {seaglider_dir}\n"
         f"  runner_user: ioprunner\n"
         f"  docker_uid: not-an-int\n"
+    )
+    assert SiteConfig.load_sites_config(config_path) is None
+    assert any(r.levelname == "ERROR" for r in caplog.records)
+
+
+def test_load_sites_config_cpu_fields_present(tmp_path, patch_lookup_user):
+    seaglider_dir = tmp_path / "seaglider"
+    seaglider_dir.mkdir()
+    config_path = tmp_path / "sites.yaml"
+    config_path.write_text(
+        f"seaglider:\n"
+        f"  watch_dir: {seaglider_dir}\n"
+        f"  runner_user: ioprunner\n"
+        f"  cpu_quota_pct: 60\n"
+        f"  cpu_weight: 50\n"
+    )
+    sites = SiteConfig.load_sites_config(config_path)
+    assert sites is not None
+    assert sites["seaglider"].cpu_quota_pct == 60
+    assert sites["seaglider"].cpu_weight == 50
+
+
+def test_load_sites_config_bad_cpu_quota_pct_value(tmp_path, caplog, patch_lookup_user):
+    seaglider_dir = tmp_path / "seaglider"
+    seaglider_dir.mkdir()
+    config_path = tmp_path / "sites.yaml"
+    config_path.write_text(
+        f"seaglider:\n"
+        f"  watch_dir: {seaglider_dir}\n"
+        f"  runner_user: ioprunner\n"
+        f"  cpu_quota_pct: not-an-int\n"
+    )
+    assert SiteConfig.load_sites_config(config_path) is None
+    assert any(r.levelname == "ERROR" for r in caplog.records)
+
+
+def test_load_sites_config_bad_cpu_weight_value(tmp_path, caplog, patch_lookup_user):
+    seaglider_dir = tmp_path / "seaglider"
+    seaglider_dir.mkdir()
+    config_path = tmp_path / "sites.yaml"
+    config_path.write_text(
+        f"seaglider:\n"
+        f"  watch_dir: {seaglider_dir}\n"
+        f"  runner_user: ioprunner\n"
+        f"  cpu_weight: not-an-int\n"
     )
     assert SiteConfig.load_sites_config(config_path) is None
     assert any(r.levelname == "ERROR" for r in caplog.records)

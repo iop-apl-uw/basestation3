@@ -1,0 +1,35 @@
+# sites.yaml for the testlong/ multipass validation VM.
+#
+# Three synthetic sites - deliberately NOT using the shared "ioprunner"
+# pattern from the real seaglider/train deployment (docs/sites.example.yaml)
+# because this environment specifically needs to prove that each site's
+# jobs run under *that site's own, distinct* account - a shared account
+# across sites would make it impossible to tell a correct dispatch from a
+# cross-wired one just by checking file ownership.
+#
+# cpu_quota_pct/cpu_weight are set only on "alpha", to exercise
+# CgroupJoiner's throttling path specifically - "bravo"/"charlie" stay
+# unthrottled to prove the default (no cgroup limits written) path too.
+
+alpha:
+  watch_dir: /home/jails/alpha/gliderjail/home/rundir
+  jail_root: /home/jails/alpha/gliderjail
+  runner_user: runner-alpha
+  cpu_quota_pct: 50
+  cpu_weight: 50
+  # Default (/opt/basestation/bin/python) doesn't exist on this VM - uv
+  # sync builds its own venv under the transferred checkout instead.
+  python_version: /usr/local/basestation3/.venv/bin/python
+
+bravo:
+  watch_dir: /home/jails/bravo/gliderjail/home/rundir
+  jail_root: /home/jails/bravo/gliderjail
+  runner_user: runner-bravo
+  python_version: /usr/local/basestation3/.venv/bin/python
+
+charlie:
+  watch_dir: /home/jails/charlie/gliderjail/home/rundir
+  jail_root: /home/jails/charlie/gliderjail
+  runner_user: runner-charlie
+  archive: true
+  python_version: /usr/local/basestation3/.venv/bin/python
