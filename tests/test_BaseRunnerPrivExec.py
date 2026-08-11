@@ -66,15 +66,14 @@ def _recv_response(sock: socket.socket) -> dict:
     return orjson.loads(data)
 
 
-def _make_site(tmp_path, *, uid=4242, gid=4343, name="aoml", jail_root=None):
+def _make_site(tmp_path, *, uid=4242, gid=4343, name="seaglider", jail_root=None):
     watch_dir = tmp_path / name
     watch_dir.mkdir(exist_ok=True)
     return SiteConfig.SiteConfig(
         name=name,
         watch_dir=watch_dir,
         jail_root=jail_root,
-        base_log=None,
-        runner_user=f"runner-{name}",
+        runner_user="ioprunner",
         runner_uid=uid,
         runner_gid=gid,
     )
@@ -251,9 +250,9 @@ def test_child_table_reap_stops_on_child_process_error():
 
 def test_validate_dispatch_request_valid(tmp_path):
     site = _make_site(tmp_path)
-    sites = {"aoml": site}
+    sites = {"seaglider": site}
     log_file = site.watch_dir / "baselog.log"
-    request = {"site": "aoml", "argv": ["/bin/true"], "log_file": str(log_file)}
+    request = {"site": "seaglider", "argv": ["/bin/true"], "log_file": str(log_file)}
 
     req = BaseRunnerPrivExec.validate_dispatch_request(sites, request)
 
@@ -274,47 +273,46 @@ def test_validate_dispatch_request_missing_site_key(tmp_path):
 
 def test_validate_dispatch_request_bad_argv(tmp_path):
     site = _make_site(tmp_path)
-    request = {"site": "aoml", "argv": "not-a-list", "log_file": "x"}
+    request = {"site": "seaglider", "argv": "not-a-list", "log_file": "x"}
     with pytest.raises(ValueError, match="argv"):
-        BaseRunnerPrivExec.validate_dispatch_request({"aoml": site}, request)
+        BaseRunnerPrivExec.validate_dispatch_request({"seaglider": site}, request)
 
 
 def test_validate_dispatch_request_empty_argv(tmp_path):
     site = _make_site(tmp_path)
-    request = {"site": "aoml", "argv": [], "log_file": "x"}
+    request = {"site": "seaglider", "argv": [], "log_file": "x"}
     with pytest.raises(ValueError, match="argv"):
-        BaseRunnerPrivExec.validate_dispatch_request({"aoml": site}, request)
+        BaseRunnerPrivExec.validate_dispatch_request({"seaglider": site}, request)
 
 
 def test_validate_dispatch_request_bad_log_file_type(tmp_path):
     site = _make_site(tmp_path)
-    request = {"site": "aoml", "argv": ["/bin/true"], "log_file": 12345}
+    request = {"site": "seaglider", "argv": ["/bin/true"], "log_file": 12345}
     with pytest.raises(ValueError, match="log_file must be a string"):
-        BaseRunnerPrivExec.validate_dispatch_request({"aoml": site}, request)
+        BaseRunnerPrivExec.validate_dispatch_request({"seaglider": site}, request)
 
 
 def test_validate_dispatch_request_log_file_outside_site_tree(tmp_path):
     site = _make_site(tmp_path)
     outside = tmp_path / "elsewhere" / "baselog.log"
-    request = {"site": "aoml", "argv": ["/bin/true"], "log_file": str(outside)}
+    request = {"site": "seaglider", "argv": ["/bin/true"], "log_file": str(outside)}
     with pytest.raises(ValueError, match="not contained"):
-        BaseRunnerPrivExec.validate_dispatch_request({"aoml": site}, request)
+        BaseRunnerPrivExec.validate_dispatch_request({"seaglider": site}, request)
 
 
 def test_validate_dispatch_request_no_roots_at_all(tmp_path):
     site = SiteConfig.SiteConfig(
-        name="aoml",
+        name="seaglider",
         watch_dir=tmp_path / "unused",
         jail_root=None,
-        base_log=None,
-        runner_user="runner-aoml",
+        runner_user="ioprunner",
         runner_uid=1,
         runner_gid=1,
     )
     object.__setattr__(site, "watch_dir", None)
-    request = {"site": "aoml", "argv": ["/bin/true"], "log_file": "/tmp/x"}
+    request = {"site": "seaglider", "argv": ["/bin/true"], "log_file": "/tmp/x"}
     with pytest.raises(ValueError, match="not contained"):
-        BaseRunnerPrivExec.validate_dispatch_request({"aoml": site}, request)
+        BaseRunnerPrivExec.validate_dispatch_request({"seaglider": site}, request)
 
 
 # --- PrivExecServer.handle_dispatch / _run_child ---
@@ -323,10 +321,10 @@ def test_validate_dispatch_request_no_roots_at_all(tmp_path):
 def test_handle_dispatch_success(tmp_path):
     site = _make_site(tmp_path)
     server = BaseRunnerPrivExec.PrivExecServer(
-        {"aoml": site}, mock.Mock(spec=BaseRunnerPrivExec.PrivilegeDropper), fork_fn=lambda: 4242
+        {"seaglider": site}, mock.Mock(spec=BaseRunnerPrivExec.PrivilegeDropper), fork_fn=lambda: 4242
     )
     log_file = site.watch_dir / "baselog.log"
-    request = {"site": "aoml", "argv": ["/bin/true"], "log_file": str(log_file)}
+    request = {"site": "seaglider", "argv": ["/bin/true"], "log_file": str(log_file)}
 
     response = server.handle_dispatch(request)
 
@@ -337,7 +335,7 @@ def test_handle_dispatch_success(tmp_path):
 def test_handle_dispatch_child_branch_calls_run_child(monkeypatch, tmp_path):
     site = _make_site(tmp_path)
     server = BaseRunnerPrivExec.PrivExecServer(
-        {"aoml": site},
+        {"seaglider": site},
         mock.Mock(spec=BaseRunnerPrivExec.PrivilegeDropper),
         fork_fn=lambda: 0,
     )
@@ -350,7 +348,7 @@ def test_handle_dispatch_child_branch_calls_run_child(monkeypatch, tmp_path):
     monkeypatch.setattr(server, "_run_child", fake_run_child)
 
     log_file = site.watch_dir / "baselog.log"
-    request = {"site": "aoml", "argv": ["/bin/true"], "log_file": str(log_file)}
+    request = {"site": "seaglider", "argv": ["/bin/true"], "log_file": str(log_file)}
 
     with pytest.raises(SystemExit):
         server.handle_dispatch(request)
@@ -370,11 +368,11 @@ def test_handle_dispatch_rejects_invalid_request(tmp_path, caplog):
 def test_handle_dispatch_log_file_open_failure(tmp_path):
     site = _make_site(tmp_path)
     server = BaseRunnerPrivExec.PrivExecServer(
-        {"aoml": site}, mock.Mock(spec=BaseRunnerPrivExec.PrivilegeDropper)
+        {"seaglider": site}, mock.Mock(spec=BaseRunnerPrivExec.PrivilegeDropper)
     )
     # A directory that doesn't exist as a parent -> os.open raises OSError.
     bad_log_file = site.watch_dir / "no" / "such" / "dir" / "baselog.log"
-    request = {"site": "aoml", "argv": ["/bin/true"], "log_file": str(bad_log_file)}
+    request = {"site": "seaglider", "argv": ["/bin/true"], "log_file": str(bad_log_file)}
 
     response = server.handle_dispatch(request)
 
@@ -389,12 +387,12 @@ def test_handle_dispatch_fork_failure(monkeypatch, tmp_path):
         raise OSError("out of resources")
 
     server = BaseRunnerPrivExec.PrivExecServer(
-        {"aoml": site},
+        {"seaglider": site},
         mock.Mock(spec=BaseRunnerPrivExec.PrivilegeDropper),
         fork_fn=_raise_fork,
     )
     log_file = site.watch_dir / "baselog.log"
-    request = {"site": "aoml", "argv": ["/bin/true"], "log_file": str(log_file)}
+    request = {"site": "seaglider", "argv": ["/bin/true"], "log_file": str(log_file)}
 
     response = server.handle_dispatch(request)
 
@@ -416,7 +414,7 @@ def test_run_child_drops_privilege_and_exits_126(monkeypatch, tmp_path):
 
     dropper = mock.Mock(spec=BaseRunnerPrivExec.PrivilegeDropper)
     site = _make_site(tmp_path)
-    server = BaseRunnerPrivExec.PrivExecServer({"aoml": site}, dropper)
+    server = BaseRunnerPrivExec.PrivExecServer({"seaglider": site}, dropper)
     req = BaseRunnerPrivExec.DispatchRequest(
         site=site, argv=["/bin/true"], log_file=site.watch_dir / "baselog.log"
     )
@@ -447,7 +445,7 @@ def test_run_child_exits_127_on_exception(monkeypatch, tmp_path):
 
     dropper = mock.Mock(spec=BaseRunnerPrivExec.PrivilegeDropper)
     site = _make_site(tmp_path)
-    server = BaseRunnerPrivExec.PrivExecServer({"aoml": site}, dropper)
+    server = BaseRunnerPrivExec.PrivExecServer({"seaglider": site}, dropper)
     req = BaseRunnerPrivExec.DispatchRequest(
         site=site, argv=["/bin/true"], log_file=site.watch_dir / "baselog.log"
     )

@@ -55,14 +55,13 @@ def short_socket_path():
         path.unlink(missing_ok=True)
 
 
-def _site(watch_dir, *, name="aoml", jail_root=None, archive=False, ignore_lock=True):
+def _site(watch_dir, *, name="seaglider", jail_root=None, archive=False, ignore_lock=True):
     watch_dir.mkdir(parents=True, exist_ok=True)
     return SiteConfig.SiteConfig(
         name=name,
         watch_dir=watch_dir,
         jail_root=jail_root,
-        base_log=None,
-        runner_user=f"runner-{name}",
+        runner_user="ioprunner",
         runner_uid=1,
         runner_gid=1,
         archive=archive,
@@ -153,11 +152,10 @@ def test_quit_func_sets_exit_event():
 
 def test_try_activate_site_missing_watch_dir(tmp_path):
     site = SiteConfig.SiteConfig(
-        name="aoml",
+        name="seaglider",
         watch_dir=tmp_path / "does-not-exist",
         jail_root=None,
-        base_log=None,
-        runner_user="runner-aoml",
+        runner_user="ioprunner",
         runner_uid=1,
         runner_gid=1,
     )
@@ -165,13 +163,13 @@ def test_try_activate_site_missing_watch_dir(tmp_path):
 
 
 def test_try_activate_site_with_ignore_lock(tmp_path):
-    site = _site(tmp_path / "aoml", ignore_lock=True)
+    site = _site(tmp_path / "seaglider", ignore_lock=True)
     assert BaseRunnerMulti._try_activate_site(site) is True
     assert (site.watch_dir / BaseRunnerMulti.base_runner_lockfile_name).exists()
 
 
 def test_try_activate_site_kills_stale_but_live_pid(tmp_path, monkeypatch):
-    site = _site(tmp_path / "aoml", ignore_lock=False)
+    site = _site(tmp_path / "seaglider", ignore_lock=False)
     lock_file = site.watch_dir / BaseRunnerMulti.base_runner_lockfile_name
     lock_file.write_text(str(os.getpid()))  # a real, live pid (ourselves)
 
@@ -197,7 +195,7 @@ def test_try_activate_site_kills_stale_but_live_pid(tmp_path, monkeypatch):
 
 
 def test_try_activate_site_sigkills_unresponsive_pid(tmp_path, monkeypatch):
-    site = _site(tmp_path / "aoml", ignore_lock=False)
+    site = _site(tmp_path / "seaglider", ignore_lock=False)
     lock_file = site.watch_dir / BaseRunnerMulti.base_runner_lockfile_name
     lock_file.write_text(str(os.getpid()))
 
@@ -222,22 +220,21 @@ def test_try_activate_site_sigkills_unresponsive_pid(tmp_path, monkeypatch):
 
 
 def test_site_registry_activates_available_sites(tmp_path):
-    ready = _site(tmp_path / "aoml")
+    ready = _site(tmp_path / "seaglider")
     missing = SiteConfig.SiteConfig(
         name="caricoos",
         watch_dir=tmp_path / "caricoos-missing",
         jail_root=None,
-        base_log=None,
         runner_user="runner-caricoos",
         runner_uid=1,
         runner_gid=1,
         ignore_lock=True,
     )
     inotify = _FakeInotify()
-    registry = BaseRunnerMulti.SiteRegistry({"aoml": ready, "caricoos": missing}, inotify)
+    registry = BaseRunnerMulti.SiteRegistry({"seaglider": ready, "caricoos": missing}, inotify)
 
     active_names = {s.name for s in registry.active_sites}
-    assert active_names == {"aoml"}
+    assert active_names == {"seaglider"}
     assert len(inotify.watches) == 1
 
 
@@ -246,7 +243,6 @@ def test_site_registry_retries_pending_sites(tmp_path):
         name="caricoos",
         watch_dir=tmp_path / "caricoos",
         jail_root=None,
-        base_log=None,
         runner_user="runner-caricoos",
         runner_uid=1,
         runner_gid=1,
@@ -262,17 +258,17 @@ def test_site_registry_retries_pending_sites(tmp_path):
 
 
 def test_site_registry_add_watch_failure_stays_pending(tmp_path):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     inotify = _FakeInotify()
     inotify.fail_paths.add(str(site.watch_dir))
-    registry = BaseRunnerMulti.SiteRegistry({"aoml": site}, inotify)
+    registry = BaseRunnerMulti.SiteRegistry({"seaglider": site}, inotify)
     assert registry.active_sites == []
 
 
 def test_site_registry_site_for_wd(tmp_path):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     inotify = _FakeInotify()
-    registry = BaseRunnerMulti.SiteRegistry({"aoml": site}, inotify)
+    registry = BaseRunnerMulti.SiteRegistry({"seaglider": site}, inotify)
     wd = next(iter(inotify.watches))
     assert registry.site_for_wd(wd) is site
     assert registry.site_for_wd(9999) is None
@@ -301,14 +297,14 @@ def test_update_queue_length_noop_when_absent():
 
 
 def test_handle_run_file_event_ignores_missing_file(tmp_path):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
     dispatcher.handle_run_file_event(site, site.watch_dir / "does-not-exist.run")
     assert not dispatcher.job_queues
 
 
 def test_handle_run_file_event_ignores_non_run_suffix(tmp_path):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     stray = site.watch_dir / "not-a-run-file.txt"
     stray.write_text("irrelevant")
     dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
@@ -318,21 +314,21 @@ def test_handle_run_file_event_ignores_non_run_suffix(tmp_path):
 
 
 def test_handle_run_file_event_enqueues_known_script(tmp_path):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     run_file = _write_run_file(
         site.watch_dir,
-        "sg229.run",
-        "/home/sg229",
-        "/home/sg229/current",
-        "/home/sg229/current/baselog.log",
-        "Base.py --mission_dir /home/sg229/current",
+        "sg272.run",
+        "/home/sg272",
+        "/home/sg272/current",
+        "/home/sg272/current/baselog.log",
+        "Base.py --mission_dir /home/sg272/current",
     )
     dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
 
     dispatcher.handle_run_file_event(site, run_file)
 
     assert not run_file.exists()  # cleaned up (unlinked, archive=False)
-    que = ("aoml", "/home/sg229/current", "Base.py", 229)
+    que = ("seaglider", "/home/sg272/current", "Base.py", 272)
     assert que in dispatcher.job_queues
     assert len(dispatcher.job_queues[que]) == 1
     job = dispatcher.job_queues[que][0]
@@ -341,35 +337,35 @@ def test_handle_run_file_event_enqueues_known_script(tmp_path):
     assert "--job_id" in job.argv
     assert "--queue_length" in job.argv
     assert job.argv[job.argv.index("--queue_length") + 1] == "0"
-    assert str(job.log_file) == "/home/sg229/current/baselog.log"
+    assert str(job.log_file) == "/home/sg272/current/baselog.log"
 
 
 def test_handle_run_file_event_archives_when_configured(tmp_path):
-    site = _site(tmp_path / "aoml", archive=True)
+    site = _site(tmp_path / "seaglider", archive=True)
     run_file = _write_run_file(
         site.watch_dir,
-        "sg229.run",
-        "/home/sg229",
-        "/home/sg229/current",
-        "/home/sg229/current/baselog.log",
-        "Base.py --mission_dir /home/sg229/current",
+        "sg272.run",
+        "/home/sg272",
+        "/home/sg272/current",
+        "/home/sg272/current/baselog.log",
+        "Base.py --mission_dir /home/sg272/current",
     )
     dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
 
     dispatcher.handle_run_file_event(site, run_file)
 
     assert not run_file.exists()
-    assert (site.watch_dir / "archive" / "sg229.run").exists()
+    assert (site.watch_dir / "archive" / "sg272.run").exists()
 
 
 def test_handle_run_file_event_unknown_script(tmp_path, caplog):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     run_file = _write_run_file(
         site.watch_dir,
-        "sg229.run",
-        "/home/sg229",
-        "/home/sg229/current",
-        "/home/sg229/current/baselog.log",
+        "sg272.run",
+        "/home/sg272",
+        "/home/sg272/current",
+        "/home/sg272/current/baselog.log",
         "NotAScript.py --foo",
     )
     dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
@@ -382,8 +378,8 @@ def test_handle_run_file_event_unknown_script(tmp_path, caplog):
 
 
 def test_handle_run_file_event_malformed_content_still_cleans_up(tmp_path, caplog):
-    site = _site(tmp_path / "aoml")
-    run_file = site.watch_dir / "sg229.run"
+    site = _site(tmp_path / "seaglider")
+    run_file = site.watch_dir / "sg272.run"
     run_file.write_text("not enough fields\n")
     dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
 
@@ -394,48 +390,48 @@ def test_handle_run_file_event_malformed_content_still_cleans_up(tmp_path, caplo
 
 
 def test_handle_run_file_event_bad_glider_id_defaults_to_zero(tmp_path):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     run_file = _write_run_file(
         site.watch_dir,
         "weird.run",
         "/home/not-a-glider-dir",
-        "/home/sg229/current",
-        "/home/sg229/current/baselog.log",
-        "Base.py --mission_dir /home/sg229/current",
+        "/home/sg272/current",
+        "/home/sg272/current/baselog.log",
+        "Base.py --mission_dir /home/sg272/current",
     )
     dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
 
     dispatcher.handle_run_file_event(site, run_file)
 
-    que = ("aoml", "/home/sg229/current", "Base.py", 0)
+    que = ("seaglider", "/home/sg272/current", "Base.py", 0)
     assert que in dispatcher.job_queues
 
 
 def test_handle_run_file_event_jail_root_rewrites_paths(tmp_path):
     jail_root = tmp_path / "jail"
-    site = _site(tmp_path / "aoml", jail_root=jail_root)
+    site = _site(tmp_path / "seaglider", jail_root=jail_root)
     run_file = _write_run_file(
         site.watch_dir,
-        "sg229.run",
-        "/home/sg229",
-        "/home/sg229/current",
-        "/home/sg229/current/baselog.log",
-        "Base.py --mission_dir /home/sg229/current",
+        "sg272.run",
+        "/home/sg272",
+        "/home/sg272/current",
+        "/home/sg272/current/baselog.log",
+        "Base.py --mission_dir /home/sg272/current",
     )
     dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
 
     dispatcher.handle_run_file_event(site, run_file)
 
-    expected_mission_dir = str(jail_root / "home/sg229/current")
-    que = ("aoml", expected_mission_dir, "Base.py", 229)
+    expected_mission_dir = str(jail_root / "home/sg272/current")
+    que = ("seaglider", expected_mission_dir, "Base.py", 272)
     assert que in dispatcher.job_queues
     job = dispatcher.job_queues[que][0]
     assert expected_mission_dir in job.argv
-    assert str(job.log_file) == str(jail_root / "home/sg229/current/baselog.log")
+    assert str(job.log_file) == str(jail_root / "home/sg272/current/baselog.log")
 
 
 def test_cleanup_run_file_refuses_path_outside_site_tree(tmp_path, caplog):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     outside_dir = tmp_path / "elsewhere"
     outside_dir.mkdir()
     outside_file = outside_dir / "sneaky.run"
@@ -452,20 +448,20 @@ def test_cleanup_run_file_refuses_path_outside_site_tree(tmp_path, caplog):
 
 
 def test_dispatch_queued_and_poll_completion_roundtrip(tmp_path):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     run_file = _write_run_file(
         site.watch_dir,
-        "sg229.run",
-        "/home/sg229",
-        "/home/sg229/current",
-        "/home/sg229/current/baselog.log",
-        "Base.py --mission_dir /home/sg229/current",
+        "sg272.run",
+        "/home/sg272",
+        "/home/sg272/current",
+        "/home/sg272/current/baselog.log",
+        "Base.py --mission_dir /home/sg272/current",
     )
     client = FakePrivExecClient()
     dispatcher = BaseRunnerMulti.Dispatcher(client)
     dispatcher.handle_run_file_event(site, run_file)
 
-    que = ("aoml", "/home/sg229/current", "Base.py", 229)
+    que = ("seaglider", "/home/sg272/current", "Base.py", 272)
     dispatcher.dispatch_queued()
 
     assert len(client.dispatched) == 1
@@ -482,22 +478,22 @@ def test_dispatch_queued_and_poll_completion_roundtrip(tmp_path):
 
 
 def test_dispatch_queued_updates_queue_length_for_second_job(tmp_path):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     client = FakePrivExecClient()
     dispatcher = BaseRunnerMulti.Dispatcher(client)
 
     run_file_1 = _write_run_file(
-        site.watch_dir, "a.run", "/home/sg229", "/home/sg229/current",
-        "/home/sg229/current/baselog.log", "Base.py --mission_dir /home/sg229/current",
+        site.watch_dir, "a.run", "/home/sg272", "/home/sg272/current",
+        "/home/sg272/current/baselog.log", "Base.py --mission_dir /home/sg272/current",
     )
     dispatcher.handle_run_file_event(site, run_file_1)
     run_file_2 = _write_run_file(
-        site.watch_dir, "b.run", "/home/sg229", "/home/sg229/current",
-        "/home/sg229/current/baselog.log", "Base.py --mission_dir /home/sg229/current",
+        site.watch_dir, "b.run", "/home/sg272", "/home/sg272/current",
+        "/home/sg272/current/baselog.log", "Base.py --mission_dir /home/sg272/current",
     )
     dispatcher.handle_run_file_event(site, run_file_2)
 
-    que = ("aoml", "/home/sg229/current", "Base.py", 229)
+    que = ("seaglider", "/home/sg272/current", "Base.py", 272)
     assert len(dispatcher.job_queues[que]) == 2
 
     dispatcher.dispatch_queued()  # dispatches the first-queued job
@@ -510,13 +506,13 @@ def test_dispatch_queued_updates_queue_length_for_second_job(tmp_path):
 
 
 def test_poll_completions_writes_timing_line_for_timing_scripts(tmp_path):
-    site = _site(tmp_path / "aoml")
-    mission_dir = tmp_path / "sg229" / "current"
+    site = _site(tmp_path / "seaglider")
+    mission_dir = tmp_path / "sg272" / "current"
     mission_dir.mkdir(parents=True)
     log_file_path = mission_dir / "baselog.log"
     log_file_path.write_text("")
     run_file = _write_run_file(
-        site.watch_dir, "sg229.run", str(tmp_path / "sg229"), str(mission_dir),
+        site.watch_dir, "sg272.run", str(tmp_path / "sg272"), str(mission_dir),
         str(log_file_path), f"BaseLogin.py --mission_dir {mission_dir}",
     )
     client = FakePrivExecClient()
@@ -537,10 +533,10 @@ def test_poll_completions_writes_timing_line_for_timing_scripts(tmp_path):
 
 
 def test_poll_completions_handles_status_rpc_failure(tmp_path, caplog):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     run_file = _write_run_file(
-        site.watch_dir, "sg229.run", "/home/sg229", "/home/sg229/current",
-        "/home/sg229/current/baselog.log", "Base.py --mission_dir /home/sg229/current",
+        site.watch_dir, "sg272.run", "/home/sg272", "/home/sg272/current",
+        "/home/sg272/current/baselog.log", "Base.py --mission_dir /home/sg272/current",
     )
     client = FakePrivExecClient()
     dispatcher = BaseRunnerMulti.Dispatcher(client)
@@ -556,20 +552,20 @@ def test_poll_completions_handles_status_rpc_failure(tmp_path, caplog):
 
 
 def test_dispatch_queued_skips_que_already_running(tmp_path):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     client = FakePrivExecClient()
     dispatcher = BaseRunnerMulti.Dispatcher(client)
     run_file_1 = _write_run_file(
-        site.watch_dir, "a.run", "/home/sg229", "/home/sg229/current",
-        "/home/sg229/current/baselog.log", "Base.py --mission_dir /home/sg229/current",
+        site.watch_dir, "a.run", "/home/sg272", "/home/sg272/current",
+        "/home/sg272/current/baselog.log", "Base.py --mission_dir /home/sg272/current",
     )
     dispatcher.handle_run_file_event(site, run_file_1)
     dispatcher.dispatch_queued()
     assert len(client.dispatched) == 1
 
     run_file_2 = _write_run_file(
-        site.watch_dir, "b.run", "/home/sg229", "/home/sg229/current",
-        "/home/sg229/current/baselog.log", "Base.py --mission_dir /home/sg229/current",
+        site.watch_dir, "b.run", "/home/sg272", "/home/sg272/current",
+        "/home/sg272/current/baselog.log", "Base.py --mission_dir /home/sg272/current",
     )
     dispatcher.handle_run_file_event(site, run_file_2)
     dispatcher.dispatch_queued()  # que already running - must not dispatch a second job
@@ -581,7 +577,7 @@ def test_dispatch_queued_skips_que_already_running(tmp_path):
 
 
 def test_dispatch_blocking_immediate_success(tmp_path):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     client = FakePrivExecClient()
     dispatcher = BaseRunnerMulti.Dispatcher(client)
 
@@ -595,7 +591,7 @@ def test_dispatch_blocking_immediate_success(tmp_path):
 
 
 def test_dispatch_blocking_logs_warning_on_nonzero_returncode(tmp_path, caplog):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     client = FakePrivExecClient()
 
     def fake_dispatch(site_name, argv, log_file):
@@ -610,7 +606,7 @@ def test_dispatch_blocking_logs_warning_on_nonzero_returncode(tmp_path, caplog):
 
 
 def test_process_run_file_uses_blocking_dispatch_when_queue_scripts_false(tmp_path):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     object.__setattr__(site, "queue_scripts", False)
     client = FakePrivExecClient()
 
@@ -622,8 +618,8 @@ def test_process_run_file_uses_blocking_dispatch_when_queue_scripts_false(tmp_pa
     client.dispatch_override = fake_dispatch
     dispatcher = BaseRunnerMulti.Dispatcher(client)
     run_file = _write_run_file(
-        site.watch_dir, "sg229.run", "/home/sg229", "/home/sg229/current",
-        "/home/sg229/current/baselog.log", "Base.py --mission_dir /home/sg229/current",
+        site.watch_dir, "sg272.run", "/home/sg272", "/home/sg272/current",
+        "/home/sg272/current/baselog.log", "Base.py --mission_dir /home/sg272/current",
     )
 
     dispatcher.handle_run_file_event(site, run_file)
@@ -645,13 +641,13 @@ def test_unix_socket_priv_exec_client_dispatch_success(short_socket_path):
             data = BaseRunnerMulti._recv_frame(conn)
             assert data is not None
             request = orjson.loads(data)
-            assert request["site"] == "aoml"
+            assert request["site"] == "seaglider"
             BaseRunnerMulti._send_frame(conn, orjson.dumps({"ok": True, "pid": 4242}))
 
     thread = threading.Thread(target=_server)
     thread.start()
     client = BaseRunnerMulti.UnixSocketPrivExecClient(str(short_socket_path))
-    pid = client.dispatch("aoml", ["/bin/true"], pathlib.Path("/tmp/x.log"))
+    pid = client.dispatch("seaglider", ["/bin/true"], pathlib.Path("/tmp/x.log"))
     thread.join(timeout=5)
     listener.close()
 
@@ -734,16 +730,16 @@ def test_unix_socket_priv_exec_client_raises_on_no_response(short_socket_path):
 
 
 def test_check_lock_file_access_error_is_non_fatal(tmp_path, monkeypatch):
-    site = _site(tmp_path / "aoml", ignore_lock=False)
+    site = _site(tmp_path / "seaglider", ignore_lock=False)
     monkeypatch.setattr(Utils, "check_lock_file", lambda *_a, **_k: -1)
     assert BaseRunnerMulti._try_activate_site(site) is True
 
 
 def test_handle_run_file_event_keyboard_interrupt_sets_exit_event(tmp_path, monkeypatch):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     run_file = _write_run_file(
-        site.watch_dir, "sg229.run", "/home/sg229", "/home/sg229/current",
-        "/home/sg229/current/baselog.log", "Base.py --mission_dir /home/sg229/current",
+        site.watch_dir, "sg272.run", "/home/sg272", "/home/sg272/current",
+        "/home/sg272/current/baselog.log", "Base.py --mission_dir /home/sg272/current",
     )
     dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
 
@@ -761,11 +757,10 @@ def test_handle_run_file_event_keyboard_interrupt_sets_exit_event(tmp_path, monk
 
 def test_handle_run_file_event_docker_branch(tmp_path):
     site = SiteConfig.SiteConfig(
-        name="aoml",
-        watch_dir=tmp_path / "aoml",
+        name="seaglider",
+        watch_dir=tmp_path / "seaglider",
         jail_root=None,
-        base_log=None,
-        runner_user="runner-aoml",
+        runner_user="ioprunner",
         runner_uid=1,
         runner_gid=1,
         ignore_lock=True,
@@ -774,36 +769,36 @@ def test_handle_run_file_event_docker_branch(tmp_path):
     )
     site.watch_dir.mkdir()
     run_file = _write_run_file(
-        site.watch_dir, "sg229.run", "/home/sg229", "/home/sg229/current",
-        "/home/sg229/current/baselog.log", "Base.py --mission_dir /home/sg229/current",
+        site.watch_dir, "sg272.run", "/home/sg272", "/home/sg272/current",
+        "/home/sg272/current/baselog.log", "Base.py --mission_dir /home/sg272/current",
     )
     dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
 
     dispatcher.handle_run_file_event(site, run_file)
 
-    que = ("aoml", "/home/sg229/current", "Base.py", 229)
+    que = ("seaglider", "/home/sg272/current", "Base.py", 272)
     job = dispatcher.job_queues[que][0]
     assert job.argv[1] == "/usr/local/basestation3/Base.py"
 
 
 def test_enqueue_strips_daemon_flag(tmp_path):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     run_file = _write_run_file(
-        site.watch_dir, "sg229.run", "/home/sg229", "/home/sg229/current",
-        "/home/sg229/current/gps.log",
-        "GliderEarlyGPS.py --daemon --mission_dir /home/sg229/current",
+        site.watch_dir, "sg272.run", "/home/sg272", "/home/sg272/current",
+        "/home/sg272/current/gps.log",
+        "GliderEarlyGPS.py --daemon --mission_dir /home/sg272/current",
     )
     dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
 
     dispatcher.handle_run_file_event(site, run_file)
 
-    que = ("aoml", "/home/sg229/current", "GliderEarlyGPS.py", 229)
+    que = ("seaglider", "/home/sg272/current", "GliderEarlyGPS.py", 272)
     job = dispatcher.job_queues[que][0]
     assert "--daemon" not in job.argv
 
 
 def test_dispatch_blocking_polls_until_done(tmp_path):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     client = FakePrivExecClient()
     calls = {"n": 0}
 
@@ -826,14 +821,14 @@ def test_dispatch_blocking_polls_until_done(tmp_path):
 
 
 def test_cleanup_run_file_missing_file_is_noop(tmp_path):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
     dispatcher._cleanup_run_file(site, site.watch_dir / "does-not-exist.run")  # no raise
 
 
 def test_cleanup_run_file_archive_mkdir_failure_falls_back_to_unlink(tmp_path, monkeypatch, caplog):
-    site = _site(tmp_path / "aoml", archive=True)
-    run_file = site.watch_dir / "sg229.run"
+    site = _site(tmp_path / "seaglider", archive=True)
+    run_file = site.watch_dir / "sg272.run"
     run_file.write_text("x")
 
     def fake_mkdir(self, *a, **k):
@@ -849,9 +844,9 @@ def test_cleanup_run_file_archive_mkdir_failure_falls_back_to_unlink(tmp_path, m
 
 
 def test_cleanup_run_file_archive_move_failure_falls_back_to_unlink(tmp_path, monkeypatch, caplog):
-    site = _site(tmp_path / "aoml", archive=True)
+    site = _site(tmp_path / "seaglider", archive=True)
     (site.watch_dir / "archive").mkdir()
-    run_file = site.watch_dir / "sg229.run"
+    run_file = site.watch_dir / "sg272.run"
     run_file.write_text("x")
 
     def fake_move(*a, **k):
@@ -867,8 +862,8 @@ def test_cleanup_run_file_archive_move_failure_falls_back_to_unlink(tmp_path, mo
 
 
 def test_cleanup_run_file_unlink_failure_logs_critical(tmp_path, monkeypatch, caplog):
-    site = _site(tmp_path / "aoml")
-    run_file = site.watch_dir / "sg229.run"
+    site = _site(tmp_path / "seaglider")
+    run_file = site.watch_dir / "sg272.run"
     run_file.write_text("x")
 
     def fake_unlink(self, *a, **k):
@@ -884,7 +879,7 @@ def test_cleanup_run_file_unlink_failure_logs_critical(tmp_path, monkeypatch, ca
 
 def test_poll_completions_outer_exception_is_caught(tmp_path, monkeypatch, caplog):
     dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
-    dispatcher.running_jobs[("aoml", "x", "Base.py", 1)] = BaseRunnerMulti.RunningJob(
+    dispatcher.running_jobs[("seaglider", "x", "Base.py", 1)] = BaseRunnerMulti.RunningJob(
         "job1", 1, ["argv"], tmp_path / "log", 0.0
     )
 
@@ -897,10 +892,10 @@ def test_poll_completions_outer_exception_is_caught(tmp_path, monkeypatch, caplo
 
 
 def test_poll_one_completion_logs_warning_on_nonzero_returncode(tmp_path):
-    site = _site(tmp_path / "aoml")
+    site = _site(tmp_path / "seaglider")
     run_file = _write_run_file(
-        site.watch_dir, "sg229.run", "/home/sg229", "/home/sg229/current",
-        "/home/sg229/current/baselog.log", "Base.py --mission_dir /home/sg229/current",
+        site.watch_dir, "sg272.run", "/home/sg272", "/home/sg272/current",
+        "/home/sg272/current/baselog.log", "Base.py --mission_dir /home/sg272/current",
     )
     client = FakePrivExecClient()
     dispatcher = BaseRunnerMulti.Dispatcher(client)
@@ -922,14 +917,14 @@ def test_write_timing_line_failure_is_logged(tmp_path, caplog):
     bad_log_file.mkdir()
     running = BaseRunnerMulti.RunningJob("job1", 1, ["argv"], bad_log_file, 0.0)
 
-    dispatcher._write_timing_line("aoml", "BaseLogin.py", running, 0)
+    dispatcher._write_timing_line("seaglider", "BaseLogin.py", running, 0)
 
     assert any(r.levelname == "ERROR" for r in caplog.records)
 
 
 def test_dispatch_queued_outer_exception_is_caught(tmp_path, monkeypatch, caplog):
     dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
-    dispatcher.job_queues[("aoml", "x", "Base.py", 1)].append(
+    dispatcher.job_queues[("seaglider", "x", "Base.py", 1)].append(
         BaseRunnerMulti.QueuedJob("job1", ["argv"], tmp_path / "log")
     )
 
@@ -943,7 +938,7 @@ def test_dispatch_queued_outer_exception_is_caught(tmp_path, monkeypatch, caplog
 
 def test_dispatch_one_queued_empty_queue_is_noop(tmp_path):
     dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
-    dispatcher._dispatch_one_queued(("aoml", "x", "Base.py", 1))  # nothing queued - no raise
+    dispatcher._dispatch_one_queued(("seaglider", "x", "Base.py", 1))  # nothing queued - no raise
     assert not dispatcher.running_jobs
 
 

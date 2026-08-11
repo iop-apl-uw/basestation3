@@ -36,11 +36,10 @@ import pytest
 import SiteConfig
 
 GOOD_YAML = """
-aoml:
-  watch_dir: {aoml_dir}
-  jail_root: {aoml_dir}/jail
-  base_log: {aoml_dir}/baserunner.log
-  runner_user: runner-aoml
+seaglider:
+  watch_dir: {seaglider_dir}
+  jail_root: {seaglider_dir}/jail
+  runner_user: ioprunner
 ioptest:
   watch_dir: {ioptest_dir}
   runner_user: runner-ioptest
@@ -50,7 +49,7 @@ ioptest:
 
 def _fake_pwent(uid: int, gid: int) -> pwd.struct_passwd:
     return pwd.struct_passwd(
-        ("runner-aoml", "x", uid, gid, "", "/nonexistent", "/usr/sbin/nologin")
+        ("ioprunner", "x", uid, gid, "", "/nonexistent", "/usr/sbin/nologin")
     )
 
 
@@ -58,7 +57,7 @@ def _fake_pwent(uid: int, gid: int) -> pwd.struct_passwd:
 def patch_lookup_user(monkeypatch):
     """Maps a fixed set of account names to fixed uid/gid pairs."""
     known = {
-        "runner-aoml": (5001, 6001),
+        "ioprunner": (5001, 6001),
         "runner-ioptest": (5002, 6002),
     }
 
@@ -74,54 +73,52 @@ def patch_lookup_user(monkeypatch):
 
 
 def test_load_sites_config_valid(tmp_path, patch_lookup_user):
-    aoml_dir = tmp_path / "aoml" / "rundir"
-    aoml_dir.mkdir(parents=True)
+    seaglider_dir = tmp_path / "seaglider" / "rundir"
+    seaglider_dir.mkdir(parents=True)
     ioptest_dir = tmp_path / "ioptest" / "rundir"
     ioptest_dir.mkdir(parents=True)
 
     config_path = tmp_path / "sites.yaml"
     config_path.write_text(
-        GOOD_YAML.format(aoml_dir=aoml_dir, ioptest_dir=ioptest_dir)
+        GOOD_YAML.format(seaglider_dir=seaglider_dir, ioptest_dir=ioptest_dir)
     )
 
     sites = SiteConfig.load_sites_config(config_path)
 
     assert sites is not None
-    assert set(sites) == {"aoml", "ioptest"}
+    assert set(sites) == {"seaglider", "ioptest"}
 
-    aoml = sites["aoml"]
-    assert aoml.name == "aoml"
-    assert aoml.watch_dir == aoml_dir.resolve()
-    assert aoml.jail_root == (aoml_dir / "jail").resolve()
-    assert aoml.base_log == (aoml_dir / "baserunner.log").resolve()
-    assert aoml.runner_user == "runner-aoml"
-    assert aoml.archive is False
-    assert aoml.runner_uid == 5001
-    assert aoml.runner_gid == 6001
-    assert aoml.mission_dir == aoml.watch_dir
-    assert aoml.python_version == "/opt/basestation/bin/python"
-    assert aoml.queue_scripts is True
-    assert aoml.docker_uid == -1
+    seaglider = sites["seaglider"]
+    assert seaglider.name == "seaglider"
+    assert seaglider.watch_dir == seaglider_dir.resolve()
+    assert seaglider.jail_root == (seaglider_dir / "jail").resolve()
+    assert seaglider.runner_user == "ioprunner"
+    assert seaglider.archive is False
+    assert seaglider.runner_uid == 5001
+    assert seaglider.runner_gid == 6001
+    assert seaglider.mission_dir == seaglider.watch_dir
+    assert seaglider.python_version == "/opt/basestation/bin/python"
+    assert seaglider.queue_scripts is True
+    assert seaglider.docker_uid == -1
 
     ioptest = sites["ioptest"]
     assert ioptest.archive is True
     assert ioptest.jail_root is None
-    assert ioptest.base_log is None
     assert ioptest.runner_uid == 5002
     assert ioptest.runner_gid == 6002
 
 
 def test_site_config_is_frozen(tmp_path, patch_lookup_user):
-    aoml_dir = tmp_path / "aoml"
-    aoml_dir.mkdir()
+    seaglider_dir = tmp_path / "seaglider"
+    seaglider_dir.mkdir()
     config_path = tmp_path / "sites.yaml"
-    config_path.write_text(f"aoml:\n  watch_dir: {aoml_dir}\n  runner_user: runner-aoml\n")
+    config_path.write_text(f"seaglider:\n  watch_dir: {seaglider_dir}\n  runner_user: ioprunner\n")
 
     sites = SiteConfig.load_sites_config(config_path)
     assert sites is not None
 
     with pytest.raises(dataclasses.FrozenInstanceError):
-        sites["aoml"].name = "not-aoml"  # type: ignore[misc]
+        sites["seaglider"].name = "not-seaglider"  # ty: ignore[invalid-assignment]
 
 
 def test_load_sites_config_missing_file(tmp_path, caplog):
@@ -146,7 +143,7 @@ def test_load_sites_config_not_a_mapping(tmp_path, caplog):
 
 def test_load_sites_config_entry_not_a_mapping(tmp_path, caplog):
     config_path = tmp_path / "sites.yaml"
-    config_path.write_text("aoml: just-a-string\n")
+    config_path.write_text("seaglider: just-a-string\n")
     assert SiteConfig.load_sites_config(config_path) is None
     assert any(r.levelname == "ERROR" for r in caplog.records)
 
@@ -154,19 +151,19 @@ def test_load_sites_config_entry_not_a_mapping(tmp_path, caplog):
 def test_load_sites_config_missing_required_key(tmp_path, caplog):
     config_path = tmp_path / "sites.yaml"
     # Missing watch_dir
-    config_path.write_text("aoml:\n  runner_user: runner-aoml\n")
+    config_path.write_text("seaglider:\n  runner_user: ioprunner\n")
     assert SiteConfig.load_sites_config(config_path) is None
     assert any(r.levelname == "ERROR" for r in caplog.records)
 
 
 def test_load_sites_config_bad_scalar_value(tmp_path, caplog, patch_lookup_user):
-    aoml_dir = tmp_path / "aoml"
-    aoml_dir.mkdir()
+    seaglider_dir = tmp_path / "seaglider"
+    seaglider_dir.mkdir()
     config_path = tmp_path / "sites.yaml"
     config_path.write_text(
-        f"aoml:\n"
-        f"  watch_dir: {aoml_dir}\n"
-        f"  runner_user: runner-aoml\n"
+        f"seaglider:\n"
+        f"  watch_dir: {seaglider_dir}\n"
+        f"  runner_user: ioprunner\n"
         f"  docker_uid: not-an-int\n"
     )
     assert SiteConfig.load_sites_config(config_path) is None
@@ -174,11 +171,11 @@ def test_load_sites_config_bad_scalar_value(tmp_path, caplog, patch_lookup_user)
 
 
 def test_load_sites_config_unknown_runner_user(tmp_path, caplog, patch_lookup_user):
-    aoml_dir = tmp_path / "aoml"
-    aoml_dir.mkdir()
+    seaglider_dir = tmp_path / "seaglider"
+    seaglider_dir.mkdir()
     config_path = tmp_path / "sites.yaml"
     config_path.write_text(
-        f"aoml:\n  watch_dir: {aoml_dir}\n  runner_user: runner-does-not-exist\n"
+        f"seaglider:\n  watch_dir: {seaglider_dir}\n  runner_user: runner-does-not-exist\n"
     )
     assert SiteConfig.load_sites_config(config_path) is None
     assert any(r.levelname == "ERROR" for r in caplog.records)
@@ -188,12 +185,12 @@ def test_load_sites_config_one_bad_entry_fails_whole_file(
     tmp_path, caplog, patch_lookup_user
 ):
     """A single malformed site must abort the whole load, not just skip it."""
-    aoml_dir = tmp_path / "aoml"
-    aoml_dir.mkdir()
+    seaglider_dir = tmp_path / "seaglider"
+    seaglider_dir.mkdir()
     config_path = tmp_path / "sites.yaml"
     config_path.write_text(
-        f"aoml:\n  watch_dir: {aoml_dir}\n  runner_user: runner-aoml\n"
-        f"broken:\n  runner_user: runner-aoml\n"
+        f"seaglider:\n  watch_dir: {seaglider_dir}\n  runner_user: ioprunner\n"
+        f"broken:\n  runner_user: ioprunner\n"
     )
     assert SiteConfig.load_sites_config(config_path) is None
 
@@ -214,11 +211,10 @@ def test_resolve_ids_success(monkeypatch):
         SiteConfig, "lookup_user", lambda name: _fake_pwent(42, 43)
     )
     site = SiteConfig.SiteConfig(
-        name="aoml",
-        watch_dir=pathlib.Path("/tmp/aoml"),
+        name="seaglider",
+        watch_dir=pathlib.Path("/tmp/seaglider"),
         jail_root=None,
-        base_log=None,
-        runner_user="runner-aoml",
+        runner_user="ioprunner",
     )
     assert SiteConfig.resolve_ids(site) is True
     assert site.runner_uid == 42
@@ -266,10 +262,9 @@ def test_resolve_ids_unknown_user(monkeypatch, caplog):
 
     monkeypatch.setattr(SiteConfig, "lookup_user", _raise)
     site = SiteConfig.SiteConfig(
-        name="aoml",
-        watch_dir=pathlib.Path("/tmp/aoml"),
+        name="seaglider",
+        watch_dir=pathlib.Path("/tmp/seaglider"),
         jail_root=None,
-        base_log=None,
         runner_user="runner-does-not-exist",
     )
     assert SiteConfig.resolve_ids(site) is False

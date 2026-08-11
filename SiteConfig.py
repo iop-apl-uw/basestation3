@@ -64,7 +64,6 @@ class SiteConfig:
         name: Site name, matches its key in sites.yaml (e.g. "aoml").
         watch_dir: Rundir this site's .run files are watched for/consumed in.
         jail_root: Root of this site's glider jail, if any.
-        base_log: Per-site job base_log path forwarded to launched scripts.
         runner_user: Name of this site's runner-<site> Linux account.
         archive: Whether completed .run files are archived instead of
             unlinked (only ioptest sets this True today).
@@ -83,7 +82,6 @@ class SiteConfig:
     name: str
     watch_dir: pathlib.Path
     jail_root: pathlib.Path | None
-    base_log: pathlib.Path | None
     runner_user: str
     archive: bool = False
     ignore_lock: bool = False
@@ -209,7 +207,6 @@ def _build_site(name: str, entry: dict) -> SiteConfig:
         name=name,
         watch_dir=pathlib.Path(entry["watch_dir"]).expanduser().resolve(),
         jail_root=_resolve_path(entry, "jail_root"),
-        base_log=_resolve_path(entry, "base_log"),
         runner_user=entry["runner_user"],
         archive=bool(entry.get("archive", False)),
         ignore_lock=bool(entry.get("ignore_lock", False)),

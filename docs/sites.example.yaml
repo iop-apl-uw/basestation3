@@ -1,0 +1,85 @@
+---
+# Sample sites.yaml for BaseRunnerMulti.py / BaseRunnerPrivExec.py.
+# See docs/BaseRunnerMulti.md for the full write-up of what these fields
+# mean and how the two processes use them.
+#
+# Top-level mapping is keyed by site name - this key is what shows up as
+# the "[site]" prefix in BaseRunnerMulti's log lines, in job-queue keys,
+# and in vis.py's queue_id strings, so pick something short and stable.
+#
+# Required per site: watch_dir, runner_user.
+# Everything else has a sane default and only needs to be set when it
+# differs from that default for this one site.
+#
+# The two entries below (seaglider, train) mirror a real two-jail
+# deployment's baserunner@.service/baserunnertrain@.service units -
+# both jails share the same runner_user (ioprunner) here, which is a
+# perfectly normal thing to do: nothing about the schema requires
+# distinct accounts per site, only that each site's own account has the
+# access that site's directory tree grants it.
+
+seaglider:
+  # Rundir this site's glider jail writes .run files into, and that
+  # BaseRunnerMulti watches via inotify. Required.
+  watch_dir: /home/seaglider/home/rundir
+
+  # Root of this site's glider jail (chrootshell jail, see jail/ReadMe.md).
+  # Used to rewrite paths that were written from inside the jail's view
+  # back to their real, outside-the-jail location. Omit if this site
+  # doesn't use a jail.
+  jail_root: /home/seaglider
+
+  # This site's runner Linux account. BaseRunnerPrivExec.py resolves
+  # this to a uid/gid via pwd.getpwnam at its own startup - the account
+  # must already exist on the host. Required.
+  runner_user: ioprunner
+
+# A second jail on the same host - a training/practice environment,
+# serviced by its own baserunnertrain@.service unit but the same
+# ioprunner account.
+train:
+  watch_dir: /home/trainjail/home/rundir
+  jail_root: /home/trainjail
+  runner_user: ioprunner
+
+# A third, fully-annotated example showing every optional field and its
+# default - delete whichever you don't need to override per site. (Not
+# part of the real two-jail deployment above - archive: true in
+# particular isn't set for either seaglider or train today.)
+example-with-all-fields:
+  watch_dir: /home/jails/example/gliderjail/home/rundir
+  jail_root: /home/jails/example/gliderjail
+  runner_user: runner-example
+
+  # Archive consumed .run files under watch_dir/archive/ instead of
+  # deleting them. Default: false.
+  archive: false
+
+  # Bypass this site's lock-file check at startup. Only meant for local
+  # testing - never set true in production, it defeats the mechanism
+  # that hands a site off cleanly from an old BaseRunner.py instance.
+  # Default: false.
+  ignore_lock: false
+
+  # Path to the python interpreter used to launch this site's jobs.
+  # Default: /opt/basestation/bin/python.
+  python_version: /opt/basestation/bin/python
+
+  # Whether known scripts (BaseLogin.py, GliderEarlyGPS.py, Base.py) are
+  # queued for async dispatch rather than run inline. Leave this true -
+  # false blocks the single shared event loop for every site, not just
+  # this one. Default: true.
+  queue_scripts: true
+
+  # Docker image to launch Base.py under, if this site runs its
+  # basestation processing inside a container. Default: "" (disabled).
+  docker_image: ""
+
+  # uid/gid to run the docker container as, if docker_image is set.
+  # Default: -1 (unset).
+  docker_uid: -1
+  docker_gid: -1
+
+  # Use the basestation installation baked into the docker image rather
+  # than mounting this checkout into the container. Default: false.
+  use_docker_basestation: false
