@@ -479,15 +479,20 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
 
     if doplot == 'png':
         try:
-            with PlotUtilsPlotly.static_image_timeout(
-                PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS
-            ):
-                imgs = [fig.to_image(format="png")]
-        except PlotUtilsPlotly.PlotTimeout:
+            imgs = [
+                PlotUtilsPlotly.bounded_render(
+                    lambda: fig.to_image(format="png"),
+                    PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS,
+                )
+            ]
+        except PlotUtilsPlotly.RenderTimeout:
             log_error(
-                f"Timeout: regress plot for {title} exceeded timeout "
-                f"({PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS})",
+                f"Timeout: static image generation failed for regress plot {title} "
+                f"after {PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS}s",
                 alert="PLOT_TIMEOUT",
+            )
+            PlotUtilsPlotly.bounded_close_global_server(
+                PlotUtilsPlotly.DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS
             )
             imgs = []  # keep list type so the per-dive loop below can still append
     elif doplot == 'html':
@@ -596,15 +601,20 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
 
         if doplot == 'png':
             try:
-                with PlotUtilsPlotly.static_image_timeout(
-                    PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS
-                ):
-                    imgs.append(fig.to_image(format="png"))
-            except PlotUtilsPlotly.PlotTimeout:
+                imgs.append(
+                    PlotUtilsPlotly.bounded_render(
+                        lambda: fig.to_image(format="png"),
+                        PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS,
+                    )
+                )
+            except PlotUtilsPlotly.RenderTimeout:
                 log_error(
-                    f"Timeout: regress plot for {title} exceeded timeout "
-                    f"({PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS})",
+                    f"Timeout: static image generation failed for regress plot {title} "
+                    f"after {PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS}s",
                     alert="PLOT_TIMEOUT",
+                )
+                PlotUtilsPlotly.bounded_close_global_server(
+                    PlotUtilsPlotly.DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS
                 )
         elif doplot == 'html':
             imgs.append(fig.to_html(

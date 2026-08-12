@@ -173,7 +173,7 @@ def plot_dives(
                         )
                 except PlotUtilsPlotly.PlotTimeout:
                     log_error(
-                        f"Timeout: dive plot {plot_name} exceeded timeout ({base_opts.plot_dive_timeout})",
+                        f"Timeout: image generation failed for {plot_name} after {base_opts.plot_dive_timeout}s",
                         alert="PLOT_TIMEOUT",
                     )
                     if kaleido_server is not None:
@@ -272,7 +272,7 @@ def plot_mission(
                     )
             except PlotUtilsPlotly.PlotTimeout:
                 log_error(
-                    f"Timeout: mission plot {plot_name} exceeded timeout ({base_opts.plot_mission_timeout})",
+                    f"Timeout: image generation failed for {plot_name} after {base_opts.plot_mission_timeout}s",
                     alert="PLOT_TIMEOUT",
                 )
                 if kaleido_server is not None:

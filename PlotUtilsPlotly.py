@@ -41,7 +41,7 @@ import threading
 import time
 import types
 import warnings
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING, Literal
 
 import brotli
@@ -146,6 +146,72 @@ def static_image_timeout(seconds: int | None) -> Iterator[None]:
     finally:
         signal.alarm(0)
         signal.signal(signal.SIGALRM, prev_handler)
+
+
+class RenderTimeout(Exception):
+    """Raised by bounded_render() when a single kaleido render didn't finish
+    within its bound.
+
+    Callers (write_output_files() in this module, and other direct
+    fig.to_image()/fig.write_image() callers like Magcal.py/RegressVBD.py)
+    are expected to catch this, log it, and call
+    bounded_close_global_server() before attempting another render.
+    """
+
+
+def bounded_render[T](fn: Callable[[], T], timeout: float) -> T:
+    """Runs fn() on a worker thread, waiting at most timeout seconds.
+
+    Unlike wrapping the call in signal.alarm(), this never interrupts fn()
+    at an arbitrary point: if it doesn't finish in time, this function
+    simply stops waiting - fn() keeps running to completion (or hangs) on
+    its own abandoned daemon thread, never having its execution forcibly
+    unwound. This matters specifically for kaleido calls: kaleido's
+    GlobalKaleidoServer.call_function() is a single-outstanding-request
+    queue handshake with no correlation IDs - a signal-raised exception
+    unwinding through it mid-call desyncs every subsequent call in the
+    process for the rest of the run Walking away from a Thread.join() has no such hazard -
+    Python only delivers signals to the main thread, so code running on a
+    worker thread is structurally immune to being interrupted this way in
+    the first place.
+
+    Callers must treat a RenderTimeout as reason to reset the kaleido
+    global server (see bounded_close_global_server()) before attempting
+    another render: the abandoned worker thread is still waiting on
+    kaleido's background thread to answer it, and starting a new render
+    against the same server risks two threads racing on the same
+    single-slot response queue.
+
+    Args:
+        fn: Zero-argument callable to run (bind args via a closure or
+            functools.partial).
+        timeout: Seconds to wait before giving up.
+
+    Returns:
+        fn()'s return value.
+
+    Raises:
+        RenderTimeout: If fn() doesn't complete within timeout seconds.
+        BaseException: Whatever fn() itself raised, if it completed (even
+            late-but-within-timeout) with an exception.
+    """
+    result: list[T] = []
+    error: list[BaseException] = []
+
+    def _run() -> None:
+        try:
+            result.append(fn())
+        except BaseException as exc:  # noqa: BLE001
+            error.append(exc)
+
+    worker = threading.Thread(target=_run, daemon=True)
+    worker.start()
+    worker.join(timeout)
+    if worker.is_alive():
+        raise RenderTimeout(f"render did not complete within {timeout}s")
+    if error:
+        raise error[0]
+    return result[0]
 
 
 #
@@ -330,19 +396,33 @@ def write_output_files(
     image_timeout = getattr(
         base_opts, "plot_dive_timeout", DEFAULT_STATIC_IMAGE_TIMEOUT_SECS
     )
-    try:
-        with static_image_timeout(image_timeout):
-            for opt_name, ext in formats:
-                if getattr(base_opts, opt_name):
-                    try:
-                        ret_list.append(save_img_file(ext))
-                    except Exception as e:
-                        log_error(f"Failed to write out {base_file_name}.{ext}: {e}")
-    except PlotTimeout:
-        log_error(
-            f"Timeout: static image generation for {base_file_name} exceeded timeout ({image_timeout})",
-            alert="PLOT_TIMEOUT",
-        )
+    # Each format's render is independently bounded via a worker thread
+    # (bounded_render), not signal.alarm() - deliberately not nested under
+    # an outer static_image_timeout() here. See bounded_render()'s
+    # docstring: a signal-raised exception unwinding through kaleido's
+    # single-outstanding-request queue handshake corrupts it for every
+    # later call in the run (the sg180 production hang), whereas walking
+    # away from a Thread.join() is always safe. A timeout on one format
+    # doesn't affect the others.
+    for opt_name, ext in formats:
+        if not getattr(base_opts, opt_name):
+            continue
+        try:
+            ret_list.append(
+                bounded_render(lambda ext=ext: save_img_file(ext), image_timeout)
+            )
+        except RenderTimeout:
+            log_error(
+                f"Timeout: static image generation failed for {base_file_name}.{ext} after {image_timeout}s",
+                alert="PLOT_TIMEOUT",
+            )
+            # The abandoned worker thread above is still waiting on kaleido's
+            # background thread to answer it - reset before the next render
+            # so a new call never races that orphaned wait on the same
+            # single-slot response queue.
+            bounded_close_global_server(DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS)
+        except Exception as e:
+            log_error(f"Failed to write out {base_file_name}.{ext}: {e}")
 
     def isnotebook():
         try:
@@ -595,12 +675,12 @@ def build_clipboard_button_post_script(
     )
 
 
-def _bounded_close_global_server(timeout: float) -> None:
+def bounded_close_global_server(timeout: float) -> None:
     """Best-effort close of kaleido's global server singleton, bounded by a timeout.
 
     kaleido's own ``GlobalKaleidoServer.close()`` joins its background render
     thread with no timeout, so a wedged thread (e.g. left mid-render by a
-    previously-interrupted static_image_timeout()) hangs the caller forever.
+    previously-abandoned bounded_render() call) hangs the caller forever.
     This runs that close() in a daemon thread and only waits up to `timeout`
     seconds for it, so callers can never be blocked longer than that no
     matter how wedged the background thread is.
@@ -690,14 +770,14 @@ class KaleidoServer:
 
         Safely breaks down any open communication channels (bounded, so a
         wedged background render thread can't hang this call - see
-        _bounded_close_global_server()) before re-instantiating a fresh copy
+        bounded_close_global_server()) before re-instantiating a fresh copy
         of the server class type.
         """
         if getattr(kaleido, "_global_server", None) is None:
             log_info("No global server instance found to reset.")
             return
 
-        _bounded_close_global_server(DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS)
+        bounded_close_global_server(DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS)
         log_debug(
             "Kaleido global server has been dynamically reset to a clean post-import state."
         )
@@ -797,12 +877,12 @@ class KaleidoServer:
     def stop_kaleido_global_server(self) -> None:
         """Stops the underlying synchronized server execution.
 
-        Bounded (see _bounded_close_global_server()) so a wedged background
+        Bounded (see bounded_close_global_server()) so a wedged background
         render thread can't hang the caller forever - this was the root
         cause of a multi-hour production hang (sg180, 2026-08-09) where an
         earlier per-plot timeout left the shared kaleido thread wedged, and
         the unguarded shutdown here then blocked forever.
         """
         if self.server_running:
-            _bounded_close_global_server(DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS)
+            bounded_close_global_server(DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS)
             self.server_running = False
