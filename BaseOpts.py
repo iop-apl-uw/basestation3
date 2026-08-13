@@ -1421,7 +1421,7 @@ global_options_dict: dict[str, options_t] = {
     # max times are 85 secs - so lower from 300 to stall less on an actual
     # timeout
     "plot_mission_timeout": options_t(
-        150, 
+        600,
         {
             "Base",
             "Reprocess",
