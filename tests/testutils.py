@@ -37,6 +37,11 @@ from collections.abc import Callable
 
 import pytest
 
+import Base
+import BaseNetCDF
+import FlightModel
+import Sensors
+
 # Each test in a "mission_dir" under the testdata/XXXX directory - testdata/sg179_Guam_Oct19/mission_dir for example
 # Previous runs are removed and the contents of testdata/XXXX (no sub-directories) are copied to testdata/XXXX/mission_dir
 
@@ -88,6 +93,15 @@ def run_mission(
             shutil.copy(p, mission_dir)
     if pre_test_hook:
         pre_test_hook(mission_dir)
+    # main_func stands in for what would be a fresh process in production -
+    # reset module-level singleton state (e.g. Sensors.sensor_extensions)
+    # immediately before each call, since a single test may call run_mission
+    # more than once (or call a main()-shaped function directly in addition
+    # to this) to simulate more than one pipeline stage.
+    Sensors.set_globals()
+    BaseNetCDF.set_globals()
+    FlightModel.set_globals()
+    Base.set_globals()
     result = main_func(cmd_line)
     assert result == 0
     bad_errors = ""

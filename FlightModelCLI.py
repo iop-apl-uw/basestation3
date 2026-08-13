@@ -67,8 +67,6 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
         0 - success
         1 - failure
     """
-    FlightModel.set_globals()
-
     # global mission_directory
     base_opts = BaseOpts.BaseOptions(
         "Command line driver for updateing flight model data",

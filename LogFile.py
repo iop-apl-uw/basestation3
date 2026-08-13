@@ -1004,9 +1004,6 @@ def parse_log_file(in_filename, issue_warn=False):
 
 def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     """Test entry point for logfile processing"""
-    Sensors.set_globals()
-    BaseNetCDF.set_globals()
-
     base_opts = BaseOpts.BaseOptions(
         "Test entry point for logfile processing",
         cmdline_args=cmdline_args,

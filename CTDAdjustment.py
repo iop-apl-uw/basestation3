@@ -209,10 +209,6 @@ def main(
         global DEBUG_PDB
         DEBUG_PDB = base_opts.debug_pdb
 
-        # All needed since this extension is making contributions to the
-        # metadata table
-        Sensors.set_globals()
-        BaseNetCDF.set_globals()
         # Sensor extensions
         (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
         if init_ret_val > 0:

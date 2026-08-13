@@ -1705,14 +1705,6 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     if not calib_consts:
         log_warning(f"Could not process {sg_calib_file_name}")
 
-    # These functions reset large blocks of global variables being used in other modules that
-    # assume an initial value on first load, then are updated throughout the run.  The call
-    # here sets back to the initial state to handle multiple runs under pytest
-    set_globals()
-    Sensors.set_globals()
-    BaseNetCDF.set_globals()
-    FlightModel.set_globals()
-
     # Sensor extensions
     (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
     if init_ret_val > 0:

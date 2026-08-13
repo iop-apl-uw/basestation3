@@ -32,6 +32,7 @@ import pathlib
 import pytest
 import testutils
 
+import FlightModel
 import FlightModelCLI
 
 
@@ -108,6 +109,8 @@ def test_fmcli_replot_and_dac_dives(caplog, fm_plot_engine):
     ext = "div" if fm_plot_engine == "plotly" else "webp"
 
     caplog.clear()
+    # Direct call, not routed through testutils.run_mission - reset here too.
+    FlightModel.set_globals()
     assert FlightModelCLI.main([*cmd_line, "--replot"]) == 0
     assert not any(r.levelname in ("ERROR", "CRITICAL") for r in caplog.records)
     for basename in (
@@ -120,6 +123,7 @@ def test_fmcli_replot_and_dac_dives(caplog, fm_plot_engine):
         assert (mission_dir / "flight" / f"{basename}.{ext}").exists()
 
     caplog.clear()
+    FlightModel.set_globals()
     assert FlightModelCLI.main([*cmd_line, "5:9"]) == 0
     assert not any(r.levelname in ("ERROR", "CRITICAL") for r in caplog.records)
     # 5 and 9 have cached grid solutions in this fixture - 6, 7, 8 don't, and

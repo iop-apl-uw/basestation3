@@ -160,8 +160,6 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     log_info(f"Moving from {base_opts.mission_dir} to {base_opts.target_dir}")
 
-    Sensors.set_globals()
-
     # Supports "./" to indicate local path
     # Supports absolute paths
     # Supports creation of trees, not just a single leaf directory

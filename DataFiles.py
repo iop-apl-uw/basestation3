@@ -44,7 +44,6 @@ import traceback
 
 import numpy as np
 
-import BaseNetCDF
 import BaseOpts
 import BaseOptsType
 import CalibConst
@@ -693,9 +692,6 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         Any exceptions raised are considered critical errors and not expected
 
     """
-    Sensors.set_globals()
-    BaseNetCDF.set_globals()
-
     # Get options
     base_opts = BaseOpts.BaseOptions(
         "Processes seaglider data files from dat to asc",
