@@ -30,6 +30,7 @@
 
 """Runs a monitor of the comm log traffic for the duration of the call - quits on disconnect or reconnect"""
 
+import argparse
 import inspect
 import os
 import shutil
@@ -62,7 +63,13 @@ gliderearlygps_lockfile_name = ".gliderearlygps_lockfile"
 class GliderEarlyGPSClient:
     """Client to handle connection to jabber server and comm callbacks"""
 
-    def __init__(self, comm_log_file_name, base_opts, known_files:list[str]):
+    def __init__(
+        self,
+        comm_log_file_name,
+        base_opts,
+        known_files: list[str],
+        first_time: bool = True,
+    ):
         self.__comm_log_file_name = comm_log_file_name
         self.__base_opts = base_opts
         self.__known_files = known_files
@@ -70,7 +77,7 @@ class GliderEarlyGPSClient:
         self._commlog_session = None
         self._commlog_linecount = 0
         self.__comm_log = None
-        self._first_time = True
+        self._first_time = first_time
 
         # Callback functions for the CommLog processor
         self.callbacks = {}
@@ -401,7 +408,7 @@ class GliderEarlyGPSClient:
             else:
                 BaseDB.addSession(self.__base_opts, session)
 
-    def process_counter_line(self, session, testing=False):
+    def process_counter_line(self, session, force=False):
         """
         Returns True for success, False for failure
         """
@@ -410,7 +417,7 @@ class GliderEarlyGPSClient:
             ret_val = "No GPS fix in most recent counter line - skipping"
         elif session.dive_num is None:
             ret_val = "No dive number in most recent counter line - skipping"
-        elif session.logout_seen is True and testing is False:
+        elif session.logout_seen is True and not force:
             # ret_val = "Logout seen - must be second counter line - skipping"
             # Ignore second counter line
             pass
@@ -472,11 +479,115 @@ class GliderEarlyGPSClient:
             log_error(ret_val)
 
 
-def main():
-    """comm.log processor launched as soon as the glider connects"""
-    # Set up the call back here
+def generate_upload_files(base_opts: BaseOpts.BaseOptions, init_dict: dict) -> int:
+    """Runs the .pre_login hook and writes the upload_files manifest.
+
+    Formerly BaseLogin.py's entire job - folded in here so a glider login
+    only pays one process/import cost instead of two.
+
+    Args:
+        base_opts: Parsed command line options.
+        init_dict: Sensor extension init dict from Sensors.init_extensions().
+
+    Returns:
+        0 on success, 1 if upload_files could not be written.
+
+    Raises:
+        Any exceptions raised are considered critical errors and not expected.
+    """
+    ret_val = 0
+
+    # Run early enough to get into the upload list
+    BaseDotFiles.run_extension_script(
+        base_opts, ".pre_login", None, base_opts.pre_login_timeout
+    )
+
+    # Invoke extensions, if any
+    BaseDotFiles.process_extensions(
+        ("prelogin",),
+        base_opts,
+    )
+
+    existing_files = "{"
+    base_files = {
+        "targets": "T",
+        "science": "S",
+        "pdoscmds.bat": "P",
+        "tcm2mat.cal": "M",
+        "rafos.dat": "R",
+        "nav1.dat": "r",
+        "nav0.scr": "N",
+        "nav1.scr": "n",
+    }
+    for f in list(base_files.keys()):
+        if (base_opts.mission_dir / f).exists():
+            existing_files = "%s%s" % (existing_files, base_files[f])
+
+    # Now, the loggers
+    for key in list(init_dict.keys()):
+        d = init_dict[key]
+        if "known_files" in d:
+            for b in d["known_files"]:
+                if (base_opts.mission_dir / b).exists():
+                    existing_files = "%s,%s" % (existing_files, b)
+
+    existing_files = "%s}" % existing_files
+
+    log_info("Existing files = %s" % existing_files)
+
+    upload_files_name = base_opts.mission_dir / "upload_files"
+    try:
+        upload_files_name.write_text('echo "%s"\n' % existing_files)
+    except Exception:
+        log_error("Unable to open %s for write" % upload_files_name)
+        ret_val = 1
+
+    return ret_val
+
+
+def login_hooks_main(cmdline_args: list[str] = sys.argv[1:]) -> int:
+    """CLI entry point for the login-time upload_files/pre_login hook only.
+
+    Mirrors what main() does at startup before entering the persistent
+    comm.log monitor loop - split out so it can be exercised directly by
+    tests without running GliderEarlyGPS's daemon loop, which never returns.
+
+    Args:
+        cmdline_args: Command line arguments, defaults to sys.argv[1:].
+
+    Returns:
+        0 on success, 1 on failure.
+
+    Raises:
+        Any exceptions raised are considered critical errors and not expected.
+    """
     base_opts = BaseOpts.BaseOptions(
-        "comm.log processor launched as soon as the glider connects",
+        "GliderEarlyGPS login-time hook processing",
+        cmdline_args=cmdline_args,
+    )
+    BaseLogger(base_opts, include_time=True)
+    (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
+    if init_ret_val > 0:
+        log_warning("Sensor initialization failed")
+    return generate_upload_files(base_opts, init_dict)
+
+
+def replay_last_session_main(cmdline_args: list[str] = sys.argv[1:]) -> int:
+    """CLI debugging tool: replays the last session in an arbitrary
+    comm.log file through the GPS-fix notification/pager pipeline, without
+    needing a live mission_dir/daemon/BaseRunner setup.
+
+    Args:
+        cmdline_args: Command line arguments, defaults to sys.argv[1:].
+
+    Returns:
+        0 on success, 1 on failure.
+
+    Raises:
+        Any exceptions raised are considered critical errors and not expected.
+    """
+    base_opts = BaseOpts.BaseOptions(
+        "Replay the last session in a comm.log file for debugging",
         additional_arguments={
             "comm_log": BaseOptsType.options_t(
                 "",
@@ -486,11 +597,51 @@ def main():
                 ("comm_log",),
                 str,
                 {
-                    "help": "comm.log file (for testing only)",
-                    "nargs": "?",
+                    "help": "comm.log file to replay the last session from",
                     "action": BaseOpts.FullPathlibAction,
                 },
             ),
+        },
+        cmdline_args=cmdline_args,
+    )
+    BaseLogger(base_opts, include_time=True)
+    # Set mission_dir before Sensors.init_extensions, unlike the old
+    # BaseLogin-era comm_log path this replaces, so mission-level .sensors
+    # extension config actually loads.
+    base_opts.mission_dir = base_opts.comm_log.parent
+
+    (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
+    if init_ret_val > 0:
+        log_warning("Sensor initialization failed")
+
+    replay_known_files: list[str] = []
+    for key in list(init_dict.keys()):
+        d = init_dict[key]
+        if "known_files" in d:
+            replay_known_files.extend(d["known_files"])
+
+    (comm_log, _, _, _, _) = CommLog.process_comm_log(base_opts.comm_log, base_opts)
+    if comm_log is None or not comm_log.sessions:
+        log_error("Could not process %s - bailing out" % base_opts.comm_log)
+        return 1
+
+    glider_client = GliderEarlyGPSClient(
+        base_opts.comm_log, base_opts, replay_known_files, first_time=False
+    )
+    try:
+        glider_client.process_counter_line(comm_log.sessions[-1], force=True)
+    except Exception:
+        log_error("Problem in process_counter_line", "exc")
+        return 1
+    return 0
+
+
+def main():
+    """comm.log processor launched as soon as the glider connects"""
+    # Set up the call back here
+    base_opts = BaseOpts.BaseOptions(
+        "comm.log processor launched as soon as the glider connects",
+        additional_arguments={
             "path_to_logout": BaseOptsType.options_t(
                 "",
                 {
@@ -502,6 +653,18 @@ def main():
                     "help": "Path to the .logout file",
                     "nargs": "?",
                     "action": BaseOpts.FullPathlibAction,
+                },
+            ),
+            "generate_upload_file": BaseOptsType.options_t(
+                True,
+                {
+                    "GliderEarlyGPS",
+                },
+                ("--generate_upload_file",),
+                bool,
+                {
+                    "help": "Generate the upload_files manifest at startup (formerly BaseLogin.py)",
+                    "action": argparse.BooleanOptionalAction,
                 },
             ),
         },
@@ -531,14 +694,13 @@ def main():
     # Check for required "options"
     if base_opts.mission_dir:
         comm_log_filename = base_opts.mission_dir / "comm.log"
-        testing = False
-    elif base_opts.comm_log:
-        # TODO - this code appears to be unreachable - setup an alternative for testing?
-        comm_log_filename = base_opts.comm_log
-        base_opts.mission_dir = base_opts.comm_log.parent
-        testing = True
+        if (
+            base_opts.generate_upload_file
+            and generate_upload_files(base_opts, init_dict) != 0
+        ):
+            log_warning("Failed to generate upload_files")
     else:
-        log_critical("Dive directory must be supplied or path to comm.log.")
+        log_critical("Dive directory must be supplied.")
         return 1
 
     if base_opts.daemon and Daemon.createDaemon(base_opts.mission_dir, False):
@@ -577,19 +739,6 @@ def main():
 
     # Start up the bot
     glider_client = GliderEarlyGPSClient(comm_log_filename, base_opts, known_files)
-    if testing:
-        # For testing, go to the last session and process that
-        (comm_log, _, _, _, _) = CommLog.process_comm_log(base_opts.comm_log, base_opts)
-        if comm_log is None:
-            log_error("Could not process %s - bailing out" % base_opts.comm_log)
-            return 1
-        try:
-            glider_client.process_counter_line(comm_log.sessions[-1], testing=True)
-        except Exception:
-            log_error("Problem in process_counter_line", "exc")
-            return 1
-        return 0
-
     try:
         log_info("Starting the GliderEarlyGPS client....")
         glider_client.run()

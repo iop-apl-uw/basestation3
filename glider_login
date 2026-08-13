@@ -47,7 +47,7 @@ if(! $?PYTHON_BINARY ) then
     set PYTHON_BINARY = /opt/basestation/bin/python
 endif
 set runner_timeout = 2
-set upload_files_timeout = 5
+set upload_files_timeout = 8
 
 if(! $?BASESTATION_PATH ) then
     set BASESTATION_PATH = "/usr/local/basestation"
@@ -64,10 +64,6 @@ set glider_early_gps_time = `date -u +%y%m%d%H%M%S`
 set glider_early_gps_base_log = `pwd`/glider_early_gps_${glider_early_gps_time}
 set glider_early_gps_cmd_line = "GliderEarlyGPS.py --daemon ${GLIDER_OPTIONS} --mission_dir `pwd` --verbose --base_log ${glider_early_gps_base_log} --config `pwd`/${user}.conf --csh_pid $$ --path_to_logout ${path_to_logout}"
 set glider_early_gps_log = `pwd`/glider_early_gps.log
-
-set base_login_time = `date -u +%y%m%d%H%M%S`
-set base_login_cmd_line = "BaseLogin.py --mission_dir `pwd` --verbose --base_log `pwd`/baselog_login_${base_login_time} --config `pwd`/${user}.conf"
-set base_login_log = `pwd`/baselog.log
 
 if( $?RUNNER_DIR ) then
   # Hand off to BaseRunner via the .run file queue. This wait is now purely a
@@ -120,32 +116,12 @@ if ( -f upload_files ) then
    endif
 endif
 
-if( $?RUNNER_DIR ) then
-  # Same liveness check as above, for BaseLogin.py's .run file
-  set base_login_run_file = ${RUNNER_DIR}/${base_login_time}.run
-  echo ${HOME} `pwd` ${base_login_log} ${base_login_cmd_line} > ${base_login_run_file}
-  set t_now = `date +%s`
-  while (-f ${base_login_run_file} )
-      sleep 0.2
-      if ( `date +%s` >= ${t_now} + ${runner_timeout}) then
-          echo ERROR - BaseLogin.py .run file not consumed after ${runner_timeout}s - BaseRunner may not be running - `date -u +"%Y-%m-%dT%H:%M:%S.%3NZ"` \(${USER}\) >> baselog.log
-          break
-      endif
-  end
-else
-  # No BaseRunner - background it via a nested POSIX shell (see comment
-  # above). No --daemon needed here: this shell stays alive and polling
-  # below for the whole wait, and the only realistic cause of a SIGHUP here
-  # is the call itself dropping, in which case upload_files would be moot
-  # anyway (nothing left to source it over).
-    sh -c "$PYTHON_BINARY $BASESTATION_PATH/${base_login_cmd_line} >> ${base_login_log} 2>&1 &"
-endif
-
-# Both GliderEarlyGPS.py and BaseLogin.py now launch concurrently (whether
-# via BaseRunner's queue or backgrounded directly above), so wait on both
-# real completion signals together rather than serially: GliderEarlyGPS.py's
-# own log file appearing means it survived past imports/config parsing and
-# got going; upload_files appearing is BaseLogin.py's actual output.
+# GliderEarlyGPS.py now generates upload_files itself at startup (folded in
+# from the former BaseLogin.py), so there's only one process/dispatch to
+# wait on here - but its own log file appearing and upload_files appearing
+# are still two distinct milestones of that one process's startup (survived
+# imports/config parsing, vs. completed the upload_files write), worth
+# telling apart rather than collapsing into a single wait/message.
 set got_early_gps = 0
 set got_upload = 0
 set t_now = `date +%s`

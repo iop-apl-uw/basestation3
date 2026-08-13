@@ -33,6 +33,7 @@ import pytest
 import testutils
 
 import Base
+import GliderEarlyGPS
 
 known_errors = (
     "Substantial unmodeled flight time",
@@ -42,44 +43,55 @@ known_errors = (
     "mpath failed",
 )
 
+# Base.main's test cases need to skip flight model/plotting/network work to
+# stay fast and side-effect-free - none of that applies to
+# GliderEarlyGPS.login_hooks_main, and most of these flags aren't even in
+# its BaseOpts scope, so each main_func supplies its own full flag set
+# rather than sharing one template.
+base_flags = (
+    "--local --no-notify_vis --skip_flight_model --plot_types none "
+    "--ignore_flight_model"
+)
 
 test_cases = (
     (
         Base.main,
         "testdata/sg236_NANOOS_May23_hooks",
-        "",
+        base_flags,
         known_errors,
         (),
     ),
     (
         Base.main,
         "testdata/sg236_NANOOS_May23_hooks",
-        "--post_dive_timeout 1",
+        f"{base_flags} --post_dive_timeout 1",
         known_errors,
         ("Timeout",),
     ),
     (
         Base.main,
         "testdata/sg236_NANOOS_May23_hooks",
-        "--post_mission_timeout 1",
+        f"{base_flags} --post_mission_timeout 1",
         known_errors,
         ("Timeout",),
     ),
-    # These tests require some re-structuring of BaseLogin.py
-    # (
-    #     BaseLogin.main,
-    #     "testdata/sg236_NANOOS_May23_hooks",
-    #     "",
-    #     (),
-    #     (),
-    # ),
-    # (
-    #     BaseLogin.main,
-    #     "testdata/sg236_NANOOS_May23_hooks",
-    #     "--pre_login_timeout 1",
-    #     (),
-    #     ("Timeout",),
-    # ),
+    (
+        GliderEarlyGPS.login_hooks_main,
+        "testdata/sg236_NANOOS_May23_hooks",
+        # Explicit margin above the fixture's .pre_login 3s sleep - the
+        # default pre_login_timeout is also 3, which races the sleep at
+        # the boundary rather than reliably completing.
+        "--no-notify_vis --pre_login_timeout 10",
+        (),
+        (),
+    ),
+    (
+        GliderEarlyGPS.login_hooks_main,
+        "testdata/sg236_NANOOS_May23_hooks",
+        "--no-notify_vis --pre_login_timeout 1",
+        (),
+        ("Timeout",),
+    ),
 )
 
 test_inputs = []
@@ -87,7 +99,7 @@ test_inputs = []
 for (
     main_func,
     test_data_dir,
-    additional_args,
+    flags,
     allowed_msgs,
     required_msgs,
 ) in test_cases:
@@ -95,7 +107,7 @@ for (
         (
             main_func,
             test_data_dir,
-            f"--verbose  --local --no-notify_vis --skip_flight_model --plot_types none --ignore_flight_model {additional_args} --mission_dir {test_data_dir}/mission_dir".split(),
+            f"--verbose {flags} --mission_dir {test_data_dir}/mission_dir".split(),
             allowed_msgs,
             required_msgs,
         )

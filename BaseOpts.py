@@ -529,7 +529,6 @@ global_options_dict: dict[str, options_t] = {
             "BaseCtrlFiles",
             "BaseDB",
             "BaseDotFiles",
-            "BaseLogin",
             "BaseParquet",
             "BasePlot",
             "BaseSMS",
@@ -570,7 +569,6 @@ global_options_dict: dict[str, options_t] = {
                 "BaseParquet",
                 "BasePlot",
                 "BaseSMS",
-                "BaseLogin",
                 "CommLog",
                 "DataFiles",
                 "FTPPush",
@@ -1773,7 +1771,7 @@ global_options_dict: dict[str, options_t] = {
     "pre_login_timeout": options_t(
         3,
         {
-            "BaseLogin",
+            "GliderEarlyGPS",
         },
         ("--pre_login_timeout",),
         int,

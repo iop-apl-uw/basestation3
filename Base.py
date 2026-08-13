@@ -1462,43 +1462,6 @@ def expunge_secrets_st(selftest_name):
     return 0
 
 
-def run_extension_script(
-    base_opts: BaseOpts.BaseOptions,
-    script_name: str,
-    script_args: list[str] | None,
-    timeout: int = 0,
-) -> None:
-    """Attempts to execute a script named under a shell context
-
-    Output is recorded to the log, error code is ignored, no timeout enforced
-    """
-    # TODO - after conversion of all paths to pathlib, remove conversions to the
-    # object below.  For now, they have the side effect of stripping the trailing
-    # / from the path before adding to the command line
-    full_script_name = pathlib.Path(base_opts.mission_dir) / script_name
-
-    if os.path.exists(full_script_name):
-        log_info(f"Processing {full_script_name}")
-        cmdline = f"{full_script_name} "
-        cmdline += f"{pathlib.Path(base_opts.basestation_directory)} "
-        cmdline += f"{pathlib.Path(base_opts.mission_dir)} "
-        if script_args:
-            for i in script_args:
-                cmdline = f"{cmdline} {i} "
-        log_debug(f"Running ({cmdline})")
-        try:
-            (_, fo) = Utils.run_cmd_shell(cmdline, timeout=timeout)
-        except Exception:
-            log_error(f"Error running {cmdline}", "exc")
-        else:
-            if fo is not None:
-                for f in fo:
-                    log_info(f)
-                fo.close()
-    else:
-        log_info(f"Extension script {full_script_name} not found")
-
-
 def remove_dive_from_dict(
     complete_files_dict: dict[str, float], dive_num: int, instrument_id: int
 ) -> dict[str, float]:
@@ -2453,7 +2416,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     # processed_file_names.append(processed_logger_other_files)
     for k in list(processed_logger_payload_files.keys()):
         if len(processed_logger_payload_files[k]) > 0:
-            run_extension_script(
+            BaseDotFiles.run_extension_script(
                 base_opts,
                 f".{k}_ext",
                 processed_logger_payload_files[k],
@@ -2461,7 +2424,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             )
 
     # Run the post dive processing script
-    run_extension_script(
+    BaseDotFiles.run_extension_script(
         base_opts,
         ".post_dive",
         None,
@@ -3110,7 +3073,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         processed_files_msg += "No new files processed\n"
 
     # Run the post mission processing script
-    run_extension_script(
+    BaseDotFiles.run_extension_script(
         base_opts,
         ".post_mission",
         [str(pp) for pp in processed_file_names],

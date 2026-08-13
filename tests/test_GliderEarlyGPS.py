@@ -31,6 +31,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+import testutils
 
 import GliderEarlyGPS
 
@@ -298,3 +299,163 @@ def test_run_survives_unexpected_exception_in_loop(
         )
         >= 2
     )
+
+
+def test_generate_upload_files_writes_manifest(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """generate_upload_files() should write upload_files listing base_files
+    and extension known_files that actually exist in mission_dir, and skip
+    ones that don't - formerly BaseLogin.main()'s job."""
+    base_opts = _make_base_opts(tmp_path)
+    base_opts.pre_login_timeout = 3
+
+    run_extension_script_mock = MagicMock()
+    process_extensions_mock = MagicMock()
+    monkeypatch.setattr(
+        GliderEarlyGPS.BaseDotFiles, "run_extension_script", run_extension_script_mock
+    )
+    monkeypatch.setattr(
+        GliderEarlyGPS.BaseDotFiles, "process_extensions", process_extensions_mock
+    )
+
+    (tmp_path / "targets").touch()
+    (tmp_path / "science").touch()
+    (tmp_path / "custom_known_file.dat").touch()
+
+    init_dict = {
+        "some_ext": {"known_files": ["custom_known_file.dat", "missing_file.dat"]},
+    }
+
+    ret_val = GliderEarlyGPS.generate_upload_files(base_opts, init_dict)
+
+    assert ret_val == 0
+    run_extension_script_mock.assert_called_once_with(
+        base_opts, ".pre_login", None, base_opts.pre_login_timeout
+    )
+    process_extensions_mock.assert_called_once_with(("prelogin",), base_opts)
+
+    upload_files_content = (tmp_path / "upload_files").read_text()
+    assert "T" in upload_files_content
+    assert "S" in upload_files_content
+    assert "custom_known_file.dat" in upload_files_content
+    assert "missing_file.dat" not in upload_files_content
+
+
+def test_process_counter_line_fires_notifications_when_not_first_time(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Regression test for a real bug: a client constructed with
+    first_time=False must actually fire the pager/extension notification
+    calls in process_counter_line. The now-removed comm_log/testing replay
+    path never set first_time=False, so those calls were silently skipped
+    even though the path existed to validate exactly this."""
+    base_opts = _make_base_opts(tmp_path)
+    base_opts.instrument_id = 179
+    client = GliderEarlyGPS.GliderEarlyGPSClient(
+        tmp_path / "comm.log", base_opts, [], first_time=False
+    )
+
+    process_extensions_mock = MagicMock()
+    process_pagers_mock = MagicMock()
+    process_pagers_yml_mock = MagicMock()
+    monkeypatch.setattr(
+        GliderEarlyGPS.BaseDotFiles, "process_extensions", process_extensions_mock
+    )
+    monkeypatch.setattr(GliderEarlyGPS.BaseDotFiles, "process_pagers", process_pagers_mock)
+    monkeypatch.setattr(
+        GliderEarlyGPS.BaseCtrlFiles, "process_pagers_yml", process_pagers_yml_mock
+    )
+    monkeypatch.setattr(GliderEarlyGPS.BaseDB, "addSession", MagicMock())
+    monkeypatch.setattr(GliderEarlyGPS.BaseDotFiles, "process_urls", MagicMock())
+    monkeypatch.setattr(GliderEarlyGPS.Utils, "notifyVis", MagicMock())
+    monkeypatch.setattr(GliderEarlyGPS.Utils, "ddmm2dd", lambda v: 0.0)
+    monkeypatch.setattr(GliderEarlyGPS.Utils, "format_lat_lon_dd", lambda *a, **kw: "0")
+    monkeypatch.setattr(GliderEarlyGPS.time, "mktime", lambda t: 0.0)
+
+    session = MagicMock()
+    session.gps_fix = MagicMock()
+    session.dive_num = 5
+    session.logout_seen = True
+    session.sg_id = "sg179"
+    session.to_message_dict.return_value = {}
+
+    client.process_counter_line(session, force=True)
+
+    process_extensions_mock.assert_called_once_with(
+        ("commloggps",), base_opts, session=session
+    )
+    process_pagers_mock.assert_called_once_with(
+        base_opts, session.sg_id, ("gps",), session=session
+    )
+    process_pagers_yml_mock.assert_called_once_with(
+        base_opts, session.sg_id, ("gps",), session=session
+    )
+
+
+def test_process_counter_line_skips_notifications_when_first_time(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Companion to the test above: the default first_time=True (the live
+    daemon path's first callback, before run() clears it) must still skip
+    the notification calls - confirms the fix didn't just make it fire
+    unconditionally."""
+    base_opts = _make_base_opts(tmp_path)
+    base_opts.instrument_id = 179
+    client = _make_client(tmp_path, base_opts)
+
+    process_extensions_mock = MagicMock()
+    monkeypatch.setattr(
+        GliderEarlyGPS.BaseDotFiles, "process_extensions", process_extensions_mock
+    )
+    monkeypatch.setattr(GliderEarlyGPS.BaseDotFiles, "process_pagers", MagicMock())
+    monkeypatch.setattr(GliderEarlyGPS.BaseCtrlFiles, "process_pagers_yml", MagicMock())
+    monkeypatch.setattr(GliderEarlyGPS.BaseDB, "addSession", MagicMock())
+    monkeypatch.setattr(GliderEarlyGPS.BaseDotFiles, "process_urls", MagicMock())
+    monkeypatch.setattr(GliderEarlyGPS.Utils, "notifyVis", MagicMock())
+    monkeypatch.setattr(GliderEarlyGPS.Utils, "ddmm2dd", lambda v: 0.0)
+    monkeypatch.setattr(GliderEarlyGPS.Utils, "format_lat_lon_dd", lambda *a, **kw: "0")
+    monkeypatch.setattr(GliderEarlyGPS.time, "mktime", lambda t: 0.0)
+
+    session = MagicMock()
+    session.gps_fix = MagicMock()
+    session.dive_num = 5
+    session.logout_seen = True
+    session.sg_id = "sg179"
+    session.to_message_dict.return_value = {}
+
+    client.process_counter_line(session, force=True)
+
+    process_extensions_mock.assert_not_called()
+
+
+def test_replay_last_session_main_fires_notifications(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Integration-style smoke test against a real fixture comm.log:
+    replay_last_session_main() should process the actual last session and
+    fire the notification pipeline, not just parse the file and return 0
+    without doing anything (the bug this replaces)."""
+    data_dir = Path("testdata/sg236_NANOOS_May23_hooks")
+    mission_dir = tmp_path / "mission_dir"
+
+    process_extensions_mock = MagicMock()
+    monkeypatch.setattr(
+        GliderEarlyGPS.BaseDotFiles, "process_extensions", process_extensions_mock
+    )
+    monkeypatch.setattr(GliderEarlyGPS.BaseDotFiles, "process_pagers", MagicMock())
+    monkeypatch.setattr(GliderEarlyGPS.BaseCtrlFiles, "process_pagers_yml", MagicMock())
+    monkeypatch.setattr(GliderEarlyGPS.BaseDB, "addSession", MagicMock())
+    monkeypatch.setattr(GliderEarlyGPS.BaseDotFiles, "process_urls", MagicMock())
+    monkeypatch.setattr(GliderEarlyGPS.Utils, "notifyVis", MagicMock())
+
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        GliderEarlyGPS.replay_last_session_main,
+        [str(mission_dir / "comm.log")],
+        caplog,
+        allowed_msgs=[],
+    )
+
+    process_extensions_mock.assert_called_once()

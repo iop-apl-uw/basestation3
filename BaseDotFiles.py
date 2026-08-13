@@ -1501,6 +1501,43 @@ def process_mailer(
     log_info("Finished processing on .mailer")
 
 
+def run_extension_script(
+    base_opts: BaseOptions,
+    script_name: str,
+    script_args: list[str] | None,
+    timeout: int = 0,
+) -> None:
+    """Attempts to execute a script named under a shell context
+
+    Output is recorded to the log, error code is ignored, no timeout enforced
+    """
+    # TODO - after conversion of all paths to pathlib, remove conversions to the
+    # object below.  For now, they have the side effect of stripping the trailing
+    # / from the path before adding to the command line
+    full_script_name = pathlib.Path(base_opts.mission_dir) / script_name
+
+    if os.path.exists(full_script_name):
+        log_info(f"Processing {full_script_name}")
+        cmdline = f"{full_script_name} "
+        cmdline += f"{pathlib.Path(base_opts.basestation_directory)} "
+        cmdline += f"{pathlib.Path(base_opts.mission_dir)} "
+        if script_args:
+            for i in script_args:
+                cmdline = f"{cmdline} {i} "
+        log_debug(f"Running ({cmdline})")
+        try:
+            (_, fo) = Utils.run_cmd_shell(cmdline, timeout=timeout)
+        except Exception:
+            log_error(f"Error running {cmdline}", "exc")
+        else:
+            if fo is not None:
+                for f in fo:
+                    log_info(f)
+                fo.close()
+    else:
+        log_info(f"Extension script {full_script_name} not found")
+
+
 def process_extensions(
     sections: tuple[
         Literal[
