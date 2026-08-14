@@ -144,6 +144,62 @@ def test_stop_kaleido_global_server_no_op_when_not_running(monkeypatch) -> None:
     assert not fake.closed
 
 
+def test_start_sync_server_without_raw_atexit_suppresses_kaleidos_registration(
+    monkeypatch,
+) -> None:
+    """kaleido's raw, unbounded atexit.register(close) side effect must never
+    reach the real atexit handler list when going through our wrapper."""
+    registered: list[object] = []
+    spy = lambda fn: registered.append(fn)  # noqa: E731
+    monkeypatch.setattr(PlotUtilsPlotly.atexit, "register", spy)
+
+    def fake_start_sync_server(*args, **kwargs) -> None:
+        # Mimic GlobalKaleidoServer.open(): registers a raw atexit handler
+        # as a side effect of starting, exactly like real kaleido does.
+        PlotUtilsPlotly.atexit.register(lambda: None)
+
+    monkeypatch.setattr(
+        PlotUtilsPlotly.kaleido, "start_sync_server", fake_start_sync_server
+    )
+
+    PlotUtilsPlotly._start_sync_server_without_raw_atexit(n=1)
+
+    assert registered == []
+    # atexit.register must be restored to exactly what it was before, not
+    # left disarmed.
+    assert PlotUtilsPlotly.atexit.register is spy
+
+
+def test_ensure_atexit_handler_registered_is_idempotent(monkeypatch) -> None:
+    """Our handler must be armed exactly once no matter how many times
+    start_kaleido_global_server() runs across a process's lifetime."""
+    monkeypatch.setattr(PlotUtilsPlotly, "_atexit_handler_registered", False)
+    calls: list[object] = []
+    monkeypatch.setattr(
+        PlotUtilsPlotly.atexit, "register", lambda fn: calls.append(fn)
+    )
+
+    PlotUtilsPlotly._ensure_atexit_handler_registered()
+    PlotUtilsPlotly._ensure_atexit_handler_registered()
+
+    assert calls == [PlotUtilsPlotly._close_global_server_at_exit]
+
+
+def test_close_global_server_at_exit_is_bounded_even_if_wedged(monkeypatch) -> None:
+    """The one handler that actually runs at interpreter exit must never
+    hang, even if the server is wedged at that point - proving there is no
+    remaining path to kaleido's raw, unbounded close()."""
+    monkeypatch.setattr(PlotUtilsPlotly, "DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS", 0.2)
+    fake = _install_fake_server(monkeypatch, close_delay=5.0)
+
+    start = time.monotonic()
+    PlotUtilsPlotly._close_global_server_at_exit()
+    elapsed = time.monotonic() - start
+
+    assert elapsed < 2.0
+    assert PlotUtilsPlotly.kaleido._global_server is not fake
+
+
 def test_bounded_render_returns_fast_result() -> None:
     """A render that finishes well within the timeout returns its value normally."""
     assert PlotUtilsPlotly.bounded_render(lambda: 42, 2.0) == 42

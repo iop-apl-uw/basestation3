@@ -53,6 +53,13 @@ recommended_python_version = (3, 14, 0)
 required_numpy_version = "2.5.0"
 required_scipy_version = "1.18.0"
 
+# PlotUtilsPlotly.py's kaleido atexit-hang workaround
+# (_start_sync_server_without_raw_atexit()) depends on this exact version's
+# internal GlobalKaleidoServer.open()/close() implementation. Re-validate
+# that workaround (and the bounded-render/bounded-close design generally)
+# before bumping this.
+validated_kaleido_version = "1.3.0"
+
 
 # pylint: disable=E0239
 class WhichHalf(IntEnum):

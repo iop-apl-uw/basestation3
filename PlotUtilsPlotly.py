@@ -32,6 +32,7 @@
 
 from __future__ import annotations
 
+import atexit
 import contextlib
 import io
 import json
@@ -80,6 +81,12 @@ DEFAULT_STATIC_IMAGE_TIMEOUT_SECS = 120
 # Closing a healthy kaleido server (sentinel + thread exit) is near-instant;
 # this only needs to be long enough to not fire on a healthy shutdown.
 DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS = 30
+
+# Guards our own, single, always-bounded atexit handler against being
+# registered more than once, since start_kaleido_global_server() can run
+# multiple times in a single process (once per plot_dives()/plot_mission()
+# call, and again after every reset_kaleido_server() cycle).
+_atexit_handler_registered = False
 
 
 class PlotTimeout(BaseException):
@@ -719,6 +726,69 @@ def bounded_close_global_server(timeout: float) -> None:
     kaleido._global_server = ServerClass()
 
 
+def _close_global_server_at_exit() -> None:
+    """Our single, process-wide atexit handler for kaleido's global server.
+
+    Always bounded (via bounded_close_global_server()), unlike the raw,
+    unbounded atexit.register(close) handler that kaleido's own
+    GlobalKaleidoServer.open() registers - see
+    _start_sync_server_without_raw_atexit() for why that raw registration
+    is suppressed in favor of this one. Looks up kaleido._global_server
+    fresh each time it runs, so this same handler stays correct no matter
+    how many times reset_kaleido_server() has replaced the singleton
+    instance underneath it since process start.
+
+    Returns:
+        None.
+    """
+    bounded_close_global_server(DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS)
+
+
+def _ensure_atexit_handler_registered() -> None:
+    """Registers _close_global_server_at_exit() exactly once for this process.
+
+    Returns:
+        None.
+    """
+    global _atexit_handler_registered
+    if _atexit_handler_registered:
+        return
+    atexit.register(_close_global_server_at_exit)
+    _atexit_handler_registered = True
+
+
+def _start_sync_server_without_raw_atexit(*args, **kwargs) -> None:
+    """Calls kaleido.start_sync_server() with atexit.register() disarmed.
+
+    kaleido.start_sync_server() -> GlobalKaleidoServer.open() unconditionally
+    registers a raw, unbounded atexit handler on success (an unguarded
+    Thread.join() with no timeout) that can't be found and unregistered
+    afterward - functools.partial objects don't support equality
+    comparison, and open() doesn't expose the partial it created. So
+    instead we stop it from ever being registered, by making
+    atexit.register() a no-op for the duration of this one call. Reading
+    open()'s source confirms atexit.register() is its only side effect
+    besides starting the background thread and setting internal state,
+    both of which we still get. Our own handler
+    (_close_global_server_at_exit(), armed via
+    _ensure_atexit_handler_registered()) is what actually runs at
+    interpreter exit instead.
+
+    Args:
+        *args: Forwarded to kaleido.start_sync_server().
+        **kwargs: Forwarded to kaleido.start_sync_server().
+
+    Returns:
+        None.
+    """
+    original_register = atexit.register
+    atexit.register = lambda *a, **kw: None
+    try:
+        kaleido.start_sync_server(*args, **kwargs)
+    finally:
+        atexit.register = original_register
+
+
 class KaleidoServer:
     """Manages the lifecycle, exception handling, and health of the global Kaleido server.
 
@@ -861,7 +931,11 @@ class KaleidoServer:
         original_hook = threading.excepthook
         threading.excepthook = self.thread_exception_handler
 
-        kaleido.start_sync_server(n=1)
+        # Our own bounded shutdown handler must be armed before kaleido's
+        # background thread can even start, so a crash/exit between here and
+        # the reset_kaleido_server() call below is still covered.
+        _ensure_atexit_handler_registered()
+        _start_sync_server_without_raw_atexit(n=1)
         time.sleep(0.1)  # Let the server startup
 
         status, msg = self.is_kaleido_global_server_running()

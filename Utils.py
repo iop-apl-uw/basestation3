@@ -45,6 +45,7 @@ import collections
 import contextlib
 import errno
 import functools
+import importlib.metadata
 import importlib.util
 import io
 import math
@@ -1186,6 +1187,27 @@ def check_versions(base_opts: BaseOpts.BaseOptions) -> None:
         )
         log_critical(msg)
         raise RuntimeError(msg)
+
+    # Check kaleido version - PlotUtilsPlotly.py's atexit-hang workaround
+    # (_start_sync_server_without_raw_atexit()) depends on this exact
+    # version's internals - see Globals.validated_kaleido_version.
+    try:
+        kaleido_version = importlib.metadata.version("kaleido")
+    except importlib.metadata.PackageNotFoundError:
+        kaleido_version = None
+
+    if kaleido_version is not None:
+        log_info("Kaleido version %s" % kaleido_version)
+        if normalize_version(kaleido_version) != normalize_version(
+            Globals.validated_kaleido_version
+        ):
+            log_warning(
+                "Kaleido version %s does not match the version (%s) the "
+                "atexit-hang workaround in PlotUtilsPlotly.py was validated "
+                "against - re-examine that workaround before relying on it "
+                "with this version"
+                % (kaleido_version, Globals.validated_kaleido_version)
+            )
 
     # TODO - deal with "post" in gsw version
     # Check GSW Toolkit Version
