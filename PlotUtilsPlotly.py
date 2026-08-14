@@ -692,6 +692,12 @@ def bounded_close_global_server(timeout: float) -> None:
     seconds for it, so callers can never be blocked longer than that no
     matter how wedged the background thread is.
 
+    A no-op if the server isn't currently running (already closed, or never
+    opened) - avoids kaleido's own close() logging a "Server already
+    closed" RuntimeWarning on every call site that closes defensively (e.g.
+    the atexit handler, which always runs even after a normal run already
+    closed the server itself during its own processing).
+
     Args:
         timeout: Seconds to wait for the close to complete before giving up
             on it.
@@ -701,6 +707,11 @@ def bounded_close_global_server(timeout: float) -> None:
     """
     server = getattr(kaleido, "_global_server", None)
     if server is None:
+        return
+
+    is_running_attr = getattr(server, "is_running", False)
+    is_running = is_running_attr() if callable(is_running_attr) else is_running_attr
+    if not is_running:
         return
 
     def _close() -> None:

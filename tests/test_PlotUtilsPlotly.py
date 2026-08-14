@@ -37,17 +37,24 @@ import PlotUtilsPlotly
 class _FakeGlobalServer:
     """Stand-in for kaleido's GlobalKaleidoServer, with a controllable close() delay."""
 
-    def __init__(self, close_delay: float = 0.0) -> None:
+    def __init__(self, close_delay: float = 0.0, running: bool = True) -> None:
         self.close_delay = close_delay
         self.closed = False
+        self.running = running
+
+    def is_running(self) -> bool:
+        return self.running
 
     def close(self) -> None:
         time.sleep(self.close_delay)
         self.closed = True
+        self.running = False
 
 
-def _install_fake_server(monkeypatch, close_delay: float) -> _FakeGlobalServer:
-    fake = _FakeGlobalServer(close_delay)
+def _install_fake_server(
+    monkeypatch, close_delay: float, running: bool = True
+) -> _FakeGlobalServer:
+    fake = _FakeGlobalServer(close_delay, running=running)
     monkeypatch.setattr(PlotUtilsPlotly.kaleido, "_global_server", fake, raising=False)
     return fake
 
@@ -90,6 +97,22 @@ def test_bounded_close_no_op_when_no_server(monkeypatch) -> None:
     PlotUtilsPlotly.bounded_close_global_server(1.0)
 
     assert PlotUtilsPlotly.kaleido._global_server is None
+
+
+def test_bounded_close_no_op_when_server_already_not_running(monkeypatch) -> None:
+    """Regression test: calling close on a server that's already closed (or
+    never opened) must not call kaleido's own close() at all - that's what
+    produces its "Server already closed" RuntimeWarning, seen in production
+    every time the atexit handler runs after a normal run already closed
+    the server itself during processing."""
+    fake = _install_fake_server(monkeypatch, close_delay=0.0, running=False)
+
+    PlotUtilsPlotly.bounded_close_global_server(1.0)
+
+    assert not fake.closed
+    # Nothing needed resetting, so the existing (already-idle) instance is
+    # left in place rather than being swapped for an equivalent new one.
+    assert PlotUtilsPlotly.kaleido._global_server is fake
 
 
 def test_reset_kaleido_server_bounded_by_wedged_close(monkeypatch) -> None:
