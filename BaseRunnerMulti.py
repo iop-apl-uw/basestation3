@@ -389,8 +389,18 @@ class UnixSocketPrivExecClient:
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
             sock.connect(self._socket_path)
+        except OSError as exc:
+            sock.close()
+            raise PrivExecError(f"could not reach privileged exec helper: {exc}") from exc
+
+        try:
             _send_frame(sock, orjson.dumps(payload))
             data = _recv_frame(sock)
+        except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError):
+            # The peer closed without responding - same situation as a clean
+            # EOF (_recv_frame returning None), just surfaced as a reset
+            # instead of an empty read on some platforms/kernels.
+            data = None
         except OSError as exc:
             raise PrivExecError(f"could not reach privileged exec helper: {exc}") from exc
         finally:
