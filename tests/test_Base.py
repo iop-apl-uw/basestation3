@@ -31,6 +31,7 @@ import os
 import pathlib
 from datetime import datetime
 from decimal import Decimal
+from unittest.mock import MagicMock
 
 import pytest
 import testutils
@@ -245,3 +246,87 @@ def test_eng_precision(caplog):
                 ]
             )
             break
+
+
+def test_process_file_group_network_logfile_casts_str_to_path(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+) -> None:
+    """Regression test for a production crash: a network-logfile fragment
+    that never goes through the tar/gzip/bzip branches produces a plain str
+    in_file_name (from the string-concatenated defrag_file_name) -
+    process_file_group must cast it to a pathlib.Path before calling
+    BaseNetwork.convert_network_logfile, which requires one
+    (AttributeError: 'str' object has no attribute 'is_file' otherwise)."""
+    fragment = tmp_path / "sg0000en.x"
+    data = b"dummy network logfile bytes"
+    fragment.write_bytes(data)
+
+    comm_log = MagicMock()
+    comm_log.find_fragment_transfer_method.return_value = "raw"
+
+    convert_mock = MagicMock(return_value=None)
+    monkeypatch.setattr(Base.BaseNetwork, "convert_network_logfile", convert_mock)
+
+    base_opts = MagicMock()
+    base_opts.mission_dir = tmp_path
+    base_opts.run_bogue = False
+
+    fragment_size_dict = {
+        "sg0000en.x": Base.CommLog.file_expected_actual_nt(len(data), len(data))
+    }
+
+    ret_val = Base.process_file_group(
+        base_opts,
+        [str(fragment)],
+        fragment_size_dict,
+        0,
+        {},
+        179,
+        comm_log,
+        [],
+    )
+
+    assert ret_val == 0
+    convert_mock.assert_called_once()
+    called_in_file_name = convert_mock.call_args.args[1]
+    assert isinstance(called_in_file_name, pathlib.Path)
+
+
+def test_process_file_group_network_profile_casts_str_to_path(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+) -> None:
+    """Same regression as above, for convert_network_profile - the sibling
+    call site with the identical latent bug."""
+    fragment = tmp_path / "sg0000rn.x"
+    data = b"dummy network profile bytes"
+    fragment.write_bytes(data)
+
+    comm_log = MagicMock()
+    comm_log.find_fragment_transfer_method.return_value = "raw"
+
+    convert_mock = MagicMock(return_value=None)
+    monkeypatch.setattr(Base.BaseNetwork, "convert_network_profile", convert_mock)
+
+    base_opts = MagicMock()
+    base_opts.mission_dir = tmp_path
+    base_opts.run_bogue = False
+
+    fragment_size_dict = {
+        "sg0000rn.x": Base.CommLog.file_expected_actual_nt(len(data), len(data))
+    }
+
+    ret_val = Base.process_file_group(
+        base_opts,
+        [str(fragment)],
+        fragment_size_dict,
+        0,
+        {},
+        179,
+        comm_log,
+        [],
+    )
+
+    assert ret_val == 0
+    convert_mock.assert_called_once()
+    called_in_file_name = convert_mock.call_args.args[1]
+    assert isinstance(called_in_file_name, pathlib.Path)
