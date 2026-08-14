@@ -32,3 +32,7 @@ A short guide to adding plots to the basestation may be found in [plotting.md](p
 ## Sensor integration guide
 
 A short guide to adding sensors and sensor data processing on the basestation may be found in [sensor_integration.md](sensor_integration.md)
+
+## BaseRunnerMulti - consolidated multi-site glider account runner
+
+Documentation on `BaseRunnerMulti.py`/`BaseRunnerPrivExec.py`, the consolidated replacement for running one `BaseRunner.py` process per site, is in [BaseRunnerMulti.md](BaseRunnerMulti.md). A sample `sites.yaml` config file is in [sites.example.yaml](sites.example.yaml)

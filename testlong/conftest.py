@@ -25,16 +25,20 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Docker-based fixtures for the testlong/ suite.
+"""Docker- and multipass-based fixtures for the testlong/ suite.
 
-These tests build Docker images and spin up containers, so they're slow -
-they're deliberately not part of `make test`/CI. `pyproject.toml` sets
+These tests build Docker images/spin up VMs, so they're slow - they're
+deliberately not part of `make test`/CI. `pyproject.toml` sets
 `testpaths = ["tests"]`, so a bare `pytest`/`make test` invocation does not
 collect this directory; run these explicitly instead: `make testlong` or
 `uv run pytest testlong/`.
 
-Set TESTLONG_KEEP_IMAGES=1 to skip removing the built images at the end of
-the session, for faster iteration when re-running locally.
+Set TESTLONG_KEEP_IMAGES=1 to skip removing the built Docker images at the
+end of the session, for faster iteration when re-running locally. Set
+TESTLONG_KEEP_VM=1 to do the same for the multipass VM used by the
+BaseRunnerMulti validation tests - relaunching and re-provisioning it
+(`uv sync` inside the VM alone takes a while) is far more expensive than
+rebuilding a Docker image.
 """
 
 from __future__ import annotations
@@ -46,9 +50,12 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import dockerutils
+import multipassutils
 import pytest
 
 KEEP_IMAGES_ENV = "TESTLONG_KEEP_IMAGES"
+KEEP_VM_ENV = "TESTLONG_KEEP_VM"
+BASERUNNER_VM_NAME = "testlong-baserunner"
 
 
 @pytest.fixture(scope="session")
@@ -120,3 +127,65 @@ def ci_image(docker_available: None, repo_root: Path) -> Iterator[str]:
     yield tag
     if not os.environ.get(KEEP_IMAGES_ENV):
         dockerutils.remove_image(tag)
+
+
+@pytest.fixture(scope="session")
+def multipass_available() -> None:
+    """Skips the test session if multipass isn't installed/available.
+
+    Raises:
+        pytest.skip.Exception: If the `multipass` CLI is missing or
+            `multipass version` fails.
+    """
+    if shutil.which("multipass") is None:
+        pytest.skip("multipass not found on PATH")
+    result = subprocess.run(
+        ["multipass", "version"], capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
+        pytest.skip(f"multipass not available: {result.stderr.strip()}")
+
+
+@pytest.fixture(scope="session")
+def baserunner_vm(
+    multipass_available: None, repo_root: Path
+) -> Iterator[multipassutils.Vm]:
+    """Launches and provisions the BaseRunnerMulti validation VM, once per session.
+
+    Creates three fake sites (alpha/bravo/charlie), the baserunner service
+    account, a real `uv sync`'d copy of this checkout with stub
+    Base.py/BaseLogin.py/GliderEarlyGPS.py swapped in (see
+    testlong/fixtures/setup_baserunner_env.sh), and installs (but does not
+    start) the baserunnermulti/baserunnerprivexec/baserunner-legacy@
+    systemd units - individual tests control starting/stopping those,
+    since the migration/rollback test needs a specific ordering the other
+    tests don't.
+
+    Args:
+        multipass_available: Ensures multipass is usable before launching.
+        repo_root: This checkout's root, transferred into the VM so
+            BaseRunnerMulti.py's own dependency chain (BaseOpts ->
+            Plotting, Utils -> numpy/scipy/netCDF4/...) can be uv sync'd
+            for real - there's no way around this, even with the science
+            scripts themselves stubbed out.
+
+    Yields:
+        The provisioned Vm.
+
+    Raises:
+        pytest.fail.Exception: If VM provisioning fails.
+    """
+    vm = multipassutils.launch(BASERUNNER_VM_NAME, cpus=2, memory="4G", disk="20G")
+    try:
+        multipassutils.transfer(str(repo_root), vm, "/home/ubuntu/basestation3")
+        fixtures_dir = Path(__file__).resolve().parent / "fixtures"
+        multipassutils.transfer(str(fixtures_dir), vm, "/home/ubuntu/fixtures")
+        result = multipassutils.exec_in(
+            vm, ["sudo", "bash", "/home/ubuntu/fixtures/setup_baserunner_env.sh"]
+        )
+        if result.returncode != 0:
+            pytest.fail(f"VM provisioning failed:\n{result.stdout}\n{result.stderr}")
+        yield vm
+    finally:
+        if not os.environ.get(KEEP_VM_ENV):
+            multipassutils.delete(vm)

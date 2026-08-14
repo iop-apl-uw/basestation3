@@ -1,0 +1,26 @@
+# Copied from docs/BaseRunnerMulti.md's "Deployment" section, unmodified
+# except for paths pointing at this VM's transferred checkout instead of
+# a real /usr/local/basestation3 install.
+[Unit]
+Description=Privileged exec helper for BaseRunnerMulti (testlong multipass validation)
+After=network.target
+
+[Service]
+User=baserunner
+Group=baserunner
+AmbientCapabilities=CAP_SETUID CAP_SETGID
+CapabilityBoundingSet=CAP_SETUID CAP_SETGID
+# Delegates a cgroup subtree to this unit so CgroupJoiner can create
+# per-site child cgroups and write cpu.max/cpu.weight/cgroup.procs
+# without needing any additional Linux capability.
+Delegate=yes
+ExecStart=/usr/local/basestation3/.venv/bin/python /usr/local/basestation3/BaseRunnerPrivExec.py \
+    --sites_config /usr/local/basestation3/etc/sites.yaml \
+    --priv_exec_socket /run/baserunner/priv_exec.sock \
+    --cgroup_root /sys/fs/cgroup/system.slice/baserunnerprivexec.service \
+    --base_log /var/log/baserunner-privexec.log
+RuntimeDirectory=baserunner
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

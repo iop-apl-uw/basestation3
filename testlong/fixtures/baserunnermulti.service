@@ -1,0 +1,21 @@
+# Copied from docs/BaseRunnerMulti.md's "Deployment" section, unmodified
+# except for paths pointing at this VM's transferred checkout instead of
+# a real /usr/local/basestation3 install.
+[Unit]
+Description=Consolidated multi-site glider account runner (testlong multipass validation)
+After=network.target baserunnerprivexec.service
+Requires=baserunnerprivexec.service
+
+[Service]
+User=baserunner
+Group=baserunner
+ExecStart=/usr/local/basestation3/.venv/bin/python /usr/local/basestation3/BaseRunnerMulti.py \
+    --sites_config /usr/local/basestation3/etc/sites.yaml \
+    --priv_exec_socket /run/baserunner/priv_exec.sock \
+    --base_log /var/log/baserunnermulti.log
+WatchdogSec=30
+Restart=always
+Type=notify
+
+[Install]
+WantedBy=multi-user.target

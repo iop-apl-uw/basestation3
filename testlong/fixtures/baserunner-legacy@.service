@@ -1,0 +1,24 @@
+# A stand-in for today's real per-site baserunner-<site>@.service units
+# (see listings.txt reviewed during design), hardcoded to the "alpha"
+# fake site, used only to test the migration/rollback lock-handoff
+# between an old-style single-site BaseRunner.py instance and the new
+# BaseRunnerMulti. Instantiate as baserunner-legacy@runner-alpha.service.
+[Unit]
+Description=Seaglider runner process for alpha (legacy single-site, testlong multipass validation)
+After=network.target
+
+[Service]
+Environment=PYTHONUNBUFFERED=true
+User=%i
+ExecStart=/usr/local/basestation3/.venv/bin/python /usr/local/basestation3/BaseRunner.py \
+    --jail_root /home/jails/alpha/gliderjail \
+    --base_log /home/jails/alpha/gliderjail/home/rundir/baserunner.log \
+    /home/jails/alpha/gliderjail/home/rundir
+WatchdogSec=30
+Restart=always
+RuntimeMaxSec=86400
+TimeoutStopSec=10
+Type=notify
+
+[Install]
+WantedBy=multi-user.target
