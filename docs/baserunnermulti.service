@@ -9,10 +9,19 @@ Requires=baserunnerprivexec.service
 [Service]
 User=baserunner
 Group=baserunner
+# baserunner has no home directory (--no-create-home), so matplotlib's
+# default $HOME/.config/matplotlib cache dir isn't writable; it falls
+# back to a throwaway /tmp dir with a startup warning if left unset.
+CacheDirectory=baserunner
+Environment=MPLCONFIGDIR=/var/cache/baserunner
 ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunnerMulti.py \
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \
-    --base_log /var/log/baserunnermulti.log
+    --base_log /var/log/baserunner/baserunnermulti.log
+# Creates /var/log/baserunner/ owned baserunner:baserunner (mode 0750) on
+# every start, recreating it if it's ever missing - no manual mkdir/chown
+# of the log directory needed. Requires systemd >= 235.
+LogsDirectory=baserunner
 WatchdogSec=30
 Restart=always
 Type=notify

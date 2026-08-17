@@ -810,7 +810,17 @@ class Dispatcher:
 
         log_info(f"[{site_name}] Starting {job.job_id}:{argv}")
         start_time = time.time()
-        pid = self._priv_client.dispatch(site_name, argv, job.log_file)
+        try:
+            pid = self._priv_client.dispatch(site_name, argv, job.log_file)
+        except Exception:
+            # Put it back rather than dropping it: the .run file that
+            # produced this job is already gone (cleaned up at enqueue
+            # time), so a lost job here has no other path back into the
+            # queue and would otherwise vanish silently on any transient
+            # privileged-helper outage (e.g. a restart to pick up a
+            # config change).
+            self.job_queues[que].append(job)
+            raise
         self.running_jobs[que] = RunningJob(job.job_id, pid, argv, job.log_file, start_time)
 
         if script_name in vis_notify_scripts:

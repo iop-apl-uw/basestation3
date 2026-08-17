@@ -169,10 +169,11 @@ root.
 
 Ready-to-copy unit files live alongside this doc:
 [`baserunnerprivexec.service`](baserunnerprivexec.service) and
-[`baserunnermulti.service`](baserunnermulti.service) - these are the
-actual files to copy onto a target host (see "Installing the units"
-below), not just illustrative snippets, so keep them and this doc in
-sync if either changes.
+[`baserunnermulti.service`](baserunnermulti.service), plus a
+[`baserunner.logrotate`](baserunner.logrotate) config for
+`/etc/logrotate.d/` - these are the actual files to copy onto a target
+host (see "Installing the units" below), not just illustrative
+snippets, so keep them and this doc in sync if any of them changes.
 
 ```ini
 # docs/baserunnerprivexec.service
@@ -183,6 +184,11 @@ After=network.target
 [Service]
 User=baserunner
 Group=baserunner
+# baserunner has no home directory (--no-create-home), so matplotlib's
+# default $HOME/.config/matplotlib cache dir isn't writable; it falls
+# back to a throwaway /tmp dir with a startup warning if left unset.
+CacheDirectory=baserunner
+Environment=MPLCONFIGDIR=/var/cache/baserunner
 AmbientCapabilities=CAP_SETUID CAP_SETGID
 CapabilityBoundingSet=CAP_SETUID CAP_SETGID
 # Delegates a cgroup subtree to this unit so CgroupJoiner can create
@@ -193,8 +199,21 @@ ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunnerPrivExec
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \
     --cgroup_root /sys/fs/cgroup/system.slice/baserunnerprivexec.service \
-    --base_log /var/log/baserunner-privexec.log
+    --base_log /var/log/baserunner/baserunner-privexec.log
 RuntimeDirectory=baserunner
+# Creates /var/log/baserunner/ owned baserunner:baserunner (mode 0750) on
+# every start, recreating it if it's ever missing - no manual mkdir/chown
+# of the log directory needed. Requires systemd >= 235.
+LogsDirectory=baserunner
+# BaseRunnerPrivExec.py calls sd_notify(READY=1) only after its socket is
+# bound and listening - this makes baserunnermulti.service's
+# Requires=/After= on this unit an actual readiness guarantee, not just
+# "the process was forked". Without Type=notify here, systemd considers
+# this unit started the instant ExecStart's process exists, so the
+# watcher could start and try to dispatch through a socket that doesn't
+# exist yet - seen in production as a PrivExecError connecting to
+# priv_exec.sock right after boot.
+Type=notify
 Restart=always
 
 [Install]
@@ -211,10 +230,16 @@ Requires=baserunnerprivexec.service
 [Service]
 User=baserunner
 Group=baserunner
+# baserunner has no home directory (--no-create-home), so matplotlib's
+# default $HOME/.config/matplotlib cache dir isn't writable; it falls
+# back to a throwaway /tmp dir with a startup warning if left unset.
+CacheDirectory=baserunner
+Environment=MPLCONFIGDIR=/var/cache/baserunner
 ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunnerMulti.py \
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \
-    --base_log /var/log/baserunnermulti.log
+    --base_log /var/log/baserunner/baserunnermulti.log
+LogsDirectory=baserunner
 WatchdogSec=30
 Restart=always
 Type=notify
@@ -228,6 +253,48 @@ site's group before either unit starts - it plays the same role as this
 org's existing admin accounts (broad group membership, no special
 capability of its own). Neither unit is enabled by this repo; both are
 infra-level artifacts for whoever operates the deployment.
+
+Both units log to `--base_log` paths under `/var/log/baserunner/`, not
+directly under `/var/log/` - `/var/log/` itself is root-owned and not
+group-writable, so a bare `logging.FileHandler(opts.base_log)` running as
+`baserunner` can't create a log file there (`PermissionError: [Errno 13]
+Permission denied`, seen the first time a fresh `baserunner` account
+starts either unit). Rather than a one-time manual `mkdir`/`chown` -
+which then has to be re-done by hand if the directory is ever deleted
+(log-cleanup script, disk migration, container rebuild) - both units
+declare `LogsDirectory=baserunner`, which makes systemd itself create
+`/var/log/baserunner/` owned `baserunner:baserunner`, mode `0750`, fresh
+on every unit start. Nothing needs to pre-create or `chown` that
+directory by hand.
+
+Both units also set `CacheDirectory=baserunner` +
+`Environment=MPLCONFIGDIR=/var/cache/baserunner` for the same reason:
+`baserunner` has no home directory (`--no-create-home`), so anything
+importing `matplotlib` (transitively, via the plotting code these
+daemons dispatch into) can't write its default `$HOME/.config/matplotlib`
+cache and falls back to a throwaway `/tmp/matplotlib-*` dir with a
+startup warning every time - harmless, but avoidable the same
+self-healing way as the log directory.
+
+`baserunnerprivexec.service` is `Type=notify`, and `BaseRunnerPrivExec.py`
+only calls `sd_notify(READY=1)` after its UNIX socket is bound and
+listening (not on process start). This closes a real startup/restart
+race: `baserunnermulti.service`'s `Requires=`/`After=` on this unit
+orders the two units' *start jobs*, but for a plain `Type=simple` unit
+systemd considers a unit "started" the instant its `ExecStart` process
+exists - not once it's actually finished loading `sites.yaml` and binding
+its socket. If a `.run` file was already waiting in a site's rundir at
+boot, `BaseRunnerMulti.py` could reach its dispatch step before the
+helper had opened `priv_exec.sock`, raising `PrivExecError: could not
+reach privileged exec helper: [Errno 2] No such file or directory`. With
+`Type=notify` here, systemd's ordering guarantee becomes real: the
+watcher's start job doesn't begin until the helper has actually signaled
+ready. This doesn't need a matching `WatchdogSec=` on this unit -
+`baserunnermulti.service` already retries a dispatch that fails for any
+reason (queued job goes back into `job_queues` rather than being
+dropped - see the `Dispatcher._dispatch_one_queued` requeue-on-failure
+path), so a slow-to-ready helper now just delays the first successful
+dispatch instead of silently losing a job.
 
 ### Installing the units
 
@@ -257,12 +324,28 @@ copy/daemon-reload/enable/start sequence, in this order:
    sudo install -o root -g root -m 644 docs/baserunnermulti.service /etc/systemd/system/
    ```
 
-3. **`daemon-reload`, then enable and start the privileged helper before
+3. **Copy the logrotate config into `/etc/logrotate.d/`.** Root-owned,
+   mode `644`. Neither daemon rotates its own log (see the comment in the
+   file itself for why `copytruncate` specifically is required here, not
+   logrotate's default rename-based rotation), and nothing else on a
+   fresh host will do this for you:
+
+   ```bash
+   sudo install -o root -g root -m 644 docs/baserunner.logrotate /etc/logrotate.d/baserunner
+   ```
+
+   Nothing needs to be pre-created under `/var/log/baserunner/` for this
+   step - both units' `LogsDirectory=baserunner` (see above) creates that
+   directory with the right ownership the first time either unit starts,
+   and logrotate is happy to manage a glob that doesn't match anything
+   yet (`missingok`).
+
+4. **`daemon-reload`, then enable and start the privileged helper before
    the watcher.** `baserunnermulti.service` already declares
    `Requires=baserunnerprivexec.service`/`After=baserunnerprivexec.service`,
    so starting the watcher first would just have systemd start the helper
    as a dependency anyway - starting the helper explicitly first makes
-   that ordering visible instead of implicit, and lets step 4 check the
+   that ordering visible instead of implicit, and lets step 5 check the
    helper's capabilities in isolation before the watcher can dispatch
    anything through it.
 
@@ -272,20 +355,23 @@ copy/daemon-reload/enable/start sequence, in this order:
    sudo systemctl enable --now baserunnermulti.service
    ```
 
-4. **Confirm both came up clean:**
+5. **Confirm both came up clean:**
 
    ```bash
    systemctl status baserunnerprivexec.service baserunnermulti.service
    journalctl -u baserunnerprivexec.service -u baserunnermulti.service -f
+   ls -l /var/log/baserunner/
    ```
 
    `baserunnermulti.service` is `Type=notify` with `WatchdogSec=30`, so
    `active (running)` here means the process reached its own ready
    callback, not just that it forked - a hang before that point shows as
    `activating (start)` and then a watchdog-timeout failure, not a false
-   "running".
+   "running". The `ls` confirms `LogsDirectory=` actually took effect -
+   both `baserunnermulti.log` and `baserunner-privexec.log` should be
+   owned `baserunner:baserunner`.
 
-Re-running steps 2-4 (copy, `daemon-reload`, `restart` instead of
+Re-running steps 2-5 (copy, `daemon-reload`, `restart` instead of
 `enable --now`) is also how you pick up a unit-file change later - e.g.
 adding `cpu_quota_pct`/`cpu_weight` support required a `Delegate=yes`
 edit to `baserunnerprivexec.service`, which needed exactly this sequence

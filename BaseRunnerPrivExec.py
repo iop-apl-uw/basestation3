@@ -59,6 +59,7 @@ import sys
 import threading
 
 import orjson
+import sdnotify
 
 import BaseOpts
 import BaseOptsType
@@ -716,6 +717,13 @@ def main() -> int:
     sock.bind(str(socket_path))
     socket_path.chmod(0o600)
     sock.listen(5)
+
+    # Only now - socket bound and listening - are we actually able to
+    # serve a dispatch request. With the unit's Type=notify, this is what
+    # makes BaseRunnerMulti.service's Requires=/After= on this unit an
+    # actual readiness guarantee instead of just "the process was
+    # forked": systemd won't start the watcher's unit until this fires.
+    sdnotify.SystemdNotifier().notify("READY=1")
 
     stop_event = threading.Event()
 

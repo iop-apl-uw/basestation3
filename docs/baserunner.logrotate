@@ -1,0 +1,23 @@
+# Install as /etc/logrotate.d/baserunner - see docs/BaseRunnerMulti.md's
+# "Deployment" section.
+#
+# BaseRunnerMulti.py and BaseRunnerPrivExec.py both log through
+# BaseLog.py's plain logging.FileHandler and never re-open their log
+# file on SIGHUP, so logrotate's default rename-based rotation would
+# leave both daemons writing forever to the now-rotated-away file while
+# the fresh /var/log/baserunner/*.log sits empty until the next
+# `systemctl restart`. `copytruncate` avoids that: logrotate copies the
+# current content out and truncates the still-open file in place, so
+# the file descriptor each daemon already holds stays valid across
+# rotation. (Trade-off: a handful of log lines written in the narrow
+# window between the copy and the truncate can be lost - acceptable
+# here since these logs are operational, not an audit-of-record.)
+/var/log/baserunner/*.log {
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}

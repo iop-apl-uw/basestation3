@@ -8,6 +8,11 @@ After=network.target
 [Service]
 User=baserunner
 Group=baserunner
+# baserunner has no home directory (--no-create-home), so matplotlib's
+# default $HOME/.config/matplotlib cache dir isn't writable; it falls
+# back to a throwaway /tmp dir with a startup warning if left unset.
+CacheDirectory=baserunner
+Environment=MPLCONFIGDIR=/var/cache/baserunner
 AmbientCapabilities=CAP_SETUID CAP_SETGID
 CapabilityBoundingSet=CAP_SETUID CAP_SETGID
 # Delegates a cgroup subtree to this unit so CgroupJoiner can create
@@ -18,8 +23,21 @@ ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunnerPrivExec
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \
     --cgroup_root /sys/fs/cgroup/system.slice/baserunnerprivexec.service \
-    --base_log /var/log/baserunner-privexec.log
+    --base_log /var/log/baserunner/baserunner-privexec.log
 RuntimeDirectory=baserunner
+# Creates /var/log/baserunner/ owned baserunner:baserunner (mode 0750) on
+# every start, recreating it if it's ever missing - no manual mkdir/chown
+# of the log directory needed. Requires systemd >= 235.
+LogsDirectory=baserunner
+# BaseRunnerPrivExec.py calls sd_notify(READY=1) only after its socket is
+# bound and listening - this makes baserunnermulti.service's
+# Requires=/After= on this unit (see baserunnermulti.service) an actual
+# readiness guarantee, not just "the process was forked". Without
+# Type=notify here, systemd considers this unit started the instant
+# ExecStart's process exists, so the watcher could start and try to
+# dispatch through a socket that doesn't exist yet - seen in production
+# as a PrivExecError connecting to priv_exec.sock right after boot.
+Type=notify
 Restart=always
 
 [Install]

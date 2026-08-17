@@ -9,10 +9,13 @@ Requires=baserunnerprivexec.service
 [Service]
 User=baserunner
 Group=baserunner
+CacheDirectory=baserunner
+Environment=MPLCONFIGDIR=/var/cache/baserunner
 ExecStart=/usr/local/basestation3/.venv/bin/python /usr/local/basestation3/BaseRunnerMulti.py \
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \
-    --base_log /var/log/baserunnermulti.log
+    --base_log /var/log/baserunner/baserunnermulti.log
+LogsDirectory=baserunner
 WatchdogSec=30
 Restart=always
 Type=notify

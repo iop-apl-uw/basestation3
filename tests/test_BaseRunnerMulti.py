@@ -537,6 +537,32 @@ def test_dispatch_queued_skips_que_already_running(tmp_path):
     assert len(client.dispatched) == 1
 
 
+def test_dispatch_queued_requeues_job_on_dispatch_failure(tmp_path, caplog):
+    site = _site(tmp_path / "seaglider")
+    client = FakePrivExecClient()
+    dispatcher = BaseRunnerMulti.Dispatcher(client)
+    run_file = _write_run_file(
+        site.watch_dir, "sg272.run", "/home/sg272", "/home/sg272/current",
+        "/home/sg272/current/baselog.log", "Base.py --mission_dir /home/sg272/current",
+    )
+    dispatcher.handle_run_file_event(site, run_file)
+
+    que = ("seaglider", "/home/sg272/current", "Base.py", 272)
+    client.raise_on_dispatch = BaseRunnerMulti.PrivExecError("helper unreachable")
+    dispatcher.dispatch_queued()  # must not raise; the job goes back into the queue
+
+    assert len(client.dispatched) == 0
+    assert que not in dispatcher.running_jobs
+    assert len(dispatcher.job_queues[que]) == 1
+    assert any(r.levelname == "ERROR" for r in caplog.records)
+
+    client.raise_on_dispatch = None
+    dispatcher.dispatch_queued()  # helper recovers - the requeued job dispatches
+
+    assert len(client.dispatched) == 1
+    assert que in dispatcher.running_jobs
+
+
 # --- Dispatcher._dispatch_blocking (dead-code parity path) ---
 
 

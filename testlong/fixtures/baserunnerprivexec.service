@@ -1,6 +1,6 @@
-# Copied from docs/BaseRunnerMulti.md's "Deployment" section, unmodified
-# except for paths pointing at this VM's transferred checkout instead of
-# a real /usr/local/basestation3 install.
+# Copied from docs/baserunnerprivexec.service, unmodified except for
+# paths pointing at this VM's transferred checkout instead of a real
+# /usr/local/basestation3 install.
 [Unit]
 Description=Privileged exec helper for BaseRunnerMulti (testlong multipass validation)
 After=network.target
@@ -8,6 +8,8 @@ After=network.target
 [Service]
 User=baserunner
 Group=baserunner
+CacheDirectory=baserunner
+Environment=MPLCONFIGDIR=/var/cache/baserunner
 AmbientCapabilities=CAP_SETUID CAP_SETGID
 CapabilityBoundingSet=CAP_SETUID CAP_SETGID
 # Delegates a cgroup subtree to this unit so CgroupJoiner can create
@@ -18,8 +20,10 @@ ExecStart=/usr/local/basestation3/.venv/bin/python /usr/local/basestation3/BaseR
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \
     --cgroup_root /sys/fs/cgroup/system.slice/baserunnerprivexec.service \
-    --base_log /var/log/baserunner-privexec.log
+    --base_log /var/log/baserunner/baserunner-privexec.log
 RuntimeDirectory=baserunner
+LogsDirectory=baserunner
+Type=notify
 Restart=always
 
 [Install]
