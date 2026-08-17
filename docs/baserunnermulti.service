@@ -1,15 +1,15 @@
-# Copied from docs/baserunnermulti.service, unmodified except for paths
-# pointing at this VM's transferred checkout instead of a real
-# /usr/local/basestation3 install.
+# Canonical example unit for BaseRunnerMulti.py - see docs/BaseRunnerMulti.md's
+# "Deployment" section for the copy/daemon-reload/enable/start sequence.
+# Adjust paths if this host's checkout doesn't live at /usr/local/basestation3.
 [Unit]
-Description=Consolidated multi-site glider account runner (testlong multipass validation)
+Description=Consolidated multi-site glider account runner
 After=network.target baserunnerprivexec.service
 Requires=baserunnerprivexec.service
 
 [Service]
 User=baserunner
 Group=baserunner
-ExecStart=/usr/local/basestation3/.venv/bin/python /usr/local/basestation3/BaseRunnerMulti.py \
+ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunnerMulti.py \
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \
     --base_log /var/log/baserunnermulti.log

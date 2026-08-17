@@ -167,8 +167,15 @@ for a site that's shown to actually need it.
 Both processes need their own systemd unit. Neither should ever run as
 root.
 
+Ready-to-copy unit files live alongside this doc:
+[`baserunnerprivexec.service`](baserunnerprivexec.service) and
+[`baserunnermulti.service`](baserunnermulti.service) - these are the
+actual files to copy onto a target host (see "Installing the units"
+below), not just illustrative snippets, so keep them and this doc in
+sync if either changes.
+
 ```ini
-# /etc/systemd/system/baserunnerprivexec.service
+# docs/baserunnerprivexec.service
 [Unit]
 Description=Privileged exec helper for BaseRunnerMulti
 After=network.target
@@ -195,7 +202,7 @@ WantedBy=multi-user.target
 ```
 
 ```ini
-# /etc/systemd/system/baserunnermulti.service
+# docs/baserunnermulti.service
 [Unit]
 Description=Consolidated multi-site glider account runner
 After=network.target baserunnerprivexec.service
@@ -221,6 +228,68 @@ site's group before either unit starts - it plays the same role as this
 org's existing admin accounts (broad group membership, no special
 capability of its own). Neither unit is enabled by this repo; both are
 infra-level artifacts for whoever operates the deployment.
+
+### Installing the units
+
+Both unit files above are plain text, not templates - copy them in as-is
+(adjusting only the paths if this host's checkout doesn't live at
+`/usr/local/basestation3`) and drive them through the normal
+copy/daemon-reload/enable/start sequence, in this order:
+
+1. **Create the `baserunner` account and add it to every site's group.**
+   This has to happen before either unit is started - `BaseRunnerMulti.py`
+   resolves the group membership at its own startup, not on the fly.
+
+   ```bash
+   sudo useradd --system --no-create-home --shell /usr/sbin/nologin baserunner
+   # repeat -aG for every site group listed in sites.yaml on this host
+   sudo usermod -aG seaglider baserunner
+   sudo usermod -aG ioptest baserunner
+   ```
+
+2. **Copy both unit files from `docs/` into `/etc/systemd/system/`.**
+   Root-owned, mode `644`, same as any other system unit. Edit the
+   `ExecStart=`/`--sites_config`/`--base_log` paths first if this host's
+   checkout doesn't live at `/usr/local/basestation3`:
+
+   ```bash
+   sudo install -o root -g root -m 644 docs/baserunnerprivexec.service /etc/systemd/system/
+   sudo install -o root -g root -m 644 docs/baserunnermulti.service /etc/systemd/system/
+   ```
+
+3. **`daemon-reload`, then enable and start the privileged helper before
+   the watcher.** `baserunnermulti.service` already declares
+   `Requires=baserunnerprivexec.service`/`After=baserunnerprivexec.service`,
+   so starting the watcher first would just have systemd start the helper
+   as a dependency anyway - starting the helper explicitly first makes
+   that ordering visible instead of implicit, and lets step 4 check the
+   helper's capabilities in isolation before the watcher can dispatch
+   anything through it.
+
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now baserunnerprivexec.service
+   sudo systemctl enable --now baserunnermulti.service
+   ```
+
+4. **Confirm both came up clean:**
+
+   ```bash
+   systemctl status baserunnerprivexec.service baserunnermulti.service
+   journalctl -u baserunnerprivexec.service -u baserunnermulti.service -f
+   ```
+
+   `baserunnermulti.service` is `Type=notify` with `WatchdogSec=30`, so
+   `active (running)` here means the process reached its own ready
+   callback, not just that it forked - a hang before that point shows as
+   `activating (start)` and then a watchdog-timeout failure, not a false
+   "running".
+
+Re-running steps 2-4 (copy, `daemon-reload`, `restart` instead of
+`enable --now`) is also how you pick up a unit-file change later - e.g.
+adding `cpu_quota_pct`/`cpu_weight` support required a `Delegate=yes`
+edit to `baserunnerprivexec.service`, which needed exactly this sequence
+to take effect.
 
 **Validate the capability chain before relying on it in production** -
 this is an easy corner of Linux privilege separation to get subtly wrong.
