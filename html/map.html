@@ -2348,6 +2348,7 @@ imestamp
                 map.fitBounds(last);
 
             const osm = new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 1.0 });
+            const esri = new L.TileLayer('https://services.arcgisonline.com/arcgis/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { opacity: 1.0, maxZoom: 13 });
             const noaa = new L.TileLayer('https://iop.apl.washington.edu/tiles/NOAA+Stamen/{z}/{x}/{y}.png');
             // const noaa = new L.TileLayer('../tile/NOAA+Stamen/{z}/{x}/{y}');
 
@@ -2674,6 +2675,7 @@ imestamp
 
             var baseLayers = {
                 "OpenStreetMap": osm,
+                "ESRI Ocean": esri,
                 "NOAA+Stamen": noaa,
             }
 
