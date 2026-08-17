@@ -1372,9 +1372,14 @@ def attachHandlers(app: sanic.Sanic):
     # description: list of missions
     # args: mask is unused
     # returns: JSON formatted dict of missions and mission config
-    async def missionsHandler(request, mask:int):
+    async def missionsHandler(request, mask:str):
         table = await buildAuthTable(request, "")
-        msg = { "missions": table, "organization": request.ctx.ctx.organization }
+        if mask == "1":
+            msg = { "missions": table, "organization": request.ctx.ctx.organization }
+        else:
+            x = [ y for y in table if y['mission'] == mask ]
+            msg = { "missions": x, "organization": request.ctx.ctx.organization }
+
         return sanic.response.json(msg)
     
     @app.route('/admin')

@@ -2736,6 +2736,21 @@ parms[p]
         }
     }
 
+    function fillMissionIndexList(m) {
+        fetch(`missions/${m}`)
+        .then(res => res.text())
+        .then(text => {
+            data = JSON.parse(text);
+            for (m of data.missions) {
+                var spn= document.createElement('span');
+                spn.classList.add("spanClick");
+                spn.onclick = function() { window.open(m['glider'] + "?plot=" + currElt); }
+                spn.innerHTML = "SG" + m['glider'];
+                $('missionIndexDivList').appendChild(spn);
+            }
+        });
+    }
+
     function loadStatus(glider, dive, setCurr) {
         fetch(`status/${glider}${mission()}`)
         .then(res => res.text())
@@ -2806,11 +2821,15 @@ parms[p]
                 // include it which should be fine ??
                 $('missionIndex').removeAttribute('hidden');
                 $('missionIndexText').innerHTML = data.mission.mission.replaceAll('_', ' ');
+                currMission = data.mission.mission;
+                fillMissionIndexList(currMission);
             }
             if ('project' in data.mission && data.mission.project && data.mission.project != "") {
                 $('projectIndex').removeAttribute('hidden');
                 $('projectIndexText').innerHTML = currProject = data.mission.project;
             }
+
+            console.log(data.mission);
 
 {% if runMode == 'pilot' %}
             targetsChannel = new BroadcastChannel(glider + '-targets');
@@ -4107,6 +4126,7 @@ parms[p]
         if (currMission != '') {
             $('missionIndex').removeAttribute('hidden');
             $('missionIndexText').innerHTML = currMission.replaceAll('_', ' ');
+            fillMissionIndexList(currMission);
         }
 
         checkUser();
@@ -4327,8 +4347,16 @@ parms[p]
             <span class="spanClick" onclick="openMagcalForm(); return false;">Compass calibration</span>
         </div>
     </div>
+
     <span id="projectIndex" hidden="hidden"> <span id="projectIndexText" class="spanClick" onclick="projectIndex(); return false;">Project</span> <b>&#124;</b> </span>
-    <span id="missionIndex" hidden="hidden"> <span id="missionIndexText" class="spanClick" onclick="missionIndex(); return false;">Mission</span> <b>&#124;</b> </span>
+
+    <div class="dropdown" id="missionIndex" hidden="hidden">
+        <span id="missionIndexText" class="spanClick droplink" onclick="missionIndex(); return false;">Mission</span> <b>&#124;</b> 
+        <div class="dropdown-content" id="missionIndexDivList">
+
+        </div>
+    </div>
+
     <span id="gliderIndex"><span id="gliderIndexText" class="spanClick" onclick="gliderIndex(); return false;">Glider</span> <b>&#124;</b> </span>
     <a href="help" target="help"> Help </a> 
 
