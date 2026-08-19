@@ -207,7 +207,7 @@ RuntimeDirectory=baserunner
 LogsDirectory=baserunner
 # BaseRunnerPrivExec.py calls sd_notify(READY=1) only after its socket is
 # bound and listening - this makes baserunnermulti.service's
-# Requires=/After= on this unit an actual readiness guarantee, not just
+# Wants=/After= on this unit an actual readiness guarantee, not just
 # "the process was forked". Without Type=notify here, systemd considers
 # this unit started the instant ExecStart's process exists, so the
 # watcher could start and try to dispatch through a socket that doesn't
@@ -225,7 +225,11 @@ WantedBy=multi-user.target
 [Unit]
 Description=Consolidated multi-site glider account runner
 After=network.target baserunnerprivexec.service
-Requires=baserunnerprivexec.service
+# Wants=, not Requires=: pulls baserunnerprivexec.service in and (via
+# After= above) orders this unit's start after it, but unlike Requires=
+# does not stop this unit whenever baserunnerprivexec.service is stopped
+# or restarted - see "Deployment" below.
+Wants=baserunnerprivexec.service
 
 [Service]
 User=baserunner
@@ -279,7 +283,7 @@ self-healing way as the log directory.
 `baserunnerprivexec.service` is `Type=notify`, and `BaseRunnerPrivExec.py`
 only calls `sd_notify(READY=1)` after its UNIX socket is bound and
 listening (not on process start). This closes a real startup/restart
-race: `baserunnermulti.service`'s `Requires=`/`After=` on this unit
+race: `baserunnermulti.service`'s `Wants=`/`After=` on this unit
 orders the two units' *start jobs*, but for a plain `Type=simple` unit
 systemd considers a unit "started" the instant its `ExecStart` process
 exists - not once it's actually finished loading `sites.yaml` and binding
@@ -295,6 +299,23 @@ reason (queued job goes back into `job_queues` rather than being
 dropped - see the `Dispatcher._dispatch_one_queued` requeue-on-failure
 path), so a slow-to-ready helper now just delays the first successful
 dispatch instead of silently losing a job.
+
+`baserunnermulti.service` declares `Wants=baserunnerprivexec.service`,
+not `Requires=`. Both pull the named unit in and (combined with `After=`
+above) order this unit's start after it - the difference only shows up on
+*stop*: `Requires=` also stops this unit whenever
+`baserunnerprivexec.service` is stopped, including an ordinary
+`systemctl restart baserunnerprivexec.service` to pick up a
+`sites.yaml`/cgroup edit (see "Installing the units" below) or a
+unit-file change. Since `Requires=`'s stop-propagation isn't symmetric -
+starting `baserunnerprivexec.service` again does *not* restart whatever
+it took down - that silently left `baserunnermulti.service` stopped until
+someone noticed and started it by hand (found on `madrona` while
+validating the fixes above). `Wants=` keeps the readiness-ordering
+guarantee on a cold start without that stop-propagation: restarting the
+helper alone now just produces the same transient, requeued dispatch
+failures described above, with `baserunnermulti.service` itself
+untouched throughout.
 
 ### Installing the units
 
@@ -342,7 +363,7 @@ copy/daemon-reload/enable/start sequence, in this order:
 
 4. **`daemon-reload`, then enable and start the privileged helper before
    the watcher.** `baserunnermulti.service` already declares
-   `Requires=baserunnerprivexec.service`/`After=baserunnerprivexec.service`,
+   `Wants=baserunnerprivexec.service`/`After=baserunnerprivexec.service`,
    so starting the watcher first would just have systemd start the helper
    as a dependency anyway - starting the helper explicitly first makes
    that ordering visible instead of implicit, and lets step 5 check the

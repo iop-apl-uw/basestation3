@@ -4,7 +4,11 @@
 [Unit]
 Description=Consolidated multi-site glider account runner (testlong multipass validation)
 After=network.target baserunnerprivexec.service
-Requires=baserunnerprivexec.service
+# Wants=, not Requires= - see docs/baserunnermulti.service's comment on
+# this line; Requires= would stop this unit whenever
+# baserunnerprivexec.service is restarted, which test_multipass_baserunner.py's
+# test_privexec_restart_does_not_stop_watcher exercises directly.
+Wants=baserunnerprivexec.service
 
 [Service]
 User=baserunner

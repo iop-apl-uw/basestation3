@@ -288,6 +288,47 @@ def test_type_notify_watchdog_compliance(running_baserunner: multipassutils.Vm) 
     assert watchdog_usec not in ("", "0"), "WatchdogSec=30 should be reflected here"
 
 
+def test_privexec_restart_does_not_stop_watcher(running_baserunner: multipassutils.Vm) -> None:
+    """baserunnermulti.service uses Wants=, not Requires=, on baserunnerprivexec.service.
+
+    Requires= would have systemd stop baserunnermulti.service too whenever
+    baserunnerprivexec.service is stopped or restarted - discovered on
+    madrona (see 2026-08-17 handoff plan) via the documented "restart
+    baserunnerprivexec to pick up a sites.yaml/cgroup edit" procedure
+    silently taking the watcher down with it, with no automatic recovery
+    (Requires='s stop-propagation isn't symmetric - starting the required
+    unit again doesn't restart units it took down). Wants= keeps the same
+    After=-ordered pull-in on a cold start (see
+    test_type_notify_watchdog_compliance/running_baserunner above) without
+    that propagation. Confirmed here by MainPID staying constant across a
+    baserunnerprivexec restart - a stop+start of baserunnermulti would
+    fork a new PID.
+    """
+    vm = running_baserunner
+    multi_pid_before = _run(
+        vm, ["systemctl", "show", "baserunnermulti", "--property=MainPID", "--value"]
+    ).strip()
+
+    _run(vm, ["sudo", "systemctl", "restart", "baserunnerprivexec"])
+
+    active_state = _run(
+        vm, ["systemctl", "show", "baserunnermulti", "--property=ActiveState", "--value"]
+    ).strip()
+    assert active_state == "active", "baserunnermulti should never have stopped"
+    multi_pid_after = _run(
+        vm, ["systemctl", "show", "baserunnermulti", "--property=MainPID", "--value"]
+    ).strip()
+    assert multi_pid_after == multi_pid_before, (
+        "baserunnermulti's PID changed - it was restarted, not left running"
+    )
+
+    # Confirm the watcher is still fully functional post-restart, not just
+    # technically "active" - a fresh dispatch should succeed normally.
+    _mission_dir, log_file = _drop_run_file(vm, "alpha", 104, "Base.py")
+    dispatched = _wait_until(lambda: "user=runner-alpha" in _read_file(vm, log_file))
+    assert dispatched, "dispatch never recovered after baserunnerprivexec restart"
+
+
 def test_subreaper_reaps_orphaned_grandchild(running_baserunner: multipassutils.Vm) -> None:
     """Item 5: a job's own orphaned grandchild gets reaped, not left a zombie."""
     vm = running_baserunner

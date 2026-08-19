@@ -4,7 +4,17 @@
 [Unit]
 Description=Consolidated multi-site glider account runner
 After=network.target baserunnerprivexec.service
-Requires=baserunnerprivexec.service
+# Wants=, not Requires=: still pulls baserunnerprivexec.service in and
+# orders this unit's start after it (see After= above), but - unlike
+# Requires= - does NOT stop this unit whenever baserunnerprivexec.service
+# is stopped or restarted (e.g. to pick up a sites.yaml/cgroup edit, or a
+# unit-file change - see "Installing the units" below). This unit's own
+# dispatch-failure requeue (Dispatcher._dispatch_one_queued) already
+# absorbs the helper being briefly unreachable during that restart, so
+# there's nothing to gain from also taking this unit down - Requires=
+# previously did exactly that, silently, since Requires= propagates a
+# stop to units that declare it, not only a start.
+Wants=baserunnerprivexec.service
 
 [Service]
 User=baserunner
