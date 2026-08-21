@@ -59,6 +59,7 @@ from choreographer.errors import (
     ChromeNotFoundError,
 )
 
+import PlotUtilsMatplotlib
 from BaseLog import log_debug, log_error, log_info, log_warning
 
 if TYPE_CHECKING:
@@ -272,6 +273,7 @@ def write_output_files(
     base_file_name: str,
     fig: plotly.graph_objects.Figure,
     post_script: str | list[str] | None = None,
+    thumbnail_fig: plotly.graph_objects.Figure | None = None,
 ) -> list[pathlib.Path]:
     """
     Helper routine to output various file formats - .png and .div all the time
@@ -291,6 +293,17 @@ def write_output_files(
             "{plot_id}" post_script placeholder, substituted with that
             plot's own div id) rather than assuming it's the only plot on
             the page.
+        thumbnail_fig - optional alternate figure used only for the
+            matplotlib thumbnail-webp render (see PlotUtilsMatplotlib.
+            render_thumbnail()), in place of `fig`. Unused by default; for
+            a plot whose real figure is unsuitable for a *static* preview
+            (e.g. DiveCTD.py's plot_CTD_series, an animated figure whose
+            base fig.data reflects its oldest frame, not its current one -
+            see .claude/plans/2026-08-20-matplotlib-thumbnail-engine.md),
+            the caller builds a reduced, non-animated figure representing
+            the state a thumbnail should freeze on and passes it here. The
+            .div/.html/full-size-image outputs still render from `fig`
+            unchanged - only the thumbnail is affected.
     Returns:
         List of fully qualified filenames that have been generated.
     """
@@ -355,6 +368,25 @@ def write_output_files(
 
     def save_img_file(output_fmt: str) -> pathlib.Path:
         output_name = base_file_name.with_suffix(f".{output_fmt}")
+
+        if (
+            output_fmt == "webp"
+            and base_opts.thumbnail_webp
+            and getattr(base_opts, "thumbnail_engine", "matplotlib") == "matplotlib"
+        ):
+            # No kaleido/Chrome involved at all in this branch - see
+            # .claude/plans/2026-08-20-matplotlib-thumbnail-engine.md's "no
+            # fallback" requirement. A rendering failure here surfaces as a
+            # normal logged error (via the except Exception below, same as
+            # any other format), never a silent reach for kaleido.
+            PlotUtilsMatplotlib.render_thumbnail(
+                thumbnail_fig if thumbnail_fig is not None else fig,
+                output_name,
+                width=thumbnail_width,
+                height=thumbnail_height,
+            )
+            return output_name
+
         # No return code
         # TODO - for kelido 0.2.1 and python 3.10 (and later) we get this warning:
         #   File "/Users/gbs/.pyenv/versions/3.10.7/lib/python3.10/threading.py", line 1224, in setDaemon
@@ -811,14 +843,6 @@ class KaleidoServer:
         base_opts (Any): Configuration object containing format flags (e.g., save_png).
     """
 
-    # Class-level configuration for supported image formats
-    FORMATS: list[str] = [
-        "save_png",
-        "save_jpg",
-        "save_webp",
-        "save_svg",
-    ]
-
     def __init__(self, base_opts: BaseOptions) -> None:
         """Initializes the KaleidoServer with configuration options.
 
@@ -839,12 +863,35 @@ class KaleidoServer:
         return (has_version and kaleido.__version__ >= "1.0.0") or not has_version
 
     def is_static_plot_generation_enabled(self) -> bool:
-        """Checks if any static image export options are currently enabled.
+        """Checks if any static image export option currently needs kaleido/Chrome.
+
+        save_png/save_jpg/save_svg always need kaleido - there's no
+        matplotlib path for those formats (out of scope for the
+        matplotlib-thumbnail-engine plan; see
+        .claude/plans/2026-08-20-matplotlib-thumbnail-engine.md). save_webp
+        only needs kaleido when its output isn't actually going through the
+        matplotlib thumbnail renderer - i.e. thumbnail_webp is off (a
+        full-size, not thumbnail-size, webp export), or thumbnail_engine is
+        explicitly set back to "kaleido". In a standard production run
+        (save_webp=True, thumbnail_webp=True, thumbnail_engine="matplotlib",
+        everything else False), none of that is true, so this returns
+        False and start_kaleido_global_server() below never starts Chrome
+        at all - not "shouldn't," but structurally unreachable.
 
         Returns:
-            bool: True if at least one save format flag evaluates to True.
+            bool: True if at least one enabled format still needs kaleido to
+            render.
         """
-        return any(getattr(self.base_opts, fmt, False) for fmt in self.FORMATS)
+        if any(
+            getattr(self.base_opts, fmt, False)
+            for fmt in ("save_png", "save_jpg", "save_svg")
+        ):
+            return True
+        needs_kaleido_webp = getattr(self.base_opts, "save_webp", False) and (
+            not getattr(self.base_opts, "thumbnail_webp", False)
+            or getattr(self.base_opts, "thumbnail_engine", "matplotlib") != "matplotlib"
+        )
+        return needs_kaleido_webp
 
     def reset_kaleido_server(self) -> None:
         """Resets the global Kaleido server instance to a clean post-import state.

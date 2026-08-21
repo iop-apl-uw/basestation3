@@ -1224,6 +1224,18 @@ global_options_dict: dict[str, options_t] = {
             "option_group": "plotting",
         },
     ),
+    "thumbnail_engine": options_t(
+        "matplotlib",
+        {"Base", "BasePlot", "Reprocess", "FlightModelCLI"},
+        ("--thumbnail_engine",),
+        str,
+        {
+            "help": "Rendering engine used for thumbnail-size webp plots",
+            "section": "plotting",
+            "option_group": "plotting",
+            "choices": ["matplotlib", "kaleido"],
+        },
+    ),
     "compress_div": options_t(
         True,
         {"Base", "BasePlot", "Reprocess", "FlightModelCLI"},

@@ -1537,6 +1537,21 @@ def plot_CTD_series(
         ]
         fig.update_layout(updatemenus=updatemenus, sliders=sliders)
 
+        # This figure is an animation: fig.data itself (the traces shown
+        # before any frame is applied) reflects the *oldest* dive in the
+        # trailing window - it's frames[-1] (the slider's default
+        # "active" position, above) that holds the most recent one. A
+        # static thumbnail render can't animate, so it needs to freeze on
+        # frames[-1]'s data explicitly rather than fig.data's, which is
+        # exactly what the "no fallback" matplotlib thumbnail path renders
+        # from if not told otherwise - see
+        # .claude/plans/2026-08-20-matplotlib-thumbnail-engine.md.
+        thumbnail_fig = (
+            plotly.graph_objects.Figure(data=frames[-1].data, layout=fig.layout)
+            if fig is not None and frames
+            else None
+        )
+
         ret_figs.append(fig)
         ret_plots.extend(
             PlotUtilsPlotly.write_output_files(
@@ -1547,6 +1562,7 @@ def plot_CTD_series(
                     "" if temp_name == "temperature" else "_raw",
                 ),
                 fig,
+                thumbnail_fig=thumbnail_fig,
             )
         )
 

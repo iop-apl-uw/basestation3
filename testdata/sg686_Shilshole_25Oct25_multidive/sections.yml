@@ -1,0 +1,15 @@
+---
+
+defaults:
+  top: 0
+  bottom: 990
+  bin: 5
+  step: 1
+  which: 4
+
+variables:
+  temperature: { colormap: thermal, min: 3, max: 20, units: '&#8451;' }
+  salinity: { colormap: haline, min: 31.5, max: 34.5 }
+
+sections:
+  "000": {start: 1, stop: -1, step: 1}

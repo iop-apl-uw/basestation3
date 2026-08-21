@@ -20,7 +20,10 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y tcsh bc dos2unix
+        sudo apt-get install -y tcsh bc dos2unix build-essential
+
+    - name: Compile ad2cpMAT
+      run: gcc -o Sensors/ad2cpMAT Sensors/ad2cpMAT.c -lm
 
     - name: Update dependencies for playwright browser install
       run: |

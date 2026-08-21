@@ -1,0 +1,75 @@
+% sg_calib_constants.m
+% establishes glider calibration constants
+
+id_str = '124';
+
+mission_title ='NISKINE May 2018';
+
+calibcomm = 'SBE CT Sail #0140 20-Dec-2017';
+t_g 	= 4.35457390e-003;
+t_h 	= 6.25482611e-004;
+t_i 	= 2.36936619e-005;
+t_j 	= 2.52079492e-006;
+
+c_g 	= -9.99455232e+000;
+c_h 	=  1.11831457e+000;
+c_i 	= -2.63707752e-003;
+c_j 	=  2.80696827e-004;
+cpcor 	=	-9.5700000E-08	;
+ctcor 	=	3.2500000E-06	;
+
+sbe_cond_freq_C0 = 2996.73;
+
+mass = 55.793;
+%volmax = 54901;
+rho0 = 1027.5;
+
+hd_a = 0.003;
+hd_b = 0.0099;
+hd_c = 1.61e-05;
+
+% From dives 128-131
+override.C_VBD = 2681
+volmax = 54822
+
+% restore prev
+override.HD_A = 0.003;
+override.HD_B = 0.0099;
+override.HD_C = 1.61e-05;
+
+pitch_min_cnts = 50;
+pitch_max_cnts = 3900;
+roll_min_cnts = 183;
+roll_max_cnts = 3883;
+vbd_min_cnts = 244;
+vbd_max_cnts = 3700;
+vbd_cnts_per_cc = -4.0767;
+
+abs_compress = 4.18e-6;
+therm_expan = 7.31e-5;
+temp_ref = 15;
+
+comm_oxy_type= 'Aa_optode'; % spec SBE_43f or Aa_optode
+calibcomm_oxygen = 'SN 430104'; % SN and cal date
+
+% Set to match values on glider
+optode_C00Coef =  5.32650e+03;
+optode_C01Coef = -1.92117e+02;
+optode_C02Coef =  4.14357e+00;
+optode_C03Coef = -3.78695e-02;
+optode_C10Coef = -2.92068e+02;
+optode_C11Coef =  9.71993e+00;
+optode_C12Coef = -2.14295e-01;
+optode_C13Coef =  2.00778e-03;
+optode_C20Coef =  6.47595e+00;
+optode_C21Coef = -1.98080e-01;
+optode_C22Coef =  4.49940e-03;
+optode_C23Coef = -4.30530e-05;
+optode_C30Coef = -6.69288e-02;
+optode_C31Coef =  1.88066e-03;
+optode_C32Coef = -4.42348e-05;
+optode_C33Coef =  4.28383e-07;
+optode_C40Coef =  2.65042e-04;
+optode_C41Coef = -6.83185e-06;
+optode_C42Coef =  1.67071e-07;
+optode_C43Coef = -1.61989e-09;

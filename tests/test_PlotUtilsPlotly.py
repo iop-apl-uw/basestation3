@@ -117,9 +117,7 @@ def test_bounded_close_no_op_when_server_already_not_running(monkeypatch) -> Non
 
 def test_reset_kaleido_server_bounded_by_wedged_close(monkeypatch) -> None:
     """KaleidoServer.reset_kaleido_server() must not hang on a wedged background thread."""
-    monkeypatch.setattr(
-        PlotUtilsPlotly, "DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS", 0.2
-    )
+    monkeypatch.setattr(PlotUtilsPlotly, "DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS", 0.2)
     fake = _install_fake_server(monkeypatch, close_delay=5.0)
     server = PlotUtilsPlotly.KaleidoServer(types.SimpleNamespace())
 
@@ -139,9 +137,7 @@ def test_stop_kaleido_global_server_bounded_by_wedged_close(monkeypatch) -> None
     per-plot timeout left the shared kaleido thread wedged, and the unguarded
     shutdown then blocked forever.
     """
-    monkeypatch.setattr(
-        PlotUtilsPlotly, "DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS", 0.2
-    )
+    monkeypatch.setattr(PlotUtilsPlotly, "DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS", 0.2)
     fake = _install_fake_server(monkeypatch, close_delay=5.0)
     server = PlotUtilsPlotly.KaleidoServer(types.SimpleNamespace())
     server.server_running = True
@@ -198,9 +194,7 @@ def test_ensure_atexit_handler_registered_is_idempotent(monkeypatch) -> None:
     start_kaleido_global_server() runs across a process's lifetime."""
     monkeypatch.setattr(PlotUtilsPlotly, "_atexit_handler_registered", False)
     calls: list[object] = []
-    monkeypatch.setattr(
-        PlotUtilsPlotly.atexit, "register", lambda fn: calls.append(fn)
-    )
+    monkeypatch.setattr(PlotUtilsPlotly.atexit, "register", lambda fn: calls.append(fn))
 
     PlotUtilsPlotly._ensure_atexit_handler_registered()
     PlotUtilsPlotly._ensure_atexit_handler_registered()
@@ -340,3 +334,123 @@ def test_write_output_files_one_format_timeout_does_not_block_others(
         for msg in logged
     )
     assert reset_calls == [PlotUtilsPlotly.DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS]
+
+
+# ---------------------------------------------------------------------------
+# is_static_plot_generation_enabled() / start_kaleido_global_server()
+#
+# See .claude/plans/2026-08-20-matplotlib-thumbnail-engine.md's Step 2: once
+# thumbnail_engine defaults to "matplotlib", a standard production run
+# (save_webp=True, thumbnail_webp=True, everything else False) has no format
+# left that actually needs kaleido - is_static_plot_generation_enabled() must
+# recognize that so start_kaleido_global_server()'s own early-return guard
+# (`if not self.is_static_plot_generation_enabled() or self.server_running:
+# return`) makes the Chrome-startup call structurally unreachable, not just
+# "shouldn't run today."
+# ---------------------------------------------------------------------------
+
+
+def _default_base_opts(**overrides) -> types.SimpleNamespace:
+    """A base_opts stand-in matching this project's real production defaults
+    (save_png/save_jpg/save_svg off, save_webp+thumbnail_webp on, matplotlib
+    thumbnail engine) - see BaseOpts.py's option defaults."""
+    defaults = dict(
+        save_png=False,
+        save_jpg=False,
+        save_svg=False,
+        save_webp=True,
+        thumbnail_webp=True,
+        thumbnail_engine="matplotlib",
+    )
+    defaults.update(overrides)
+    return types.SimpleNamespace(**defaults)
+
+
+def test_is_static_plot_generation_enabled_false_for_default_options() -> None:
+    server = PlotUtilsPlotly.KaleidoServer(_default_base_opts())
+    assert server.is_static_plot_generation_enabled() is False
+
+
+def test_is_static_plot_generation_enabled_true_for_save_png() -> None:
+    server = PlotUtilsPlotly.KaleidoServer(_default_base_opts(save_png=True))
+    assert server.is_static_plot_generation_enabled() is True
+
+
+def test_is_static_plot_generation_enabled_true_for_save_jpg() -> None:
+    server = PlotUtilsPlotly.KaleidoServer(_default_base_opts(save_jpg=True))
+    assert server.is_static_plot_generation_enabled() is True
+
+
+def test_is_static_plot_generation_enabled_true_for_save_svg() -> None:
+    server = PlotUtilsPlotly.KaleidoServer(_default_base_opts(save_svg=True))
+    assert server.is_static_plot_generation_enabled() is True
+
+
+def test_is_static_plot_generation_enabled_true_for_full_size_webp() -> None:
+    """save_webp without thumbnail_webp is a full-size kaleido export, not a
+    matplotlib thumbnail - still needs kaleido regardless of thumbnail_engine."""
+    server = PlotUtilsPlotly.KaleidoServer(_default_base_opts(thumbnail_webp=False))
+    assert server.is_static_plot_generation_enabled() is True
+
+
+def test_is_static_plot_generation_enabled_true_when_engine_reverted_to_kaleido() -> (
+    None
+):
+    """The explicit operator escape hatch (thumbnail_engine="kaleido") must
+    still route through kaleido - this is the deliberate override case, not
+    a bug to route around."""
+    server = PlotUtilsPlotly.KaleidoServer(
+        _default_base_opts(thumbnail_engine="kaleido")
+    )
+    assert server.is_static_plot_generation_enabled() is True
+
+
+def test_is_static_plot_generation_enabled_false_when_no_formats_requested() -> None:
+    server = PlotUtilsPlotly.KaleidoServer(
+        _default_base_opts(save_webp=False, thumbnail_webp=False)
+    )
+    assert server.is_static_plot_generation_enabled() is False
+
+
+def test_start_kaleido_global_server_never_starts_chrome_for_default_options(
+    monkeypatch,
+) -> None:
+    """The concrete Step 2 guarantee: a standard production run must never
+    reach kaleido's own server-startup call at all - proven by making that
+    call raise if it's ever invoked, not just checking a flag afterward."""
+    monkeypatch.setattr(
+        PlotUtilsPlotly,
+        "_start_sync_server_without_raw_atexit",
+        lambda *a, **kw: (_ for _ in ()).throw(
+            AssertionError("kaleido must not start for default options")
+        ),
+    )
+    server = PlotUtilsPlotly.KaleidoServer(_default_base_opts())
+
+    server.start_kaleido_global_server()  # must return without touching kaleido
+
+    assert server.server_running is False
+
+
+def test_start_kaleido_global_server_positive_control_still_starts_for_save_png(
+    monkeypatch,
+) -> None:
+    """Proves the gate discriminates correctly rather than being permanently
+    disabled, which would silently break real PNG export users: a format
+    that genuinely needs kaleido must still reach the startup call."""
+    calls: list[int] = []
+    monkeypatch.setattr(
+        PlotUtilsPlotly,
+        "_start_sync_server_without_raw_atexit",
+        lambda *a, **kw: calls.append(1),
+    )
+    monkeypatch.setattr(
+        PlotUtilsPlotly.KaleidoServer,
+        "is_kaleido_global_server_running",
+        lambda self: (True, "fake success"),
+    )
+    server = PlotUtilsPlotly.KaleidoServer(_default_base_opts(save_png=True))
+
+    server.start_kaleido_global_server()
+
+    assert calls == [1]
