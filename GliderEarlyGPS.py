@@ -94,6 +94,8 @@ class GliderEarlyGPSClient:
         """
         shell_missing_count = 0
         comm_log_error_count = 0
+        closeout_issued = False
+        closeout_wait_count = 0
         while True:
             try:
                 if self.process_comm_log_wrapper():
@@ -163,8 +165,19 @@ class GliderEarlyGPSClient:
                     )
                     # Wait 4 seconds before doing anything
                     if shell_missing_count >= 4:
-                        self.closeout_session()
-                    # Let the normal disconnect code will handle the rest of closeout and shutdown
+                        if not closeout_issued:
+                            self.closeout_session()
+                            closeout_issued = True
+                        else:
+                            # Let the normal disconnect code will handle the rest of closeout and shutdown -
+                            # but if that never arrives (no valid session to pair the disconnect with), don't
+                            # spin here forever re-issuing closeout_session() and re-appending to comm.log.
+                            closeout_wait_count += 1
+                            if closeout_wait_count > 10:
+                                log_error(
+                                    "Shell gone and no disconnect processed after closeout - forcing shutdown"
+                                )
+                                self.cleanup_shutdown()
                 time.sleep(1)
 
             except KeyboardInterrupt:

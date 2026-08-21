@@ -2149,7 +2149,7 @@ def main():
                     "CommLog",
                 },
                 ("--dump_last",),
-                str,
+                bool,
                 {
                     "help": "Dump the last comm.log session",
                     "action": argparse.BooleanOptionalAction,
@@ -2161,7 +2161,7 @@ def main():
                     "CommLog",
                 },
                 ("--dump_all",),
-                str,
+                bool,
                 {
                     "help": "Dump the last comm.log session",
                     "action": argparse.BooleanOptionalAction,
@@ -2173,7 +2173,7 @@ def main():
                     "CommLog",
                 },
                 ("--init_db",),
-                str,
+                bool,
                 {
                     "help": "Initialize (entire) database and load sessions",
                     "action": argparse.BooleanOptionalAction,
@@ -2185,7 +2185,7 @@ def main():
                     "CommLog",
                 },
                 ("--rebuild_db",),
-                str,
+                bool,
                 {
                     "help": "Rebuild sessions database",
                     "action": argparse.BooleanOptionalAction,
@@ -2197,7 +2197,7 @@ def main():
                     "CommLog",
                 },
                 ("--predict_drift",),
-                str,
+                bool,
                 {
                     "help": "Run the predict_drift calculation",
                     "action": argparse.BooleanOptionalAction,
@@ -2209,7 +2209,7 @@ def main():
                     "CommLog",
                 },
                 ("--has_glider_rebooted",),
-                str,
+                bool,
                 {
                     "help": "Has the glider rebooted since the last call",
                     "action": argparse.BooleanOptionalAction,

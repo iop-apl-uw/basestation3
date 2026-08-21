@@ -195,6 +195,41 @@ def test_run_survives_missing_session_and_calls_closeout_at_threshold(
     )
 
 
+def test_run_forces_shutdown_when_shell_missing_and_no_disconnect_ever_arrives(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Regression test for the production hang: when the login shell has gone
+    away and closeout_session() has already been issued once, but no
+    valid-session Disconnected line ever arrives to end things normally, run()
+    must eventually force its own shutdown via cleanup_shutdown() instead of
+    calling closeout_session() again on every iteration forever."""
+    base_opts = _make_base_opts(tmp_path)
+    client = _make_client(tmp_path, base_opts)
+    assert client._commlog_session is None
+
+    monkeypatch.setattr(
+        client, "process_comm_log_wrapper", MagicMock(return_value=0)
+    )
+    monkeypatch.setattr(GliderEarlyGPS.Utils, "check_for_pid", lambda pid: False)
+    closeout_mock = MagicMock()
+    monkeypatch.setattr(client, "closeout_session", closeout_mock)
+    monkeypatch.setattr(GliderEarlyGPS, "log_info", MagicMock())
+    log_error_mock = MagicMock()
+    monkeypatch.setattr(GliderEarlyGPS, "log_error", log_error_mock)
+    cleanup_shutdown_mock = MagicMock(side_effect=KeyboardInterrupt)
+    monkeypatch.setattr(client, "cleanup_shutdown", cleanup_shutdown_mock)
+    monkeypatch.setattr(GliderEarlyGPS.time, "sleep", MagicMock(return_value=None))
+
+    result = client.run()
+
+    assert result is True
+    closeout_mock.assert_called_once()
+    cleanup_shutdown_mock.assert_called_once()
+    assert any(
+        "forcing shutdown" in str(call.args[0]) for call in log_error_mock.call_args_list
+    )
+
+
 def test_run_bails_out_after_repeated_unexpected_exceptions(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
