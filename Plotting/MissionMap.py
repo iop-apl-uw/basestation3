@@ -256,7 +256,7 @@ def mission_map(
         bathy_lats = bathy.y[lat_range_xr].to_numpy()
         bathy_lons = bathy.x[lon_range_xr].to_numpy()
 
-    fig = plt.figure(figsize=(8,12), dpi=200)
+    fig = plt.figure(dpi=200, layout='constrained') # figsize=(8,12), dpi=200)
     ax = fig.add_subplot(1, 1, 1, projection=myProj)
 
     fudgex = 0.12*(extent[1] - extent[0])
@@ -348,7 +348,7 @@ def mission_map(
         output_name: pathlib.Path = base_opts.plot_directory / output_name
 
     ret_list: list[pathlib.Path] = [output_name]
-    plt.savefig(output_name, format="webp", bbox_inches='tight')
+    plt.savefig(output_name, format="webp", bbox_inches='tight', dpi=200)
     
     return ([], ret_list)
 # fmt: on
