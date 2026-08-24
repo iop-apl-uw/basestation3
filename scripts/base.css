@@ -171,15 +171,15 @@
     }
 
     .thumbImg {
-        max-width:180px; 
-        max-height:169px; 
+        max-width:130px; 
+        max-height:121px; 
         mix-blend-mode:multiply;
     }
 
     .thumbDiv {
-        width: 200px;
-        max-width: 200px;
-        min-width: 200px;
+        width: 140px;
+        max-width: 140px;
+        min-width: 140px;
         height: 100%;
     }
 
@@ -539,7 +539,7 @@
             /* position: relative; */
             display: grid;
             grid-template-columns: auto;
-            grid-template-rows: 0.55fr 50px 150px 0.45fr;
+            grid-template-rows: 0.55fr 50px auto 0.45fr;
             grid-template-areas:
                 "main"
                 "toolbar"
@@ -1024,7 +1024,7 @@
         /* position: relative; */
         display: grid;
         grid-template-columns: 50px 1fr max-content;
-        grid-template-rows: min-content 0.98fr 205px;
+        grid-template-rows: min-content 0.98fr auto;
         grid-template-areas:
             "navLinks navLinks right"
             "toolbar main right"
@@ -1079,8 +1079,8 @@
 
 
     .desktop#plotRibbonBox {
-        height: 210px; 
-        max-height: 210px; 
+       /*  height: 160px;  */
+        max-height: 160px; 
         overflow: hidden;
         grid-area: plotRibbonBox;
     }
@@ -1094,8 +1094,8 @@
 
     .desktop#plotRibbon {
         width: 100%;
-        height: 185px;
-        max-height: 185px;
+        /* height: 135px; */
+        max-height: 135px;
         display: flex;
         overflow-x:scroll; 
         background-color:#dddddd;

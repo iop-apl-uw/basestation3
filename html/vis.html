@@ -146,6 +146,9 @@
     var sgplots = [];
     var sgplotlyplots = [];
 
+    var plotRibbonVisible = true;
+    var plotRibbonMode = null;
+
     var startX = null;
     var startY = null;
     var startZ = null;
@@ -1034,6 +1037,22 @@
             $('main').style.overflow = "auto";
         }
 
+    }
+
+    function togglePlotRibbon() {
+        const collection = document.getElementsByClassName("plotly-graph-div"); 
+        if (plotRibbonVisible) {
+            plotRibbonVisible = false;
+            plotRibbonMode = $('plotRibbon').style.display;
+            $('plotRibbon').style.display = 'none';
+            $('spnToggleRibbon').innerHTML = "&#8593;";
+        }
+        else {
+            plotRibbonVisible = true;
+            $('plotRibbon').style.display = plotRibbonMode;
+            $('spnToggleRibbon').innerHTML = "&#8595;";
+        }
+        Plotly.Plots.resize(collection[0]);
     }
 
     function showPlotLinks() {
@@ -3369,6 +3388,10 @@ parms[p]
 
             var j;
             $('plotRibbonLinks').innerHTML = '<span class="hamburger" onclick="showPlotLinks()">&nbsp;&nbsp;&nbsp;</span>';
+            if (plotRibbonVisible)
+                $('plotRibbonLinks').innerHTML += '<span class="spanClick" onclick="togglePlotRibbon()" id="spnToggleRibbon" style="font-size: 32px; vertical-align: text-top; line-height: 0.5;">&#8595;</span>';
+            else
+                $('plotRibbonLinks').innerHTML += '<span class="spanClick" onclick="togglePlotRibbon()" id="spnToggleRibbon" style="font-size: 32px; vertical-align: text-top; line-height: 0.5;">&#8593;</span>';
 
             for (var i = 0 ; i < mn ; i += 5) {
                 if (i + 4 < mn)
