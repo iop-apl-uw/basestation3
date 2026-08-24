@@ -142,10 +142,14 @@ _TITLE_MAX_CHARS = 40
 # single-axis plot strictly needs so a secondary_y twin Axes' own y-label
 # (e.g. MissionMotors.py's dual-axis current/rate plots) has room to
 # render without clipping off the canvas edge.
-_FIGURE_MARGIN_LEFT = 0.16
-_FIGURE_MARGIN_RIGHT = 0.14
-_FIGURE_MARGIN_BOTTOM = 0.14
-_FIGURE_MARGIN_TOP = 0.12
+#_FIGURE_MARGIN_LEFT = 0.16
+#_FIGURE_MARGIN_RIGHT = 0.14
+#_FIGURE_MARGIN_BOTTOM = 0.14
+#_FIGURE_MARGIN_TOP = 0.12
+_FIGURE_MARGIN_LEFT = 0.04
+_FIGURE_MARGIN_RIGHT = 0.04
+_FIGURE_MARGIN_BOTTOM = 0.05
+_FIGURE_MARGIN_TOP = 0.05
 
 _DASH_STYLES: dict[str, str] = {
     "solid": "-",
@@ -887,9 +891,9 @@ class _AxesResolver:
         label_text = _clean_title_text(
             getattr(getattr(axis_obj, "title", None), "text", None)
         )
-        if label_text:
-            set_label = ax.set_xlabel if letter == "x" else ax.set_ylabel
-            set_label(label_text, fontsize=_AXIS_LABEL_FONTSIZE)
+#        if label_text:
+#            set_label = ax.set_xlabel if letter == "x" else ax.set_ylabel
+#            set_label(label_text, fontsize=_AXIS_LABEL_FONTSIZE)
 
     def apply_pending_ranges(self) -> None:
         """Applies every deferred partial-range request queued by `_apply_range_and_label()`.
@@ -1087,7 +1091,7 @@ def render_thumbnail(
     title_text = _clean_title_text(
         getattr(getattr(fig.layout, "title", None), "text", None)
     )
-    if title_text:
-        mpl_fig.suptitle(title_text, fontsize=_TITLE_FONTSIZE, y=0.99)
+    #if title_text:
+    #    mpl_fig.suptitle(title_text, fontsize=_TITLE_FONTSIZE, y=0.99)
 
     mpl_fig.savefig(output_path, dpi=_DEFAULT_DPI, facecolor=paper_bgcolor)

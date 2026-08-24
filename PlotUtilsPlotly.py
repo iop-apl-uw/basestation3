@@ -71,8 +71,8 @@ std_height = 894
 std_scale = 1.0
 
 # Matches what vis is expecting
-thumbnail_width = 185
-thumbnail_height = 185
+thumbnail_width = 370
+thumbnail_height = 370
 
 # Matches BaseOpts.plot_dive_timeout's default; used as the timeout for static
 # image generation in call sites that have no base_opts (and thus no
@@ -334,6 +334,7 @@ def write_output_files(
             include_mathjax="cdn",
             auto_play=False,
             post_script=post_script,
+            div_id='plotly-plot-div',
         )
         ret_list.append(output_name)
 
@@ -355,6 +356,7 @@ def write_output_files(
             include_mathjax="cdn",
             auto_play=False,
             post_script=post_script,
+            div_id='plotly-plot-div',
         )
 
         if base_opts.compress_div:
