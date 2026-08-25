@@ -2755,18 +2755,19 @@ parms[p]
         }
     }
 
-    function fillMissionIndexList(m) {
-        fetch(`missions/${m}`)
+    function fillMissionIndexList(missionName) {
+        fetch(`missions/${missionName}`)
         .then(res => res.text())
         .then(text => {
             data = JSON.parse(text);
-            for (m of data.missions) {
-                var spn= document.createElement('span');
+            data.missions.forEach((m, idx) => {
+                let spn = document.createElement('span');
                 spn.classList.add("spanClick");
-                spn.onclick = function() { window.open(m['glider'] + "?plot=" + currElt); }
+                spn.onclick = function() { window.open('' + m['glider'] + "?plot=" + currElt); }
+                console.log('' + m['glider'] + "?plot=" + currElt);
                 spn.innerHTML = "SG" + m['glider'];
                 $('missionIndexDivList').appendChild(spn);
-            }
+            });
         });
     }
 
