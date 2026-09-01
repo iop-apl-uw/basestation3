@@ -1024,7 +1024,7 @@
         /* position: relative; */
         display: grid;
         grid-template-columns: 50px 1fr max-content;
-        grid-template-rows: min-content 0.98fr auto;
+        grid-template-rows: min-content minmax(0, 1fr) auto;
         grid-template-areas:
             "navLinks navLinks right"
             "toolbar main right"
@@ -1049,16 +1049,17 @@
 
     .desktop#toolbar {
         grid-area: toolbar;
-        width:50px; 
+        width:50px;
         max-width:50px;
         display: grid;
         grid-template-columns: 50px;
-        grid-template-rows: max-content 1fr max-content;
+        grid-template-rows: max-content minmax(0, 1fr) max-content;
         grid-template-areas:
             "top"
             "."
             "bottom";
         row-gap: 5px;
+        overflow-y: auto;
     }
 
     .desktop.toolTop {
@@ -1090,6 +1091,8 @@
         display: flex;
         width: 100%;
         gap: 5px;
+        min-height: 32px;
+        flex-shrink: 0;
     }
 
     .desktop#plotRibbon {
