@@ -592,18 +592,21 @@ def test_axes_resolver_showgrid_false_suppresses_grid() -> None:
 
 def test_axes_resolver_hidden_axis_suppresses_label() -> None:
     """DiveCTD.py's xaxis3/4/5: hidden but its range must still apply so
-    traces plotted against it land correctly - only the label is dropped."""
+    traces plotted against it land correctly - the label stays dropped
+    regardless, per test_axes_resolver_visible_axis_has_no_label below."""
     layout = go.Layout(xaxis3=dict(overlaying="x", visible=False, title="Hidden"))
     resolver = _new_resolver(layout)
     ax = resolver.get("x3", "y")
     assert ax.get_xlabel() == ""
 
 
-def test_axes_resolver_visible_axis_sets_label() -> None:
+def test_axes_resolver_visible_axis_has_no_label() -> None:
+    """Axis labels are dropped for every axis, visible or not - thumbnails
+    are dashboard tiles, too small for legible axis text (see e968b5d)."""
     layout = go.Layout(xaxis=dict(title=dict(text="Depth (m)")))
     resolver = _new_resolver(layout)
     ax = resolver.get("x", "y")
-    assert ax.get_xlabel() == "Depth (m)"
+    assert ax.get_xlabel() == ""
 
 
 # ---------------------------------------------------------------------------

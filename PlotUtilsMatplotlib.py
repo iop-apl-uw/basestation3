@@ -888,9 +888,9 @@ class _AxesResolver:
         if getattr(axis_obj, "visible", True) is False:
             return
 
-        label_text = _clean_title_text(
-            getattr(getattr(axis_obj, "title", None), "text", None)
-        )
+        # label_text = _clean_title_text(
+        #     getattr(getattr(axis_obj, "title", None), "text", None)
+        # )
 #        if label_text:
 #            set_label = ax.set_xlabel if letter == "x" else ax.set_ylabel
 #            set_label(label_text, fontsize=_AXIS_LABEL_FONTSIZE)
@@ -1088,9 +1088,9 @@ def render_thumbnail(
             labelright=False,
         )
 
-    title_text = _clean_title_text(
-        getattr(getattr(fig.layout, "title", None), "text", None)
-    )
+    # title_text = _clean_title_text(
+    #     getattr(getattr(fig.layout, "title", None), "text", None)
+    # )
     #if title_text:
     #    mpl_fig.suptitle(title_text, fontsize=_TITLE_FONTSIZE, y=0.99)
 
