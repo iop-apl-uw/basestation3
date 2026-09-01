@@ -1023,7 +1023,7 @@
     .desktop#bodyView {
         /* position: relative; */
         display: grid;
-        grid-template-columns: 50px 1fr max-content;
+        grid-template-columns: 68px 1fr max-content;
         grid-template-rows: min-content minmax(0, 1fr) auto;
         grid-template-areas:
             "navLinks navLinks right"
@@ -1049,10 +1049,10 @@
 
     .desktop#toolbar {
         grid-area: toolbar;
-        width:50px;
-        max-width:50px;
+        width:68px;
+        max-width:68px;
         display: grid;
-        grid-template-columns: 50px;
+        grid-template-columns: 68px;
         grid-template-rows: max-content minmax(0, 1fr) max-content;
         grid-template-areas:
             "top"
@@ -1060,6 +1060,8 @@
             "bottom";
         row-gap: 5px;
         overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: thin;
     }
 
     .desktop.toolTop {
