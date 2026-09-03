@@ -178,7 +178,7 @@ ignore = [
   "SIM300",
 ]
 [tool.ruff.lint.per-file-ignores]
-"!{BaseLog.py,CalibConst.py,Utils.py,Utils2.py}" = ["ANN"]
+"!{BaseLog.py,CalibConst.py,GliderDAC.py,Utils.py,Utils2.py}" = ["ANN"]
 #"!{Utils.py,Base.py}" = ["ANN"]
 [tool.coverage.html]
 directory = "coverage_html_report"
@@ -198,5 +198,5 @@ omit = [
 # TODO - see if this can be scoped to just that class in future releases
 #unresolved-attribute = "ignore"
 [tool.ty.src]
-include = ["BaseLog.py", "BaseNetwork.py", "CalibConst.py", "Utils.py", "Utils2.py"]
+include = ["BaseLog.py", "BaseNetwork.py", "CalibConst.py", "GliderDAC.py", "Utils.py", "Utils2.py"]
 #include = ["Utils.py", "Base.py"]

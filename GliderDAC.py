@@ -49,13 +49,14 @@
 #    missing_value (QC_MISSING) for nan data.
 
 import argparse
-import collections
+import collections.abc
 import pathlib
 import pdb
 import stat
 import sys
 import time
 import traceback
+import typing
 from functools import reduce
 
 import gsw
@@ -82,12 +83,32 @@ def DEBUG_PDB_F() -> None:
         pdb.post_mortem(traceb)
 
 
-dim_map_t = collections.namedtuple("dim_map_t", ["first_i", "last_i"])
+class dim_map_t(typing.NamedTuple):
+    """Maps a dimension's span within the unsorted, concatenated master time
+    vector.
+
+    Attributes:
+        first_i: Index of the first element for this dimension.
+        last_i: Index one past the last element for this dimension.
+    """
+
+    first_i: int
+    last_i: int
 
 
 # Util functions
-def fix_ints(data_type, attrs):
-    """Convert int values from LL (json format) to appropriate size per gliderdac specs"""
+def fix_ints(
+    data_type: type, attrs: dict[str, typing.Any]
+) -> dict[str, typing.Any]:
+    """Convert int values from LL (json format) to appropriate size per gliderdac specs
+
+    Args:
+        data_type: Numpy scalar type to cast int-valued attributes to.
+        attrs: Attribute dictionary to convert.
+
+    Returns:
+        A new attribute dictionary with int values cast to data_type.
+    """
     new_attrs = {}
     for k, v in attrs.items():
         if isinstance(type(v), int):
@@ -99,7 +120,17 @@ def fix_ints(data_type, attrs):
     return new_attrs
 
 
-def lookup_qc_val(value):
+def lookup_qc_val(value: str) -> np.int8 | None:
+    """Resolves a QC name string (e.g. "QC_NO_CHANGE") to its numeric value.
+
+    Args:
+        value: QC name string, as it appears in a template's qc_data or
+            qc_missing_data field.
+
+    Returns:
+        The matching QC value, or None if value doesn't match a known QC
+        name.
+    """
     for k, v in QC.qc_name_d.items():
         if value.rstrip().lstrip() == v:
             return np.int8(k)
@@ -108,25 +139,31 @@ def lookup_qc_val(value):
 
 
 def create_nc_var(
-    dso,
-    template,
-    var_name,
-    data,
-    qc_val=None,
-    qc_missing_val=None,
-):
+    dso: xr.Dataset,
+    template: dict[str, typing.Any],
+    var_name: str,
+    data: str | int | float | np.generic | np.ndarray | xr.DataArray,
+    qc_val: int | np.generic | np.ndarray | xr.DataArray | None = None,
+    qc_missing_val: int | np.generic | None = None,
+) -> tuple[xr.DataArray, xr.DataArray | None]:
     """Creates a nc variable and sets meta data
-    Input:
-        dso - output dataset
-        template - dictionary of metadata
-        var_name - name of variable as appears in teamplate
-        data - input data
-        qc_val - override the qc value to use (normally comes from the template)
-        qc_missing_val - override the qc value to use
+
+    Args:
+        dso: Output dataset.
+        template: Dictionary of variable metadata.
+        var_name: Name of variable as it appears in template.
+        data: Input data - scalar, string, or array-like.
+        qc_val: Optional; QC value(s) to use - a scalar QC value, a
+            per-point QC array, or a QC DataArray copied from the source
+            netCDF. Overrides the template's own qc_data default. Defaults
+            to None (use the template default).
+        qc_missing_val: Optional; QC value to use for missing (fill-value)
+            points. Defaults to None (use the template's qc_missing_data,
+            or QC.QC_MISSING).
 
     Returns:
-        dataarray for variable and matching qc variable
-
+        A tuple of (dataarray for the variable, dataarray for the matching
+        qc variable, or None if no qc variable was created).
     """
 
     if qc_val is None and "qc_data" in template["variables"][var_name]:
@@ -149,7 +186,13 @@ def create_nc_var(
         # Scalar data
         inp_data = np.dtype(template["variables"][var_name]["type"]).type(data)
     else:
-        inp_data = data.astype(template["variables"][var_name]["type"])
+        # np.ndim(data) == 0 above already routed every scalar (including
+        # bare int/float) to the previous branch - only array-like data
+        # (np.ndarray/xr.DataArray) reaches here, but ty can't narrow that
+        # from a runtime np.ndim() check.
+        inp_data = data.astype(  # ty: ignore[unresolved-attribute]
+            template["variables"][var_name]["type"]
+        )
 
     if "num_digits" in template["variables"][var_name]:
         inp_data = inp_data.round(template["variables"][var_name]["num_digits"])
@@ -159,9 +202,9 @@ def create_nc_var(
         if np.issubdtype(inp_data.dtype, np.number) and np.isnan(inp_data):
             inp_data = template["variables"][var_name]["attributes"]["_FillValue"]
     else:
-        inp_data[np.isnan(inp_data)] = template["variables"][var_name]["attributes"][
-            "_FillValue"
-        ]
+        inp_data[np.isnan(inp_data)] = template["variables"][var_name][  # ty: ignore[invalid-assignment]
+            "attributes"
+        ]["_FillValue"]
 
     # GBS 2022/02/09 In what can only be a bug, if the time_qc variable is written out after the time variable,
     # time variables attributes are deleted, leaving an empty dict.  No other variables have
@@ -212,15 +255,27 @@ def create_nc_var(
     return (da, da_q)
 
 
-def load_var(dci, var_name, dims_map, sort_i):
-    """
-    Input:
-        dci - dataset
-        var_name - name of the variable
-        dims_map - mapping of the dimensions to the unsorted time space
-        sort_i  - mapping of unsorted time space to sorted time space
-    Returns
-        var - netcdf array, with QC applied (QC_GOOD only)
+def load_var(
+    dci: xr.Dataset,
+    var_name: str,
+    dims_map: dict[tuple[collections.abc.Hashable, ...], dim_map_t],
+    sort_i: np.ndarray,
+) -> np.ndarray | None:
+    """Loads one variable's data, QC'd and remapped into sorted master-time
+    order.
+
+    Args:
+        dci: Input per-dive dataset.
+        var_name: Name of the variable to load.
+        dims_map: Mapping of each dimension tuple to its span within the
+            unsorted, concatenated master time vector.
+        sort_i: Index array mapping unsorted master-time order to sorted
+            order.
+
+    Returns:
+        The variable's data, QC'd (only QC_GOOD points kept, others NaN)
+        and remapped into sorted master-time order, or None if var_name's
+        size doesn't match its expected span in dims_map.
     """
     var = dci[var_name]
     qc_name = f"{var_name}_qc"
@@ -246,8 +301,18 @@ def load_var(dci, var_name, dims_map, sort_i):
     return expanded_var
 
 
-def load_templates(base_opts):
-    """Load configuration template files and merge into one"""
+def load_templates(base_opts: BaseOpts.BaseOptions) -> dict[str, typing.Any] | None:
+    """Loads the base/project/deployment configuration template files and
+    merges them into one.
+
+    Args:
+        base_opts: Options object, providing gliderdac_base_config,
+            gliderdac_project_config, and gliderdac_deployment_config.
+
+    Returns:
+        The merged template dictionary, or None if a required config option
+        is missing or a template file couldn't be loaded/merged.
+    """
 
     # Check for all variables being set
     if not base_opts.gliderdac_base_config:
@@ -291,8 +356,19 @@ def load_templates(base_opts):
     return templates[0]
 
 
-def find_deepest_bin_i(depth, bin_centers, bin_width):
-    """Finds the last index within the deepest bin"""
+def find_deepest_bin_i(
+    depth: np.ndarray, bin_centers: np.ndarray, bin_width: float
+) -> np.intp:
+    """Finds the last index within the deepest bin
+
+    Args:
+        depth: Depth values (meters), in master-time order.
+        bin_centers: Downcast bin center depths.
+        bin_width: Bin width (meters).
+
+    Returns:
+        Index of the first sample past the deepest bin.
+    """
 
     max_i = np.argmax(depth)
     while depth[max_i] >= bin_centers[-1] - (bin_width / 2.0):
@@ -303,9 +379,16 @@ def find_deepest_bin_i(depth, bin_centers, bin_width):
     return max_i
 
 
-def load_additional_arguments() -> tuple[list[str], dict, dict]:
+def load_additional_arguments() -> (
+    tuple[list[str], dict[str, str], dict[str, BaseOptsType.options_t]]
+):
     """Defines and extends arguments related to this extension.
     Called by BaseOpts when the extension is set to be loaded
+
+    Returns:
+        A tuple of (names of existing BaseOpts options this extension also
+        uses, option-group descriptions keyed by group name, this
+        extension's own options keyed by option name).
     """
     return (
         # Add this module to these options defined in BaseOpts
@@ -440,8 +523,31 @@ def main(
     known_mailer_tags: list[str] | None = None,
     known_ftp_tags: list[str] | None = None,
     processed_file_names: list[pathlib.Path] | None = None,
-):
+) -> int:
     """Basestation extension for creating simplified netCDF files
+
+    Args:
+        cmdline_args: Command line arguments, used to build base_opts when
+            base_opts isn't already provided.
+        instrument_id: Unused; part of the standard basestation extension
+            signature.
+        base_opts: Options object; self-constructed from cmdline_args if
+            not provided.
+        sg_calib_file_name: Unused; part of the standard basestation
+            extension signature.
+        dive_nc_file_names: Per-dive netCDF files to process. Collected via
+            base_opts.mission_dir if not provided.
+        nc_files_created: Per-dive netCDF files created by an earlier
+            pipeline stage this run - takes priority over
+            dive_nc_file_names when provided.
+        processed_other_files: Optional; if provided, each GliderDAC output
+            netCDF path is appended to this list.
+        known_mailer_tags: Unused; part of the standard basestation
+            extension signature.
+        known_ftp_tags: Unused; part of the standard basestation extension
+            signature.
+        processed_file_names: Unused; part of the standard basestation
+            extension signature.
 
     Returns:
         0 for success (although there may have been individual errors in
@@ -487,7 +593,7 @@ def main(
             # TODO assert_type(base_opts.netcdf_filename, pathlib.Path)
             dive_nc_file_names = [base_opts.netcdf_filename]
             if not base_opts.gliderdac_directory:
-                base_opts.gliderdac_directory = (  # ty: ignore[invalid-assignment]
+                base_opts.gliderdac_directory = (
                     base_opts.netcdf_filename.parent / "gliderdac"
                 )
     else:
@@ -526,10 +632,17 @@ def main(
     if not template:
         return 1
 
-    def _base_qc(var_name):
+    def _base_qc(var_name: str) -> int | np.int8 | None:
         """Resolve a variable's base QC value the same way create_nc_var
         does - from its template's qc_data field if present, else
-        QC_NO_CHANGE."""
+        QC_NO_CHANGE.
+
+        Args:
+            var_name: Name of the variable as it appears in template.
+
+        Returns:
+            The resolved base QC value.
+        """
         if "qc_data" in template["variables"][var_name]:
             return lookup_qc_val(template["variables"][var_name]["qc_data"])
         return QC.QC_NO_CHANGE
@@ -576,13 +689,13 @@ def main(
             timeseries_vars[var_name] = var_content
             dims = dsi[var_name].dims
             for vv in dsi.variables:
-                # TODO assert_type(vv, str)
+                vv_name = str(vv)
                 if (
                     dsi[vv].dims == dims
-                    and vv.endswith("_time")
-                    and "_results_" not in vv
+                    and vv_name.endswith("_time")
+                    and "_results_" not in vv_name
                 ):
-                    time_vars.add((vv, dims))
+                    time_vars.add((vv_name, dims))
 
         unsorted_master_time = np.zeros(0)
         dims_map = {}
@@ -653,6 +766,10 @@ def main(
                 dims_map,
                 sort_i,
             )
+            if data is None:
+                # load_var already logged the mismatch - skip this variable
+                # rather than crash on it below.
+                continue
             if base_opts.gliderdac_bin_width:
                 # Calculated above
                 # max_depth_i = find_deepest_bin_i(
@@ -902,13 +1019,13 @@ def main(
         for k, v in template["global_attributes"].items():
             dso.attrs[k] = v
 
-        netcdf_out_filename = (
+        netcdf_out_filename: pathlib.Path = (
             base_opts.gliderdac_directory
             / f"{trajectory_name}Z{delayed_str}.nc".replace("-", "_")
         )
-        comp = dict(zlib=True, complevel=9)
+        comp: dict[str, typing.Any] = dict(zlib=True, complevel=9)
         # encoding = {var: comp for var in dso.data_vars}
-        encoding = {}
+        encoding: dict[typing.Any, dict[str, typing.Any]] = {}
         for var in dso.data_vars:
             encoding[var] = comp.copy()
             if template["variables"][var]["type"] == "c":
@@ -920,7 +1037,7 @@ def main(
             "w",
             encoding=encoding,
             # engine="netcdf4",
-            format="netCDF4",
+            format="NETCDF4",
         )
 
         if processed_other_files is not None:
