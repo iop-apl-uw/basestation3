@@ -92,6 +92,8 @@ def trace_array(tag:str, x:Any)->None:
     if (trace_disabled()):
         return None
     trace_ensure_file()
+    if (len(TRACE_DATA) == 0):
+        return None
     fid = TRACE_DATA[1]
     # ignore filename in TRACE_DATA[2]
     nc = TRACE_DATA[3]
@@ -120,6 +122,8 @@ def trace_comment(tag:str)->None:
     if (trace_disabled()):
         return
     trace_ensure_file()
+    if (len(TRACE_DATA) == 0):
+        return
     fid = TRACE_DATA[1]
     comment = TRACE_DATA[5]
     fid.write('%s %s\n' % (comment, tag))

@@ -40,12 +40,9 @@
 # 1) For input timeseries vectors with associated QC vectors, only points marked QC_GOOD are
 #    accepted.  All other points are converted to nans
 # 2) If timeseries vectors are associated with multiple time basis, there is a single
-#    time basis constructed contain all observations (obviously, this can be very sparse
+#    time basis constructed contain all observations (this can be very sparse
 #    table for a scicon instrument)
-# 3) If --gliderdac_reduce_output is set (default is True), all timeseries vectors are
-#    reduced such that all rows are contain all valid observations.  Obviously, this
-#    is only useful for CTD only profiles.
-# 4) For output, timeseries variables time, depth, latitude, longitude and pressure are
+# 3) For output, timeseries variables time, depth, latitude, longitude and pressure are
 #    marked no_qc_performed (QC_NOCHANGE) for non-nan data and missing_value (QC_MISSING)
 #    for nan.
 #    All other timeseries variables are marked good_data (QC_GOOD) for non-nan and
@@ -422,10 +419,10 @@ def load_additional_arguments() -> tuple[list[str], dict, dict]:
                 ("--gliderdac_reduce",),
                 bool,
                 {
-                    "help": "Reduce the output to only non-nan observations (not useful with non-CT data)",
+                    "help": "No longer has any effect - output is never reduced/intersected across timeseries variables",
                     "section": "gliderdac",
                     "option_group": "gliderdac",
-                    "action": argparse.BooleanOptionalAction,
+                    "action": BaseOptsType.DeprecateAction,
                 },
             ),
         },
@@ -529,6 +526,14 @@ def main(
     if not template:
         return 1
 
+    def _base_qc(var_name):
+        """Resolve a variable's base QC value the same way create_nc_var
+        does - from its template's qc_data field if present, else
+        QC_NO_CHANGE."""
+        if "qc_data" in template["variables"][var_name]:
+            return lookup_qc_val(template["variables"][var_name]["qc_data"])
+        return QC.QC_NO_CHANGE
+
     # Default timeseries variables and the name mapping
     # Can be overridden by same names in the "config" dictionary from the template(s)
     requested_timeseries_vars = {
@@ -589,6 +594,7 @@ def main(
             dims_map[t_dim] = dim_map_t(last_i, last_i + len(new_time_v))
             last_i += len(new_time_v)
             unsorted_master_time = np.concatenate((unsorted_master_time, new_time_v))
+        del time_vars
         sort_i = np.argsort(unsorted_master_time)
         # NOTE: A possible issue is if there are repeated time values in different time_vars.
         # A solution is to wrap the call below with np.unique(), but is not tested
@@ -639,7 +645,6 @@ def main(
         # Note: for non-binned, this variable is just a copy of the data straight from
         # the netcdf file
         binned_vars = {}
-        reduced_pts_i = None
         for var_name in timeseries_vars:
             log_debug(f"Adding variable {var_name}")
             data = load_var(
@@ -669,62 +674,88 @@ def main(
                 )
                 var_v[np.size(bin_centers_down) :] = var_tmp[:-1][::-1]
                 n_obs[np.size(bin_centers_down) :] = n_obs_tmp[:-1][::-1]
-                binned_vars[var_name] = (var_v, np.isfinite(var_v), n_obs)
+                binned_vars[var_name] = (var_v, n_obs)
             else:
                 # With the new remapping code, data isn't a xarray object, but a numpy object
-                # binned_vars[var_name] = (data.data, np.isfinite(data))
-                binned_vars[var_name] = (data, np.isfinite(data))
-            if reduced_pts_i is None:
-                reduced_pts_i = np.arange(len(binned_vars[var_name][0]))
+                # binned_vars[var_name] = (data.data,)
+                binned_vars[var_name] = (data,)
 
-        if base_opts.gliderdac_reduce_output:
-            # Locate the good points
-            reduced_pts_i = np.squeeze(
-                np.nonzero(
-                    np.logical_and.reduce(
-                        [
-                            v[1]
-                            for k, v in binned_vars.items()
-                            if k not in ("latitude", "longitude", "pressure")
-                        ]
-                    )
-                )
-            )
-
-        # Create variables with only good points, based on the mask
-        reduced_vars = {}
+        # Create variables
+        output_vars = {}
         for var_name, val in binned_vars.items():
-            reduced_vars[var_name] = val[0][reduced_pts_i]
+            output_vars[var_name] = val[0].copy()
             create_nc_var(
                 dso,
                 template,
                 timeseries_vars[var_name],
-                reduced_vars[var_name],
+                output_vars[var_name],
             )
             # This is just for debugging
             # if base_opts.gliderdac_bin_width and var_name == "temperature":
-            #    create_nc_var(dso, template, "temperature_n", val[2][reduced_pts_i])
+            #    create_nc_var(dso, template, "temperature_n", val[1])
 
         if base_opts.gliderdac_bin_width:
-            reduced_depth = bin_centers[reduced_pts_i]
-            reduced_time = t_profile[reduced_pts_i]
+            depth_var = bin_centers.copy()
+            time_var = t_profile.copy()
             del (
                 bin_centers,
                 t_profile,
             )
+            depth_qc_v = None
         else:
-            reduced_depth = master_depth[reduced_pts_i]
-            reduced_time = master_time[reduced_pts_i]
+            depth_var = master_depth.copy()
+            time_var = master_time.copy()
+            depth_qc_v = QC.initialize_qc(len(depth_var), _base_qc("depth"))
+            QC.assert_qc(
+                QC.QC_INTERPOLATED,
+                depth_qc_v,
+                np.nonzero(np.logical_not(np.isin(time_var, dsi["ctd_time"].data)))[0],
+                "depth interpolated onto non-CTD sample time",
+            )
 
+        # Lat/lon are only densely sampled on the CTD timebase - interpolate
+        # onto every other science variable's own sample time too, and mark
+        # the filled-in points QC_INTERPOLATED (matches lat/lon's existing
+        # "Values may be interpolated between measured GPS fixes" template
+        # comment, docs/gliderdac/seaglider.yml).
+        for ll_var in ("latitude", "longitude"):
+            ll_qc_v = QC.initialize_qc(
+                len(output_vars[ll_var]), _base_qc(timeseries_vars[ll_var])
+            )
+            nan_v = np.isnan(output_vars[ll_var])
+            if np.nonzero(nan_v)[0].size:
+                output_vars[ll_var][nan_v] = NetCDFUtils.interp1_extend(
+                    time_var[np.logical_not(nan_v)],
+                    output_vars[ll_var][np.logical_not(nan_v)],
+                    time_var[nan_v],
+                )
+                QC.assert_qc(
+                    QC.QC_INTERPOLATED,
+                    ll_qc_v,
+                    np.nonzero(nan_v)[0],
+                    f"{ll_var} interpolated onto non-CTD sample time",
+                )
+            create_nc_var(
+                dso,
+                template,
+                timeseries_vars[ll_var],
+                output_vars[ll_var],
+                qc_val=ll_qc_v,
+            )
+
+        # lat/lon are now densely interpolated (see above), but gsw.SA_from_SP
+        # returns NaN wherever salinity itself is NaN regardless of lon/lat -
+        # no need to mask lat/lon to non-interpolated points here (confirmed
+        # empirically).
         salinity_absolute = gsw.SA_from_SP(
-            reduced_vars["salinity"],
-            np.zeros(reduced_vars["salinity"].size),
-            reduced_vars["longitude"],
-            reduced_vars["latitude"],
+            output_vars["salinity"],
+            np.zeros(output_vars["salinity"].size),
+            output_vars["longitude"],
+            output_vars["latitude"],
         )
         density = gsw.rho_t_exact(
             salinity_absolute,
-            reduced_vars["temperature"],
+            output_vars["temperature"],
             np.zeros(salinity_absolute.size),
         )
         create_nc_var(
@@ -734,20 +765,21 @@ def main(
             density,
         )
 
-        del binned_vars, reduced_pts_i
+        del binned_vars
 
         # Depth and time
         create_nc_var(
             dso,
             template,
             "depth",
-            reduced_depth,
+            depth_var,
+            qc_val=depth_qc_v,
         )
         create_nc_var(
             dso,
             template,
             "time",
-            reduced_time,
+            time_var,
         )
 
         # Singleton variables
@@ -759,52 +791,32 @@ def main(
         create_nc_var(dso, template, "trajectory", trajectory_name)
         dso.attrs["time_coverage_start"] = f"{start_ts}Z"
         dso.attrs["time_coverage_end"] = time.strftime(
-            "%Y%m%dT%H%MZ", time.gmtime(np.nanmax(reduced_time))
+            "%Y%m%dT%H%MZ", time.gmtime(np.nanmax(time_var))
         )
         dso.attrs["id"] = trajectory_name
 
         # Variables
         create_nc_var(dso, template, "profile_id", dsi.attrs["dive_number"])
 
-        median_time_i = np.abs(reduced_time - np.median(reduced_time)).argmin()
+        median_time_i = np.abs(time_var - np.median(time_var)).argmin()
         create_nc_var(
             dso,
             template,
             "profile_time",
-            reduced_time[median_time_i],
+            time_var[median_time_i],
         )
-
-        # Lat and Lon may not be dense - interpolate the missing points
-        # for use in median location variables
-        full_lat = reduced_vars["latitude"].copy()
-        lat_nan_v = np.isnan(reduced_vars["latitude"])
-        if np.nonzero(lat_nan_v)[0].size:
-            full_lat[lat_nan_v] = NetCDFUtils.interp1_extend(
-                reduced_time[np.logical_not(lat_nan_v)],
-                full_lat[np.logical_not(lat_nan_v)],
-                reduced_time[lat_nan_v],
-            )
-
-        full_lon = reduced_vars["longitude"].copy()
-        lon_nan_v = np.isnan(reduced_vars["longitude"])
-        if np.nonzero(lon_nan_v)[0].size:
-            full_lon[lon_nan_v] = NetCDFUtils.interp1_extend(
-                reduced_time[np.logical_not(lon_nan_v)],
-                full_lon[np.logical_not(lon_nan_v)],
-                reduced_time[lon_nan_v],
-            )
 
         create_nc_var(
             dso,
             template,
             "profile_lat",
-            full_lat[median_time_i],
+            output_vars["latitude"][median_time_i],
         )
         create_nc_var(
             dso,
             template,
             "profile_lon",
-            full_lon[median_time_i],
+            output_vars["longitude"][median_time_i],
         )
         create_nc_var(
             dso,
@@ -824,19 +836,19 @@ def main(
             dso,
             template,
             "time_uv",
-            reduced_time[median_time_i],
+            time_var[median_time_i],
         )
         create_nc_var(
             dso,
             template,
             "lat_uv",
-            full_lat[median_time_i],
+            output_vars["latitude"][median_time_i],
         )
         create_nc_var(
             dso,
             template,
             "lon_uv",
-            full_lon[median_time_i],
+            output_vars["longitude"][median_time_i],
         )
 
         # This varibles are just to hold the attched metadata
@@ -880,10 +892,10 @@ def main(
         #     )
 
         # dso.attrs["geospatial_vertical_min"] = np.format_float_positional(
-        #     np.floor(np.nanmin(reduced_depth)), precision=2, unique=False
+        #     np.floor(np.nanmin(depth_var)), precision=2, unique=False
         # )
         # dso.attrs["geospatial_vertical_max"] = np.format_float_positional(
-        #     np.ceil(np.nanmax(reduced_depth)), precision=2, unique=False
+        #     np.ceil(np.nanmax(depth_var)), precision=2, unique=False
         # )
 
         # Apply global attributes from template

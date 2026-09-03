@@ -1,0 +1,9 @@
+config:
+  timeseries_vars:
+    temperature: temperature
+    salinity: salinity
+    conductivity: conductivity
+    latitude: lat
+    longitude: lon
+    ctd_pressure: pressure
+    sbe43_dissolved_oxygen: oxygen
