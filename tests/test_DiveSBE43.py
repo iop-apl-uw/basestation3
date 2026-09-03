@@ -130,6 +130,7 @@ def test_sbe43_dive_climb_alignment(caplog, data_dir_name, dive_base, allowed_ms
         "dives",
         "--dive_plots",
         "plot_sbe43",
+        "--no-notify_vis",
     ]
 
     testutils.run_mission(
@@ -184,6 +185,7 @@ def test_sbe43_zero_frequency_marked_unsampled(caplog):
         "dives",
         "--dive_plots",
         "plot_sbe43",
+        "--no-notify_vis",
     ]
 
     testutils.run_mission(

@@ -279,6 +279,12 @@ def test_dive_plot_coverage(
         cmd_line += ["--instrument_id", instrument_id]
     if extra_args:
         cmd_line += extra_args.split(" ")
+    if use_base_pipeline:
+        # --no-notify_vis isn't a registered option for BasePlot.main (only
+        # Base/Reprocess/MakeKML/BaseCtrlFiles/CommLog/GliderEarlyGPS) - it
+        # would fail argparse with "unrecognized arguments" there, so this
+        # must stay conditional on which entry point is actually used.
+        cmd_line += ["--no-notify_vis"]
 
     testutils.run_mission(
         data_dir_path,
@@ -359,6 +365,7 @@ def test_mission_plot_coverage(caplog, plot_name, data_dir, dive_nc):
         "--mission_plots",
         plot_name,
         "--make_mission_profile",
+        "--no-notify_vis",
     ]
 
     testutils.run_mission(

@@ -895,7 +895,16 @@ global_options_dict: dict[str, options_t] = {
     ),
     "notify_vis": options_t(
         True,
-        {"Base", "Reprocess", "MakeKML", "BaseCtrlFiles", "CommLog", "GliderEarlyGPS"},
+        {
+            "Base",
+            "Reprocess",
+            "MakeKML",
+            "BaseCtrlFiles",
+            "CommLog",
+            "GliderEarlyGPS",
+            "BaseRunner",
+            "BaseRunnerMulti",
+        },
         ("--notify_vis",),
         bool,
         {

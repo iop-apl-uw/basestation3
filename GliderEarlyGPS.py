@@ -345,17 +345,18 @@ class GliderEarlyGPSClient:
                     self.__base_opts, send_str, session.sg_id, session.dive_num
                 )
                 try:
-                    msg = {
-                        "glider": session.sg_id,
-                        "dive": session.dive_num,
-                        "content": "status=disconnected",
-                        "time": time.time(),
-                    }
-                    Utils.notifyVis(
-                        session.sg_id,
-                        "urls-status",
-                        orjson.dumps(msg).decode("utf-8"),
-                    )
+                    if self.__base_opts.notify_vis:
+                        msg = {
+                            "glider": session.sg_id,
+                            "dive": session.dive_num,
+                            "content": "status=disconnected",
+                            "time": time.time(),
+                        }
+                        Utils.notifyVis(
+                            session.sg_id,
+                            "urls-status",
+                            orjson.dumps(msg).decode("utf-8"),
+                        )
                 except Exception:
                     log_error("notifyVis failed", "exc")
                 self.cleanup_shutdown()
@@ -474,14 +475,15 @@ class GliderEarlyGPSClient:
                     payload=payload,
                 )
                 try:
-                    # old school gpsstr, just the string - not used
-                    # Utils.notifyVis(session.sg_id, "urls-gpsstr", f"gpsstr={send_str}")
-                    # new school send the whole session as a json dict
-                    Utils.notifyVis(
-                        session.sg_id,
-                        "urls-gpsstr",
-                        orjson.dumps(payload).decode("utf-8"),
-                    )
+                    if self.__base_opts.notify_vis:
+                        # old school gpsstr, just the string - not used
+                        # Utils.notifyVis(session.sg_id, "urls-gpsstr", f"gpsstr={send_str}")
+                        # new school send the whole session as a json dict
+                        Utils.notifyVis(
+                            session.sg_id,
+                            "urls-gpsstr",
+                            orjson.dumps(payload).decode("utf-8"),
+                        )
                 except Exception:
                     log_error("notifyVis failed", "exc")
 

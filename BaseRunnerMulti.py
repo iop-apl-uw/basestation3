@@ -475,13 +475,17 @@ class Dispatcher:
     no shared mutable state leaking between tests.
     """
 
-    def __init__(self, priv_client: PrivExecClient) -> None:
+    def __init__(self, priv_client: PrivExecClient, notify_vis: bool = False) -> None:
         """Initializes empty queues.
 
         Args:
             priv_client: Client used to reach the privileged exec helper.
+            notify_vis: Whether _notify_vis() should actually push to vis.
+                Defaults to False (the test-safe value); main() passes
+                the real base_opts.notify_vis value explicitly.
         """
         self._priv_client = priv_client
+        self._notify_vis_enabled = notify_vis
         self.job_queues: collections.defaultdict[tuple, collections.deque] = (
             collections.defaultdict(collections.deque)
         )
@@ -851,6 +855,8 @@ class Dispatcher:
         Returns:
             None.
         """
+        if not self._notify_vis_enabled:
+            return
         site_name, seaglider_mission_dir, script_name, _ = que
         msg: dict[str, int | str | float | list[str] | None] = {
             "glider": glider_id,
@@ -919,7 +925,7 @@ def main() -> int:
         return 1
 
     priv_client = UnixSocketPrivExecClient(base_opts.priv_exec_socket)
-    dispatcher = Dispatcher(priv_client)
+    dispatcher = Dispatcher(priv_client, notify_vis=base_opts.notify_vis)
 
     notifier = sdnotify.SystemdNotifier()
     notifier.notify("READY=1")
