@@ -179,3 +179,48 @@ def test_gliderdac_binned_excludes_interpolated_depth_qc(caplog):
         assert not np.any(qc_v == QC.QC_INTERPOLATED)
     finally:
         ds.close()
+
+
+def test_gliderdac_plot_dives(caplog):
+    """Checks that --gliderdac_plot_dives generates the expected quick-check
+    plots (temperature+salinity combined, plus every other science
+    timeseries variable in this fixture's deployment config - here just
+    oxygen - and the always-computed density) into mission_dir/plots/,
+    following the dv%04d_gliderdac_<tag> naming convention.
+    """
+    mission_dir = _build_mission(caplog)
+
+    result = GliderDAC.main(
+        cmdline_args=[
+            "--mission_dir",
+            str(mission_dir),
+            "--gliderdac_base_config",
+            str(BASE_CONFIG),
+            "--gliderdac_project_config",
+            str(PROJECT_CONFIG),
+            "--gliderdac_deployment_config",
+            str(DEPLOYMENT_CONFIG),
+            "--gliderdac_directory",
+            str(mission_dir / "gliderdac_plots"),
+            "--gliderdac_plot_dives",
+        ]
+    )
+    assert result == 0
+
+    plot_dir = mission_dir / "plots"
+    for tag in ("temperature_salinity", "density", "oxygen"):
+        assert (plot_dir / f"dv0001_gliderdac_{tag}.div").exists()
+
+    # pressure/lat/lon/conductivity/depth/time are axes or excluded, not
+    # plotted as their own content
+    for excluded in (
+        "pressure",
+        "lat",
+        "lon",
+        "conductivity",
+        "depth",
+        "time",
+        "temperature",
+        "salinity",
+    ):
+        assert not (plot_dir / f"dv0001_gliderdac_{excluded}.div").exists()

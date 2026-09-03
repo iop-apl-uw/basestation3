@@ -135,13 +135,19 @@ def update_qc(qc, previous_qc=QC_NO_CHANGE):
     return previous_qc if previous_qc in trump_qc(qc) else qc
 
 
-def assert_qc(qc, qc_v, indices_v, reason):
+def assert_qc(qc, qc_v, indices_v, reason, log_changes=True):
     """Assert qc into the associated qc vector at given indices
     Inputs:
     qc         - the qc value
     qc_v       - the qc array
     indices_v - where to update
     reason     - why the change is made
+    log_changes - if False, skip the log_debug/log_info "Changed (n/m) ..."
+        report (still updates qc_v/qc_log as normal) - for callers whose
+        indices_v can be very large (e.g. a whole timeseries interpolated
+        onto a different sample time), where the per-index listing is
+        unreadable console noise rather than useful audit trail. Defaults
+        to True (existing behavior, unchanged for every other caller).
 
     Returns:
     None
@@ -163,29 +169,30 @@ def assert_qc(qc, qc_v, indices_v, reason):
         trace_array(
             "QC %s -> %d" % (reason, qc), np.array(changed_i_v) + 1
         )  # +1 for matlab
-        # succinct_elts adds +1 for matlab to the string result
-        elts = Utils.succinct_elts(changed_i_v)
-        log_debug(
-            "Changed (%d/%d) %s to %s because %s"
-            % (len(changed_i_v), len(qc_v), elts, qc_name_d[qc], reason),
-            loc="parent",
-        )
-        # Since we now process this history attribute to plot the affect of the
-        # QC process, leave these as complete lines
+        if log_changes:
+            # succinct_elts adds +1 for matlab to the string result
+            elts = Utils.succinct_elts(changed_i_v)
+            log_debug(
+                "Changed (%d/%d) %s to %s because %s"
+                % (len(changed_i_v), len(qc_v), elts, qc_name_d[qc], reason),
+                loc="parent",
+            )
+            # Since we now process this history attribute to plot the affect of the
+            # QC process, leave these as complete lines
 
-        # be more succinct about QC reports; truncate string if too long
-        # max_length = 50
-        # if len(elts) > max_length:
-        #     for i in range(max_length - 3 - 1, len(elts)):
-        #         if elts[i] == " ":
-        #             elts = f"{elts[0:i]} ..."
-        #             break
-        log_info(
-            "Changed (%d/%d) %s to %s because %s"
-            % (len(changed_i_v), len(qc_v), elts, qc_name_d[qc], reason),
-            loc="parent",
-        )
-        # log_info("Changed %d of %d points to %s because %s" % (len(changed_i_v),len(qc_v),qc_name_d[qc],reason),loc='parent')
+            # be more succinct about QC reports; truncate string if too long
+            # max_length = 50
+            # if len(elts) > max_length:
+            #     for i in range(max_length - 3 - 1, len(elts)):
+            #         if elts[i] == " ":
+            #             elts = f"{elts[0:i]} ..."
+            #             break
+            log_info(
+                "Changed (%d/%d) %s to %s because %s"
+                % (len(changed_i_v), len(qc_v), elts, qc_name_d[qc], reason),
+                loc="parent",
+            )
+            # log_info("Changed %d of %d points to %s because %s" % (len(changed_i_v),len(qc_v),qc_name_d[qc],reason),loc='parent')
 
 
 def report_qc(tag, qc_v):  # pylint: disable=unused-argument

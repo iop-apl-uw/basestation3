@@ -60,7 +60,9 @@ import typing
 from functools import reduce
 
 import gsw
+import netCDF4
 import numpy as np
+import plotly.graph_objects
 import xarray as xr
 import yaml
 
@@ -68,7 +70,11 @@ import BaseOpts
 import BaseOptsType
 import MakeDiveProfiles
 import NetCDFUtils
+import PlotUtils
+import PlotUtilsPlotly
 import QC
+import TraceArray
+import Utils
 from BaseLog import BaseLogger, log_debug, log_error, log_info, log_warning
 
 # Local config
@@ -391,8 +397,22 @@ def load_additional_arguments() -> (
         extension's own options keyed by option name).
     """
     return (
-        # Add this module to these options defined in BaseOpts
-        ["mission_dir", "netcdf_filename"],
+        # Add this module to these options defined in BaseOpts - the
+        # plot_* options are needed for plot_gliderdac_dive()'s
+        # PlotUtils.setup_plot_directory()/PlotUtilsPlotly.write_output_files()
+        # calls (same list SimplePlotExtension.py uses for the same reason).
+        [
+            "mission_dir",
+            "netcdf_filename",
+            "plot_directory",
+            "full_html",
+            "compress_div",
+            "thumbnail_webp",
+            "save_png",
+            "save_jpg",
+            "save_webp",
+            "save_svg",
+        ],
         # Description for any option_group tags used below
         {"gliderdac": "NetCDF file generation for submission to the Glider DAC"},
         # Add these options that are local to this extension
@@ -477,6 +497,22 @@ def load_additional_arguments() -> (
                     "action": argparse.BooleanOptionalAction,
                 },
             ),
+            "gliderdac_plot_dives": BaseOptsType.options_t(
+                False,
+                {
+                    "Base",
+                    "Reprocess",
+                    "GliderDAC",
+                },
+                ("--gliderdac_plot_dives",),
+                bool,
+                {
+                    "help": "Generate quick-check plots of the GliderDAC output for each dive",
+                    "section": "gliderdac",
+                    "option_group": "gliderdac",
+                    "action": argparse.BooleanOptionalAction,
+                },
+            ),
             "gliderdac_bin_width": BaseOptsType.options_t(
                 0.0,
                 {
@@ -510,6 +546,225 @@ def load_additional_arguments() -> (
             ),
         },
     )
+
+
+def plot_gliderdac_dive(
+    base_opts: BaseOpts.BaseOptions,
+    gliderdac_nc_filename: pathlib.Path,
+    template: dict[str, typing.Any] | None = None,
+) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
+    """Generates quick-check plots of a GliderDAC output netCDF file.
+
+    Re-opens gliderdac_nc_filename from disk (a freshly-written GliderDAC
+    output, not the main per-dive netCDF) and produces one plot per science
+    timeseries variable (value vs. depth, dive/climb split, QC value in the
+    hover tooltip), following Plotting/DiveScience.py's conventions.
+    Pressure/lat/lon/conductivity/depth/time are excluded (axes or not
+    science content); temperature and salinity share one dual-x-axis plot.
+    These are a quick sanity check on the GliderDAC output itself, not a
+    replacement for the main Plotting/*.py pipeline.
+
+    Args:
+        base_opts: Options object.
+        gliderdac_nc_filename: Path to the already-written GliderDAC output
+            netCDF file to plot.
+        template: Unused - accepted for API symmetry with the rest of
+            GliderDAC.py's pipeline. Every value needed (units, long_name)
+            is already present as an attribute on gliderdac_nc_filename's
+            own variables, so re-reading from disk is self-sufficient.
+
+    Returns:
+        A tuple of (created Figures, written output file paths).
+    """
+    if base_opts.mission_dir:
+        if PlotUtils.setup_plot_directory(base_opts):
+            return ([], [])
+    else:
+        # Standalone single-file CLI mode - no mission plots/ directory to
+        # default into (PlotUtils.setup_plot_directory() requires
+        # mission_dir). Mirrors how gliderdac_directory itself falls back
+        # in this mode: a "plots" directory alongside (not inside)
+        # gliderdac_directory - gliderdac_directory.parent is the same
+        # netcdf_filename.parent gliderdac_directory itself was derived
+        # from, in both single-file and mission-dir modes.
+        if not base_opts.plot_directory:
+            base_opts.plot_directory = base_opts.gliderdac_directory.parent / "plots"
+        if not base_opts.plot_directory.exists():
+            try:
+                base_opts.plot_directory.mkdir()
+                base_opts.plot_directory.chmod(
+                    stat.S_IRUSR
+                    | stat.S_IWUSR
+                    | stat.S_IXUSR
+                    | stat.S_IRGRP
+                    | stat.S_IXGRP
+                    | stat.S_IWGRP
+                    | stat.S_IROTH
+                    | stat.S_IXOTH,
+                )
+            except Exception:
+                log_error(f"Could not create {base_opts.plot_directory}", "exc")
+                return ([], [])
+
+    ds = Utils.open_netcdf_file(str(gliderdac_nc_filename))
+
+    def _masked(var: netCDF4.Variable) -> np.ndarray:
+        """Reads var's data as float, with its own _FillValue points
+        replaced by NaN (Utils.open_netcdf_file opens with mask_results=
+        False, so fill values otherwise come back as literal numbers -
+        e.g. -999 - that swamp real readings on a plot)."""
+        data = np.asarray(var[:], dtype=float)
+        fill_value = getattr(var, "_FillValue", None)
+        if fill_value is not None:
+            data[data == fill_value] = np.nan
+        return data
+
+    try:
+        dive_num = int(ds.variables["profile_id"][...])
+        title_ident = f"{ds.trajectory} Dive {dive_num} Started {ds.time_coverage_start}"
+        depth = _masked(ds.variables["depth"])
+    except Exception:
+        log_error(f"Could not load identity/depth from {gliderdac_nc_filename}", "exc")
+        ds.close()
+        return ([], [])
+
+    max_depth_i = int(np.nanargmax(depth))
+    point_num = np.arange(depth.size)
+
+    skip_vars = {"pressure", "lat", "lon", "conductivity", "depth", "time"}
+    plot_vars = [
+        var_name
+        for var_name, var in ds.variables.items()
+        if var.dimensions == ("time",)
+        and var_name not in skip_vars
+        and f"{var_name}_qc" in ds.variables
+    ]
+
+    def _add_leg_traces(
+        fig: plotly.graph_objects.Figure,
+        var_name: str,
+        long_name: str,
+        units: str,
+        xaxis: str,
+    ) -> None:
+        """Adds a dive-leg and climb-leg trace for one variable to fig."""
+        data = _masked(ds.variables[var_name])
+        qc_strs = np.asarray(QC.qc_to_str(QC.decode_qc(ds.variables[f"{var_name}_qc"][:])))
+        for leg, sl, symbol, color in (
+            ("Dive", slice(0, max_depth_i), "triangle-down", "Red"),
+            ("Climb", slice(max_depth_i, None), "triangle-up", "Magenta"),
+        ):
+            fig.add_trace(
+                {
+                    "name": f"{long_name} {leg}",
+                    "x": data[sl],
+                    "y": depth[sl],
+                    "customdata": np.squeeze(
+                        np.dstack((point_num[sl], qc_strs[sl]))
+                    ),
+                    "xaxis": xaxis,
+                    "yaxis": "y1",
+                    "mode": "markers",
+                    "marker": {"symbol": symbol, "color": color},
+                    "hovertemplate": (
+                        f"{long_name} {leg}<br>%{{x:.3f}} {units}<br>"
+                        "%{y:.2f} m<br>%{customdata[0]:d} point_num<br>"
+                        "%{customdata[1]}<extra></extra>"
+                    ),
+                }
+            )
+
+    ret_figs: list[plotly.graph_objects.Figure] = []
+    ret_plots: list[pathlib.Path] = []
+
+    for var_name in plot_vars:
+        if var_name in ("temperature", "salinity"):
+            continue  # plotted together below
+        var = ds.variables[var_name]
+        long_name = getattr(var, "long_name", var_name)
+        units = getattr(var, "units", "")
+        fig = plotly.graph_objects.Figure()
+        _add_leg_traces(fig, var_name, long_name, units, "x1")
+        fig.update_layout(
+            {
+                "xaxis": {"title": f"{long_name} ({units})", "showgrid": True},
+                "yaxis": {
+                    "title": "Depth (m)",
+                    "showgrid": True,
+                    "autorange": "reversed",
+                },
+                "title": {
+                    "text": f"{title_ident}<br>{long_name} vs Depth",
+                    "xanchor": "center",
+                    "yanchor": "top",
+                    "x": 0.5,
+                    "y": 0.95,
+                },
+                "margin": {"t": 150},
+            }
+        )
+        ret_figs.append(fig)
+        ret_plots.extend(
+            PlotUtilsPlotly.write_output_files(
+                base_opts, f"dv{dive_num:04d}_gliderdac_{var_name}", fig
+            )
+        )
+
+    if "temperature" in plot_vars and "salinity" in plot_vars:
+        temp_units = getattr(ds.variables["temperature"], "units", "")
+        salinity_units = getattr(ds.variables["salinity"], "units", "")
+        fig = plotly.graph_objects.Figure()
+        _add_leg_traces(
+            fig,
+            "temperature",
+            getattr(ds.variables["temperature"], "long_name", "Temperature"),
+            temp_units,
+            "x1",
+        )
+        _add_leg_traces(
+            fig,
+            "salinity",
+            getattr(ds.variables["salinity"], "long_name", "Salinity"),
+            salinity_units,
+            "x2",
+        )
+        fig.update_layout(
+            {
+                "xaxis": {
+                    "title": f"Temperature ({temp_units})",
+                    "showgrid": True,
+                    "side": "bottom",
+                },
+                "xaxis2": {
+                    "title": f"Salinity ({salinity_units})",
+                    "overlaying": "x1",
+                    "side": "top",
+                    "showgrid": False,
+                },
+                "yaxis": {
+                    "title": "Depth (m)",
+                    "showgrid": True,
+                    "autorange": "reversed",
+                },
+                "title": {
+                    "text": f"{title_ident}<br>Temperature/Salinity vs Depth",
+                    "xanchor": "center",
+                    "yanchor": "top",
+                    "x": 0.5,
+                    "y": 0.95,
+                },
+                "margin": {"t": 150},
+            }
+        )
+        ret_figs.append(fig)
+        ret_plots.extend(
+            PlotUtilsPlotly.write_output_files(
+                base_opts, f"dv{dive_num:04d}_gliderdac_temperature_salinity", fig
+            )
+        )
+
+    ds.close()
+    return (ret_figs, ret_plots)
 
 
 def main(
@@ -575,6 +830,13 @@ def main(
         DEBUG_PDB = base_opts.debug_pdb
 
     BaseLogger(base_opts)
+
+    # GliderDAC.py never uses TraceArray's MATLAB-comparison tracing (that's
+    # MakeDiveProfiles.py's own debug mechanism) - disable it so
+    # QC.assert_qc()'s trace_array() calls don't print "Run trace_results()
+    # before calling trace routines!" every time (tracing defaults to
+    # enabled-but-no-file-open at process start).
+    TraceArray.trace_disable()
 
     if base_opts.delayed_submission:
         delayed_str = "_delayed"
@@ -828,6 +1090,7 @@ def main(
                 depth_qc_v,
                 np.nonzero(np.logical_not(np.isin(time_var, dsi["ctd_time"].data)))[0],
                 "depth interpolated onto non-CTD sample time",
+                log_changes=False,
             )
 
         # Lat/lon are only densely sampled on the CTD timebase - interpolate
@@ -851,6 +1114,7 @@ def main(
                     ll_qc_v,
                     np.nonzero(nan_v)[0],
                     f"{ll_var} interpolated onto non-CTD sample time",
+                    log_changes=False,
                 )
             create_nc_var(
                 dso,
@@ -1042,6 +1306,9 @@ def main(
 
         if processed_other_files is not None:
             processed_other_files.append(netcdf_out_filename)
+
+        if base_opts.gliderdac_plot_dives:
+            plot_gliderdac_dive(base_opts, netcdf_out_filename, template)
 
     log_info(
         "Finished processing "
