@@ -148,6 +148,16 @@ def write_parquet_file(dive_nc_file_name, base_opts, timeseries_cfg_d):
                 common_dims[dim_name].pop(var_name)
                 continue
             if var_name.endswith("_qc"):
+                base_var_name = var_name[: -len("_qc")]
+                if base_var_name not in common_dims[dim_name]:
+                    # Orphaned QC variable - the data variable it qualifies is
+                    # missing from this dive (e.g. CTD processing bailed out
+                    # partway through) - nothing to mask, so drop it rather
+                    # than leave the raw netCDF4.Variable in place.
+                    log_warning(
+                        f"{var_name} has no associated data variable in {dive_nc_file_name} - dropping"
+                    )
+                    common_dims[dim_name].pop(var_name)
                 continue
             var = common_dims[dim_name][var_name][:]
             qc_name = f"{var_name}_qc"

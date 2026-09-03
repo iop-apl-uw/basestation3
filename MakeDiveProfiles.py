@@ -5112,6 +5112,12 @@ def make_dive_profile(
             # In the event the CTD is not present, or its init doesn't work, calculate a GSM estimate
             # for velocity and displacement, so there is something to go on for the pilot
 
+            # Discard any partial CTD results stashed above before the bail-out
+            # (e.g. ctd_pressure_qc set ahead of ctd_pressure for legato) - the
+            # CTD data is being treated as not present, so a lone qc variable
+            # with no paired data variable should not survive into the netCDF file.
+            results_d.pop("ctd_pressure_qc", None)
+
             try:
                 sg_press_v = (
                     eng_f.get_col("depth")
