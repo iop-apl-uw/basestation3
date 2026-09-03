@@ -262,7 +262,7 @@ def write_parquet_files(dive_nc_file_names, base_opts):
             )
             ret_val |= return_val
         except Exception:
-            log_error("Problem writing out parquet files", "exc")
+            log_error(f"Problem writing out parquet files {dive_nc_file_name}", "exc")
             ret_val |= 1
         else:
             out_files.extend(output_files)
