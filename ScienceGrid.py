@@ -228,7 +228,10 @@ def setup_science_grid(base_opts) -> None:
             with tempfile.NamedTemporaryFile(mode="w+t", delete=True) as temp_file:
                 for ll in science_body.split("\n"):
                     if ll:
-                        start_ii = ll.index(",N,")
+                        try:
+                            start_ii = ll.index(",N,")
+                        except ValueError:
+                            continue
                         science_line = ll[start_ii + 3 :]
                         # TODO - capture the loiter line
                         try:
