@@ -63,7 +63,24 @@ class SiteConfig:
     Attributes:
         name: Site name, matches its key in sites.yaml (e.g. "aoml").
         watch_dir: Rundir this site's .run files are watched for/consumed in.
-        jail_root: Root of this site's glider jail, if any.
+        jail_root: Extra allowed root for this site's directory-tree
+            containment check (BaseRunnerPrivExec.validate_dispatch_request),
+            alongside watch_dir. When jailed is True, also the real
+            filesystem root .run-file paths get rewritten against (they
+            were written from inside the jail's own view of the
+            filesystem). None means no extra root beyond watch_dir.
+        jailed: Whether this site's glider account runs inside a real
+            chroot jail, so paths recorded in its .run files are relative
+            to the jail's own root and need rewriting against jail_root to
+            get their real, outside-the-jail location. False means
+            jail_root (if set) only widens the containment check - .run
+            file paths are already real, absolute host paths. The dataclass
+            default (False) is only a safe no-op fallback for callers that
+            construct a SiteConfig directly; load_sites_config's own
+            default is whether jail_root is set, so existing always-jailed
+            sites' sites.yaml entries need no change. A site that isn't
+            jailed but still wants a containment root wider than watch_dir
+            must set jailed: false explicitly alongside jail_root.
         runner_user: Name of this site's runner-<site> Linux account.
         archive: Whether completed .run files are archived instead of
             unlinked (only ioptest sets this True today).
@@ -87,6 +104,7 @@ class SiteConfig:
     watch_dir: pathlib.Path
     jail_root: pathlib.Path | None
     runner_user: str
+    jailed: bool = False
     archive: bool = False
     ignore_lock: bool = False
     python_version: str = "/opt/basestation/bin/python"
@@ -227,12 +245,19 @@ def _build_site(name: str, entry: dict) -> SiteConfig:
     Raises:
         KeyError: If a required key (watch_dir, runner_user) is missing.
         TypeError: If a value has the wrong shape for its field.
-        ValueError: If a value can't be converted to its field's type.
+        ValueError: If a value can't be converted to its field's type, or
+            jailed is true with no jail_root set.
     """
+    jail_root = _resolve_path(entry, "jail_root")
+    jailed = bool(entry.get("jailed", jail_root is not None))
+    if jailed and jail_root is None:
+        raise ValueError(f"site {name!r}: jailed is true but jail_root is not set")
+
     return SiteConfig(
         name=name,
         watch_dir=pathlib.Path(entry["watch_dir"]).expanduser().resolve(),
-        jail_root=_resolve_path(entry, "jail_root"),
+        jail_root=jail_root,
+        jailed=jailed,
         runner_user=entry["runner_user"],
         archive=bool(entry.get("archive", False)),
         ignore_lock=bool(entry.get("ignore_lock", False)),

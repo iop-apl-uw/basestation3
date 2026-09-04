@@ -23,10 +23,13 @@ seaglider:
   # BaseRunnerMulti watches via inotify. Required.
   watch_dir: /home/seaglider/home/rundir
 
-  # Root of this site's glider jail (chrootshell jail, see jail/ReadMe.md).
-  # Used to rewrite paths that were written from inside the jail's view
-  # back to their real, outside-the-jail location. Omit if this site
-  # doesn't use a jail.
+  # Extra allowed root for this site's directory-tree containment check,
+  # alongside watch_dir. When jailed (below) is true - the default once
+  # jail_root is set - this is also this site's real chrootshell jail root
+  # (see jail/ReadMe.md), and .run-file paths get rewritten against it (they
+  # were written from inside the jail's own view of the filesystem). Omit
+  # entirely if this site doesn't use a jail and watch_dir alone is a wide
+  # enough containment root.
   jail_root: /home/seaglider
 
   # This site's runner Linux account. BaseRunnerPrivExec.py resolves
@@ -50,6 +53,15 @@ example-with-all-fields:
   watch_dir: /home/jails/example/gliderjail/home/rundir
   jail_root: /home/jails/example/gliderjail
   runner_user: runner-example
+
+  # Whether this site's glider account runs inside a real chroot jail, so
+  # .run-file paths need rewriting against jail_root to get their real,
+  # outside-the-jail location. Default: whether jail_root is set (so an
+  # always-jailed site like this one needs no explicit value). A site
+  # that isn't jailed but still wants a containment root wider than
+  # watch_dir must set this false explicitly alongside jail_root - see
+  # the "test" site in docs/BaseRunnerMulti.md's setup notes for why.
+  jailed: true
 
   # Archive consumed .run files under watch_dir/archive/ instead of
   # deleting them. Default: false.

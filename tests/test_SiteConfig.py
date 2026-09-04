@@ -103,11 +103,46 @@ def test_load_sites_config_valid(tmp_path, patch_lookup_user):
     assert seaglider.cpu_quota_pct is None
     assert seaglider.cpu_weight is None
 
+    assert seaglider.jailed is True  # inferred: jail_root is set
+
     ioptest = sites["ioptest"]
     assert ioptest.archive is True
     assert ioptest.jail_root is None
+    assert ioptest.jailed is False  # inferred: no jail_root
     assert ioptest.runner_uid == 5002
     assert ioptest.runner_gid == 6002
+
+
+def test_load_sites_config_unjailed_site_with_jail_root(tmp_path, patch_lookup_user):
+    """A site can widen its containment root without being a real jail."""
+    watch_dir = tmp_path / "rundir"
+    watch_dir.mkdir()
+    config_path = tmp_path / "sites.yaml"
+    config_path.write_text(
+        f"test:\n"
+        f"  watch_dir: {watch_dir}\n"
+        f"  jail_root: {tmp_path}\n"
+        f"  jailed: false\n"
+        f"  runner_user: ioprunner\n"
+    )
+    sites = SiteConfig.load_sites_config(config_path)
+    assert sites is not None
+    assert sites["test"].jail_root == tmp_path.resolve()
+    assert sites["test"].jailed is False
+
+
+def test_load_sites_config_jailed_true_requires_jail_root(tmp_path, caplog):
+    config_path = tmp_path / "sites.yaml"
+    watch_dir = tmp_path / "rundir"
+    watch_dir.mkdir()
+    config_path.write_text(
+        f"seaglider:\n"
+        f"  watch_dir: {watch_dir}\n"
+        f"  runner_user: ioprunner\n"
+        f"  jailed: true\n"
+    )
+    assert SiteConfig.load_sites_config(config_path) is None
+    assert any(r.levelname == "ERROR" for r in caplog.records)
 
 
 def test_site_config_is_frozen(tmp_path, patch_lookup_user):

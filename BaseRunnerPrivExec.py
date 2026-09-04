@@ -226,21 +226,31 @@ class PrivilegeDropper:
     """
 
     def drop_and_exec(
-        self, uid: int, gid: int, argv: list[str], env: dict[str, str]
+        self, user: str, uid: int, gid: int, argv: list[str], env: dict[str, str]
     ) -> None:
-        """Drops privileges to uid/gid and execs argv. Does not return on success.
+        """Drops privileges to user/uid/gid and execs argv. Does not return on success.
 
         Call order is safety-critical and must not be reordered:
-        1. setgroups([gid]) FIRST - skipping this is the dangerous, silent
-           failure mode: the process would keep this helper's own
+        1. initgroups(user, gid) FIRST - skipping this is the dangerous,
+           silent failure mode: the process would keep this helper's own
            supplementary groups (membership in every site's group),
-           defeating the entire point of the drop.
+           defeating the entire point of the drop. initgroups looks up
+           user's real supplementary groups (e.g. a shared "gliders" group
+           several sites' runner accounts belong to) via the system's
+           account database and sets exactly those, rather than a single
+           setgroups([gid]) - that once looked equally safe here but
+           silently dropped every one of the target account's own real
+           supplementary groups, breaking access to any directory (like a
+           glider's home tree) it needs group membership, not just its own
+           uid/gid, to reach.
         2. setgid(gid) SECOND - must happen before setuid, since a
            non-root process cannot change its gid.
         3. setuid(uid) LAST - irreversible; only safe once group
            membership is already correct.
 
         Args:
+            user: Target account name to become (a site's runner_user) -
+                used only to resolve supplementary groups via initgroups.
             uid: Target uid to become (a site's runner_uid).
             gid: Target gid to become (a site's runner_gid).
             argv: Full argv, including argv[0] as the executable path.
@@ -250,9 +260,9 @@ class PrivilegeDropper:
             Never returns on success (the process image is replaced).
 
         Raises:
-            OSError: If any of setgroups/setgid/setuid/execve fails.
+            OSError: If any of initgroups/setgid/setuid/execve fails.
         """
-        os.setgroups([gid])
+        os.initgroups(user, gid)
         os.setgid(gid)
         os.setuid(uid)
         os.execve(argv[0], argv, env)
@@ -557,9 +567,22 @@ class PrivExecServer:
                     self._joiner.join(req.site, self._cgroup_root)
                 except Exception:
                     log_warning(f"[{req.site.name}] cgroup join raised - continuing unthrottled")
-            env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin")}
+            # Runner accounts are typically created with no real home
+            # directory (same reason baserunnerprivexec.service itself
+            # needs Environment=MPLCONFIGDIR - see that unit file), so
+            # anything expecting $HOME to be writable (matplotlib's config
+            # cache, in practice) falls back to a throwaway /tmp dir with a
+            # startup warning. log_file's own parent - the job's mission
+            # directory - is already guaranteed writable by this site's
+            # runner account, since the job's own output has to land there
+            # regardless; reusing it as $HOME needs no extra per-site setup
+            # (no real home directory to create/maintain per runner account).
+            env = {
+                "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+                "HOME": str(req.log_file.parent),
+            }
             self._dropper.drop_and_exec(
-                req.site.runner_uid, req.site.runner_gid, req.argv, env
+                req.site.runner_user, req.site.runner_uid, req.site.runner_gid, req.argv, env
             )
         except Exception:
             os._exit(127)
@@ -704,6 +727,14 @@ def main() -> int:
     if sites is None:
         log_error("Failed to load sites config - exiting")
         return 1
+
+    # Matches glider_login's own "umask 2" and BaseRunnerMulti.py/
+    # BaseRunner.py's identical call: every dispatched job is a fork of
+    # this process, so its umask is what actually reaches the files a job
+    # creates (drop_and_exec's execve does not reset it) - without this,
+    # jobs inherit systemd's default 0022 and their output loses the
+    # group-write bit the rest of basestation assumes is there.
+    os.umask(0o002)
 
     _set_child_subreaper()
     _move_self_into_leaf_cgroup(pathlib.Path(base_opts.cgroup_root))

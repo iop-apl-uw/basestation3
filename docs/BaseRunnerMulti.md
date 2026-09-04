@@ -115,7 +115,8 @@ sample. Top-level mapping keyed by site name; each entry:
 |---|---|---|---|
 | `watch_dir` | yes | - | Rundir this site's `.run` files are watched for/consumed in. |
 | `runner_user` | yes | - | This site's `runner-<site>` Linux account name, resolved to uid/gid via `pwd.getpwnam` at each process's own startup. |
-| `jail_root` | no | `null` | Root of this site's glider jail, if any - used to rewrite paths written from inside the jail's view. |
+| `jail_root` | no | `null` | Extra allowed root for this site's directory-tree containment check, alongside `watch_dir`. Also the rewrite target for `.run`-file paths when `jailed` is true. |
+| `jailed` | no | whether `jail_root` is set | Whether this site's glider account runs inside a real chroot jail, so `.run`-file paths need rewriting against `jail_root`. A site that isn't jailed but still wants a containment root wider than `watch_dir` must set this `false` explicitly alongside `jail_root` - see "Unjailed sites and `jail_root`" below. |
 | `archive` | no | `false` | Archive consumed `.run` files under `watch_dir/archive/` instead of deleting them. Only `ioptest` sets this today. |
 | `ignore_lock` | no | `false` | Bypass this site's lock-file check. Testing only - never set `true` in production. |
 | `python_version` | no | `/opt/basestation/bin/python` | Interpreter used to launch this site's jobs. |
@@ -135,6 +136,38 @@ A missing `watch_dir` for an otherwise-valid site is different: that site
 is logged and left pending rather than failing the whole process, and
 `BaseRunnerMulti.py` retries pending sites periodically (once per minute)
 so a site coming online later doesn't require a daemon restart.
+
+### Unjailed sites and `jail_root`
+
+`jail_root` does two unrelated jobs, and `jailed` is what tells them apart:
+
+1. It's an extra root `BaseRunnerPrivExec.validate_dispatch_request` accepts
+   a job's `log_file` under, alongside `watch_dir` - this is the boundary
+   the privileged helper enforces before it will touch a path at all.
+2. When `jailed` is true, it's *also* the real filesystem root `.run`-file
+   paths get rewritten against, because those paths were written from
+   inside a chroot jail's own view of the filesystem and need translating
+   back to their real, outside-the-jail location.
+
+Every real deployment today uses a real chroot jail, so `jailed` defaults
+to whether `jail_root` is set and existing `sites.yaml` files need no
+change. But a site with unjailed glider accounts living directly under
+some shared root (e.g. several `sgNNN` home directories under `/home`,
+with no chroot at all) still needs a `jail_root` wider than `watch_dir` for
+the containment check to accept their paths - and setting one without
+`jailed: false` silently corrupts every dispatch, since `.run`-file paths
+there are already real, absolute host paths and don't need (or survive)
+the jail rewrite: prepending `jail_root` a second time turns
+`/home/sg090/.../baselog.log` into `/home/home/sg090/.../baselog.log`,
+which then fails to open. For that case, set both fields explicitly:
+
+```yaml
+test:
+  watch_dir: /home/rundir
+  jail_root: /home
+  jailed: false
+  runner_user: sg090-runner
+```
 
 ## Per-site CPU throttling
 

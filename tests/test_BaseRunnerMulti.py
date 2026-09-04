@@ -55,12 +55,17 @@ def short_socket_path():
         path.unlink(missing_ok=True)
 
 
-def _site(watch_dir, *, name="seaglider", jail_root=None, archive=False, ignore_lock=True):
+def _site(
+    watch_dir, *, name="seaglider", jail_root=None, jailed=None, archive=False, ignore_lock=True
+):
     watch_dir.mkdir(parents=True, exist_ok=True)
+    if jailed is None:
+        jailed = jail_root is not None
     return SiteConfig.SiteConfig(
         name=name,
         watch_dir=watch_dir,
         jail_root=jail_root,
+        jailed=jailed,
         runner_user="ioprunner",
         runner_uid=1,
         runner_gid=1,
@@ -394,6 +399,34 @@ def test_handle_run_file_event_jail_root_rewrites_paths(tmp_path):
     assert str(job.log_file) == str(jail_root / "home/sg272/current/baselog.log")
 
 
+def test_handle_run_file_event_unjailed_site_does_not_rewrite_paths(tmp_path):
+    """jail_root widens the containment tree without a real jail when jailed=False.
+
+    Paths in the .run file are already real, absolute host paths for an
+    unjailed site - rewriting them against jail_root (as if they were
+    written from inside a jail's own view) would double-prefix them.
+    """
+    site_root = tmp_path / "home"
+    site = _site(site_root / "rundir", jail_root=site_root, jailed=False)
+    run_file = _write_run_file(
+        site.watch_dir,
+        "sg090.run",
+        "/home/sg090",
+        "/home/sg090/current",
+        "/home/sg090/current/baselog.log",
+        "Base.py --mission_dir /home/sg090/current",
+    )
+    dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
+
+    dispatcher.handle_run_file_event(site, run_file)
+
+    que = ("seaglider", "/home/sg090/current", "Base.py", 90)
+    assert que in dispatcher.job_queues
+    job = dispatcher.job_queues[que][0]
+    assert "/home/sg090/current" in job.argv
+    assert str(job.log_file) == "/home/sg090/current/baselog.log"
+
+
 def test_cleanup_run_file_refuses_path_outside_site_tree(tmp_path, caplog):
     site = _site(tmp_path / "seaglider")
     outside_dir = tmp_path / "elsewhere"
@@ -561,6 +594,35 @@ def test_dispatch_queued_requeues_job_on_dispatch_failure(tmp_path, caplog):
 
     assert len(client.dispatched) == 1
     assert que in dispatcher.running_jobs
+
+
+def test_dispatch_queued_drops_job_on_rejection(tmp_path, caplog):
+    site = _site(tmp_path / "seaglider")
+    client = FakePrivExecClient()
+    dispatcher = BaseRunnerMulti.Dispatcher(client)
+    log_file = tmp_path / "baselog.log"
+    run_file = _write_run_file(
+        site.watch_dir, "sg272.run", "/home/sg272", "/home/sg272/current",
+        str(log_file), "Base.py --mission_dir /home/sg272/current",
+    )
+    dispatcher.handle_run_file_event(site, run_file)
+
+    que = ("seaglider", "/home/sg272/current", "Base.py", 272)
+    client.raise_on_dispatch = BaseRunnerMulti.PrivExecRejected(
+        f"log_file {log_file} is not contained within site 'seaglider''s tree"
+    )
+    dispatcher.dispatch_queued()  # must not raise, and must not requeue
+
+    assert len(client.dispatched) == 0
+    assert que not in dispatcher.running_jobs
+    assert que not in dispatcher.job_queues or len(dispatcher.job_queues[que]) == 0
+    assert any(r.levelname == "ERROR" for r in caplog.records)
+    assert "not contained within site" in log_file.read_text()
+
+    # A later tick must not re-raise the same rejection - the job is gone.
+    caplog.clear()
+    dispatcher.dispatch_queued()
+    assert len(caplog.records) == 0
 
 
 # --- Dispatcher._dispatch_blocking (dead-code parity path) ---

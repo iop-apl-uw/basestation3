@@ -260,7 +260,21 @@ class SiteRegistry:
 
 
 class PrivExecError(Exception):
-    """Raised when the privileged exec helper rejects or fails a request."""
+    """Raised when the privileged exec helper is unreachable or misbehaves.
+
+    Covers connection-level failures (socket refused, no response, garbled
+    reply) - the helper may simply be mid-restart, so callers are expected
+    to retry.
+    """
+
+
+class PrivExecRejected(PrivExecError):
+    """Raised when the helper is up but rejects the request as invalid.
+
+    This means the request itself is malformed (unknown site, argv, or a
+    log_file outside the site's tree) - a condition retrying will never fix,
+    since nothing about the request changes between attempts.
+    """
 
 
 class PrivExecClient(Protocol):
@@ -283,7 +297,8 @@ class PrivExecClient(Protocol):
             The pid of the launched job.
 
         Raises:
-            PrivExecError: If the helper rejects or fails the request.
+            PrivExecError: If the helper is unreachable or fails.
+            PrivExecRejected: If the helper rejects the request as invalid.
         """
         ...
 
@@ -383,8 +398,10 @@ class UnixSocketPrivExecClient:
             The parsed response dict (guaranteed "ok": True).
 
         Raises:
-            PrivExecError: If the connection fails, the response is
-                malformed, or the helper reports failure.
+            PrivExecError: If the connection fails or the response is
+                malformed.
+            PrivExecRejected: If the helper reports the request itself is
+                invalid.
         """
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
@@ -410,7 +427,7 @@ class UnixSocketPrivExecClient:
             raise PrivExecError("no response from privileged exec helper")
         response = orjson.loads(data)
         if not response.get("ok", False):
-            raise PrivExecError(response.get("error", "unknown error"))
+            raise PrivExecRejected(response.get("error", "unknown error"))
         return response
 
     def dispatch(self, site: str, argv: list[str], log_file: pathlib.Path) -> int:
@@ -539,7 +556,7 @@ class Dispatcher:
         seaglider_home_dir = seaglider_home_dir.rstrip()
         seaglider_mission_dir = seaglider_mission_dir.rstrip()
         log_file = log_file.rstrip()
-        if site.jail_root and log_file.startswith(seaglider_mission_dir):
+        if site.jailed and log_file.startswith(seaglider_mission_dir):
             log_file = str(site.jail_root / log_file[1:])
 
         try:
@@ -571,7 +588,7 @@ class Dispatcher:
 
         argv = [site.python_version, full_path_script, *tail.split()]
 
-        if site.jail_root:
+        if site.jailed:
             for ii, part in enumerate(argv):
                 if part.startswith(seaglider_mission_dir):
                     argv[ii] = str(site.jail_root / part[1:])
@@ -816,6 +833,20 @@ class Dispatcher:
         start_time = time.time()
         try:
             pid = self._priv_client.dispatch(site_name, argv, job.log_file)
+        except PrivExecRejected as exc:
+            # The helper is up and has told us this exact request is
+            # invalid (unknown site, bad argv, log_file outside the site's
+            # tree, ...) - nothing about the request changes on a retry, so
+            # requeuing would spin forever re-issuing the same rejection.
+            # Drop the job, but write the failure where a pilot reviewing
+            # the mission will actually see it.
+            log_error(f"[{site_name}] Dropping {job.job_id}:{argv} - rejected: {exc}")
+            try:
+                with job.log_file.open("a") as fo:
+                    fo.write(f"ERROR: BaseRunner: dispatch rejected, job dropped: {exc}\n")
+            except OSError:
+                log_error(f"[{site_name}] Failed to record rejection to {job.log_file}", "exc")
+            return
         except Exception:
             # Put it back rather than dropping it: the .run file that
             # produced this job is already gone (cleaned up at enqueue

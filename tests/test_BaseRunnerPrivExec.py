@@ -181,7 +181,9 @@ def test_set_child_subreaper_failure_logs_warning(monkeypatch, caplog):
 
 def test_privilege_dropper_call_order(monkeypatch):
     calls = []
-    monkeypatch.setattr(os, "setgroups", lambda groups: calls.append(("setgroups", groups)))
+    monkeypatch.setattr(
+        os, "initgroups", lambda user, gid: calls.append(("initgroups", user, gid))
+    )
     monkeypatch.setattr(os, "setgid", lambda gid: calls.append(("setgid", gid)))
     monkeypatch.setattr(os, "setuid", lambda uid: calls.append(("setuid", uid)))
     monkeypatch.setattr(
@@ -189,11 +191,11 @@ def test_privilege_dropper_call_order(monkeypatch):
     )
 
     BaseRunnerPrivExec.PrivilegeDropper().drop_and_exec(
-        4242, 4343, ["/bin/true"], {"PATH": "/bin"}
+        "sg090-runner", 4242, 4343, ["/bin/true"], {"PATH": "/bin"}
     )
 
     assert calls == [
-        ("setgroups", [4343]),
+        ("initgroups", "sg090-runner", 4343),
         ("setgid", 4343),
         ("setuid", 4242),
         ("execve", "/bin/true", ["/bin/true"], {"PATH": "/bin"}),
@@ -441,7 +443,14 @@ def test_run_child_drops_privilege_and_exits_126(monkeypatch, tmp_path):
 
     assert excinfo.value.code == 126
     dropper.drop_and_exec.assert_called_once_with(
-        site.runner_uid, site.runner_gid, ["/bin/true"], {"PATH": os.environ.get("PATH", "/usr/bin:/bin")}
+        site.runner_user,
+        site.runner_uid,
+        site.runner_gid,
+        ["/bin/true"],
+        {
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            "HOME": str(req.log_file.parent),
+        },
     )
     assert (99, 1) in dup2_calls
     assert (99, 2) in dup2_calls
