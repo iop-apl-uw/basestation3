@@ -548,6 +548,70 @@ def test_poll_completions_handles_status_rpc_failure(tmp_path, caplog):
     assert any(r.levelname == "ERROR" for r in caplog.records)
 
 
+def test_poll_completions_drops_job_on_unknown_pid_rejection(tmp_path, caplog):
+    """A privexec restart mid-job: ChildTable is in-memory and per-process,
+    so the new helper authoritatively rejects status() for the survivor's
+    pid. That must drop the queue entry, not leave it stuck forever.
+    """
+    site = _site(tmp_path / "seaglider")
+    mission_dir = tmp_path / "sg272" / "current"
+    mission_dir.mkdir(parents=True)
+    log_file_path = mission_dir / "baselog.log"
+    log_file_path.write_text("")
+    run_file = _write_run_file(
+        site.watch_dir, "sg272.run", str(tmp_path / "sg272"), str(mission_dir),
+        str(log_file_path), f"Base.py --mission_dir {mission_dir}",
+    )
+    client = FakePrivExecClient()
+    dispatcher = BaseRunnerMulti.Dispatcher(client)
+    dispatcher.handle_run_file_event(site, run_file)
+    dispatcher.dispatch_queued()
+
+    que = next(iter(dispatcher.running_jobs))
+    pid = dispatcher.running_jobs[que].pid
+    client.raise_on_status = BaseRunnerMulti.PrivExecRejected(f"unknown pid {pid}")
+    dispatcher.poll_completions()  # must not raise, and must not leave que stuck
+
+    assert que not in dispatcher.running_jobs
+    assert any(r.levelname == "WARNING" for r in caplog.records)
+    assert "can no longer be tracked" in log_file_path.read_text()
+
+
+def test_dispatch_queued_recovers_after_poll_drops_rejected_job(tmp_path):
+    """Once the stuck job is dropped, its queue must accept new jobs again."""
+    site = _site(tmp_path / "seaglider")
+    mission_dir = tmp_path / "sg272" / "current"
+    mission_dir.mkdir(parents=True)
+    log_file_path = mission_dir / "baselog.log"
+    log_file_path.write_text("")
+    seaglider_home = str(tmp_path / "sg272")
+    run_file = _write_run_file(
+        site.watch_dir, "sg272.run", seaglider_home, str(mission_dir),
+        str(log_file_path), f"Base.py --mission_dir {mission_dir}",
+    )
+    client = FakePrivExecClient()
+    dispatcher = BaseRunnerMulti.Dispatcher(client)
+    dispatcher.handle_run_file_event(site, run_file)
+    dispatcher.dispatch_queued()
+
+    que = next(iter(dispatcher.running_jobs))
+    pid = dispatcher.running_jobs[que].pid
+    client.raise_on_status = BaseRunnerMulti.PrivExecRejected(f"unknown pid {pid}")
+    dispatcher.poll_completions()
+    assert que not in dispatcher.running_jobs
+
+    client.raise_on_status = None
+    run_file_2 = _write_run_file(
+        site.watch_dir, "sg272b.run", seaglider_home, str(mission_dir),
+        str(log_file_path), f"Base.py --mission_dir {mission_dir}",
+    )
+    dispatcher.handle_run_file_event(site, run_file_2)
+    dispatcher.dispatch_queued()
+
+    assert que in dispatcher.running_jobs
+    assert len(client.dispatched) == 2
+
+
 def test_dispatch_queued_skips_que_already_running(tmp_path):
     site = _site(tmp_path / "seaglider")
     client = FakePrivExecClient()

@@ -39,6 +39,58 @@ LogsDirectory=baserunner
 # as a PrivExecError connecting to priv_exec.sock right after boot.
 Type=notify
 Restart=always
+# Every dispatched job is moved into its own cgroup_root/site-<name>
+# sub-cgroup (see CgroupJoiner.join()) - a child of this unit's own
+# delegated cgroup tree. Without KillMode=process, systemd's default
+# KillMode=control-group would SIGTERM/SIGKILL every process in that
+# whole tree on any stop of this unit - including already-dispatched
+# jobs sitting in their own site cgroups, not just this unit's own
+# tracked process. That includes the routine, documented "systemctl
+# restart baserunnerprivexec.service" procedure for picking up a
+# sites.yaml/cgroup edit (see docs/BaseRunnerMulti.md), not just a
+# crash or reboot - silently killing an in-flight job (e.g. a
+# 30-minute Base.py run) with nothing in the job's own log pointing at
+# the real cause.
+#
+# KillMode=mixed is NOT enough here, despite looking like a safer
+# middle ground - confirmed the hard way on real hardware. Per
+# systemd.kill(5), mixed sends SIGTERM to only the main process, but
+# still sends SIGKILL to every *other* remaining process in the
+# cgroup as soon as that main process exits - it does not skip them,
+# it only changes which signal they get, and does so immediately
+# (not after TimeoutStopSec) once the main process is gone. Only
+# KillMode=process leaves every other process in the cgroup
+# completely untouched. The man page calls KillMode=process "not
+# recommended" because it normally lets processes escape the service
+# manager's lifecycle by accident - here that's the deliberate,
+# intended design: dispatched jobs are meant to outlive this helper's
+# own restarts, tracked by BaseRunnerMulti.py's own job-queue
+# bookkeeping, not by systemd's cgroup-kill mechanism. See
+# BaseRunnerMulti.py's _poll_one_completion for how the watcher copes
+# with no longer being able to learn a survivor's eventual
+# completion/exit code once this helper restarts.
+KillMode=process
+# KillMode=process alone is still not sufficient, also confirmed the
+# hard way: with a job surviving in site-<name>, that child cgroup
+# keeps "cpu" enabled in this unit's own cgroup.subtree_control across
+# the restart. Cgroup v2's "no internal process" rule then means
+# systemd can never place a *freshly started* invocation's raw main
+# process directly into this unit's own cgroup top level - which is
+# exactly what it tries to do, before any of our Python code (and
+# _move_self_into_leaf_cgroup()'s own mitigation) ever runs. The
+# result was a hard, repeatable start failure (status=219/CGROUP) for
+# as long as any job stayed alive, not a transient race - 5 rapid
+# restart attempts, then systemd's rate limiter gave up and left the
+# unit fully stopped until manually recovered. DelegateSubgroup=
+# (systemd >= 254) fixes this declaratively: it tells systemd to place
+# this unit's own freshly started main process into the named subgroup
+# itself, never into the delegated cgroup's own top level, so the
+# conflict with surviving job cgroups never arises in the first place.
+# Reuses the same "supervisor" name _move_self_into_leaf_cgroup()
+# already uses, making that function's own move a harmless no-op (it
+# finds itself already there) - left in place as a redundant safety
+# net rather than removed.
+DelegateSubgroup=supervisor
 
 [Install]
 WantedBy=multi-user.target

@@ -25,6 +25,8 @@ RuntimeDirectory=baserunner
 LogsDirectory=baserunner
 Type=notify
 Restart=always
+KillMode=process
+DelegateSubgroup=supervisor
 
 [Install]
 WantedBy=multi-user.target

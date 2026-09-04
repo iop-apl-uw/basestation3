@@ -41,6 +41,7 @@ this module operationalizes.
 
 from __future__ import annotations
 
+import re
 import shlex
 import time
 import uuid
@@ -327,6 +328,73 @@ def test_privexec_restart_does_not_stop_watcher(running_baserunner: multipassuti
     _mission_dir, log_file = _drop_run_file(vm, "alpha", 104, "Base.py")
     dispatched = _wait_until(lambda: "user=runner-alpha" in _read_file(vm, log_file))
     assert dispatched, "dispatch never recovered after baserunnerprivexec restart"
+
+
+def test_in_flight_job_survives_privexec_restart_but_completion_is_unknowable(
+    running_baserunner: multipassutils.Vm,
+) -> None:
+    """KillMode=process + DelegateSubgroup=supervisor: a dispatched job
+    outlives a privexec restart instead of being killed via the shared
+    cgroup tree - but BaseRunnerMulti can no longer track its completion
+    afterward (ChildTable is per-process, in-memory state - see
+    _poll_one_completion's PrivExecRejected handling).
+
+    DelegateSubgroup is required alongside KillMode=process, not optional:
+    without it, systemd's own placement of a freshly started invocation's
+    main process (directly into this Delegate=yes unit's own cgroup top
+    level) conflicts with cgroup v2's "no internal process" rule as long as
+    the survivor's site-<name> cgroup keeps a controller enabled there -
+    found on real hardware as a repeatable status=219/CGROUP start failure,
+    not a rare race. The unit-health assertion below is the regression test
+    for that specific failure mode, distinct from the job-survival check.
+    """
+    vm = running_baserunner
+    _mission_dir, log_file = _drop_run_file(
+        vm, "alpha", 105, "Base.py --stub-sleep-seconds 20"
+    )
+    started = _wait_until(lambda: "user=runner-alpha" in _read_file(vm, log_file))
+    assert started, f"job never started - {log_file}"
+
+    match = re.search(r"pid=(\d+)", _read_file(vm, log_file))
+    assert match, f"could not find pid= in {log_file}"
+    job_pid = match.group(1)
+
+    _run(vm, ["sudo", "systemctl", "restart", "baserunnerprivexec"])
+
+    # The new invocation must actually come up, not hit status=219/CGROUP -
+    # regression test for the DelegateSubgroup requirement specifically.
+    privexec_active = _wait_until(
+        lambda: _run(
+            vm, ["systemctl", "show", "baserunnerprivexec", "--property=ActiveState", "--value"]
+        ).strip()
+        == "active",
+        timeout=10.0,
+    )
+    assert privexec_active, "baserunnerprivexec failed to restart while a job was in flight"
+
+    # Must NOT have been killed by the restart: still alive well before its
+    # 20s sleep would have finished, and still in its own site cgroup.
+    still_alive = multipassutils.exec_in(vm, ["sudo", "kill", "-0", job_pid])
+    assert still_alive.returncode == 0, "job was killed by baserunnerprivexec restart"
+
+    site_cgroup = "/sys/fs/cgroup/system.slice/baserunnerprivexec.service/site-alpha"
+    procs = _read_file(vm, f"{site_cgroup}/cgroup.procs")
+    assert job_pid in procs.split()
+
+    # It should still run to completion on its own (proves it wasn't merely
+    # delayed-killed) - liveness goes false once its sleep finishes.
+    finished = _wait_until(
+        lambda: multipassutils.exec_in(vm, ["sudo", "kill", "-0", job_pid]).returncode != 0,
+        timeout=25.0,
+    )
+    assert finished, "job never exited on its own after surviving the restart"
+
+    # A fresh dispatch to the SAME (site, mission_dir, script, glider_id)
+    # queue key must not be permanently jammed by the old job's untracked
+    # completion - the core regression this test guards against.
+    _mission_dir2, log_file2 = _drop_run_file(vm, "alpha", 105, "Base.py")
+    dispatched_again = _wait_until(lambda: "user=runner-alpha" in _read_file(vm, log_file2))
+    assert dispatched_again, "queue stayed jammed after privexec restart"
 
 
 def test_subreaper_reaps_orphaned_grandchild(running_baserunner: multipassutils.Vm) -> None:

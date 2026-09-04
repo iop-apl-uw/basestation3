@@ -734,6 +734,14 @@ class Dispatcher:
     def _poll_one_completion(self, que: tuple) -> None:
         """Checks one in-flight job for completion.
 
+        A job that outlives a privexec restart (see KillMode=mixed on
+        baserunnerprivexec.service) produces a predictable two-phase
+        sequence here: several ticks of plain PrivExecError while the
+        helper is down/reconnecting, then exactly one PrivExecRejected
+        once the new helper is up and authoritatively reports it has
+        never heard of this pid - that second phase is what triggers
+        the cleanup below.
+
         Args:
             que: The (site_name, seaglider_mission_dir, script_name,
                 glider_id) key into running_jobs.
@@ -745,6 +753,32 @@ class Dispatcher:
         running = self.running_jobs[que]
         try:
             done, returncode = self._priv_client.status(running.pid)
+        except PrivExecRejected as exc:
+            # The helper is up but has never heard of this pid - it
+            # restarted while this job was in flight (ChildTable is
+            # in-memory, per-process state with no persistence across a
+            # restart) and initgroups/KillMode=mixed let the job itself
+            # keep running rather than killing it. But nothing about this
+            # request will ever succeed on retry, and leaving the queue
+            # entry in place would block every future job for this same
+            # (site, mission_dir, script, glider_id) queue forever - drop
+            # it, accepting that this one job's real exit code, timing
+            # line, and vis notification are now permanently unknowable.
+            log_warning(
+                f"[{site_name}] {running.job_id}:{running.argv} (pid={running.pid}) "
+                f"no longer known to the privileged exec helper - {exc}"
+            )
+            try:
+                with running.log_file.open("a") as fo:
+                    fo.write(
+                        "WARNING: BaseRunner: privileged exec helper restarted while "
+                        f"this job was in flight (pid={running.pid}) - its completion "
+                        "can no longer be tracked\n"
+                    )
+            except OSError:
+                log_error(f"[{site_name}] Failed to record restart to {running.log_file}", "exc")
+            self.running_jobs.pop(que)
+            return
         except PrivExecError:
             log_error(f"[{site_name}] Could not get status for pid {running.pid}", "exc")
             return

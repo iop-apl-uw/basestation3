@@ -348,7 +348,74 @@ validating the fixes above). `Wants=` keeps the readiness-ordering
 guarantee on a cold start without that stop-propagation: restarting the
 helper alone now just produces the same transient, requeued dispatch
 failures described above, with `baserunnermulti.service` itself
-untouched throughout.
+untouched throughout. That description covers only jobs not yet
+dispatched at restart time - a job already in flight when the helper
+restarts is a separate case, covered next.
+
+### `KillMode` and in-flight jobs
+
+Every dispatched job is moved into its own `cgroup_root/site-<name>`
+sub-cgroup (see `CgroupJoiner.join()`) - a child of
+`baserunnerprivexec.service`'s own delegated cgroup tree. Systemd's
+default `KillMode=control-group` would SIGTERM/SIGKILL every process in
+that whole tree on *any* stop of the unit, not just this unit's own
+tracked process - including the routine, documented
+`systemctl restart baserunnerprivexec.service` procedure below, not just
+a crash or reboot. `baserunnerprivexec.service` sets `KillMode=process`
+to avoid that: a stop signals only the main process, leaving dispatched
+jobs running completely untouched in their own site cgroups.
+`KillMode=mixed` looks like a safer middle ground but isn't - confirmed
+on real hardware - per `systemd.kill(5)`, `mixed` sends SIGTERM to only
+the main process but still sends SIGKILL to every other process in the
+cgroup as soon as that main process exits (not only as a
+`TimeoutStopSec` fallback), so it kills in-flight jobs just as fast as
+`control-group` does. Only `process` leaves them alone. The man page
+calls `process` "not recommended" because it normally lets processes
+escape the service manager's lifecycle by accident - here that's the
+deliberate, intended design: dispatched jobs are meant to outlive this
+helper's own restarts, tracked by `BaseRunnerMulti.py`'s own job-queue
+bookkeeping instead.
+
+`KillMode=process` alone is still not sufficient, also confirmed on real
+hardware: this unit has `Delegate=yes`, and cgroup v2's "no internal
+process" rule means a cgroup cannot simultaneously hold a process
+directly *and* have children with controllers enabled in its
+`cgroup.subtree_control`. `CgroupJoiner.join()` delegates the `cpu`
+controller down to `site-<name>` children - so as long as a job survives
+in one of them, that controller stays enabled at this unit's own cgroup
+top level across a restart, and systemd's own placement of a *freshly
+started* invocation's raw main process - which happens directly into
+that top level, before any of our Python code (including
+`_move_self_into_leaf_cgroup()`'s own mitigation) ever runs - now
+violates the constraint every time. The result was a hard, repeatable
+`status=219/CGROUP` start failure for as long as any job stayed alive,
+not a rare race: 5 rapid restart attempts, then systemd's rate limiter
+gave up and left the unit fully stopped until manually recovered - worse
+than the original bug. `DelegateSubgroup=supervisor` (systemd >= 254)
+fixes this declaratively: it tells systemd to place this unit's own
+freshly started main process into that named subgroup itself, never
+into the delegated cgroup's own top level, so the conflict with
+surviving job cgroups never arises. It reuses the same `supervisor` name
+`_move_self_into_leaf_cgroup()` already uses, making that function's own
+move a harmless no-op. A benign `"Found left-over process ... in
+control group ... Ignoring"` line in the journal during a
+restart-while-job-active is now expected - systemd noticing the
+surviving job, not an error.
+
+That fixes the kill, but not for free: `ChildTable`
+(`BaseRunnerPrivExec.py`) is purely in-memory, per-process state with no
+persistence across a restart, and the new process is never an ancestor
+of the old instance's forked children, so it structurally cannot
+`waitpid()` them - only a real parent can reap a process. A job that
+survives a restart this way is invisible to the *new* helper process:
+`BaseRunnerMulti.py`'s `_poll_one_completion` gets an authoritative
+"unknown pid" rejection the next time it polls, logs one `WARNING` and a
+matching line in the job's own log file, and drops it from tracking. The
+job still runs to completion under its own identity - it just does so
+with no returncode ever recorded, no timing line, and no vis
+notification. This is a deliberate, bounded tradeoff (see `TODO.md` for
+why reconciling orphaned jobs after a restart isn't done today) rather
+than an oversight.
 
 ### Installing the units
 
@@ -429,7 +496,12 @@ Re-running steps 2-5 (copy, `daemon-reload`, `restart` instead of
 `enable --now`) is also how you pick up a unit-file change later - e.g.
 adding `cpu_quota_pct`/`cpu_weight` support required a `Delegate=yes`
 edit to `baserunnerprivexec.service`, which needed exactly this sequence
-to take effect.
+to take effect. `KillMode=process` (see above) means restarting
+`baserunnerprivexec.service` for any reason - this procedure, a crash, a
+reboot - won't kill a job already in flight, but that job's completion
+will never be tracked afterward (see above) - if avoiding that for a
+specific job matters, check for a quiet dispatch queue first; nothing
+today blocks or warns about this at restart time itself.
 
 **Validate the capability chain before relying on it in production** -
 this is an easy corner of Linux privilege separation to get subtly wrong.
