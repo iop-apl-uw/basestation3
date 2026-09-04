@@ -151,7 +151,7 @@ def create_nc_var(
     data: str | int | float | np.generic | np.ndarray | xr.DataArray,
     qc_val: int | np.generic | np.ndarray | xr.DataArray | None = None,
     qc_missing_val: int | np.generic | None = None,
-) -> tuple[xr.DataArray, xr.DataArray | None]:
+) -> tuple[xr.DataArray | None, xr.DataArray | None]:
     """Creates a nc variable and sets meta data
 
     Args:
@@ -169,8 +169,23 @@ def create_nc_var(
 
     Returns:
         A tuple of (dataarray for the variable, dataarray for the matching
-        qc variable, or None if no qc variable was created).
+        qc variable, or None if no qc variable was created). Both are None
+        if var_name has no definition in template - see Raises.
+
+    Raises:
+        Nothing - logs an error and returns (None, None) if var_name isn't
+        defined in template (e.g. a deployment config's timeseries_vars
+        mapping names a target variable no loaded template actually
+        defines), rather than a raw KeyError.
     """
+    if var_name not in template["variables"]:
+        log_error(
+            f"Variable '{var_name}' is not defined in the loaded GliderDAC "
+            "template(s) - check timeseries_vars (or any other variable "
+            "mapping) in the deployment/project config for a target name "
+            "with no matching variable block - skipping"
+        )
+        return (None, None)
 
     if qc_val is None and "qc_data" in template["variables"][var_name]:
         qc_val = lookup_qc_val(template["variables"][var_name]["qc_data"])

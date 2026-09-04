@@ -63,6 +63,9 @@ ALLOWED_MSGS = [
 BASE_CONFIG = pathlib.Path("docs/gliderdac/seaglider.yml")
 PROJECT_CONFIG = pathlib.Path("docs/gliderdac/project.yml")
 DEPLOYMENT_CONFIG = pathlib.Path("testdata") / DATA_DIR_NAME / "gliderdac_deployment.yml"
+DEPLOYMENT_CONFIG_UNDEFINED_VAR = (
+    pathlib.Path("testdata") / DATA_DIR_NAME / "gliderdac_deployment_undefined_var.yml"
+)
 
 
 def _build_mission(caplog) -> pathlib.Path:
@@ -224,3 +227,47 @@ def test_gliderdac_plot_dives(caplog):
         "salinity",
     ):
         assert not (plot_dir / f"dv0001_gliderdac_{excluded}.div").exists()
+
+
+def test_gliderdac_undefined_template_var_skips_gracefully(caplog):
+    """Checks that a timeseries_vars mapping naming a target variable not
+    defined in any loaded template (e.g. a deployment config typo/mismatch)
+    logs a clear error and is skipped, rather than crashing GliderDAC.main
+    with a raw KeyError from create_nc_var - regression test for the
+    sbe43_dissolved_oxygen -> "fluorescence" (undefined) crash a community
+    user hit.
+    """
+    mission_dir = _build_mission(caplog)
+
+    result = GliderDAC.main(
+        cmdline_args=[
+            "--mission_dir",
+            str(mission_dir),
+            "--gliderdac_base_config",
+            str(BASE_CONFIG),
+            "--gliderdac_project_config",
+            str(PROJECT_CONFIG),
+            "--gliderdac_deployment_config",
+            str(DEPLOYMENT_CONFIG_UNDEFINED_VAR),
+            "--gliderdac_directory",
+            str(mission_dir / "gliderdac_undefined_var"),
+        ]
+    )
+    assert result == 0
+
+    assert any(
+        "nonexistent_variable" in record.getMessage()
+        and "not defined" in record.getMessage()
+        for record in caplog.records
+    ), "Expected a clear error naming the undefined template variable"
+
+    out_files = list((mission_dir / "gliderdac_undefined_var").glob("*.nc"))
+    assert len(out_files) == 1
+    ds = xr.open_dataset(out_files[0])
+    try:
+        assert "nonexistent_variable" not in ds.variables
+        # Everything else still made it into the output
+        assert "temperature" in ds.variables
+        assert "salinity" in ds.variables
+    finally:
+        ds.close()
