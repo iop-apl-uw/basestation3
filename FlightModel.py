@@ -3760,24 +3760,32 @@ def process_dive(
         if len(flight_dive_nums):
             # Need to find the dive just before new_dive_num in case of out of order dives
             d_n_i = np.where(aflight_dive_nums < new_dive_num)[0]
-            restart_from_dive_num = flight_dive_nums[d_n_i[-1]]
-            # restore predicted ab and trust from restart_from_dive_num
-            log_debug(restart_cache_d.keys())
-            if restart_from_dive_num in restart_cache_d:
-                (
-                    mr_dives_pitches,
-                    mr_index,
-                    mr_n_inserted,
-                    last_W_misfit_RMS_dive_num,
-                    last_ab_committed_dive_num,
-                    predicted_hd_a,
-                    predicted_hd_b,
-                    predicted_hd_ab_trusted,
-                ) = restart_cache_d[restart_from_dive_num]
+            if len(d_n_i):
+                restart_from_dive_num = flight_dive_nums[d_n_i[-1]]
+                # restore predicted ab and trust from restart_from_dive_num
+                log_debug(restart_cache_d.keys())
+                if restart_from_dive_num in restart_cache_d:
+                    (
+                        mr_dives_pitches,
+                        mr_index,
+                        mr_n_inserted,
+                        last_W_misfit_RMS_dive_num,
+                        last_ab_committed_dive_num,
+                        predicted_hd_a,
+                        predicted_hd_b,
+                        predicted_hd_ab_trusted,
+                    ) = restart_cache_d[restart_from_dive_num]
+                else:
+                    log_error(
+                        "Internal error - dive %d not in restart_cache_d - skipping FM"
+                        % restart_from_dive_num
+                    )
+                    return 1
             else:
                 log_error(
-                    "Internal error - dive %d not in restart_cache_d - skipping FM"
-                    % restart_from_dive_num
+                    f"No known dive before {new_dive_num} in the flight "
+                    "database (out-of-order dive, or a stale/mismatched "
+                    "flight database checkpoint) - skipping FM for this dive"
                 )
                 return 1
         else:
