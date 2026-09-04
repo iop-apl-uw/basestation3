@@ -1,0 +1,29 @@
+# Does the actual work formerly done by the AvisoUtils.py cron job. Only
+# ever started by aviso-fetch-trigger.service (via `--job-mode=fail`) --
+# never enabled/started directly, and not WantedBy= anything.
+#
+# Runs as ioprunner:gliders -- that account/group needs read/write access to
+# /home/ssh/data. See ../makekml-systemd-setup.md.
+#
+# Logging: no --base_log is passed, so BaseLog.py's BaseLogger only attaches
+# a stdout StreamHandler (see ../BaseLog.py) -- no log file is written.
+# systemd captures that stdout into the journal automatically
+# (StandardOutput=journal is the default, set explicitly below for
+# clarity). Read it with:
+#
+#   journalctl -u aviso-fetch-worker.service
+#   journalctl -u aviso-fetch-worker.service --since -1h
+#   journalctl -u aviso-fetch-worker.service -f          # follow live
+[Unit]
+Description=AvisoUtils.py worker (fetch/decimate/prune SSH altimetry data)
+
+[Service]
+Type=oneshot
+User=ioprunner
+Group=gliders
+ExecStart=/opt/basestation/bin/python /usr/local/basestation3/ssh/AvisoUtils.py --delete_older 30 --verbose /home/ssh/data
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aviso-fetch
+TimeoutStopSec=10
+KillMode=mixed

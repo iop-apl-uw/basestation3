@@ -1,0 +1,23 @@
+# Replaces the old crontab entry (run from ioprunner):
+#   15 10 * * * /opt/basestation/bin/python /usr/local/basestation3/ssh/MakeKMLSSHMissions.py \
+#       --verbose /home/ssh/data /home/seaglider/home/missions.yml >> /var/log/MakeKML.log 2>&1
+#
+# Only ever activates makekml-ssh-trigger.service, never
+# makekml-ssh-worker.service directly -- see makekml-ssh-trigger.service for
+# why. Scheduled 15 minutes after aviso-fetch.timer, same as the old cron
+# entries, so the SSH data AvisoUtils.py just fetched is in place first.
+[Unit]
+Description=Run makekml-ssh-trigger daily
+
+[Timer]
+OnCalendar=*-*-* 10:15:00
+AccuracySec=1s
+Persistent=true
+# Without this, a timer named makekml-ssh.timer would activate
+# makekml-ssh.service by systemd's default same-basename convention --
+# which doesn't exist, since the unit to trigger is named
+# makekml-ssh-trigger.service instead.
+Unit=makekml-ssh-trigger.service
+
+[Install]
+WantedBy=timers.target

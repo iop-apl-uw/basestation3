@@ -1,0 +1,21 @@
+# Replaces the old crontab entry (run from gbs):
+#   0 10 * * * /opt/basestation/bin/python /usr/local/basestation3/ssh/AvisoUtils.py \
+#       --delete_older 30 --verbose /home/ssh/data >> /var/log/MakeKML.log 2>&1
+#
+# Only ever activates aviso-fetch-trigger.service, never aviso-fetch-worker.service
+# directly -- see aviso-fetch-trigger.service for why.
+[Unit]
+Description=Run aviso-fetch-trigger daily
+
+[Timer]
+OnCalendar=*-*-* 10:00:00
+AccuracySec=1s
+Persistent=true
+# Without this, a timer named aviso-fetch.timer would activate
+# aviso-fetch.service by systemd's default same-basename convention --
+# which doesn't exist, since the unit to trigger is named
+# aviso-fetch-trigger.service instead.
+Unit=aviso-fetch-trigger.service
+
+[Install]
+WantedBy=timers.target

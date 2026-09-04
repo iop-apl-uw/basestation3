@@ -1,0 +1,16 @@
+# Fail-fast overlap protection for makekml-ssh-worker.service: if the
+# previous run is still active when the timer fires again (e.g. a stalled
+# mission-directory write, or the box is in the middle of an EFS/NFS stall
+# against /home/seaglider -- see ../2026_08_19_iopbase3_incident_summary.md),
+# this call is REFUSED outright instead of queueing behind it or being
+# merged into it. That refusal makes this trigger unit fail, which is what
+# shows up in `systemctl status` / `journalctl -u makekml-ssh-trigger.service`
+# -- nothing is silently swallowed the way a skipped cron tick would be. The
+# still-running worker instance is completely unaffected and runs to
+# completion; the skipped tick is simply lost (no retry, no queueing).
+[Unit]
+Description=Trigger makekml-ssh-worker (fails if worker already running)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl --job-mode=fail start makekml-ssh-worker.service

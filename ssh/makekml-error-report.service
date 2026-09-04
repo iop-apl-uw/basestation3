@@ -1,0 +1,17 @@
+# Runs report_makekml_errors.py once a day; see makekml-error-report.timer
+# for the schedule and makekml-systemd-setup.md for installation.
+#
+# Runs as ioprunner:gliders, same as the worker units -- this only needs
+# read access to the journal (via the systemd-journal group) and whatever
+# permission the `mail` command needs to send local mail.
+[Unit]
+Description=Daily MakeKML error report (journal scan, emailed to ioplog@uw.edu)
+
+[Service]
+Type=oneshot
+User=ioprunner
+Group=gliders
+ExecStart=/opt/basestation/bin/python /usr/local/basestation3/ssh/report_makekml_errors.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=makekml-error-report

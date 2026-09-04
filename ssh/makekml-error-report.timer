@@ -1,0 +1,16 @@
+# Replaces the old crontab entry (run from gbs):
+#   0 11 * * * /opt/basestation/bin/python /home/gbs/basestation/bin/scan_makekml_errors.py \
+#       --since-days 1.0 --only-if-errors /var/log/MakeKML.log
+#
+# Scheduled an hour after aviso-fetch.timer / 45 minutes after
+# makekml-ssh.timer, same as the old cron entry, so both jobs have finished.
+[Unit]
+Description=Run makekml-error-report daily
+
+[Timer]
+OnCalendar=*-*-* 11:00:00
+AccuracySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
