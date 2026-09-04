@@ -37,12 +37,17 @@ from datetime import UTC, datetime
 
 # BaseLog.py's timestamp style, e.g.:
 #   22:10:06 23 Aug 2023 UTC: ERROR: Could not process inbox:
+#   16:40:47 04 Sep 2026 GMT: INFO: Removing ...
+# Despite the workers setting TZ=UTC, glibc's tzset() labels it "GMT" on
+# some hosts/tzdata versions (confirmed live on iopbase3) -- same quirk
+# scan_makekml_errors.py's docstring already called out for the old
+# MakeKML.log file, so both labels are matched here too.
 # journald wraps each physical line of a worker's stdout in its own journal
 # entry, but `journalctl -o cat` reprints just the MESSAGE field one per
 # line, so the resulting text stream matches the old log file's layout
 # closely enough to reuse the same block-grouping approach.
 _TIMESTAMP_LINE_RE = re.compile(
-    r"^(?P<ts>\d{2}:\d{2}:\d{2} \d{2} \w{3} \d{4}) UTC: (?P<level>[A-Z]+): (?P<message>.*)$"
+    r"^(?P<ts>\d{2}:\d{2}:\d{2} \d{2} \w{3} \d{4}) (?:UTC|GMT): (?P<level>[A-Z]+): (?P<message>.*)$"
 )
 _BARE_LEVEL_LINE_RE = re.compile(r"^(?P<level>DEBUG|INFO|WARNING|ERROR|CRITICAL): (?P<message>.*)$")
 _EXCEPTION_LINE_RE = re.compile(r"^(?P<exc>[A-Za-z_][\w.]*): ?(?P<msg>.*)$")
