@@ -29,8 +29,8 @@
 # Starts a throwaway Docker container, reachable over SSH, staged through
 # Readme.md's "Basestation source" section - so a live demo can start typing
 # right at the "## Installation" heading (install uv, create the venv,
-# uv sync, Chromium, login/logout scripts) instead of re-deriving everything
-# from a bare box. See demo/Readme.md.
+# uv sync, login/logout scripts) instead of re-deriving everything from a
+# bare box. See demo/Readme.md.
 #
 # Usage: demo/start_demo_container.sh [--pilot-user <user>] [--port <port>]
 

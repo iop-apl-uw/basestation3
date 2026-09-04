@@ -12,8 +12,7 @@ sets up, by calling the same [install/lib_install.sh](../install/lib_install.sh)
 functions (see [stage_prereqs.sh](stage_prereqs.sh)). It stops there, so a
 live demo can start typing right at the
 ["## Installation"](../Readme.md#installation) heading: installing `uv`,
-creating the `uv`-managed venv, `uv sync`, Chromium for kaleido, and the
-login/logout scripts.
+creating the `uv`-managed venv, `uv sync`, and the login/logout scripts.
 
 ## Usage
 

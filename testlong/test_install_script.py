@@ -145,38 +145,46 @@ def test_install_venv_works(installed_container: dockerutils.Container) -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_install_chromium_installed(installed_container: dockerutils.Container) -> None:
-    """Chromium (needed by kaleido for static plot image export) was installed.
+def test_install_does_not_install_chromium(
+    installed_container: dockerutils.Container,
+) -> None:
+    """Production installs must not install Chromium/Playwright.
 
-    Regression guard for the gap this test suite predates: the script used to
-    produce a basestation that could run Base.py but couldn't render any plot
-    images, since kaleido>=1.0 needs an externally supplied Chromium and
-    nothing installed one. The fixture's own smoke_test call already renders a
-    plot end-to-end; this asserts the specific artifact (a world-readable
-    Chromium binary under /opt/playwright-browsers) that makes that possible.
+    Regression guard for the opposite gap this test used to guard: Chromium
+    was previously installed for kaleido's static plot image export (a
+    now-deprecated, low-volume path - see
+    PlotUtilsPlotly.write_output_files()) and, more recently, for
+    tests/test_MagCal.py's Playwright click-test - but that click-test is a
+    dev/CI-only concern (pyproject.toml's "ci" extras group), not something
+    a production glider host ever runs. install/lib_install.sh's
+    setup_uv_venv() does a plain `uv sync --active` (no `--extra ci`), so
+    neither the playwright package nor a Chromium binary should end up on a
+    production host at all.
 
     Args:
         installed_container: Container the install script already ran in.
 
     Raises:
-        AssertionError: If no executable Chromium binary is found, or it isn't
-            world-readable/executable (needed since glider accounts, not just
-            the pilot user, run plot generation at logout).
+        AssertionError: If a Chromium binary is found under
+            /opt/playwright-browsers, or the playwright package is
+            importable from the installed venv.
     """
     find_chrome = (
-        "find /opt/playwright-browsers -iname chrome -type f -executable | sort | tail -1"
+        "find /opt/playwright-browsers -iname chrome -type f -executable 2>/dev/null | sort | tail -1"
     )
     result = dockerutils.exec_in(
         installed_container.container_id, ["sh", "-c", find_chrome]
     )
     chrome_path = result.stdout.strip()
-    assert result.returncode == 0 and chrome_path, result.stdout + result.stderr
+    assert not chrome_path, f"Chromium unexpectedly installed at {chrome_path}"
 
-    perm_result = dockerutils.exec_in(
-        installed_container.container_id, ["stat", "-c", "%A", chrome_path]
+    playwright_result = dockerutils.exec_in(
+        installed_container.container_id,
+        ["/opt/basestation/bin/python", "-c", "import playwright"],
     )
-    perms = perm_result.stdout.strip()
-    assert perms[-3:] in ("r-x", "rwx"), f"{chrome_path} not world-readable/executable: {perms}"
+    assert playwright_result.returncode != 0, (
+        "playwright package unexpectedly importable from the production venv"
+    )
 
 
 def test_install_login_logout_scripts_copied(installed_container: dockerutils.Container) -> None:

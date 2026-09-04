@@ -128,9 +128,7 @@ comment out the following lines:
 
 The steps from here through [login/logout scripts](#loginlogout-scripts) -
 system packages, the `gliders` group, the PAM edit above, the
-`/usr/local/basestation3` checkout, the `uv` venv setup, Chromium (needed by
-kaleido for static plot image export - see
-[Installing Chromium](#installing-chromium) below), and installing the
+`/usr/local/basestation3` checkout, the `uv` venv setup, and installing the
 login/logout scripts - can be automated with
 `install/install_basestation.sh` / `install/update_basestation.sh` - see
 [install/Readme.md](install/Readme.md) for usage and what they don't cover.
@@ -217,38 +215,6 @@ To test that all is working:
 ```/opt/basestation/bin/python Base.py --help```
 
 and you should see the help message for ```Base.py```
-
-
-### Installing Chromium
-
-Needed because kaleido (used for static plot image export - png/jpg/webp/svg)
-no longer bundles its own browser as of kaleido 1.x; it renders through an
-externally supplied Chromium instead.
-```
-sudo mkdir -p /opt/playwright-browsers
-sudo chown -R <user>:gliders /opt/playwright-browsers
-export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
-playwright install-deps
-playwright install chromium
-sudo chmod -R o+rx /opt/playwright-browsers
-```
-Next, setup the site sitecustomize.py script in the virtual env.
-```
-python3 -c "import site; print(site.getsitepackages()[0])" | xargs -I{} sh -c 'cat >> {}/sitecustomize.py << "EOF"
-import os, glob
-_matches = sorted(glob.glob("/opt/playwright-browsers/chromium-*/*/chrome"))
-if _matches:
-    os.environ.setdefault("BROWSER_PATH", _matches[-1])
-EOF'
-```
-Finally, confirm that the browser cache is set correctly
-``` 
-python3 -c "import os; print(os.environ.get('BROWSER_PATH'))"
-```
-You should see something like:
-```
-/opt/playwright-browsers/chromium-1228/chrome-linux/chrome
-```
 
 ### login/logout scripts
 

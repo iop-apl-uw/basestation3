@@ -111,21 +111,56 @@ _FIND_AND_LAUNCH_CHROME = (
 )
 
 
-def test_runtime_image_chromium_launches(runtime_image: dockerutils.RuntimeImage) -> None:
-    """Chromium (installed for kaleido static plot image export) launches headless.
+def test_ci_image_chromium_launches(ci_image: str) -> None:
+    """Chromium (installed for tests/test_MagCal.py's Playwright click-test) launches headless.
 
     Mirrors .github/workflows/action.yml's "Verify Chromium launches" step, so a
-    future dependency bump that breaks image generation (e.g. a Playwright/kaleido
-    version mismatch, or a missing OS runtime library) fails here instead of
-    silently degrading to missing plot images in production - see
-    PlotUtilsPlotly.py's KaleidoServer, which logs an error rather than crashing
-    when Chrome can't be found.
+    future dependency bump that breaks it (e.g. a Playwright version mismatch, or
+    a missing OS runtime library) fails here instead of silently degrading to a
+    self-skipped click-test in CI. Independent of kaleido, which no longer needs
+    a managed Chrome server - see PlotUtilsPlotly.write_output_files(). Chromium
+    lives only in the ci stage now, not runtime - production images never carry
+    it (see testlong/test_install_script.py::test_install_does_not_install_chromium
+    for the equivalent bare-metal-install guard).
+
+    Args:
+        ci_image: Built ci-stage image fixture.
+
+    Raises:
+        AssertionError: If no Chromium executable is found, or it fails to launch.
+    """
+    result = dockerutils.run_container(ci_image, ["sh", "-c", _FIND_AND_LAUNCH_CHROME])
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_runtime_image_does_not_include_chromium(
+    runtime_image: dockerutils.RuntimeImage,
+) -> None:
+    """Runtime image must not carry Chromium/Playwright - it's a dev/CI-only concern.
+
+    Regression guard for the split introduced when Chromium moved out of the
+    shared `base` stage into `ci` only: a future edit that accidentally moves
+    the `RUN uv run playwright install --with-deps chromium` step (or an
+    `--extra ci` sync) back into `base`/`runtime` would silently bloat every
+    production image without failing anything else.
 
     Args:
         runtime_image: Built runtime-stage image fixture.
 
     Raises:
-        AssertionError: If no Chromium executable is found, or it fails to launch.
+        AssertionError: If a Chromium binary is found, or playwright imports.
     """
-    result = dockerutils.run_container(runtime_image.tag, ["sh", "-c", _FIND_AND_LAUNCH_CHROME])
-    assert result.returncode == 0, result.stdout + result.stderr
+    find_result = dockerutils.run_container(
+        runtime_image.tag,
+        ["sh", "-c", "find /opt/playwright-browsers -iname chrome -type f 2>/dev/null"],
+    )
+    assert not find_result.stdout.strip(), (
+        f"Chromium unexpectedly present: {find_result.stdout}"
+    )
+
+    import_result = dockerutils.run_container(
+        runtime_image.tag, [".venv/bin/python", "-c", "import playwright"]
+    )
+    assert import_result.returncode != 0, (
+        "playwright package unexpectedly importable in the runtime image"
+    )

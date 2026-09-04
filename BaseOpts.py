@@ -1054,7 +1054,7 @@ global_options_dict: dict[str, options_t] = {
         },
     ),
     "fm_plot_engine": options_t(
-        "matplotlib",
+        "plotly",
         {"Base", "FlightModelCLI", "Reprocess"},
         ("--fm_plot_engine",),
         str,
@@ -1436,9 +1436,6 @@ global_options_dict: dict[str, options_t] = {
             "option_group": "plotting",
         },
     ),
-    # After profiling on an AWS EC2 instanace on NFS mounted drive, typical
-    # max times are 85 secs - so lower from 300 to stall less on an actual
-    # timeout
     "plot_mission_timeout": options_t(
         600,
         {
@@ -1452,7 +1449,9 @@ global_options_dict: dict[str, options_t] = {
         {
             "option_group": "plotting",
             "section": "plotting",
-            "help": "Timeout in seconds for the any individual mission plot",
+            "help": "No longer used - static-image timeout protection was removed "
+            "along with kaleido/Chrome server management",
+            "action": DeprecateAction,
         },
     ),
     "plot_dive_timeout": options_t(
@@ -1468,7 +1467,9 @@ global_options_dict: dict[str, options_t] = {
         {
             "section": "plotting",
             "option_group": "plotting",
-            "help": "Timeout in seconds for the any individual dive plot",
+            "help": "No longer used - static-image timeout protection was removed "
+            "along with kaleido/Chrome server management",
+            "action": DeprecateAction,
         },
     ),
     # End plotting related

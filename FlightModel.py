@@ -5221,66 +5221,54 @@ def main(
         alert_dive_num = dive_num
 
     # simulate adding one dive at a time to the FDD as if this were a deployment
-    # Keep a single warm Chrome/kaleido instance alive for the whole batch of
-    # figures below instead of paying a Chrome cold-start per figure (mirrors
-    # BasePlot.py's plot_dives()/plot_mission()); only relevant for the
-    # plotly engine - the matplotlib engine never touches kaleido.
-    kaleido_server = None
-    if base_opts.fm_plot_engine == "plotly":
-        kaleido_server = PlotUtilsPlotly.KaleidoServer(base_opts)
-        kaleido_server.start_kaleido_global_server()
-    try:
-        ret_val = 0
-        log_debug(f"Starting main loop new_dive_nums:{new_dive_nums}")
-        for new_dive_num in new_dive_nums:
-            if exit_event and exit_event.is_set():
-                log_info("Exit requested")
-                ret_val = 1
-                break
-            log_debug("Main loop dive %d" % new_dive_num)
-            if force_alerts:  # for debugging alerts
-                alert_dive_num = new_dive_num
-            ret_val = process_dive(
-                base_opts,
-                new_dive_num,
-                updated_dives_d,
-                nc_files_created,
-                alert_dive_num,
-                exit_event=exit_event,
-            )
-            if ret_val:
-                log_error("process_dive returned %d - bailing out" % ret_val)
-                break
-        log_debug("Main loop ended")
-        if not ret_val and len(list(updated_dives_d.keys())) > 0:
-            # recompute the keys() in case the process_dive() calls removed them by side-effect
-            # any residual updated files
-            # in case there are no new dives but some dives were updated (via external reprocessing)
-            log_debug(f"Processing remaining dives {list(updated_dives_d.keys())}")
-            ret_val = process_dive(
-                base_opts,
-                None,
-                updated_dives_d,
-                nc_files_created,
-                alert_dive_num,
-                exit_event=exit_event,
-            )
-            log_debug("Done processing remaining dives")
+    ret_val = 0
+    log_debug(f"Starting main loop new_dive_nums:{new_dive_nums}")
+    for new_dive_num in new_dive_nums:
+        if exit_event and exit_event.is_set():
+            log_info("Exit requested")
+            ret_val = 1
+            break
+        log_debug("Main loop dive %d" % new_dive_num)
+        if force_alerts:  # for debugging alerts
+            alert_dive_num = new_dive_num
+        ret_val = process_dive(
+            base_opts,
+            new_dive_num,
+            updated_dives_d,
+            nc_files_created,
+            alert_dive_num,
+            exit_event=exit_event,
+        )
+        if ret_val:
+            log_error("process_dive returned %d - bailing out" % ret_val)
+            break
+    log_debug("Main loop ended")
+    if not ret_val and len(list(updated_dives_d.keys())) > 0:
+        # recompute the keys() in case the process_dive() calls removed them by side-effect
+        # any residual updated files
+        # in case there are no new dives but some dives were updated (via external reprocessing)
+        log_debug(f"Processing remaining dives {list(updated_dives_d.keys())}")
+        ret_val = process_dive(
+            base_opts,
+            None,
+            updated_dives_d,
+            nc_files_created,
+            alert_dive_num,
+            exit_event=exit_event,
+        )
+        log_debug("Done processing remaining dives")
 
-        save_flight_database(
-            base_opts
-        )  # save any updated history, ab_grid_cache, and dive_data values
+    save_flight_database(
+        base_opts
+    )  # save any updated history, ab_grid_cache, and dive_data values
 
-        if not ret_val and len(grid_dive_sets):
-            # now that everything is buttoned up try solving these grids the user is interested in
-            dump_checkpoint_data_matfiles = True
-            for dive_set in grid_dive_sets:
-                if all(map(lambda d: d in flight_dive_data_d, dive_set)):
-                    log_info(f"Solving a/b grid for {dive_set}")
-                    solve_ab_grid(base_opts, dive_set, 99)
-    finally:
-        if kaleido_server is not None:
-            kaleido_server.stop_kaleido_global_server()
+    if not ret_val and len(grid_dive_sets):
+        # now that everything is buttoned up try solving these grids the user is interested in
+        dump_checkpoint_data_matfiles = True
+        for dive_set in grid_dive_sets:
+            if all(map(lambda d: d in flight_dive_data_d, dive_set)):
+                log_info(f"Solving a/b grid for {dive_set}")
+                solve_ab_grid(base_opts, dive_set, 99)
     return ret_val
 
 
@@ -5431,116 +5419,108 @@ def replot_from_flight_database(base_opts: BaseOpts.BaseOptions) -> int:
         "replot: skipping DAC plots (never cached - see generate_dac_plots())"
     )
 
-    kaleido_server = None
-    if base_opts.fm_plot_engine == "plotly":
-        kaleido_server = PlotUtilsPlotly.KaleidoServer(base_opts)
-        kaleido_server.start_kaleido_global_server()
-    try:
-        last_W_misfit_RMS = None
-        for dive_num in sorted(ab_grid_cache_d.keys()):
-            W_misfit_RMS, ia, ib, min_misfit, dive_set, pitch_diff = ab_grid_cache_d[
-                dive_num
-            ]
-            dd = flight_dive_data_d[dive_num]
-            ab_grid_plot_data = ABGridPlotData(
-                dive_num=dive_num,
-                ia=ia,
-                ib=ib,
-                min_misfit=min_misfit,
-                W_misfit_RMS=W_misfit_RMS,
-                last_W_misfit_RMS=last_W_misfit_RMS,
-                hd_a_grid=hd_a_grid,
-                hd_b_grid=hd_b_grid,
-                HD_A=np.asarray(HD_A),
-                HD_B=np.asarray(HD_B),
-                w_misfit_rms_levels=np.asarray(w_misfit_rms_levels),
-                prev_w_misfit_rms_levels=(
-                    np.asarray(prev_w_misfit_rms_levels)
-                    if prev_w_misfit_rms_levels is not None
-                    else None
-                ),
-                ab_tolerance=ab_tolerance,
-                w_rms_func_bad=w_rms_func_bad,
-                mass_comp=flight_consts_d["mass_comp"],
-                pressmin=pressmin,
-                pressmax=pressmax,
-                dive_set=dive_set,
-                pitch_diff=pitch_diff,
-                compare_velo=compare_velo,
-                glider_mission_string=str(glider_mission_string),
-                show_previous_ab_solution=last_W_misfit_RMS is not None,
-                committed_hd_a=dd.hd_a,
-                committed_hd_b=dd.hd_b,
-                volmax=flight_dive_data_d["volmax"],
-                abs_compress=flight_dive_data_d["abs_compress"],
-                hd_c=flight_consts_d["hd_c"],
-                hd_s=flight_consts_d["hd_s"],
-                therm_expan=flight_consts_d["therm_expan"],
-                glider_length=flight_consts_d["glider_length"],
-            )
-            fig = render_ab_grid_plot(base_opts, ab_grid_plot_data, font=font)
-            if base_opts.fm_plot_engine == "plotly":
-                write_figure_plotly(base_opts, "dv%04d_ab" % dive_num, fig)
-            else:
-                write_figure("dv%04d_ab.webp" % dive_num)
-                plt.clf()
-            last_W_misfit_RMS = W_misfit_RMS
+    last_W_misfit_RMS = None
+    for dive_num in sorted(ab_grid_cache_d.keys()):
+        W_misfit_RMS, ia, ib, min_misfit, dive_set, pitch_diff = ab_grid_cache_d[
+            dive_num
+        ]
+        dd = flight_dive_data_d[dive_num]
+        ab_grid_plot_data = ABGridPlotData(
+            dive_num=dive_num,
+            ia=ia,
+            ib=ib,
+            min_misfit=min_misfit,
+            W_misfit_RMS=W_misfit_RMS,
+            last_W_misfit_RMS=last_W_misfit_RMS,
+            hd_a_grid=hd_a_grid,
+            hd_b_grid=hd_b_grid,
+            HD_A=np.asarray(HD_A),
+            HD_B=np.asarray(HD_B),
+            w_misfit_rms_levels=np.asarray(w_misfit_rms_levels),
+            prev_w_misfit_rms_levels=(
+                np.asarray(prev_w_misfit_rms_levels)
+                if prev_w_misfit_rms_levels is not None
+                else None
+            ),
+            ab_tolerance=ab_tolerance,
+            w_rms_func_bad=w_rms_func_bad,
+            mass_comp=flight_consts_d["mass_comp"],
+            pressmin=pressmin,
+            pressmax=pressmax,
+            dive_set=dive_set,
+            pitch_diff=pitch_diff,
+            compare_velo=compare_velo,
+            glider_mission_string=str(glider_mission_string),
+            show_previous_ab_solution=last_W_misfit_RMS is not None,
+            committed_hd_a=dd.hd_a,
+            committed_hd_b=dd.hd_b,
+            volmax=flight_dive_data_d["volmax"],
+            abs_compress=flight_dive_data_d["abs_compress"],
+            hd_c=flight_consts_d["hd_c"],
+            hd_s=flight_consts_d["hd_s"],
+            therm_expan=flight_consts_d["therm_expan"],
+            glider_length=flight_consts_d["glider_length"],
+        )
+        fig = render_ab_grid_plot(base_opts, ab_grid_plot_data, font=font)
+        if base_opts.fm_plot_engine == "plotly":
+            write_figure_plotly(base_opts, "dv%04d_ab" % dive_num, fig)
+        else:
+            write_figure("dv%04d_ab.webp" % dive_num)
+            plt.clf()
+        last_W_misfit_RMS = W_misfit_RMS
 
-        if len(flight_dive_nums) > 1:
-            timestamp = time.strftime(
-                "%d %b %Y %H:%M:%S", time.gmtime(flight_dive_data_d["last_updated"])
-            )
+    if len(flight_dive_nums) > 1:
+        timestamp = time.strftime(
+            "%d %b %Y %H:%M:%S", time.gmtime(flight_dive_data_d["last_updated"])
+        )
 
-            fig = render_vbdbias_plot(
+        fig = render_vbdbias_plot(
+            base_opts,
+            flight_dive_nums,
+            flight_dive_data_d,
+            str(glider_mission_string),
+            timestamp,
+            vbdbias_filter,
+            show_implied_c_vbd,
+            font=font,
+        )
+        if base_opts.fm_plot_engine == "plotly":
+            write_figure_plotly(base_opts, "eng_FM_vbdbias", fig)
+        else:
+            write_figure("eng_FM_vbdbias.webp")
+            plt.clf()
+
+        if glider_type is not OCULUS:  # No reason to plot this figure for OCULUS
+            fig = render_abs_compress_plot(
                 base_opts,
                 flight_dive_nums,
                 flight_dive_data_d,
                 str(glider_mission_string),
                 timestamp,
-                vbdbias_filter,
-                show_implied_c_vbd,
                 font=font,
             )
             if base_opts.fm_plot_engine == "plotly":
-                write_figure_plotly(base_opts, "eng_FM_vbdbias", fig)
+                write_figure_plotly(base_opts, "eng_FM_abs_compress", fig)
             else:
-                write_figure("eng_FM_vbdbias.webp")
+                write_figure("eng_FM_abs_compress.webp")
                 plt.clf()
 
-            if glider_type is not OCULUS:  # No reason to plot this figure for OCULUS
-                fig = render_abs_compress_plot(
-                    base_opts,
-                    flight_dive_nums,
-                    flight_dive_data_d,
-                    str(glider_mission_string),
-                    timestamp,
-                    font=font,
-                )
-                if base_opts.fm_plot_engine == "plotly":
-                    write_figure_plotly(base_opts, "eng_FM_abs_compress", fig)
-                else:
-                    write_figure("eng_FM_abs_compress.webp")
-                    plt.clf()
-
-            fig = render_ab_dives_plot(
-                base_opts,
-                flight_dive_nums,
-                flight_dive_data_d,
-                ab_grid_cache_d,
-                hd_a_grid,
-                hd_b_grid,
-                str(glider_mission_string),
-                timestamp,
-                font=font,
-            )
-            if base_opts.fm_plot_engine == "plotly":
-                write_figure_plotly(base_opts, "eng_FM_ab_dives", fig)
-            else:
-                write_figure("eng_FM_ab_dives.webp")
-                plt.clf()
-    finally:
-        if kaleido_server is not None:
-            kaleido_server.stop_kaleido_global_server()
+        fig = render_ab_dives_plot(
+            base_opts,
+            flight_dive_nums,
+            flight_dive_data_d,
+            ab_grid_cache_d,
+            hd_a_grid,
+            hd_b_grid,
+            str(glider_mission_string),
+            timestamp,
+            font=font,
+        )
+        if base_opts.fm_plot_engine == "plotly":
+            write_figure_plotly(base_opts, "eng_FM_ab_dives", fig)
+        else:
+            write_figure("eng_FM_ab_dives.webp")
+            plt.clf()
 
     return 0
 
@@ -5569,24 +5549,16 @@ def generate_dac_plots(base_opts: BaseOpts.BaseOptions, dive_nums: list[int]) ->
     if not _load_replay_state(base_opts):
         return 1
 
-    kaleido_server = None
-    if base_opts.fm_plot_engine == "plotly":
-        kaleido_server = PlotUtilsPlotly.KaleidoServer(base_opts)
-        kaleido_server.start_kaleido_global_server()
-    try:
-        for dive_num in dive_nums:
-            if dive_num not in ab_grid_cache_d:
-                log_warning(
-                    f"No cached a/b grid solution for dive {dive_num} - "
-                    "run FlightModel normally first; skipping DAC plot"
-                )
-                continue
-            W_misfit_RMS, ia, ib, min_misfit, dive_set, pitch_diff = ab_grid_cache_d[
-                dive_num
-            ]
-            solve_ab_DAC(base_opts, dive_num, W_misfit_RMS, ia, ib, min_misfit)
-    finally:
-        if kaleido_server is not None:
-            kaleido_server.stop_kaleido_global_server()
+    for dive_num in dive_nums:
+        if dive_num not in ab_grid_cache_d:
+            log_warning(
+                f"No cached a/b grid solution for dive {dive_num} - "
+                "run FlightModel normally first; skipping DAC plot"
+            )
+            continue
+        W_misfit_RMS, ia, ib, min_misfit, dive_set, pitch_diff = ab_grid_cache_d[
+            dive_num
+        ]
+        solve_ab_DAC(base_opts, dive_num, W_misfit_RMS, ia, ib, min_misfit)
 
     return 0

@@ -53,11 +53,9 @@ recommended_python_version = (3, 14, 0)
 required_numpy_version = "2.5.0"
 required_scipy_version = "1.18.0"
 
-# PlotUtilsPlotly.py's kaleido atexit-hang workaround
-# (_start_sync_server_without_raw_atexit()) depends on this exact version's
-# internal GlobalKaleidoServer.open()/close() implementation. Re-validate
-# that workaround (and the bounded-render/bounded-close design generally)
-# before bumping this.
+# Pinned kaleido version for static plot image export (fig.write_image()/
+# fig.to_image()); Utils.check_versions() warns on drift. Re-validate
+# PlotUtilsPlotly.py's kaleido-dependent call sites before bumping this.
 validated_kaleido_version = "1.3.0"
 
 

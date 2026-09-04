@@ -6,9 +6,9 @@
 described in the main [Readme.md](../Readme.md)'s "Installation for a
 realtime basestation" section - system packages, the `gliders` group, the
 PAM login edit, the `/usr/local/basestation3` checkout, the `uv` venv setup,
-Chromium (needed by kaleido for static plot image export - see
-[Installing Chromium](../Readme.md#installing-chromium)), and the
-login/logout scripts.
+and the login/logout scripts. Chromium/Playwright are dev/CI-only concerns
+(the `ci` extras group in `pyproject.toml`, used by the test suite's
+browser-click test) and are never installed on a production host.
 
 ## install_basestation.sh
 
@@ -20,8 +20,8 @@ Fresh install, from system packages through
 ## update_basestation.sh
 
 Updates an existing install (git pull the source, re-sync the `uv` venv,
-re-check Chromium, refresh the login/logout scripts if they haven't been
-hand-edited), without repeating the one-time group/PAM/package steps:
+refresh the login/logout scripts if they haven't been hand-edited),
+without repeating the one-time group/PAM/package steps:
 
     sudo install/update_basestation.sh --pilot-user <user>
 

@@ -53,7 +53,6 @@ import CommLog
 import MakeDiveProfiles
 import Plotting
 import PlotUtils
-import PlotUtilsPlotly
 import Sensors
 import Utils
 from BaseLog import (
@@ -132,67 +131,41 @@ def plot_dives(
 
     dive_plot_times: dict[str, float] = collections.defaultdict(float)
 
-    kaleido_server = None
-    if dive_nc_file_names and generate_plots:
-        kaleido_server = PlotUtilsPlotly.KaleidoServer(base_opts)
-        kaleido_server.start_kaleido_global_server()
-    try:
-        for dive_nc_file_name in dive_nc_file_names:
-            log_info(f"Plotting {dive_nc_file_name}")
-            dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
+    for dive_nc_file_name in dive_nc_file_names:
+        log_info(f"Plotting {dive_nc_file_name}")
+        dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
 
-            for plot_name, plot_func in dive_plot_dict.items():
-                # if generate_plots and f_static_plot_generation(base_opts):
-                #     status, msg = is_kaleido_global_server_running()
-                #     if not status:
-                #         log_error(
-                #             f"Problem with Chrome for static plot generation ({msg})",
-                #             alert="CHROME_ISSUE",
-                #             max_count=1,
-                #         )
-                try:
-                    t0 = time.time()
-                    if (
-                        hasattr(base_opts, "stop_processing_event")
-                        and base_opts.stop_processing_event.is_set()
-                    ):
-                        log_warning("Caught SIGUSR1 - bailing out")
-                        return (figs, output_files)
-                except AttributeError:
-                    pass
-                log_debug(f"Trying Dive Plot :{plot_name}")
-                try:
-                    with PlotUtilsPlotly.static_image_timeout(
-                        base_opts.plot_dive_timeout
-                    ):
-                        fig_list, file_list = plot_func(
-                            base_opts,
-                            dive_ncf,
-                            generate_plots=generate_plots,
-                            dbcon=con,
-                        )
-                except PlotUtilsPlotly.PlotTimeout:
-                    log_error(
-                        f"Timeout: image generation failed for {plot_name} after {base_opts.plot_dive_timeout}s",
-                        alert="PLOT_TIMEOUT",
-                    )
-                    if kaleido_server is not None:
-                        kaleido_server.reset_kaleido_server()
-                except KeyboardInterrupt:
+        for plot_name, plot_func in dive_plot_dict.items():
+            try:
+                t0 = time.time()
+                if (
+                    hasattr(base_opts, "stop_processing_event")
+                    and base_opts.stop_processing_event.is_set()
+                ):
+                    log_warning("Caught SIGUSR1 - bailing out")
                     return (figs, output_files)
-                except Exception:
-                    DEBUG_PDB_F()
-                    log_error(f"{plot_name} failed {dive_nc_file_name}", "exc")
-                else:
-                    for figure in Utils.flatten(fig_list):
-                        figs.append(figure)
-                    for file_name in Utils.flatten(file_list):
-                        output_files.append(file_name)
-                finally:
-                    dive_plot_times[plot_name] += time.time() - t0
-    finally:
-        if kaleido_server is not None:
-            kaleido_server.stop_kaleido_global_server()
+            except AttributeError:
+                pass
+            log_debug(f"Trying Dive Plot :{plot_name}")
+            try:
+                fig_list, file_list = plot_func(
+                    base_opts,
+                    dive_ncf,
+                    generate_plots=generate_plots,
+                    dbcon=con,
+                )
+            except KeyboardInterrupt:
+                return (figs, output_files)
+            except Exception:
+                DEBUG_PDB_F()
+                log_error(f"{plot_name} failed {dive_nc_file_name}", "exc")
+            else:
+                for figure in Utils.flatten(fig_list):
+                    figs.append(figure)
+                for file_name in Utils.flatten(file_list):
+                    output_files.append(file_name)
+            finally:
+                dive_plot_times[plot_name] += time.time() - t0
 
     if len(dive_nc_file_names):
         for plot_name, elapsed_time in dive_plot_times.items():
@@ -241,57 +214,39 @@ def plot_mission(
     figs: list[plotly.graph_objects.Figure] = []
     output_files: list[pathlib.Path] = []
     mission_plot_times: dict[str, float] = {}
-    kaleido_server = None
-    if generate_plots:
-        kaleido_server = PlotUtilsPlotly.KaleidoServer(base_opts)
-        kaleido_server.start_kaleido_global_server()
 
-    try:
-        for plot_name, plot_func in mission_plot_dict.items():
-            try:
-                if (
-                    hasattr(base_opts, "stop_processing_event")
-                    and base_opts.stop_processing_event.is_set()
-                ):
-                    log_warning("Caught SIGUSR1 - bailing out")
-                    return (figs, output_files)
-            except AttributeError:
-                pass
-            log_debug(f"Trying Mission Plot: {plot_name}")
-            try:
-                t0 = time.time()
-                with PlotUtilsPlotly.static_image_timeout(
-                    base_opts.plot_mission_timeout
-                ):
-                    fig_list, file_list = plot_func(
-                        base_opts,
-                        mission_str,
-                        dive=dive,
-                        generate_plots=generate_plots,
-                        dbcon=con,
-                    )
-            except PlotUtilsPlotly.PlotTimeout:
-                log_error(
-                    f"Timeout: image generation failed for {plot_name} after {base_opts.plot_mission_timeout}s",
-                    alert="PLOT_TIMEOUT",
-                )
-                if kaleido_server is not None:
-                    kaleido_server.reset_kaleido_server()
-            except KeyboardInterrupt:
+    for plot_name, plot_func in mission_plot_dict.items():
+        try:
+            if (
+                hasattr(base_opts, "stop_processing_event")
+                and base_opts.stop_processing_event.is_set()
+            ):
+                log_warning("Caught SIGUSR1 - bailing out")
                 return (figs, output_files)
-            except Exception:
-                log_error(f"{plot_name}", "exc")
-                DEBUG_PDB_F()
-            else:
-                for figure in fig_list:
-                    figs.append(figure)
-                for file_name in file_list:
-                    output_files.append(file_name)
-            finally:
-                mission_plot_times[plot_name] = time.time() - t0
-    finally:
-        if kaleido_server is not None:
-            kaleido_server.stop_kaleido_global_server()
+        except AttributeError:
+            pass
+        log_debug(f"Trying Mission Plot: {plot_name}")
+        try:
+            t0 = time.time()
+            fig_list, file_list = plot_func(
+                base_opts,
+                mission_str,
+                dive=dive,
+                generate_plots=generate_plots,
+                dbcon=con,
+            )
+        except KeyboardInterrupt:
+            return (figs, output_files)
+        except Exception:
+            log_error(f"{plot_name}", "exc")
+            DEBUG_PDB_F()
+        else:
+            for figure in fig_list:
+                figs.append(figure)
+            for file_name in file_list:
+                output_files.append(file_name)
+        finally:
+            mission_plot_times[plot_name] = time.time() - t0
     for plot_name, elapsed_time in mission_plot_times.items():
         log_info(f"Mission {plot_name} took {elapsed_time:.2f} secs")
     if dbcon is None:

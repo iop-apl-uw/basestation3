@@ -30,8 +30,7 @@
 # "Installation for a realtime basestation" section of Readme.md:
 # system packages, the gliders group, the PAM login edit, the
 # /usr/local/basestation3 checkout, the uv-managed python venv at
-# /opt/basestation, Chromium (for kaleido static plot image export), and
-# the login/logout scripts.
+# /opt/basestation, and the login/logout scripts.
 #
 # Does NOT cover: chroot jail setup, Basestation2 coexistence,
 # rawxfer/Sensors builds, external repos, modem setup, or Commission.py -
@@ -82,8 +81,6 @@ add_user_to_gliders_group
 patch_pam_login
 checkout_source install
 setup_uv_venv
-install_playwright_chromium
-configure_browser_path_hook
 install_login_logout_scripts
 smoke_test
 

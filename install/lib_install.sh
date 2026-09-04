@@ -38,7 +38,6 @@ BASESTATION_SHIM_DIR="/usr/local/basestation"
 LOGIN_LOGOUT_SRC_DIR="$BASESTATION_DIR/login_logout_scripts"
 VENV_DIR="/opt/basestation"
 PYTHON_VERSIONS_DIR="/opt/python_versions"
-PLAYWRIGHT_BROWSERS_DIR="/opt/playwright-browsers"
 GLIDERS_GROUP="gliders"
 DEFAULT_SOURCE_URL="https://github.com/iop-apl-uw/basestation3.git"
 
@@ -220,77 +219,16 @@ setup_uv_venv() {
             # venv to fix it, which can fail with a permission error partway
             # through (this is the "failed to remove directory /opt/basestation:
             # Permission denied" quirk Readme.md warns about).
+            #
+            # No --extra here: the "ci" extras group (pytest/ruff/ty/
+            # playwright) is a dev/CI-only concern - production installs
+            # never run the test suite or need Chromium (kaleido static
+            # image export is a deprecated, low-volume path; see
+            # PlotUtilsPlotly.write_output_files()).
             cd "$BASESTATION_DIR"
             uv venv --clear "$VENV_DIR"
             VIRTUAL_ENV="$VENV_DIR" uv sync --active
         '
-}
-
-# Installs Chromium for kaleido's static plot image export (png/jpg/webp/svg
-# - kaleido>=1.0 no longer bundles its own browser, see
-# PlotUtilsPlotly.py::KaleidoServer). Mirrors Readme.md's "Installing
-# Chromium" section and the equivalent .github/workflows/action.yml step.
-#
-# Unlike setup_uv_venv, this runs as root rather than via run_as_pilot:
-# `playwright install --with-deps` apt-get installs Chromium's runtime
-# libraries (nss, atk, ...), which needs root. The download itself is
-# written to $PLAYWRIGHT_BROWSERS_DIR (not the pilot user's home), so
-# running the whole step as root doesn't change what gets installed - only
-# who owns it, which is fixed up below.
-install_playwright_chromium() {
-    require_root
-    require_pilot_user
-    if [ ! -x "$VENV_DIR/bin/python3" ]; then
-        log_error "no venv found at $VENV_DIR - run setup_uv_venv first"
-        exit 1
-    fi
-
-    mkdir -p "$PLAYWRIGHT_BROWSERS_DIR"
-
-    # Uses the venv's own `python -m playwright` rather than `uv run
-    # playwright ...`: `uv` itself was installed into the pilot user's
-    # $HOME/.local/bin by setup_uv_venv, not onto root's PATH, and this step
-    # has to run as root (see comment above). $VENV_DIR/bin/python3 already
-    # has playwright installed (a core project dependency synced by
-    # setup_uv_venv), so no `uv` lookup is needed here at all.
-    log_info "installing Chromium for static plot image export (this can take a while)"
-    PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR" \
-        "$VENV_DIR/bin/python3" -m playwright install --with-deps chromium
-
-    chown -R "$PILOT_USER:$GLIDERS_GROUP" "$PLAYWRIGHT_BROWSERS_DIR"
-    chmod -R o+rx "$PLAYWRIGHT_BROWSERS_DIR"
-    log_info "Chromium installed at $PLAYWRIGHT_BROWSERS_DIR"
-}
-
-# Adds a sitecustomize.py hook to the venv's site-packages that resolves
-# BROWSER_PATH from $PLAYWRIGHT_BROWSERS_DIR at interpreter startup - so
-# plot generation finds Chromium without every caller having to set
-# PLAYWRIGHT_BROWSERS_PATH/BROWSER_PATH by hand (glider logout scripts,
-# cron, Commission.py, etc). Idempotent: skips if already present.
-configure_browser_path_hook() {
-    require_pilot_user
-    if [ ! -x "$VENV_DIR/bin/python3" ]; then
-        log_error "no venv found at $VENV_DIR - run setup_uv_venv first"
-        exit 1
-    fi
-
-    local site_packages sitecustomize
-    site_packages="$("$VENV_DIR/bin/python3" -c 'import site; print(site.getsitepackages()[0])')"
-    sitecustomize="$site_packages/sitecustomize.py"
-
-    if [ -f "$sitecustomize" ] && grep -q "BROWSER_PATH" "$sitecustomize" 2>/dev/null; then
-        log_info "BROWSER_PATH hook already present in $sitecustomize"
-        return 0
-    fi
-
-    log_info "adding BROWSER_PATH hook to $sitecustomize"
-    cat >>"$sitecustomize" <<EOF
-import os, glob
-_matches = sorted(glob.glob("$PLAYWRIGHT_BROWSERS_DIR/chromium-*/*/chrome"))
-if _matches:
-    os.environ.setdefault("BROWSER_PATH", _matches[-1])
-EOF
-    chown "$PILOT_USER:$GLIDERS_GROUP" "$sitecustomize"
 }
 
 # Installs (or refreshes) the login/logout shim scripts at
@@ -343,29 +281,4 @@ smoke_test() {
         exit 1
     fi
     log_info "smoke test passed"
-
-    log_info "running Chromium smoke test: static plot image export"
-    local browser_path="" f
-    for f in "$PLAYWRIGHT_BROWSERS_DIR"/chromium-*/*/chrome; do
-        [ -x "$f" ] && browser_path="$f"
-    done
-    if [ -z "$browser_path" ] || [ ! -x "$browser_path" ]; then
-        log_error "no Chromium executable found under $PLAYWRIGHT_BROWSERS_DIR - run install_playwright_chromium"
-        exit 1
-    fi
-    set +e
-    out="$(run_as_pilot env BROWSER_PATH="$browser_path" "$VENV_DIR/bin/python" -c '
-import plotly.graph_objects as go
-fig = go.Figure(data=[go.Scatter(x=[1, 2, 3], y=[1, 3, 2])])
-fig.write_image("/tmp/basestation_install_smoke_test.png", width=400, height=300)
-' 2>&1)"
-    status=$?
-    set -e
-    if [ "$status" -ne 0 ] || [ ! -s /tmp/basestation_install_smoke_test.png ]; then
-        log_error "Chromium smoke test failed (exit $status). Output:"
-        printf '%s\n' "$out" | tail -n 40 >&2
-        exit 1
-    fi
-    rm -f /tmp/basestation_install_smoke_test.png
-    log_info "Chromium smoke test passed"
 }

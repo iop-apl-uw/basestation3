@@ -68,7 +68,6 @@ dependencies = [
     # To match the adcp requirements
     "h5py==3.16.0",
     "q2netcdf", #Rockland Q file to netcdf convertor
-    "playwright>=1.61.0",
     "pillow",  # Used it image verification on the CI pipeline
     # WKB-stretched CTD sampling schedule dive plot
     "ctd_sampling",
@@ -94,6 +93,11 @@ ci = [
    "ruff==0.15.17",
    ## Static Typing
    "ty==0.0.32", ## Latest
+   ## Chromium provisioning for tests/test_MagCal.py's browser-click test
+   ## (dev/CI only - production installs never need Chromium; kaleido's
+   ## static image export is a deprecated, low-volume path, see
+   ## PlotUtilsPlotly.write_output_files())
+   "playwright>=1.61.0",
 ]
 dev = [
     ## Documentation (fill in)

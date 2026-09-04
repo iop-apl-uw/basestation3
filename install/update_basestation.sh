@@ -27,11 +27,10 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # Updates an existing realtime basestation3 install: pulls the latest
-# source, re-syncs the uv venv, re-checks Chromium (needed by kaleido for
-# static plot image export - a no-op if already installed at the pinned
-# version), and refreshes the login/logout scripts (if they haven't been
-# hand-edited since install). Does NOT repeat the one-time system package /
-# gliders group / PAM steps - see install_basestation.sh for a fresh
+# source, re-syncs the uv venv, and refreshes the login/logout scripts (if
+# they haven't been hand-edited since install). Does NOT repeat the
+# one-time system package / gliders group / PAM steps - see
+# install_basestation.sh for a fresh
 # install.
 
 set -euo pipefail
@@ -78,8 +77,6 @@ log_info "skipping PAM login edit (update mode)"
 
 checkout_source update
 setup_uv_venv
-install_playwright_chromium
-configure_browser_path_hook
 install_login_logout_scripts
 smoke_test
 

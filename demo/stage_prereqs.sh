@@ -33,8 +33,7 @@
 # lib_install.sh functions install_basestation.sh itself uses, so the demo's
 # "before" state can't drift from the real install path.
 #
-# Deliberately stops there: does NOT call setup_uv_venv,
-# install_playwright_chromium, configure_browser_path_hook, or
+# Deliberately stops there: does NOT call setup_uv_venv or
 # install_login_logout_scripts - those are the steps the live demo walks
 # through by hand from "## Installation" onward.
 #

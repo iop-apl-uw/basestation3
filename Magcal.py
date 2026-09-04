@@ -57,7 +57,6 @@ import BaseOpts
 import BaseOptsType
 import CommLog
 import PlotUtils
-import PlotUtilsPlotly
 import RegressVBD
 import Utils
 from BaseLog import (
@@ -106,19 +105,9 @@ def magcal(
 
     if fig and doplot == 'png':
         try:
-            imgs = PlotUtilsPlotly.bounded_render(
-                lambda: fig.to_image(format="png"),
-                PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS,
-            )
-        except PlotUtilsPlotly.RenderTimeout:
-            log_error(
-                f"Timeout: static image generation failed for magcal plot {title} "
-                f"after {PlotUtilsPlotly.DEFAULT_STATIC_IMAGE_TIMEOUT_SECS}s",
-                alert="PLOT_TIMEOUT",
-            )
-            PlotUtilsPlotly.bounded_close_global_server(
-                PlotUtilsPlotly.DEFAULT_KALEIDO_SHUTDOWN_TIMEOUT_SECS
-            )
+            imgs = fig.to_image(format="png")
+        except Exception:
+            log_error(f"Failed to generate static image for magcal plot {title}", "exc")
             imgs = None
     elif fig and doplot == 'html':
         imgs = fig.to_html(
