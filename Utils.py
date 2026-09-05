@@ -1953,9 +1953,24 @@ def estimate_endurance(
             f"Non-sensical dive time remaining estimate ({secs_remaining:.2f}) - limiting value"
         )
         secs_remaining = 50 * 3.154e7
-    end_date = time.strftime(
-        "%Y-%m-%dT%H:%M:%SZ", time.gmtime(dive_end[-1] + secs_remaining)
-    )
+    if np.isfinite(dive_end[-1] + secs_remaining):
+        end_date = time.strftime(
+            "%Y-%m-%dT%H:%M:%SZ", time.gmtime(dive_end[-1] + secs_remaining)
+        )
+    else:
+        # m/b (and therefore everything derived from them) are NaN when
+        # gauge_col has no finite values over the requested dive window -
+        # e.g. battery capacity stopped being logged partway through a
+        # mission. Returning a deliberately unparseable end_date lets the
+        # caller's existing `except ValueError` handling around
+        # datetime.strptime(end_date, ...) skip this scenario gracefully,
+        # the same way it already does for a genuinely malformed date -
+        # instead of crashing here in time.gmtime() before ever returning.
+        log_warning(
+            f"Cannot estimate endurance (m={m}, b={b}) - insufficient/missing "
+            "capacity data over the requested dive window"
+        )
+        end_date = "unknown"
     days_remaining = secs_remaining / (24.0 * 3600.0)
 
     return (dives_remaining, days_remaining, end_date)

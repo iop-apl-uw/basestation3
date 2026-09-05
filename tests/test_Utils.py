@@ -27,10 +27,45 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import types
+
+import numpy as np
 import pytest
 import testutils
 
 import Utils
+
+
+def test_estimate_endurance_handles_all_nan_gauge_column(caplog):
+    """A gauge/dive-time column that's entirely NaN over the requested dive
+    window (e.g. battery capacity and time_seconds_on_surface both stopped
+    being logged partway through a long mission - sg244_AMOS_Jul25 dive 835
+    real-world case) must not crash inside time.gmtime() - regression test
+    for a bug where MissionEnergy.py's own graceful-degradation path
+    (catching datetime.strptime failures) never got a chance to run
+    because estimate_endurance() itself raised first.
+    """
+    base_opts = types.SimpleNamespace(
+        mission_energy_dives_back=20,
+        mission_energy_reserve_percent=0.2,
+    )
+    dive_col = np.arange(1, 21, dtype=float)
+    gauge_col = np.full(20, np.nan)
+    # NaN, matching dive_time = time_seconds_on_surface + time_seconds_diving
+    # when time_seconds_on_surface stopped being logged for these dives.
+    dive_times = np.full(20, np.nan)
+    dive_end = np.arange(1_700_000_000, 1_700_000_000 + 20 * 86400, 86400, dtype=float)
+
+    dives_remaining, days_remaining, end_date = Utils.estimate_endurance(
+        base_opts, dive_col, gauge_col, dive_times, dive_end
+    )
+
+    # dives_remaining is whatever garbage int32(nan) casts to (platform/numpy
+    # -dependent, not reliably NaN) - the real bug is downstream of it.
+    assert np.isnan(days_remaining)
+    # Deliberately unparseable, matching MissionEnergy.py's existing
+    # except ValueError handling around datetime.strptime(end_date, ...).
+    assert end_date == "unknown"
 
 
 @pytest.mark.parametrize("test_timeout", (10, None))
