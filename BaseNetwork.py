@@ -539,9 +539,7 @@ var_template = {
 
 
 # TODO: Keep this until its clear the template will not be housed in a json file
-def fix_ints(
-    data_type: type, attrs: dict[str, typing.Any]
-) -> dict[str, typing.Any]:
+def fix_ints(data_type: type, attrs: dict[str, typing.Any]) -> dict[str, typing.Any]:
     """Convert int values from LL (json format) to appropriate size per gliderdac specs
 
     Args:
@@ -1254,9 +1252,7 @@ def make_netcdf_network_file(
                             )
                         create_ds_var(dso, var_template, "wl_depth", wl_depth)
                         for raw_name in names:
-                            canonical_name = WL_RAW_TO_CANONICAL.get(
-                                raw_name, raw_name
-                            )
+                            canonical_name = WL_RAW_TO_CANONICAL.get(raw_name, raw_name)
                             if canonical_name not in var_template["variables"]:
                                 log_warning(
                                     f"No netcdf variable for wl column {raw_name} - skipping"
@@ -1488,8 +1484,14 @@ def make_netcdf_network_files(
             log_file = ct_file.with_suffix(".nlog")
         if ct_file is None and log_file is not None:
             ct_file = log_file.with_suffix(".npro")
+            if not ct_file.exists():
+                ct_file = log_file.with_suffix(".npro_ct.dat")
         assert log_file is not None
         assert ct_file is not None
+        if wl_file is None:
+            wl_file = log_file.with_suffix(".npro_wl.dat")
+            if not wl_file.exists():
+                wl_file = None
         try:
             ncf_filename = make_netcdf_network_file(log_file, ct_file, wl_file)
         except Exception:
