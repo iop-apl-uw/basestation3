@@ -1038,15 +1038,17 @@ def process_file_group(
                 processed_other_files.append(fc.mk_base_capfile_name())
             elif fc.is_network():
                 if fc.is_network_logfile():
-                    BaseNetwork.convert_network_logfile(
+                    converted_name = BaseNetwork.convert_network_logfile(
                         base_opts, pathlib.Path(in_file_name), fc.mk_base_logfile_name()
                     )
-                    processed_other_files.append(fc.mk_base_logfile_name())
+                    if converted_name is not None:
+                        processed_other_files.append(converted_name)
                 elif fc.is_network_profile():
-                    BaseNetwork.convert_network_profile(
+                    converted_name = BaseNetwork.convert_network_profile(
                         base_opts, pathlib.Path(in_file_name), fc.mk_base_datfile_name()
                     )
-                    processed_other_files.append(fc.mk_base_datfile_name())
+                    if converted_name is not None:
+                        processed_other_files.append(converted_name)
             else:
                 log_error(
                     f"Don't know how to deal with file ({in_file_name}) - unknown type"
