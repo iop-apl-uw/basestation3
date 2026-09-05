@@ -296,6 +296,52 @@ def test_dive_plot_coverage(
     assert webp_files, f"{plot_name} produced no .webp thumbnail"
 
 
+def test_plot_wkb_schedule_partial_dive_does_not_crash(caplog):
+    """plot_wkb_schedule skips gracefully, rather than crashing, when the trailing window includes a partial dive.
+
+    Regression test for a production incident (SG283_WHIRLS_CRUISE dive
+    362, 2026-09-05): a dive still in progress (awaiting its GPS fix) gets
+    a dive profile NetCDF written without latitude/longitude (see
+    MakeDiveProfiles.py's "Fall through and write the nc file with
+    whatever data is available" fallback). plot_wkb_schedule's trailing
+    window then includes this partial file alongside four complete ones,
+    which used to crash with a raw KeyError from deep inside xarray
+    instead of being handled like the plot's existing "not enough data"
+    case.
+
+    testdata/sg283_WHIRLS_CRUISE_partial_wkb holds five real, consecutive
+    dive profiles from that mission (dives 358-362, matching wkb_dives_back's
+    default of 5) with dive 362 doctored to strip out latitude/longitude,
+    reproducing the exact file shape from the incident.
+    """
+    data_dir = pathlib.Path("testdata").joinpath("sg283_WHIRLS_CRUISE_partial_wkb")
+    mission_dir = data_dir.joinpath("mission_dir")
+
+    allowed_msgs = ["Skipping plot_wkb_schedule for dive 362"]
+    cmd_line = [
+        "--verbose",
+        "--mission_dir",
+        str(mission_dir),
+        "p2830362.nc",
+        "--plot_types",
+        "dives",
+        "--dive_plots",
+        "plot_wkb_schedule",
+        "--instrument_id",
+        "283",
+    ]
+
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        BasePlot.main,
+        cmd_line,
+        caplog,
+        allowed_msgs,
+        required_msgs=["Skipping plot_wkb_schedule for dive 362"],
+    )
+
+
 # (plot_name, data_dir, dive_nc_filename)
 #
 # All use Base.main, not BasePlot.main - unlike the dive-plot sweep above,

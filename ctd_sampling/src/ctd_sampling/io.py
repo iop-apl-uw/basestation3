@@ -24,7 +24,9 @@ def load_dive_variables(file_nc: Path, variables: Sequence[str]) -> dict[str, np
         A dict mapping variable name to its values as a 1-D numpy array.
 
     Raises:
-        KeyError: If a requested variable is not present in the file.
+        KeyError: If a requested variable is not present in the file (e.g.
+            a partial/in-progress dive profile written before the glider's
+            GPS fix was available, so latitude/longitude were never added).
     """
     # CF time decoding is applied only to the requested subset, not the
     # whole file: some Seaglider profiles carry unrelated variables (e.g.
@@ -32,5 +34,11 @@ def load_dive_variables(file_nc: Path, variables: Sequence[str]) -> dict[str, np
     # attribute is stale/mismatched with their actual (character) storage,
     # which raises if xarray tries to CF-decode them on open.
     with xr.open_dataset(file_nc, decode_times=False, decode_timedelta=False) as raw:
+        missing = [name for name in variables if name not in raw.variables]
+        if missing:
+            raise KeyError(
+                f"{file_nc} is missing required variable(s) {missing} - "
+                "likely a partial/in-progress dive profile"
+            )
         ds = xr.decode_cf(raw[list(variables)], decode_timedelta=False)
         return {name: ds[name].to_numpy() for name in variables}

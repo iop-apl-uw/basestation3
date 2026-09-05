@@ -428,20 +428,25 @@ def plot_wkb_schedule(
         return ([], [])
 
     z = np.arange(0.0, base_opts.wkb_z_max + base_opts.wkb_dz, base_opts.wkb_dz)
-    sg = ctd_sampling.wkb.build_dive_stack(
-        base_opts.mission_dir, sg_label, dive_numbers, z, base_opts.wkb_dz
-    )
     try:
+        sg = ctd_sampling.wkb.build_dive_stack(
+            base_opts.mission_dir, sg_label, dive_numbers, z, base_opts.wkb_dz
+        )
         result = ctd_sampling.wkb.compute_wkb_schedule(
             sg,
             buckets_depths=np.array(base_opts.wkb_buckets_depths),
             top_sampling_rate=base_opts.wkb_top_sampling_rate,
             relative_N=np.array(base_opts.wkb_relative_n),
         )
-    except ValueError as exc:
-        # E.g. every dive in the trailing window is too shallow/short to
-        # reach past buckets_depths[0] - not enough data for a WKB-stretched
-        # schedule, so skip this plot rather than crash the whole run.
+    except (KeyError, ValueError) as exc:
+        # KeyError: one of the dives in the trailing window is a
+        # partial/in-progress profile (e.g. still awaiting a GPS fix, so
+        # latitude/longitude were never added - see ctd_sampling.io.
+        # load_dive_variables). ValueError: every dive in the trailing
+        # window is too shallow/short to reach past buckets_depths[0].
+        # Either way there isn't enough data yet for a WKB-stretched
+        # schedule, so skip this plot rather than crash the whole run - a
+        # later run will pick it up once the dive data is complete.
         log_warning(f"Skipping plot_wkb_schedule for dive {latest}: {exc}")
         return ([], [])
 

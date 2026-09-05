@@ -175,3 +175,22 @@ def test_no_data_below_first_bucket_raises_clearly() -> None:
     )
     with pytest.raises(ValueError, match="too shallow/short"):
         compute_wkb_schedule(gridded, buckets_depths=_BUCKETS_DEPTHS, top_sampling_rate=5.0, relative_N=_RELATIVE_N)
+
+
+def test_build_dive_stack_partial_dive_raises_clear_key_error() -> None:
+    """A partial/in-progress dive profile missing lat/lon raises a clear KeyError, not a crash deep in xarray.
+
+    Regression test for a production incident (SG283_WHIRLS_CRUISE dive
+    362): a dive profile NetCDF written mid-dive, before the glider's GPS
+    fix was available, never gets latitude/longitude added (see
+    MakeDiveProfiles.py's "Fall through and write the nc file with
+    whatever data is available" fallback). Loading it used to raise an
+    opaque KeyError from deep inside xarray's ``_get_virtual_variable``;
+    ``load_dive_variables`` now checks for missing variables up front and
+    raises a message naming them and the likely cause. The fixture here is
+    a real production dive profile with latitude/longitude stripped out,
+    reproducing the exact file shape from that incident.
+    """
+    z = np.arange(0.0, 1000.0 + _DZ, _DZ)
+    with pytest.raises(KeyError, match="latitude"):
+        build_dive_stack(_FIXTURES / "partial", "283", (362,), z, _DZ)
