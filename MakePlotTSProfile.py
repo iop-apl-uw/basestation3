@@ -80,18 +80,141 @@ def plot_ts_profile(profile_file, dive_num, base_opts):
 
 
 def plot_ncdf_profile(ncf_file, base_opts):
-    """Plot a text version of a reduced TS profile"""
+    """Plot a text version of a reduced TS and/or WetLabs profile"""
 
     ds = xr.open_dataset(ncf_file)
 
-    return plot_ts_profile_core(
-        np.diff(ds["depth"])[0],
-        ds["depth"],
-        ds["temperature"][0],
-        ds["salinity"][0],
-        ds["dive_number"],
-        base_opts,
+    ret_val = []
+    if "temperature" in ds.variables:
+        ret_val += plot_ts_profile_core(
+            np.diff(ds["depth"])[0],
+            ds["depth"],
+            ds["temperature"][0],
+            ds["salinity"][0],
+            ds["dive_number"],
+            base_opts,
+        )
+
+    if "sig470nm" in ds.variables:
+        channels = {
+            name: ds[name].values
+            for name in ("sig470nm", "sig700nm", "sig695nm")
+            if name in ds.variables
+        }
+        ret_val += plot_wl_profile_core(
+            ds["wl_depth"].values, channels, int(ds["dive_number"]), base_opts
+        )
+
+    return ret_val
+
+
+# Raw WetLabs .npro_wl.dat column names -> this project's canonical sensor
+# variable names - matches BaseNetwork.py's WL_RAW_TO_CANONICAL (kept as a
+# small standalone copy here for the same reason: Sensors/ isn't a regular
+# importable package - it's loaded as sensor extensions dynamically, not
+# via static import).
+WL_RAW_TO_CANONICAL = {
+    "470sig": "sig470nm",
+    "700sig": "sig700nm",
+    "Chlsig": "sig695nm",
+    "temp": "temp",
+}
+
+
+def plot_wl_profile(profile_file, dive_num, base_opts):
+    """Plot a text version of a reduced WetLabs (optical) profile"""
+    first_bin_depth = None
+    bin_width = None
+    names = None
+    with open(profile_file, "r") as fi:
+        for ll in fi.readlines():
+            if ll.startswith("%first_bin_depth"):
+                first_bin_depth = float(ll.split(":")[1])
+            elif ll.startswith("%bin_width"):
+                bin_width = float(ll.split(":")[1])
+            elif ll.startswith("%columns:"):
+                names = tuple(ll.split(":", 1)[1].split())
+
+    if first_bin_depth is None or bin_width is None or names is None:
+        log_error(f"Could not read header from {profile_file}")
+        return None
+
+    data = np.genfromtxt(profile_file, comments="%", names=names)
+    depth = np.arange(first_bin_depth, bin_width * len(data[names[0]]), bin_width)
+
+    channels = {
+        WL_RAW_TO_CANONICAL.get(raw_name, raw_name): data[raw_name]
+        for raw_name in names
+        if WL_RAW_TO_CANONICAL.get(raw_name, raw_name)
+        in ("sig470nm", "sig700nm", "sig695nm")
+    }
+
+    return plot_wl_profile_core(depth, channels, dive_num, base_opts)
+
+
+def plot_wl_profile_core(depth, channels, dive_num, base_opts):
+    """Core plotting routine for a WetLabs optical profile (blue/red
+    scattering, chlorophyll fluorescence vs depth).
+
+    Raw counts, not calibrated - this is a quick network preview, not the
+    full per-dive WetLabs plot (see Plotting/DiveWetlabs.py for that),
+    whose channel names/colors this mirrors for visual consistency.
+    """
+    ret_val = []
+
+    fig = plotly.graph_objects.Figure()
+
+    chan_style = {
+        "sig470nm": ("Blue scattering", "DarkBlue"),
+        "sig700nm": ("Red scattering", "DarkRed"),
+        "sig695nm": ("Chlorophyll fluorescence", "Green"),
+    }
+
+    for canonical_name, values in channels.items():
+        name, color = chan_style.get(canonical_name, (canonical_name, "Black"))
+        fig.add_trace(
+            {
+                "y": depth,
+                "x": values,
+                "name": name,
+                "type": "scatter",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "triangle-down",
+                    "color": color,
+                },
+                "hovertemplate": "%{x:.0f} counts<br>%{y:.2f} meters<extra></extra>",
+            }
+        )
+
+    fig.update_layout(
+        {
+            "xaxis": {
+                "title": "Raw counts",
+                "showgrid": False,
+            },
+            "yaxis": {
+                "title": "Depth (m)",
+                "range": [depth.max(), 0],
+            },
+            "title": {
+                "text": "Raw WetLabs optical profile vs Depth",
+                "xanchor": "center",
+                "yanchor": "top",
+                "x": 0.5,
+                "y": 0.95,
+            },
+        }
     )
+
+    ret_val.append(
+        PlotUtilsPlotly.write_output_files(
+            base_opts,
+            "dv%04d_reduced_wl" % (dive_num,),
+            fig,
+        )
+    )
+    return ret_val
 
 
 def plot_ts_profile_core(bin_width, depth, temperature, salinity, dive_num, base_opts):
@@ -475,11 +598,14 @@ def main(
                 processed_other_files.append(m)
             for m in base_opts.mission_dir.glob("p???????.npro_ct.dat"):
                 processed_other_files.append(m)
+            for m in base_opts.mission_dir.glob("p???????.npro_wl.dat"):
+                processed_other_files.append(m)
 
     if PlotUtils.setup_plot_directory(base_opts):
         log_error("Setup of plot direectory failed")
         return 1
 
+    wl_profile_file_names = []
     for ff in processed_other_files:
         if ff.suffix == ".npro" or (
             len(ff.suffixes) == 2 and ff.suffixes[0].startswith(".npro_ct")
@@ -487,6 +613,8 @@ def main(
             # While the glider can produce reduced profile up or down,
             # only plot the downcast.
             profile_file_names.append(ff)
+        elif len(ff.suffixes) == 2 and ff.suffixes[0].startswith(".npro_wl"):
+            wl_profile_file_names.append(ff)
         elif ff.suffix == ".ncdf":
             ncdf_file_names.append(ff)
 
@@ -509,6 +637,28 @@ def main(
             log_error(
                 "Error in plotting vertical velocity for %s - skipping"
                 % profile_file_name,
+                "exc",
+            )
+
+    for wl_profile_file_name in wl_profile_file_names:
+        log_info(f"Processing {wl_profile_file_name}")
+        try:
+            dive_num = int(wl_profile_file_name.name[4:8])
+        except ValueError:
+            continue
+        try:
+            plots = plot_wl_profile(wl_profile_file_name, dive_num, base_opts)
+            if processed_other_files is not None and plots is not None:
+                for p in plots:
+                    processed_other_files.append(p)
+
+        except KeyboardInterrupt:
+            log_error("Interupted by operator")
+            break
+        except Exception:
+            log_error(
+                "Error in plotting wl profile for %s - skipping"
+                % wl_profile_file_name,
                 "exc",
             )
 

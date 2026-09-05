@@ -2102,8 +2102,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     # Process network files to netcdf
     network_files_to_process = []
     for file_name in processed_other_files:
-        fc = FileMgr.FileCode(file_name, instrument_id)
-        if fc.is_processed_network_log() or fc.is_processed_network_profile():
+        if FileMgr.is_processed_network_log(
+            file_name
+        ) or FileMgr.is_processed_network_profile(file_name):
             network_files_to_process.append(file_name)
 
     if network_files_to_process:

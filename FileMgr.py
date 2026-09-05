@@ -56,6 +56,11 @@ sgid_dive_name_pattern = re.compile(
 )  # all p<sgid><dive>.* and ar<sgid><dive>.* files
 sgid_name_pattern = re.compile(r"\D*\d{3}[^\d].*[.].*")
 
+# Newer per-sensor network profile files (e.g. p<sgid><dive>.npro_ct.dat,
+# p<sgid><dive>.npro_wl.dat) - replaced the single bare .npro file. Plain
+# text, already decoded - see BaseNetwork.py's profile-parsing code.
+network_profile_pattern = re.compile(r"\.npro(_[a-z]+\.dat)?$")
+
 # These extensions are known to the core basestation processing and are constant
 post_proc_extensions = [
     ".log",
@@ -102,6 +107,7 @@ post_proc_glob_list = [
     "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].[0-9][0-9][0-9].????",  # .pdos
     "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].??_kkyy",  # .up_kkyy .dn_kkyy
     "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].[0-9][0-9][0-9].????",
+    "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].npro_*.dat",  # per-sensor network profile files (npro_ct, npro_wl, ...)
     "pt[0-9][0-9][0-9][0-9][0-9][0-9][0-9].???",
     "pt[0-9][0-9][0-9][0-9][0-9][0-9][0-9].[0-9][0-9][0-9].????",
     "pt[0-9][0-9][0-9][0-9][0-9][0-9][0-9].?????",
@@ -446,6 +452,30 @@ def is_complete_xmit(filename):
     return ext.lower() == ".x"
 
 
+def is_processed_network_log(filename) -> bool:
+    """True if filename is a processed network logfile (p<sgid><dive>.nlog).
+
+    A plain function (not a FileCode method) since network log/profile
+    filenames - unlike FileCode's raw-transmission naming - aren't
+    fixed-width, and newer per-sensor profile files
+    (is_processed_network_profile()) can exceed FileCode's length limit.
+    """
+    filename = os.path.basename(str(filename))
+    _, ext = os.path.splitext(filename)
+    return filename[0:1] == "p" and ext == ".nlog"
+
+
+def is_processed_network_profile(filename) -> bool:
+    """True if filename is a processed network profile file.
+
+    Covers both the legacy bare .npro file and the newer per-sensor
+    p<sgid><dive>.npro_<sensor>.dat files (e.g. .npro_ct.dat, .npro_wl.dat)
+    that replaced it - see network_profile_pattern.
+    """
+    filename = os.path.basename(str(filename))
+    return filename[0:1] == "p" and bool(network_profile_pattern.search(filename))
+
+
 # Classes
 
 
@@ -638,14 +668,6 @@ class FileCode:
         _, ext = os.path.splitext(self._filename)
 
         return self._filename[0:1] == "pt" and ext == ".log"
-
-    def is_processed_network_log(self):
-        _, ext = os.path.splitext(self._filename)
-        return self._filename[0:1] == "p" and ext == ".nlog"
-
-    def is_processed_network_profile(self):
-        _, ext = os.path.splitext(self._filename)
-        return self._filename[0:1] == "p" and ext == ".npro"
 
     # Marker names
     def is_dive_marker(self):

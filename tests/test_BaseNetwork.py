@@ -39,6 +39,7 @@ import xarray as xr
 
 import BaseNetwork
 import BaseOpts
+import FileMgr
 
 REAL_LOG_DECOMPRESSOR = pathlib.Path("/usr/local/bin/log")
 REAL_PROFILE_DECOMPRESSOR = pathlib.Path("/usr/local/bin/x3decode_ts")
@@ -64,6 +65,27 @@ def _make_base_opts(**cmdline_overrides: str) -> BaseOpts.BaseOptions:
 # ---------------------------------------------------------------------------
 # Tier 1 - pure unit tests, no I/O
 # ---------------------------------------------------------------------------
+
+
+def test_is_processed_network_profile_recognizes_all_formats():
+    """Covers the legacy bare .npro format and the newer per-sensor
+    .npro_ct.dat/.npro_wl.dat formats - regression guard for the gap where
+    only the legacy format was recognized, silently dropping newer network
+    profile files from both the standalone cdf command and live per-dive
+    processing (Base.py's gating on this same predicate)."""
+    assert FileMgr.is_processed_network_profile("p2560005.npro")
+    assert FileMgr.is_processed_network_profile("p2560005.npro_ct.dat")
+    assert FileMgr.is_processed_network_profile("p2560005.npro_wl.dat")
+    assert not FileMgr.is_processed_network_profile("p2560005.nlog")
+    assert not FileMgr.is_processed_network_profile("p2560005.log")
+    assert not FileMgr.is_processed_network_profile("p2560005.npro_ct.datx")
+    assert not FileMgr.is_processed_network_profile("random.txt")
+
+
+def test_is_processed_network_log_recognizes_nlog():
+    assert FileMgr.is_processed_network_log("p2560005.nlog")
+    assert not FileMgr.is_processed_network_log("p2560005.npro")
+    assert not FileMgr.is_processed_network_log("p2560005.log")
 
 
 def test_fix_ints():
@@ -123,10 +145,11 @@ def test_make_netcdf_network_files_groups_by_dive_number(monkeypatch, tmp_path):
 
     def fake_make_netcdf_network_file(
         network_logfile: pathlib.Path,
-        network_profile: pathlib.Path,
+        network_profile_ct: pathlib.Path,
+        network_profile_wl: pathlib.Path | None = None,
         ts_outputfile: bool = False,
     ) -> pathlib.Path:
-        calls.append((network_logfile, network_profile))
+        calls.append((network_logfile, network_profile_ct, network_profile_wl))
         return network_logfile.with_suffix(".ncdf")
 
     monkeypatch.setattr(
@@ -544,5 +567,139 @@ def test_cdf_subparser_with_nlog_and_npro(tmp_path, caplog):
         assert "temperature" in ds.variables
         assert "salinity" in ds.variables
         assert "depth" in ds.variables
+    finally:
+        ds.close()
+
+
+def test_cdf_subparser_with_npro_ct_dat(tmp_path, caplog):
+    """The newer .npro_ct.dat format (with a %columns: header line, unlike
+    the legacy bare .npro) must parse the same as the legacy format."""
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    nlog_path = data_dir / "p2560005.nlog"
+    nlog_path.write_text("$ID,256\n$DIVE,5\nstart:01 01 26 00 00 00\n")
+    ct_path = data_dir / "p2560005.npro_ct.dat"
+    ct_path.write_text(
+        "%first_bin_depth: 7.50\n%bin_width: 5.00\n%container: SG256\n"
+        "%comment: sc0005b\n%columns: temperature salinity \n"
+        "10.5 34.2 \n10.3 34.1 \n"
+    )
+    mission_dir = tmp_path / "mission_dir"
+
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        _main_with_argv,
+        [
+            "--verbose",
+            "cdf",
+            str(mission_dir / "p2560005.nlog"),
+            str(mission_dir / "p2560005.npro_ct.dat"),
+        ],
+        caplog,
+        [""],
+    )
+
+    ncdf_file = mission_dir / "p2560005.ncdf"
+    assert ncdf_file.exists()
+    ds = xr.open_dataset(ncdf_file)
+    try:
+        assert "temperature" in ds.variables
+        assert "salinity" in ds.variables
+        assert "depth" in ds.variables
+        assert np.allclose(ds["temperature"][0], [10.5, 10.3])
+        assert np.allclose(ds["salinity"][0], [34.2, 34.1])
+    finally:
+        ds.close()
+
+
+def test_cdf_subparser_with_npro_ct_and_wl(tmp_path, caplog):
+    """A dive with both a ct and a wl network profile must produce a single
+    .ncdf with all 5 variables (temperature/salinity plus the 3 WetLabs
+    channels, remapped from their raw column names to canonical ones)."""
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    nlog_path = data_dir / "p2560005.nlog"
+    nlog_path.write_text("$ID,256\n$DIVE,5\nstart:01 01 26 00 00 00\n")
+    ct_path = data_dir / "p2560005.npro_ct.dat"
+    ct_path.write_text(
+        "%first_bin_depth: 7.50\n%bin_width: 5.00\n%columns: temperature salinity \n"
+        "10.5 34.2 \n10.3 34.1 \n"
+    )
+    wl_path = data_dir / "p2560005.npro_wl.dat"
+    wl_path.write_text(
+        "%first_bin_depth: 2.50\n%bin_width: 5.00\n"
+        "%columns: 470sig 700sig Chlsig temp \n"
+        "74.0 74.0 53.0 572.0 \n73.0 73.0 54.0 571.0 \n"
+    )
+    mission_dir = tmp_path / "mission_dir"
+
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        _main_with_argv,
+        [
+            "--verbose",
+            "cdf",
+            str(mission_dir / "p2560005.nlog"),
+            str(mission_dir / "p2560005.npro_ct.dat"),
+            str(mission_dir / "p2560005.npro_wl.dat"),
+        ],
+        caplog,
+        [""],
+    )
+
+    ncdf_file = mission_dir / "p2560005.ncdf"
+    assert ncdf_file.exists()
+    ds = xr.open_dataset(ncdf_file)
+    try:
+        assert np.allclose(ds["temperature"][0], [10.5, 10.3])
+        assert np.allclose(ds["salinity"][0], [34.2, 34.1])
+        assert np.allclose(ds["sig470nm"], [74.0, 73.0])
+        assert np.allclose(ds["sig700nm"], [74.0, 73.0])
+        assert np.allclose(ds["sig695nm"], [53.0, 54.0])
+        assert np.allclose(ds["temp"], [572.0, 571.0])
+        assert np.allclose(ds["wl_depth"], [2.5, 7.5])
+    finally:
+        ds.close()
+
+
+def test_cdf_subparser_npro_wl_without_ct(tmp_path, caplog):
+    """A dive with only a .nlog and a .npro_wl.dat (no ct profile at all)
+    must still produce an .ncdf with the wl channels - missing ct is logged
+    (matches the legacy "not found" behavior), missing wl is not (most
+    dives have no optical puck installed at all)."""
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    nlog_path = data_dir / "p2560006.nlog"
+    nlog_path.write_text("$ID,256\n$DIVE,6\nstart:01 01 26 00 00 00\n")
+    wl_path = data_dir / "p2560006.npro_wl.dat"
+    wl_path.write_text(
+        "%first_bin_depth: 2.50\n%bin_width: 5.00\n"
+        "%columns: 470sig 700sig Chlsig temp \n74.0 74.0 53.0 572.0 \n"
+    )
+    mission_dir = tmp_path / "mission_dir"
+
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        _main_with_argv,
+        [
+            "--verbose",
+            "cdf",
+            str(mission_dir / "p2560006.nlog"),
+            str(mission_dir / "p2560006.npro_wl.dat"),
+        ],
+        caplog,
+        [""],
+        required_msgs=["not found - skipping"],  # confirms ct's absence is logged
+    )
+
+    ncdf_file = mission_dir / "p2560006.ncdf"
+    assert ncdf_file.exists()
+    ds = xr.open_dataset(ncdf_file)
+    try:
+        assert "temperature" not in ds.variables
+        assert np.allclose(ds["sig470nm"], [74.0])
     finally:
         ds.close()

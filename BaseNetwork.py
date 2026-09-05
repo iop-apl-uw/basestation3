@@ -126,6 +126,64 @@ var_template = {
                 "units": "m",
             },
         },
+        # WetLabs (.npro_wl.dat) network profile variables. Raw telemetry
+        # counts, not yet calibrated (that only happens in the full per-dive
+        # pipeline - see Plotting/DiveWetlabs.py/Sensors/WETlabs_ext.py) -
+        # this is just a quick preview. wl_depth is a separate bin grid from
+        # "depth" above since the wl and ct sensors can report different
+        # first_bin_depth/bin_width values for the same dive.
+        "wl_depth": {
+            "type": "f4",
+            "num_digits": 2,
+            "dimensions": ["wl_depth_data_point"],
+            "attributes": {
+                "_FillValue": -999,
+                "long_name": "WetLabs profile depth",
+                "standard_name": "depth",
+                "units": "m",
+            },
+        },
+        "sig470nm": {
+            "type": "f4",
+            "num_digits": 1,
+            "dimensions": ["wl_depth_data_point"],
+            "attributes": {
+                "_FillValue": -999,
+                "long_name": "Blue scattering (raw counts)",
+                "units": "counts",
+            },
+        },
+        "sig700nm": {
+            "type": "f4",
+            "num_digits": 1,
+            "dimensions": ["wl_depth_data_point"],
+            "attributes": {
+                "_FillValue": -999,
+                "long_name": "Red scattering (raw counts)",
+                "units": "counts",
+            },
+        },
+        "sig695nm": {
+            "type": "f4",
+            "num_digits": 1,
+            "dimensions": ["wl_depth_data_point"],
+            "attributes": {
+                "_FillValue": -999,
+                "long_name": "Chlorophyll fluorescence (raw counts)",
+                "units": "counts",
+            },
+        },
+        "temp": {
+            "type": "f4",
+            "num_digits": 1,
+            "dimensions": ["wl_depth_data_point"],
+            "attributes": {
+                "_FillValue": -999,
+                "long_name": "WetLabs puck internal temperature (raw counts)",
+                "comment": "Not sea water temperature - see the 'temperature' variable for that.",
+                "units": "counts",
+            },
+        },
         # TODO - post AMOS2022/Hood Canal, this should be retired in favor of the log_ID
         # for now, topside may be depending on this variable
         "dive_number": {
@@ -1039,27 +1097,81 @@ class log_parser:
 #
 
 
+def _read_profile_header(
+    profile_file: pathlib.Path, default_names: tuple[str, ...] | None = None
+) -> tuple[float, float, tuple[str, ...]] | None:
+    """Reads a network profile file's %key: value header.
+
+    Args:
+        profile_file: Path to the plain-text network profile file
+            (.npro / .npro_ct.dat / .npro_wl.dat).
+        default_names: Column names to use if the file has no
+            "%columns:" header line (the legacy bare-.npro format never
+            had one). None means the file is required to have one.
+
+    Returns:
+        (first_bin_depth, bin_width, column_names), or None if the
+        header is incomplete.
+    """
+    first_bin_depth = None
+    bin_width = None
+    names = default_names
+    with profile_file.open("r") as fi:
+        for ll in fi.readlines():
+            if ll.startswith("%first_bin_depth"):
+                first_bin_depth = float(ll.split(":")[1])
+            elif ll.startswith("%bin_width"):
+                bin_width = float(ll.split(":")[1])
+            elif ll.startswith("%columns:"):
+                names = tuple(ll.split(":", 1)[1].split())
+
+    if first_bin_depth is None or bin_width is None or names is None:
+        log_error(
+            f"Could not read first_bin_depth/bin_width/columns header from {profile_file}"
+        )
+        return None
+    return first_bin_depth, bin_width, names
+
+
+# Raw WetLabs .npro_wl.dat column names -> this project's canonical sensor
+# variable names - mirrors Sensors/WETlabs_ext.py's columns_d synonym table
+# (kept as a small standalone copy here rather than importing that module,
+# since Sensors/ isn't a regular importable package - it's loaded as sensor
+# extensions dynamically, not via static import).
+WL_RAW_TO_CANONICAL = {
+    "470sig": "sig470nm",
+    "700sig": "sig700nm",
+    "Chlsig": "sig695nm",
+    "temp": "temp",
+}
+
+
 def make_netcdf_network_file(
     network_logfile: pathlib.Path,
-    network_profile: pathlib.Path,
+    network_profile_ct: pathlib.Path,
+    network_profile_wl: pathlib.Path | None = None,
     ts_outputfile: bool = False,
 ) -> pathlib.Path | None:
-    """Creates a network netcdf file, from either or both of the arguments
+    """Creates a network netcdf file, from any of the arguments
 
     Args:
         network_logfile: Path to the plain-text network logfile.
-        network_profile: Path to the plain-text network ct profile.
+        network_profile_ct: Path to the plain-text network ct (CTD)
+            profile - either the legacy bare .npro format, or the newer
+            .npro_ct.dat format.
+        network_profile_wl: Path to the plain-text network wl (WetLabs
+            optical) profile (.npro_wl.dat), if the dive has one.
         ts_outputfile: If True, name the output file from the embedded
             start time and platform id instead of the input filename.
 
     Returns:
         Path to the created network netcdf file, or None on failure.
     """
-    if not network_logfile.is_file() and not network_profile.is_file():
-        log_error(f"Neither {network_logfile} nor {network_logfile} exists")
+    if not network_logfile.is_file() and not network_profile_ct.is_file():
+        log_error(f"Neither {network_logfile} nor {network_profile_ct} exists")
         return None
 
-    log_info(f"Processing {network_logfile} {network_profile}")
+    log_info(f"Processing {network_logfile} {network_profile_ct} {network_profile_wl}")
 
     dso = xr.Dataset()
 
@@ -1069,54 +1181,96 @@ def make_netcdf_network_file(
 
     time_v = None
 
-    if not network_profile.is_file():
-        log_warning(f"{network_profile} not found - skipping")
+    if not network_profile_ct.is_file():
+        log_warning(f"{network_profile_ct} not found - skipping")
     else:
         try:
-            with network_profile.open("r") as fi:
-                for ll in fi.readlines():
-                    if ll.startswith("%first_bin_depth"):
-                        first_bin_depth = float(ll.split(":")[1])
-                    elif ll.startswith("%bin_width"):
-                        bin_width = float(ll.split(":")[1])
-            data = np.genfromtxt(
-                network_profile, comments="%", names=("temperature", "salinity")
+            header = _read_profile_header(
+                network_profile_ct, default_names=("temperature", "salinity")
             )
-            if not data.size:
-                log_error(f"Read from {network_profile} returned no data")
+            if header is None:
+                pass
             else:
-                if np.ndim(data["temperature"]) == 0:
-                    create_ds_var(
-                        dso,
-                        var_template,
-                        "depth",
-                        np.atleast_1d(np.array(bin_width / 2.0)),
-                    )
+                first_bin_depth, bin_width, names = header
+                data = np.genfromtxt(network_profile_ct, comments="%", names=names)
+                if not data.size:
+                    log_error(f"Read from {network_profile_ct} returned no data")
                 else:
-                    depth = np.linspace(
-                        first_bin_depth,
-                        first_bin_depth + (bin_width * len(data["temperature"])),
-                        num=len(data["temperature"]),
-                        endpoint=False,
-                    )
-                    create_ds_var(dso, var_template, "depth", depth)
-                for var_name in ("temperature", "salinity"):
-                    tmp_v = np.array(
+                    if np.ndim(data[names[0]]) == 0:
+                        create_ds_var(
+                            dso,
+                            var_template,
+                            "depth",
+                            np.atleast_1d(np.array(bin_width / 2.0)),
+                        )
+                    else:
+                        depth = np.linspace(
+                            first_bin_depth,
+                            first_bin_depth + (bin_width * len(data[names[0]])),
+                            num=len(data[names[0]]),
+                            endpoint=False,
+                        )
+                        create_ds_var(dso, var_template, "depth", depth)
+                    for var_name in names:
+                        tmp_v = np.array(
+                            (
+                                np.atleast_1d(data[var_name]),
+                                np.full(len(np.atleast_1d(data[var_name])), np.nan),
+                            )
+                        )
+                        create_ds_var(dso, var_template, var_name, tmp_v)
+                    time_v = np.array(
                         (
-                            np.atleast_1d(data[var_name]),
-                            np.full(len(np.atleast_1d(data[var_name])), np.nan),
+                            np.full(len(np.atleast_1d(data[names[-1]])), np.nan),
+                            np.full(len(np.atleast_1d(data[names[-1]])), np.nan),
                         )
                     )
-                    create_ds_var(dso, var_template, var_name, tmp_v)
-                time_v = np.array(
-                    (
-                        np.full(len(np.atleast_1d(data[var_name])), np.nan),
-                        np.full(len(np.atleast_1d(data[var_name])), np.nan),
-                    )
-                )
         except Exception:
             DEBUG_PDB_F()
-            log_error(f"Failed processing {network_profile}", "exc")
+            log_error(f"Failed processing {network_profile_ct}", "exc")
+
+    if network_profile_wl is not None:
+        if not network_profile_wl.is_file():
+            log_warning(f"{network_profile_wl} not found - skipping")
+        else:
+            try:
+                header = _read_profile_header(network_profile_wl)
+                if header is None:
+                    pass
+                else:
+                    first_bin_depth, bin_width, names = header
+                    data = np.genfromtxt(network_profile_wl, comments="%", names=names)
+                    if not data.size:
+                        log_error(f"Read from {network_profile_wl} returned no data")
+                    else:
+                        if np.ndim(data[names[0]]) == 0:
+                            wl_depth = np.atleast_1d(np.array(bin_width / 2.0))
+                        else:
+                            wl_depth = np.linspace(
+                                first_bin_depth,
+                                first_bin_depth + (bin_width * len(data[names[0]])),
+                                num=len(data[names[0]]),
+                                endpoint=False,
+                            )
+                        create_ds_var(dso, var_template, "wl_depth", wl_depth)
+                        for raw_name in names:
+                            canonical_name = WL_RAW_TO_CANONICAL.get(
+                                raw_name, raw_name
+                            )
+                            if canonical_name not in var_template["variables"]:
+                                log_warning(
+                                    f"No netcdf variable for wl column {raw_name} - skipping"
+                                )
+                                continue
+                            create_ds_var(
+                                dso,
+                                var_template,
+                                canonical_name,
+                                np.atleast_1d(data[raw_name]),
+                            )
+            except Exception:
+                DEBUG_PDB_F()
+                log_error(f"Failed processing {network_profile_wl}", "exc")
 
     if not network_logfile.is_file():
         log_warning(f"{network_logfile} not found - skipping")
@@ -1299,27 +1453,48 @@ def make_netcdf_network_files(
 
     ret_val = 0
 
-    # Add missing files, remove non-network files
-    net_files = collections.defaultdict(set)
+    # Classify each file by role and group by dive number. A dive can have
+    # a log, a ct-shaped profile (the legacy bare .npro, or the newer
+    # .npro_ct.dat), and/or a wl-shaped profile (.npro_wl.dat) - any subset,
+    # not necessarily all three.
+    net_files: dict[int, dict[str, pathlib.Path]] = collections.defaultdict(dict)
     for nf in network_files:
         dive_num = int(nf.name[4:8])
 
         if nf.suffix == ".nlog":
-            net_files[dive_num].add(nf.with_suffix(".npro"))
-        elif nf.suffix == ".npro":
-            net_files[dive_num].add(nf.with_suffix(".nlog"))
+            net_files[dive_num]["log"] = nf
+        elif nf.name.endswith(".npro_ct.dat") or nf.suffix == ".npro":
+            net_files[dive_num]["ct"] = nf
+        elif nf.name.endswith(".npro_wl.dat"):
+            net_files[dive_num]["wl"] = nf
         else:
             log_warning(f"{nf} is not a network file - skipping")
-            continue
-        net_files[dive_num].add(nf)
 
-    for _, files in net_files.items():
-        dive_net_files = sorted(files)
+    for dive_num, files in net_files.items():
+        log_file = files.get("log")
+        ct_file = files.get("ct")
+        wl_file = files.get("wl")
+        if log_file is None and ct_file is None:
+            # A lone wl file with nothing else to derive dive/glider info
+            # from isn't processable.
+            log_warning(f"No .nlog or ct-profile file for dive {dive_num} - skipping")
+            continue
+        # Synthesize the other's expected sibling name when only one of
+        # log/ct was supplied, same as before - make_netcdf_network_file()
+        # tolerates either being missing on disk and logs accordingly. wl
+        # is never synthesized this way: most dives simply have no optical
+        # puck installed, so a missing wl file is not worth a warning.
+        if log_file is None and ct_file is not None:
+            log_file = ct_file.with_suffix(".nlog")
+        if ct_file is None and log_file is not None:
+            ct_file = log_file.with_suffix(".npro")
+        assert log_file is not None
+        assert ct_file is not None
         try:
-            ncf_filename = make_netcdf_network_file(*dive_net_files)
+            ncf_filename = make_netcdf_network_file(log_file, ct_file, wl_file)
         except Exception:
             DEBUG_PDB_F()
-            log_error(f"Failed to create cdf file from {dive_net_files}", "exc")
+            log_error(f"Failed to create cdf file for dive {dive_num}", "exc")
             ret_val = 1
         else:
             if ncf_filename:
