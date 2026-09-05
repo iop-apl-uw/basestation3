@@ -279,6 +279,91 @@ def test_convert_network_logfile_success_with_fake_decompressor(tmp_path):
     assert out_file.read_bytes() == b"$ID,272\n$DIVE,2\n"
 
 
+def _write_fake_sglog(sglog_pkg: pathlib.Path, cli_body: str) -> None:
+    sglog_pkg.mkdir(parents=True)
+    (sglog_pkg / "__init__.py").write_text("")
+    (sglog_pkg / "cli.py").write_text(cli_body)
+    (sglog_pkg / "__main__.py").write_text(
+        "from sglog.cli import main\n"
+        "if __name__ == '__main__':\n"
+        "    raise SystemExit(main())\n"
+    )
+
+
+def test_convert_network_logfile_uses_sglog_when_available(tmp_path, monkeypatch):
+    fake_bsd = tmp_path / "bsd"
+    _write_fake_sglog(
+        fake_bsd / "log" / "src" / "sglog",
+        "import sys, pathlib\n"
+        "def main(argv=None):\n"
+        "    argv = argv if argv is not None else sys.argv[1:]\n"
+        "    sys.stdout.write(pathlib.Path(argv[0]).read_text())\n"
+        "    return 0\n",
+    )
+
+    base_opts = _make_base_opts()
+    monkeypatch.setattr(base_opts, "basestation_directory", fake_bsd)
+
+    in_file = tmp_path / "p2720002.x"
+    in_file.write_bytes(b"$ID,272\n$DIVE,2\n")
+    out_file = tmp_path / "p2720002.nlog"
+
+    result = BaseNetwork.convert_network_logfile(base_opts, in_file, out_file)
+    assert result == out_file
+    assert out_file.read_bytes() == b"$ID,272\n$DIVE,2\n"
+
+
+def test_convert_network_logfile_explicit_decompressor_overrides_sglog(
+    tmp_path, monkeypatch
+):
+    fake_bsd = tmp_path / "bsd"
+    _write_fake_sglog(
+        fake_bsd / "log" / "src" / "sglog",
+        "import sys\n"
+        "def main(argv=None):\n"
+        "    sys.stdout.write('SGLOG_OUTPUT\\n')\n"
+        "    return 0\n",
+    )
+
+    explicit_convertor = tmp_path / "fake_log"
+    explicit_convertor.write_text('#!/bin/sh\necho "EXPLICIT_OUTPUT"\n')
+    explicit_convertor.chmod(0o755)
+
+    base_opts = _make_base_opts(network_log_decompressor=str(explicit_convertor))
+    monkeypatch.setattr(base_opts, "basestation_directory", fake_bsd)
+
+    in_file = tmp_path / "p2720002.x"
+    in_file.write_bytes(b"data")
+    out_file = tmp_path / "p2720002.nlog"
+
+    result = BaseNetwork.convert_network_logfile(base_opts, in_file, out_file)
+    assert result == out_file
+    assert out_file.read_bytes() == b"EXPLICIT_OUTPUT\n"
+
+
+@pytest.mark.skipif(
+    REAL_LOG_DECOMPRESSOR.is_file(),
+    reason="test asserts fallback behavior when the real decompressor is absent",
+)
+def test_convert_network_logfile_falls_back_to_real_binary_when_sglog_unavailable(
+    tmp_path, monkeypatch, caplog
+):
+    fake_bsd = tmp_path / "bsd"  # deliberately has no log/ subdir
+    fake_bsd.mkdir()
+    base_opts = _make_base_opts()
+    monkeypatch.setattr(base_opts, "basestation_directory", fake_bsd)
+
+    in_file = tmp_path / "p2720002.x"
+    in_file.write_bytes(b"data")
+    with caplog.at_level(logging.ERROR):
+        result = BaseNetwork.convert_network_logfile(base_opts, in_file, None)
+    assert result is None
+    assert any(
+        "/usr/local/bin/log" in r.message and "does not exit" in r.message
+        for r in caplog.records
+    )
+
+
 def test_convert_network_profile_success_with_fake_decompressor(tmp_path):
     convertor = tmp_path / "fake_profile"
     convertor.write_text(

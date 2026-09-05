@@ -641,6 +641,20 @@ def create_ds_var(
     return da
 
 
+def _sglog_pythonpath_env(base_opts: BaseOpts.BaseOptions) -> dict[str, str] | None:
+    """Builds an env with PYTHONPATH set for an sglog checkout under
+    base_opts.basestation_directory/log/src, if one is present."""
+    sglog_src = base_opts.basestation_directory / "log" / "src"
+    if not (sglog_src / "sglog" / "cli.py").is_file():
+        return None
+    env = dict(os.environ)
+    existing = env.get("PYTHONPATH")
+    env["PYTHONPATH"] = (
+        f"{sglog_src}{os.pathsep}{existing}" if existing else str(sglog_src)
+    )
+    return env
+
+
 def convert_network_logfile(
     base_opts: BaseOpts.BaseOptions,
     in_file_name: pathlib.Path,
@@ -659,7 +673,20 @@ def convert_network_logfile(
         Path to the converted output file, or None on failure.
     """
 
-    convertor = base_opts.network_log_decompressor or pathlib.Path("/usr/local/bin/log")
+    env: dict[str, str] | None = None
+
+    if base_opts.network_log_decompressor:
+        convertor = base_opts.network_log_decompressor
+        cmdline = f"{convertor} {in_file_name}"
+    else:
+        sglog_env = _sglog_pythonpath_env(base_opts)
+        if sglog_env is not None:
+            convertor = pathlib.Path(sys.executable)
+            env = sglog_env
+            cmdline = f"{sys.executable} -m sglog {in_file_name}"
+        else:
+            convertor = pathlib.Path("/usr/local/bin/log")
+            cmdline = f"{convertor} {in_file_name}"
 
     if not convertor.is_file():
         log_error(
@@ -677,10 +704,9 @@ def convert_network_logfile(
         log_error(f"{in_file_name} does not exist")
         return None
 
-    cmdline = f"{convertor} {in_file_name}"
     log_info(f"Running {cmdline}")
     try:
-        (sts, run_output) = Utils.run_cmd_shell(cmdline, timeout=10)
+        (sts, run_output) = Utils.run_cmd_shell(cmdline, timeout=10, env=env)
     except Exception:
         log_error(f"Error running {cmdline}", "exc")
         return None
