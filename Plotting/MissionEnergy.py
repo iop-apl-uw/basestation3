@@ -151,7 +151,7 @@ def mission_energy(
         ).sort_values("dive")
 
         start_df = pd.read_sql_query(
-            "SELECT dive,log_gps2_time FROM dives ORDER BY dive ASC LIMIT 1",
+            "SELECT dive,log_gps2_time FROM dives WHERE dive > 0 ORDER BY dive ASC LIMIT 1",
             conn,
         )
         if start_df.size == 0:
