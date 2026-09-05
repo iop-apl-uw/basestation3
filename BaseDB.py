@@ -857,7 +857,7 @@ def loadNetworkFileToDB(base_opts, cur, filename, con):
         if not nci.variables[v].dimensions:
             insertColumn(dive, cur, v, nci.variables[v].getValue(), "FLOAT")
 
-    if 'log_GC' in nci.variables:
+    if 'log_GC' in nci.variables and not numpy.all(numpy.isnan(nci.variables["log_GC"][:,1])):
         dep_mx = numpy.nanmax(nci.variables["log_GC"][:,1])
         insertColumn(dive, cur, "max_depth", dep_mx, "FLOAT")
     else:
