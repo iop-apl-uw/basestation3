@@ -323,3 +323,76 @@ def test_copy_button_copies_hard0_soft0(caplog: pytest.LogCaptureFixture) -> Non
             browser.close()
 
     assert clipboard_text == expected_copy_text
+
+
+def test_magcal_worker_phase_split_produces_different_fits() -> None:
+    """magcal_worker(phase="dive")/phase="climb") must fit against
+    disjoint sample sets, not silently fall back to the combined
+    (phase="all") behavior - regression guard for the dive/climb split
+    feature: proves the two fits actually differ rather than both
+    happening to compute the same "all" result.
+    """
+    _baseplot_options, data_dir_name, nc_filename = _MAGCAL_DIVE
+    mission_dir = pathlib.Path("testdata").joinpath(data_dir_name, "mission_dir")
+
+    nc_file = Utils.open_netcdf_file(str(mission_dir / nc_filename))
+    try:
+        hard_dive, _soft_dive, _cover_dive, _circ_dive, fig_dive, _copy_dive = (
+            Magcal.magcal_worker(
+                [nc_file], True, "html", "test title", phase="dive"
+            )
+        )
+        hard_climb, _soft_climb, _cover_climb, _circ_climb, fig_climb, _copy_climb = (
+            Magcal.magcal_worker(
+                [nc_file], True, "html", "test title", phase="climb"
+            )
+        )
+    finally:
+        nc_file.close()
+
+    assert fig_dive is not None
+    assert fig_climb is not None
+    assert np.isfinite(hard_dive).all()
+    assert np.isfinite(hard_climb).all()
+    assert hard_dive != hard_climb
+    assert "(dive)" in fig_dive.layout.title.text
+    assert "(climb)" in fig_climb.layout.title.text
+
+
+def test_plot_mag_dive_climb_split(caplog: pytest.LogCaptureFixture) -> None:
+    """--plot_magcal_dive_climb makes DiveMagCal emit dv####_magcal_dive/
+    _climb instead of the combined dv####_magcal."""
+    baseplot_options, data_dir_name, _nc_filename = _MAGCAL_DIVE
+    data_dir = pathlib.Path("testdata").joinpath(data_dir_name)
+    mission_dir = data_dir.joinpath("mission_dir")
+
+    cmd_line = ["--verbose", "--mission_dir", str(mission_dir)]
+    cmd_line += baseplot_options.split(" ")
+    cmd_line += ["--plot_magcal_dive_climb"]
+    testutils.run_mission(data_dir, mission_dir, BasePlot.main, cmd_line, caplog, [""])
+
+    plots_dir = mission_dir / "plots"
+    assert (plots_dir / "dv0005_magcal_dive.html").exists()
+    assert (plots_dir / "dv0005_magcal_climb.html").exists()
+    assert not (plots_dir / "dv0005_magcal.html").exists()
+
+
+def test_magcal_function_phase_split_produces_different_fits() -> None:
+    """Magcal.magcal()'s phase parameter threads through to
+    magcal_worker() - regression guard for the batch-CLI split feature's
+    underlying function (Magcal.py:main() is a thin argparse/file-writing
+    wrapper around this)."""
+    _baseplot_options, data_dir_name, _nc_filename = _MAGCAL_DIVE
+    mission_dir = str(pathlib.Path("testdata").joinpath(data_dir_name, "mission_dir"))
+
+    hard_dive, soft_dive, _cover_dive, _circ_dive, html_dive = Magcal.magcal(
+        mission_dir, 686, [5], True, "html", phase="dive"
+    )
+    hard_climb, soft_climb, _cover_climb, _circ_climb, html_climb = Magcal.magcal(
+        mission_dir, 686, [5], True, "html", phase="climb"
+    )
+
+    assert html_dive
+    assert html_climb
+    assert hard_dive != hard_climb
+    assert not np.array_equal(soft_dive, soft_climb)

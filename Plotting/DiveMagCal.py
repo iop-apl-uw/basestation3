@@ -34,6 +34,7 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import argparse
 import json
 import pathlib
 import typing
@@ -48,14 +49,31 @@ if typing.TYPE_CHECKING:
 
     import BaseOpts
 
+import BaseOptsType
 import Magcal
 import PlotUtils
 import PlotUtilsPlotly
-from Plotting import plotdivesingle
+from Plotting import add_arguments, plotdivesingle
 
 _HELP_SLUG = "dv_magcal"
 
 
+@add_arguments(
+    additional_arguments={
+        "plot_magcal_dive_climb": BaseOptsType.options_t(
+            False,
+            {"Base", "BasePlot", "Reprocess"},
+            ("--plot_magcal_dive_climb",),
+            bool,
+            {
+                "help": "Plot dive and climb magcal calibration separately instead of combined",
+                "section": "plotting",
+                "option_group": "plotting",
+                "action": argparse.BooleanOptionalAction,
+            },
+        ),
+    }
+)
 @plotdivesingle
 def plot_mag(
     base_opts: BaseOpts.BaseOptions,
@@ -67,34 +85,55 @@ def plot_mag(
     if "eng_mag_x" not in dive_nc_file.variables or not generate_plots:
         return ([], [])
 
-    hard, soft, cover, circ, fig, copy_text = Magcal.magcal_worker(
-        [dive_nc_file], True, "html", PlotUtils.get_mission_dive(dive_nc_file)
-    )
-    if fig is None:
-        return ([], [])
+    def _build_output(
+        phase: str, basename: str
+    ) -> tuple[plotly.graph_objects.Figure | None, list[pathlib.Path]]:
+        hard, soft, cover, circ, fig, copy_text = Magcal.magcal_worker(
+            [dive_nc_file],
+            True,
+            "html",
+            PlotUtils.get_mission_dive(dive_nc_file),
+            phase=phase,
+        )
+        if fig is None:
+            return None, []
 
-    fig.add_annotation(PlotUtilsPlotly.add_help_link(_HELP_SLUG))
+        fig.add_annotation(PlotUtilsPlotly.add_help_link(_HELP_SLUG))
 
-    copy_post_script = PlotUtilsPlotly.build_clipboard_button_post_script(
-        button_label="Copy calibration",
-        get_copy_text_js=f"return {json.dumps(copy_text)};",
-        # Anchored to the x-axis title group ("X field") with
-        # placement="below_centered" - lands the button below the plot,
-        # horizontally centered under the x-axis label. Anchoring to the
-        # title group itself (rather than a fixed offset from rect.bg)
-        # means the button always clears the tick labels too, since the
-        # title is reliably drawn below them.
-        anchor_element_js="return gd.querySelector('g.g-xtitle');\n",
-        is_visible_js="return true;",
-        placement="below_centered",
-    )
+        copy_post_script = PlotUtilsPlotly.build_clipboard_button_post_script(
+            button_label="Copy calibration",
+            get_copy_text_js=f"return {json.dumps(copy_text)};",
+            # Anchored to the x-axis title group ("X field") with
+            # placement="below_centered" - lands the button below the plot,
+            # horizontally centered under the x-axis label. Anchoring to the
+            # title group itself (rather than a fixed offset from rect.bg)
+            # means the button always clears the tick labels too, since the
+            # title is reliably drawn below them.
+            anchor_element_js="return gd.querySelector('g.g-xtitle');\n",
+            is_visible_js="return true;",
+            placement="below_centered",
+        )
 
-    return (
-        [fig],
-        PlotUtilsPlotly.write_output_files(
+        return fig, PlotUtilsPlotly.write_output_files(
             base_opts,
-            "dv%04d_magcal" % (dive_nc_file.dive_number,),
+            basename,
             fig,
             post_script=copy_post_script,
-        ),
+        )
+
+    if getattr(base_opts, "plot_magcal_dive_climb", False):
+        figs = []
+        output_files = []
+        for phase, suffix in (("dive", "dive"), ("climb", "climb")):
+            fig, files = _build_output(
+                phase, "dv%04d_magcal_%s" % (dive_nc_file.dive_number, suffix)
+            )
+            if fig is not None:
+                figs.append(fig)
+                output_files.extend(files)
+        return (figs, output_files)
+
+    fig, output_files = _build_output(
+        "all", "dv%04d_magcal" % (dive_nc_file.dive_number,)
     )
+    return ([fig] if fig is not None else [], output_files)

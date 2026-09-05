@@ -44,6 +44,7 @@ import sys
 import traceback
 import typing
 import warnings
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -84,7 +85,8 @@ def magcal(
     glider: int,
     dives: list[int],
     softiron: bool,
-    doplot: str
+    doplot: str,
+    phase: str = "all",
 ) -> tuple[list, np.ndarray, float, float, Any]:
 
     nc_files = []
@@ -101,7 +103,7 @@ def magcal(
     else:
         title = PlotUtils.get_mission_str(nc_files[0]) + f' dives {dives}'
 
-    hard, soft, cover, circ, fig, _copy_text = magcal_worker(nc_files, softiron, doplot, title)
+    hard, soft, cover, circ, fig, _copy_text = magcal_worker(nc_files, softiron, doplot, title, phase=phase)
 
     if fig and doplot == 'png':
         try:
@@ -157,7 +159,8 @@ def magcal_worker(
     dive_nc_file: list[scipy.io._netcdf.netcdf_file],
     softiron: bool,
     doplot: str,
-    title: str
+    title: str,
+    phase: str = "all",
 ) -> tuple[list, np.ndarray, float, float, plotly.graph_objects.Figure | None, str]:
 
     if "eng_mag_x" not in dive_nc_file[0].variables:
@@ -196,6 +199,10 @@ def magcal_worker(
     for f in dive_nc_file:
         mpts = f.dimensions["sg_data_point"].size
         idx = range(0, mpts, decimate)
+        if phase != "all":
+            depth_at_idx = f.variables["eng_depth"][idx]
+            split = int(np.argmax(depth_at_idx))
+            idx = idx[: split + 1] if phase == "dive" else idx[split:]
         #print(idx)
         mpts = len(idx)
         #print(npts, k, mpts)
@@ -796,7 +803,8 @@ def magcal_worker(
         softiron,
     )
 
-    title_text = f"{title}<br>compass calibration<br>{fit_line}"
+    phase_suffix = {"dive": " (dive)", "climb": " (climb)"}.get(phase, "")
+    title_text = f"{title}{phase_suffix}<br>compass calibration<br>{fit_line}"
 
     fig.update_layout(
         {
@@ -874,6 +882,16 @@ def main():
                     "action": argparse.BooleanOptionalAction,
                 },
             ),
+            "split_dive_climb": BaseOptsType.options_t(
+                False,
+                {"Magcal",},
+                ("--split_dive_climb",),
+                bool,
+                {
+                    "help": "Process dive and climb phases separately instead of combined",
+                    "action": argparse.BooleanOptionalAction,
+                },
+            ),
         }
     )
 
@@ -913,22 +931,43 @@ def main():
     else:
         fmt = ""
 
-    hard, soft, cover, circ, plt = magcal(base_opts.mission_dir,
-                                          base_opts.instrument_id,
-                                          dives,
-                                          base_opts.soft,
-                                          fmt)
+    if base_opts.split_dive_climb:
+        out_path = Path(base_opts.out)
+        for phase in ("dive", "climb"):
+            hard, soft, cover, circ, plt = magcal(base_opts.mission_dir,
+                                                  base_opts.instrument_id,
+                                                  dives,
+                                                  base_opts.soft,
+                                                  fmt,
+                                                  phase=phase)
+            phase_out = out_path.with_stem(f"{out_path.stem}_{phase}")
+            if fmt == 'html':
+                fid = open(phase_out, 'w')
+            elif fmt == 'png':
+                fid = open(phase_out, 'wb')
 
-    if fmt == 'html':
-        fid = open(base_opts.out, 'w')
-    elif fmt == 'png':
-        fid = open(base_opts.out, 'wb')
+            fid.write(plt)
+            fid.close()
 
-    fid.write(plt)
-    fid.close()
-  
-    print(f"hard = {hard}")
-    print(f"soft = {soft}")
+            print(f"{phase}: hard = {hard}")
+            print(f"{phase}: soft = {soft}")
+    else:
+        hard, soft, cover, circ, plt = magcal(base_opts.mission_dir,
+                                              base_opts.instrument_id,
+                                              dives,
+                                              base_opts.soft,
+                                              fmt)
+
+        if fmt == 'html':
+            fid = open(base_opts.out, 'w')
+        elif fmt == 'png':
+            fid = open(base_opts.out, 'wb')
+
+        fid.write(plt)
+        fid.close()
+
+        print(f"hard = {hard}")
+        print(f"soft = {soft}")
 
 if __name__ == "__main__":
     retval = 1
