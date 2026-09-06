@@ -254,7 +254,11 @@ def main(instrument_id=None, base_opts=None):
                         )
 
                         log_info(f"Running {cmd_line}")
-                        Utils.run_cmd_shell(cmd_line)
+                        sts, _ = Utils.run_cmd_shell(cmd_line)
+                        if sts:
+                            log_error(
+                                f"MakeKML.py exited {sts} - see {makekml_log} for details"
+                            )
 
                         log_info(
                             f"Back from MakeKML.py - see {makekml_log} for details"

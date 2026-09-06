@@ -691,7 +691,7 @@ def convert_network_logfile(
         )
         return None
 
-    if sts >> 8:
+    if sts:
         error = ""
         if run_output is not None:
             for ll in run_output:
@@ -805,7 +805,7 @@ def convert_network_profile(
         )
         return None
 
-    if sts >> 8:
+    if sts:
         error = ""
         if fo is not None:
             for ll in fo:

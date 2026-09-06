@@ -280,9 +280,13 @@ def process_data_files(
         cmdline = f"{convertor} {fc.full_filename()} {matfile}"
         log_info(f"Running {cmdline}")
         try:
-            Utils.run_cmd_shell(cmdline)
+            sts, _ = Utils.run_cmd_shell(cmdline)
         except Exception:
             log_error(f"Error running {cmdline}", "exc")
+            return 1
+
+        if sts:
+            log_error(f"Error running {cmdline} - exit status {sts}")
             return 1
 
         shutil.copy(matfile, fc.mk_base_engfile_name())

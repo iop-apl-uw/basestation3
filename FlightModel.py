@@ -4679,7 +4679,7 @@ def process_dive(
                     flight_directory,
                     "Reprocess_%04d_%.f.log" % (max(flight_dive_nums), time.time()),
                 )
-                Utils.run_cmd_shell(
+                sts, _ = Utils.run_cmd_shell(
                     "%s %s --force -v --called_from_fm --mission_dir %s --nice %d %s  > %s 2>&1"
                     % (
                         sys.executable,
@@ -4690,6 +4690,10 @@ def process_dive(
                         reprocess_log,
                     )
                 )
+                if sts:
+                    log_error(
+                        f"Reprocess.py exited {sts} - see {reprocess_log} for details"
+                    )
 
                 log_info(f"Back from Reprocess.py - see {reprocess_log} for details")
                 # update updated_dives_d with any new times for the next FM cycle

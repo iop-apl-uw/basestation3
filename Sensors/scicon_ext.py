@@ -151,6 +151,10 @@ def process_adcp_dat(
         )
         return 1
 
+    if sts:
+        log_error("Error running %s - exit status %d" % (cmdline, sts))
+        return 1
+
     shutil.copy(matfile, scicon_eng_file)
     processed_logger_eng_files.append(pathlib.Path(scicon_eng_file))
     processed_logger_other_files.append(pathlib.Path(matfile))
@@ -243,6 +247,10 @@ def process_ctx3_dat(base_opts, scicon_file, output_file, processed_logger_other
         log_error(
             "Error running %s - timeout" % cmdline, "exc", alert="CONVERSION_TIMEOUT"
         )
+        return 1
+
+    if sts:
+        log_error("Error running %s - exit status %d" % (cmdline, sts))
         return 1
 
     processed_logger_other_files.append(pathlib.Path(output_file))

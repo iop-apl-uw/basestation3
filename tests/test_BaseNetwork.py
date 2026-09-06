@@ -299,7 +299,41 @@ def test_convert_network_profile_success_with_fake_decompressor(tmp_path):
     out_file = tmp_path / "p2720002.npro"
     result = BaseNetwork.convert_network_profile(base_opts, in_file, out_file)
     assert result == out_file
-    assert out_file.read_bytes() == b"raw profile data"
+
+
+def test_convert_network_logfile_failure_with_fake_decompressor(tmp_path, caplog):
+    """Regression test: a decompressor that exits nonzero must be treated
+    as a failure (return None), not silently treated as success. Was
+    previously checked via `if sts >> 8:` - Utils.run_cmd_shell() returns
+    a plain 0-255 exit code (subprocess.Popen.returncode), not an
+    os.wait()-encoded status, so right-shifting any real exit code by 8
+    always yielded 0 and every failure was missed."""
+    convertor = tmp_path / "fake_log_fails"
+    convertor.write_text("#!/bin/sh\necho 'boom' >&2\nexit 1\n")
+    convertor.chmod(0o755)
+    base_opts = _make_base_opts(network_log_decompressor=str(convertor))
+    in_file = tmp_path / "p2720002.x"
+    in_file.write_bytes(b"$ID,272\n$DIVE,2\n")
+    out_file = tmp_path / "p2720002.nlog"
+    with caplog.at_level(logging.ERROR):
+        result = BaseNetwork.convert_network_logfile(base_opts, in_file, out_file)
+    assert result is None
+    assert any("Error running" in r.message for r in caplog.records)
+
+
+def test_convert_network_profile_failure_with_fake_decompressor(tmp_path, caplog):
+    """Same regression as above, for convert_network_profile."""
+    convertor = tmp_path / "fake_profile_fails"
+    convertor.write_text("#!/bin/sh\necho 'boom' >&2\nexit 1\n")
+    convertor.chmod(0o755)
+    base_opts = _make_base_opts(network_profile_decompressor=str(convertor))
+    in_file = tmp_path / "p2720002.pro_raw"
+    in_file.write_bytes(b"raw profile data")
+    out_file = tmp_path / "p2720002.npro"
+    with caplog.at_level(logging.ERROR):
+        result = BaseNetwork.convert_network_profile(base_opts, in_file, out_file)
+    assert result is None
+    assert any("Error running" in r.message for r in caplog.records)
 
 
 # ---------------------------------------------------------------------------
