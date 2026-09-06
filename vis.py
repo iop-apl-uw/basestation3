@@ -729,6 +729,7 @@ def attachHandlers(app: sanic.Sanic):
         if 'fallback' in request.args:
             filenames.append(f'{gliderPath(glider,request)}/plots/dv{dive:04d}_diveplot.{fmt}')
             filenames.append(f'{gliderPath(glider,request)}/plots/dv{dive:04d}_reduced_ctd.{fmt}')
+            filenames.append(f'{gliderPath(glider,request)}/plots/dv{dive:04d}_reduced_ts.{fmt}')
             filenames.append(f'{gliderPath(glider,request)}/plots/eng_mission_map.{fmt}')
 
         for filename in filenames:
