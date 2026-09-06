@@ -737,7 +737,7 @@ def convert_network_logfile(
                     sgid = float(ll.rstrip()[4:])
                 elif ll.startswith("$DIVE,"):
                     divenum = float(ll.rstrip()[6:])
-            if sgid is None or sgid < 100.0 or divenum is None or divenum <= 0:
+            if sgid is None or sgid < 100.0 or divenum is None or divenum < 0:
                 log_debug(f"Could not formulate file name for {in_file_name}")
                 return None
             run_output.seek(0)

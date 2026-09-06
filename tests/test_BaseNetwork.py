@@ -279,6 +279,21 @@ def test_convert_network_logfile_success_with_fake_decompressor(tmp_path):
     assert out_file.read_bytes() == b"$ID,272\n$DIVE,2\n"
 
 
+def test_convert_network_logfile_auto_names_dive_zero(tmp_path):
+    """Regression guard: dive 0 (e.g. sg0000en.r pre-dive/self-test data) is
+    a legitimate dive number, not a sentinel for "couldn't parse" - the
+    auto-naming guard must accept it rather than silently returning None."""
+    convertor = tmp_path / "fake_log"
+    convertor.write_text('#!/bin/sh\ncat "$1"\n')
+    convertor.chmod(0o755)
+    base_opts = _make_base_opts(network_log_decompressor=str(convertor))
+    in_file = tmp_path / "sg0000en.x"
+    in_file.write_bytes(b"$ID,261.000000\n$DIVE,0.000000\n")
+    result = BaseNetwork.convert_network_logfile(base_opts, in_file, None)
+    assert result == tmp_path / "p2610000.nlog"
+    assert result.read_bytes() == b"$ID,261.000000\n$DIVE,0.000000\n"
+
+
 def _write_fake_sglog(sglog_pkg: pathlib.Path, cli_body: str) -> None:
     sglog_pkg.mkdir(parents=True)
     (sglog_pkg / "__init__.py").write_text("")
@@ -362,6 +377,38 @@ def test_convert_network_logfile_falls_back_to_real_binary_when_sglog_unavailabl
         "/usr/local/bin/log" in r.message and "does not exit" in r.message
         for r in caplog.records
     )
+
+
+def test_convert_network_logfile_reports_nonzero_exit_status(tmp_path, caplog):
+    """Regression guard: Utils.run_cmd_shell returns a plain exit code (not
+    an os.wait()-style encoded status), so the failure check must test
+    `sts` directly rather than `sts >> 8` - the latter zeroes out any
+    normal exit code (1-255) and silently treats real failures as
+    success."""
+    convertor = tmp_path / "fake_log"
+    convertor.write_text('#!/bin/sh\necho "boom" >&2\nexit 1\n')
+    convertor.chmod(0o755)
+    base_opts = _make_base_opts(network_log_decompressor=str(convertor))
+    in_file = tmp_path / "p2720002.x"
+    in_file.write_bytes(b"data")
+    with caplog.at_level(logging.ERROR):
+        result = BaseNetwork.convert_network_logfile(base_opts, in_file, None)
+    assert result is None
+    assert any("boom" in r.message for r in caplog.records)
+
+
+def test_convert_network_profile_reports_nonzero_exit_status(tmp_path, caplog):
+    convertor = tmp_path / "fake_profile"
+    convertor.write_text('#!/bin/sh\necho "boom" >&2\nexit 1\n')
+    convertor.chmod(0o755)
+    base_opts = _make_base_opts(network_profile_decompressor=str(convertor))
+    in_file = tmp_path / "p2720002.x"
+    in_file.write_bytes(b"data")
+    out_file = tmp_path / "p2720002.npro"
+    with caplog.at_level(logging.ERROR):
+        result = BaseNetwork.convert_network_profile(base_opts, in_file, out_file)
+    assert result is None
+    assert any("boom" in r.message for r in caplog.records)
 
 
 def test_convert_network_profile_success_with_fake_decompressor(tmp_path):
