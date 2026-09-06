@@ -1389,6 +1389,10 @@ def make_netcdf_network_file(
         if full_gc_table is None:
             log_warning("Empty GC table - skipping")
         else:
+            if len(np.shape(full_gc_table)) == 1:
+                # Single row - convert to a 1xN table so column indexing/sort works.
+                full_gc_table = np.reshape(full_gc_table, (1, np.shape(full_gc_table)[0]))
+
             # Sort the table by the first column
             data = full_gc_table[full_gc_table[:, 0].argsort()]
 
@@ -1458,6 +1462,90 @@ def make_netcdf_network_file(
     return ncf_filename
 
 
+# Real .nlog files always carry a "start:" line with a plausible calendar
+# date. Some builds emit a line or two of debug output before it, so this
+# is a window scan, not an anchor to a fixed line number.
+_NLOG_SANITY_SCAN_LINES = 20
+# Rejects a "start:" line decades in the past/future - seen in the wild
+# from a broken en.r -> nlog conversion (e.g. year fields that decode to
+# 1960 or 1970) without hardcoding a mission-specific date.
+_NLOG_MIN_PLAUSIBLE_EPOCH = time.mktime((1995, 1, 1, 0, 0, 0, 0, 0, 0))
+_NLOG_MAX_FUTURE_SLOP_SECS = 3 * 365 * 86400
+
+
+def check_nlog_sanity(
+    network_logfile: pathlib.Path,
+    expected_sgid: int | None = None,
+    max_scan_lines: int = _NLOG_SANITY_SCAN_LINES,
+) -> str | None:
+    """Checks whether a network logfile looks like real glider telemetry
+    rather than the product of a broken en.r -> nlog conversion.
+
+    A garbled conversion (seen in the wild - e.g. a decompressor crash
+    whose output got written out as if it were the log) typically has no
+    "start:" line at all, or one with an implausible date, and/or lacks an
+    "$ID,<glider>" line naming the glider that produced the dive.
+
+    Args:
+        network_logfile: Path to the network logfile to check.
+        expected_sgid: Glider number the file is supposed to belong to
+            (e.g. parsed from the filename), checked against any early
+            "$ID,..." line found. Pass None to skip that check.
+        max_scan_lines: How many leading lines to scan.
+
+    Returns:
+        None if the file looks sane, otherwise a short reason it doesn't.
+    """
+    try:
+        with network_logfile.open("rb") as f:
+            lines = [
+                f.readline().decode(errors="replace").rstrip()
+                for _ in range(max_scan_lines)
+            ]
+    except Exception as e:
+        return f"could not read file ({e})"
+
+    start_reason = f"no start: line in the first {max_scan_lines} lines"
+    for raw_line in lines:
+        if not raw_line.startswith("start:"):
+            continue
+        try:
+            time_string = (
+                raw_line.split(",", maxsplit=1)[1]
+                if "," in raw_line
+                else raw_line.split(":", maxsplit=1)[1]
+            )
+            start_epoch = Utils.parse_time(time_string)
+        except Exception as e:
+            start_reason = f"unparseable start: line {raw_line!r} ({e})"
+            continue
+        if (
+            start_epoch < _NLOG_MIN_PLAUSIBLE_EPOCH
+            or start_epoch > time.time() + _NLOG_MAX_FUTURE_SLOP_SECS
+        ):
+            start_reason = f"implausible start: line {raw_line!r} (epoch {start_epoch:.0f})"
+            continue
+        start_reason = None
+        break
+    if start_reason is not None:
+        return start_reason
+
+    if expected_sgid is None:
+        return None
+
+    for raw_line in lines:
+        if not raw_line.startswith("$ID,"):
+            continue
+        try:
+            sgid = float(raw_line[len("$ID,") :])
+        except ValueError:
+            continue
+        if abs(sgid - expected_sgid) < 0.5:
+            return None
+
+    return f"no $ID,{expected_sgid} line in the first {max_scan_lines} lines"
+
+
 def make_netcdf_network_files(
     network_files: list[pathlib.Path], processed_files_list: list[pathlib.Path]
 ) -> int:
@@ -1484,7 +1572,15 @@ def make_netcdf_network_files(
         dive_num = int(nf.name[4:8])
 
         if nf.suffix == ".nlog":
-            net_files[dive_num]["log"] = nf
+            reason = (
+                check_nlog_sanity(nf, expected_sgid=int(nf.name[1:4]))
+                if nf.is_file()
+                else None
+            )
+            if reason is not None:
+                log_error(f"{nf} does not look like a valid nlog ({reason}) - skipping")
+            else:
+                net_files[dive_num]["log"] = nf
         elif nf.name.endswith(".npro_ct.dat") or nf.suffix == ".npro":
             net_files[dive_num]["ct"] = nf
         elif nf.name.endswith(".npro_wl.dat"):

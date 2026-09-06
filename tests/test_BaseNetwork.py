@@ -184,6 +184,93 @@ def test_make_netcdf_network_files_warns_on_unknown_suffix(
 
 
 # ---------------------------------------------------------------------------
+# check_nlog_sanity - guards against a broken en.r -> nlog conversion
+# producing garbled telemetry that otherwise crashes or silently corrupts
+# downstream netcdf output (e.g. a bogus single $STATE row).
+# ---------------------------------------------------------------------------
+
+
+def test_check_nlog_sanity_accepts_well_formed_file(tmp_path):
+    nlog_path = tmp_path / "p2720002.nlog"
+    nlog_path.write_text(
+        "1788683967 191 0 0 0\nstart: 9 6 126 8 39 27\n$ID,272.000000\n"
+    )
+    assert BaseNetwork.check_nlog_sanity(nlog_path, expected_sgid=272) is None
+
+
+def test_check_nlog_sanity_tolerates_leading_debug_output(tmp_path):
+    """Some builds emit a line of debug output before the start: line -
+    the check must scan for start:/$ID rather than anchor to line 0/1."""
+    nlog_path = tmp_path / "p2720002.nlog"
+    nlog_path.write_text(
+        "DEBUG: modem sync ok\nstart: 9 6 126 8 39 27\n$ID,272.000000\n"
+    )
+    assert BaseNetwork.check_nlog_sanity(nlog_path, expected_sgid=272) is None
+
+
+def test_check_nlog_sanity_rejects_missing_start_line(tmp_path):
+    """Reproduces the real garbled network log for sg261 dive 40: the
+    decompressor's output has no start: line at all."""
+    nlog_path = tmp_path / "p2610040.nlog"
+    nlog_path.write_text("$NAV_MODE,0.000000\n$NAV_MODE,0.000000\n$ID,-378.516602\n")
+    reason = BaseNetwork.check_nlog_sanity(nlog_path, expected_sgid=261)
+    assert reason is not None
+    assert "start:" in reason
+
+
+def test_check_nlog_sanity_rejects_implausible_start_date(tmp_path):
+    """Reproduces a real garbled network log where a start: line is
+    present, but decodes to a nonsense date (year 70 -> ~1970)."""
+    nlog_path = tmp_path / "p2610033.nlog"
+    nlog_path.write_text("start: 3 22 70 20 43 42\n$ID,0.000000\n")
+    reason = BaseNetwork.check_nlog_sanity(nlog_path, expected_sgid=261)
+    assert reason is not None
+    assert "implausible" in reason
+
+
+def test_check_nlog_sanity_rejects_wrong_glider_id(tmp_path):
+    nlog_path = tmp_path / "p2610014.nlog"
+    nlog_path.write_text("start: 9 6 126 8 39 27\n$ID,406426222592.000000\n")
+    reason = BaseNetwork.check_nlog_sanity(nlog_path, expected_sgid=261)
+    assert reason is not None
+    assert "$ID,261" in reason
+
+
+def test_check_nlog_sanity_skips_id_check_when_no_expected_sgid(tmp_path):
+    nlog_path = tmp_path / "p2610014.nlog"
+    nlog_path.write_text("start: 9 6 126 8 39 27\n$ID,406426222592.000000\n")
+    assert BaseNetwork.check_nlog_sanity(nlog_path, expected_sgid=None) is None
+
+
+def test_make_netcdf_network_files_skips_garbled_nlog(monkeypatch, tmp_path, caplog):
+    """Integration guard: a garbled .nlog is excluded from processing
+    entirely (rather than reaching make_netcdf_network_file and either
+    crashing or producing a netcdf from bogus data), while a well-formed
+    sibling dive still gets processed normally."""
+    calls = []
+    monkeypatch.setattr(
+        BaseNetwork,
+        "make_netcdf_network_file",
+        lambda log, ct, wl=None, ts_outputfile=False: calls.append(log)
+        and log.with_suffix(".ncdf"),
+    )
+
+    garbled = tmp_path / "p2610040.nlog"
+    garbled.write_text("$NAV_MODE,0.000000\n$ID,-378.516602\n")
+    good = tmp_path / "p2610014.nlog"
+    good.write_text("start: 9 6 126 8 39 27\n$ID,261.000000\n")
+
+    processed: list[pathlib.Path] = []
+    with caplog.at_level(logging.ERROR):
+        ret_val = BaseNetwork.make_netcdf_network_files([garbled, good], processed)
+    assert ret_val == 0
+    assert calls == [good]
+    assert any(
+        "does not look like a valid nlog" in r.message for r in caplog.records
+    )
+
+
+# ---------------------------------------------------------------------------
 # Tier 2 - guard-clause tests, no decompressor binary needed
 # ---------------------------------------------------------------------------
 
