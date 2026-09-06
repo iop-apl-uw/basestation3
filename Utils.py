@@ -1944,7 +1944,14 @@ def estimate_endurance(
         warnings.simplefilter("ignore", np.exceptions.RankWarning)  # noqa: NPY201
         m, b = np.polyfit(dive_col[-p_dives_back:], gauge_col[-p_dives_back:], 1)
     log_info(f"m:{m} b:{b}")
-    lastdive_num = np.int32((base_opts.mission_energy_reserve_percent - b) / m)
+    if np.isnan(m) or np.isnan(b):
+        # m/b are NaN when gauge_col has no finite values over the requested
+        # dive window - casting that straight to int32 below would raise a
+        # RuntimeWarning ("invalid value encountered in cast"); the NaN
+        # propagates harmlessly to the isfinite check further down instead.
+        lastdive_num = np.nan
+    else:
+        lastdive_num = np.int32((base_opts.mission_energy_reserve_percent - b) / m)
     dives_remaining = lastdive_num - dive_col[-1]
     secs_remaining = dives_remaining * np.mean(dive_times[-p_dives_back:])
     if secs_remaining > (50 * 3.154e7):

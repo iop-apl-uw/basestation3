@@ -315,73 +315,78 @@ def mission_energy(
 
             log_info(f"avg_use:{avg_use}")
 
-            p_dives_back = (
-                base_opts.mission_energy_dives_back
-                if batt_df["dive"].to_numpy()[-1] >= base_opts.mission_energy_dives_back
-                else batt_df["dive"].to_numpy()[-1]
-            )
-
-            batt_cap = max(
-                batt_df["batt_Ahr_cap_24V"].to_numpy()[-1] if batt_df["batt_Ahr_cap_24V"].to_numpy()[-1] is not None else 0,
-                batt_df["batt_Ahr_cap_10V"].to_numpy()[-1],
-            )
-            dives_remaining = (
-                batt_cap * (1.0 - base_opts.mission_energy_reserve_percent) - used_to_date
-            ) / avg_use
-            secs_remaining = dives_remaining * np.mean(
-                batt_df["dive_time"].to_numpy()[-p_dives_back:]
-            )
-            end_date = time.strftime(
-                "%Y-%m-%dT%H:%M:%SZ",
-                time.gmtime(batt_df["dive_end"].to_numpy()[-1] + secs_remaining),
-            )
-            days_remaining = secs_remaining / (24.0 * 3600.0)
-            log_info(
-                f"Used to date:{used_to_date:.2f} avg_use:{avg_use:.2f} batt_cap:{batt_cap:.2f} dives_remaining:{dives_remaining:.0f}, days_remaining:{days_remaining:.2f}"
-            )
-            fg_est_str = f"Based on Fuel Gauge for the last {p_dives_back} dives: {dives_remaining:.0f} dives remaining ({days_remaining:.01f} days at current rate) to {100*base_opts.mission_energy_reserve_percent:.0f}% reserve. Estimated end date {end_date} "
-            # y_offset += -0.02
-            # l_annotations.append(
-            #     {
-            #         "text": fg_est_str,
-            #         "showarrow": False,
-            #         "xref": "paper",
-            #         "yref": "paper",
-            #         "x": 0.0,
-            #         "y": y_offset,
-            #     }
-            # )
-
-            try:
-                end_t = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%SZ").timestamp()
-            except ValueError as e:
-                log_warning(f"Failed to convert {end_date} ({e})")
+            if not np.isfinite(avg_use) or avg_use == 0:
+                log_warning(
+                    f"Cannot estimate fuel gauge endurance (avg_use={avg_use}) - insufficient/missing fuel gauge data over the requested dive window"
+                )
             else:
-                BaseDB.addValToDB(base_opts, 
-                                  int(dive_col.to_numpy()[-1]), 
-                                  "energy_dives_remain_FG", 
-                                  dives_remaining, conn)
-                BaseDB.addValToDB(base_opts, 
-                                  int(dive_col.to_numpy()[-1]), 
-                                  "energy_dives_total_FG", 
-                                  dives_remaining + int(dive_col.to_numpy()[-1]), conn)
-                BaseDB.addValToDB(base_opts, 
-                                  int(dive_col.to_numpy()[-1]), 
-                                  "energy_days_remain_FG", 
-                                  days_remaining, conn)
-                BaseDB.addValToDB(base_opts, 
-                                  int(dive_col.to_numpy()[-1]), 
-                                  "energy_end_time_FG", 
-                                  end_t, conn)
-                BaseDB.addValToDB(base_opts, 
-                                  int(dive_col.to_numpy()[-1]), 
-                                  "energy_days_total_FG", 
-                                  (end_t - start)/86400,conn)
+                p_dives_back = (
+                    base_opts.mission_energy_dives_back
+                    if batt_df["dive"].to_numpy()[-1] >= base_opts.mission_energy_dives_back
+                    else batt_df["dive"].to_numpy()[-1]
+                )
 
-            days_df_fg = pd.read_sql_query(
-                f"SELECT dive,energy_days_total_FG FROM dives {clause} ORDER BY dive ASC", 
-                conn,
-            ).sort_values("dive")
+                batt_cap = max(
+                    batt_df["batt_Ahr_cap_24V"].to_numpy()[-1] if batt_df["batt_Ahr_cap_24V"].to_numpy()[-1] is not None else 0,
+                    batt_df["batt_Ahr_cap_10V"].to_numpy()[-1],
+                )
+                dives_remaining = (
+                    batt_cap * (1.0 - base_opts.mission_energy_reserve_percent) - used_to_date
+                ) / avg_use
+                secs_remaining = dives_remaining * np.mean(
+                    batt_df["dive_time"].to_numpy()[-p_dives_back:]
+                )
+                end_date = time.strftime(
+                    "%Y-%m-%dT%H:%M:%SZ",
+                    time.gmtime(batt_df["dive_end"].to_numpy()[-1] + secs_remaining),
+                )
+                days_remaining = secs_remaining / (24.0 * 3600.0)
+                log_info(
+                    f"Used to date:{used_to_date:.2f} avg_use:{avg_use:.2f} batt_cap:{batt_cap:.2f} dives_remaining:{dives_remaining:.0f}, days_remaining:{days_remaining:.2f}"
+                )
+                fg_est_str = f"Based on Fuel Gauge for the last {p_dives_back} dives: {dives_remaining:.0f} dives remaining ({days_remaining:.01f} days at current rate) to {100*base_opts.mission_energy_reserve_percent:.0f}% reserve. Estimated end date {end_date} "
+                # y_offset += -0.02
+                # l_annotations.append(
+                #     {
+                #         "text": fg_est_str,
+                #         "showarrow": False,
+                #         "xref": "paper",
+                #         "yref": "paper",
+                #         "x": 0.0,
+                #         "y": y_offset,
+                #     }
+                # )
+
+                try:
+                    end_t = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%SZ").timestamp()
+                except ValueError as e:
+                    log_warning(f"Failed to convert {end_date} ({e})")
+                else:
+                    BaseDB.addValToDB(base_opts,
+                                      int(dive_col.to_numpy()[-1]),
+                                      "energy_dives_remain_FG",
+                                      dives_remaining, conn)
+                    BaseDB.addValToDB(base_opts,
+                                      int(dive_col.to_numpy()[-1]),
+                                      "energy_dives_total_FG",
+                                      dives_remaining + int(dive_col.to_numpy()[-1]), conn)
+                    BaseDB.addValToDB(base_opts,
+                                      int(dive_col.to_numpy()[-1]),
+                                      "energy_days_remain_FG",
+                                      days_remaining, conn)
+                    BaseDB.addValToDB(base_opts,
+                                      int(dive_col.to_numpy()[-1]),
+                                      "energy_end_time_FG",
+                                      end_t, conn)
+                    BaseDB.addValToDB(base_opts,
+                                      int(dive_col.to_numpy()[-1]),
+                                      "energy_days_total_FG",
+                                      (end_t - start)/86400,conn)
+
+                days_df_fg = pd.read_sql_query(
+                    f"SELECT dive,energy_days_total_FG FROM dives {clause} ORDER BY dive ASC",
+                    conn,
+                ).sort_values("dive")
 
 
         # Find the device and sensor columnns for power consumption

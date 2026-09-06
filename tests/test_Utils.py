@@ -28,6 +28,7 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import types
+import warnings
 
 import numpy as np
 import pytest
@@ -56,12 +57,13 @@ def test_estimate_endurance_handles_all_nan_gauge_column(caplog):
     dive_times = np.full(20, np.nan)
     dive_end = np.arange(1_700_000_000, 1_700_000_000 + 20 * 86400, 86400, dtype=float)
 
-    dives_remaining, days_remaining, end_date = Utils.estimate_endurance(
-        base_opts, dive_col, gauge_col, dive_times, dive_end
-    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        dives_remaining, days_remaining, end_date = Utils.estimate_endurance(
+            base_opts, dive_col, gauge_col, dive_times, dive_end
+        )
 
-    # dives_remaining is whatever garbage int32(nan) casts to (platform/numpy
-    # -dependent, not reliably NaN) - the real bug is downstream of it.
+    assert np.isnan(dives_remaining)
     assert np.isnan(days_remaining)
     # Deliberately unparseable, matching MissionEnergy.py's existing
     # except ValueError handling around datetime.strptime(end_date, ...).
