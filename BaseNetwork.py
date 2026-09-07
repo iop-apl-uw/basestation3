@@ -45,7 +45,7 @@ import typing
 import numpy as np
 import xarray as xr
 
-import BaseDB
+#import BaseDB
 import BaseOpts
 import BaseOptsType
 import LogFile
@@ -2027,7 +2027,11 @@ def main(
                         base_opts.instrument_id = int(ncf.stem[1:4])
                     except Exception:
                         base_opts.instrument_id = -1
-                BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
+                        
+                log_info("Not adding to database {ncf}")
+                # GBS 2026/09/06 This is almost certainly not the right thing to do
+                #BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
+                # This is better, but needs more more consideration in a mixed full dive/compressed dive mission
 
     log_info(
         "Finished processing "
