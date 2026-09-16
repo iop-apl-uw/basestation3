@@ -91,24 +91,24 @@ class FakePrivExecClient:
     """In-memory PrivExecClient used to exercise Dispatcher without a real socket."""
 
     def __init__(self):
-        self.dispatched: list[tuple[str, list[str], pathlib.Path]] = []
+        self.dispatched: list[tuple[str, list[str], pathlib.Path, str]] = []
         self._next_pid = 1000
         self._statuses: dict[int, tuple[bool, int | None]] = {}
         self.raise_on_dispatch: Exception | None = None
         self.raise_on_status: Exception | None = None
         # Optional hooks so individual tests can override behavior without
         # reassigning (and thereby shadowing) the dispatch/status methods.
-        self.dispatch_override: Callable[[str, list[str], pathlib.Path], int] | None = None
+        self.dispatch_override: Callable[[str, list[str], pathlib.Path, str], int] | None = None
         self.status_override: Callable[[int], tuple[bool, int | None]] | None = None
 
-    def dispatch(self, site: str, argv: list[str], log_file: pathlib.Path) -> int:
+    def dispatch(self, site: str, argv: list[str], log_file: pathlib.Path, job_id: str) -> int:
         if self.dispatch_override:
-            return self.dispatch_override(site, argv, log_file)
+            return self.dispatch_override(site, argv, log_file, job_id)
         if self.raise_on_dispatch:
             raise self.raise_on_dispatch
         pid = self._next_pid
         self._next_pid += 1
-        self.dispatched.append((site, argv, log_file))
+        self.dispatched.append((site, argv, log_file, job_id))
         self._statuses[pid] = (False, None)
         return pid
 
@@ -697,7 +697,7 @@ def test_dispatch_blocking_immediate_success(tmp_path):
     client = FakePrivExecClient()
     dispatcher = BaseRunnerMulti.Dispatcher(client)
 
-    def fake_dispatch(site_name, argv, log_file):
+    def fake_dispatch(site_name, argv, log_file, job_id):
         pid = 4242
         client._statuses[pid] = (True, 0)
         return pid
@@ -710,7 +710,7 @@ def test_dispatch_blocking_logs_warning_on_nonzero_returncode(tmp_path, caplog):
     site = _site(tmp_path / "seaglider")
     client = FakePrivExecClient()
 
-    def fake_dispatch(site_name, argv, log_file):
+    def fake_dispatch(site_name, argv, log_file, job_id):
         pid = 4242
         client._statuses[pid] = (True, 3)
         return pid
@@ -726,7 +726,7 @@ def test_process_run_file_uses_blocking_dispatch_when_queue_scripts_false(tmp_pa
     object.__setattr__(site, "queue_scripts", False)
     client = FakePrivExecClient()
 
-    def fake_dispatch(site_name, argv, log_file):
+    def fake_dispatch(site_name, argv, log_file, job_id):
         pid = 4242
         client._statuses[pid] = (True, 0)
         return pid
@@ -758,12 +758,13 @@ def test_unix_socket_priv_exec_client_dispatch_success(short_socket_path):
             assert data is not None
             request = orjson.loads(data)
             assert request["site"] == "seaglider"
+            assert request["job_id"] == "job1"
             BaseRunnerMulti._send_frame(conn, orjson.dumps({"ok": True, "pid": 4242}))
 
     thread = threading.Thread(target=_server)
     thread.start()
     client = BaseRunnerMulti.UnixSocketPrivExecClient(str(short_socket_path))
-    pid = client.dispatch("seaglider", ["/bin/true"], pathlib.Path("/tmp/x.log"))
+    pid = client.dispatch("seaglider", ["/bin/true"], pathlib.Path("/tmp/x.log"), "job1")
     thread.join(timeout=5)
     listener.close()
 
@@ -918,7 +919,7 @@ def test_dispatch_blocking_polls_until_done(tmp_path):
     client = FakePrivExecClient()
     calls = {"n": 0}
 
-    def fake_dispatch(site_name, argv, log_file):
+    def fake_dispatch(site_name, argv, log_file, job_id):
         return 4242
 
     def fake_status(pid):
@@ -1036,6 +1037,142 @@ def test_write_timing_line_failure_is_logged(tmp_path, caplog):
     dispatcher._write_timing_line("seaglider", "BaseLogin.py", running, 0)
 
     assert any(r.levelname == "ERROR" for r in caplog.records)
+
+
+def test_write_timing_line_includes_peak_memory(tmp_path):
+    dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
+    log_file = tmp_path / "baselog.log"
+    log_file.write_text("")
+    running = BaseRunnerMulti.RunningJob("job1", 1, ["argv"], log_file, 0.0)
+
+    dispatcher._write_timing_line("seaglider", "BaseLogin.py", running, 0, 512 * 1024 * 1024)
+
+    assert "peak_memory_mb=512.0" in log_file.read_text()
+
+
+def test_write_timing_line_omits_peak_memory_when_none(tmp_path):
+    dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())
+    log_file = tmp_path / "baselog.log"
+    log_file.write_text("")
+    running = BaseRunnerMulti.RunningJob("job1", 1, ["argv"], log_file, 0.0)
+
+    dispatcher._write_timing_line("seaglider", "BaseLogin.py", running, 0, None)
+
+    assert "peak_memory_mb" not in log_file.read_text()
+
+
+def test_notify_vis_complete_includes_peak_memory(monkeypatch):
+    dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient(), notify_vis=True)
+    payloads = []
+    monkeypatch.setattr(
+        Utils, "notifyVis", lambda glider_id, kind, payload: payloads.append(payload)
+    )
+
+    dispatcher._notify_vis(
+        ("seaglider", "sg272", "Base.py", 272), 272, ["job1"], "complete", "job1", 0,
+        512 * 1024 * 1024,
+    )
+
+    assert len(payloads) == 1
+    msg = orjson.loads(payloads[0])
+    assert msg["peak_memory_bytes"] == 512 * 1024 * 1024
+
+
+def test_notify_vis_complete_peak_memory_none_when_unavailable(monkeypatch):
+    dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient(), notify_vis=True)
+    payloads = []
+    monkeypatch.setattr(
+        Utils, "notifyVis", lambda glider_id, kind, payload: payloads.append(payload)
+    )
+
+    dispatcher._notify_vis(
+        ("seaglider", "sg272", "Base.py", 272), 272, ["job1"], "complete", "job1", 0
+    )
+
+    msg = orjson.loads(payloads[0])
+    assert msg["peak_memory_bytes"] is None
+
+
+def test_sample_job_memory_reads_memory_current(tmp_path):
+    cgroup_root = tmp_path / "cgroup"
+    job_cgroup = cgroup_root / "site-seaglider" / "job-abc123"
+    job_cgroup.mkdir(parents=True)
+    (job_cgroup / "memory.current").write_text("12345\n")
+
+    dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient(), cgroup_root=cgroup_root)
+
+    assert dispatcher._sample_job_memory("seaglider", "abc123") == 12345
+
+
+def test_sample_job_memory_missing_file_returns_none(tmp_path):
+    dispatcher = BaseRunnerMulti.Dispatcher(
+        FakePrivExecClient(), cgroup_root=tmp_path / "cgroup"
+    )
+
+    assert dispatcher._sample_job_memory("seaglider", "abc123") is None
+
+
+def test_sample_job_memory_no_cgroup_root_returns_none():
+    dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient())  # cgroup_root=None
+
+    assert dispatcher._sample_job_memory("seaglider", "abc123") is None
+
+
+def test_final_job_memory_bytes_prefers_memory_peak(tmp_path):
+    cgroup_root = tmp_path / "cgroup"
+    job_cgroup = cgroup_root / "site-seaglider" / "job-abc123"
+    job_cgroup.mkdir(parents=True)
+    (job_cgroup / "memory.peak").write_text("99999\n")
+
+    dispatcher = BaseRunnerMulti.Dispatcher(FakePrivExecClient(), cgroup_root=cgroup_root)
+
+    assert dispatcher._final_job_memory_bytes("seaglider", "abc123", 111) == 99999
+
+
+def test_final_job_memory_bytes_falls_back_to_running_max(tmp_path):
+    dispatcher = BaseRunnerMulti.Dispatcher(
+        FakePrivExecClient(), cgroup_root=tmp_path / "cgroup"
+    )  # no memory.peak file created
+
+    assert dispatcher._final_job_memory_bytes("seaglider", "abc123", 111) == 111
+
+
+def test_final_job_memory_bytes_none_when_nothing_available(tmp_path):
+    dispatcher = BaseRunnerMulti.Dispatcher(
+        FakePrivExecClient(), cgroup_root=tmp_path / "cgroup"
+    )
+
+    assert dispatcher._final_job_memory_bytes("seaglider", "abc123", 0) is None
+
+
+def test_poll_completion_updates_peak_memory_across_ticks(tmp_path):
+    site = _site(tmp_path / "seaglider")
+    run_file = _write_run_file(
+        site.watch_dir, "sg272.run", "/home/sg272", "/home/sg272/current",
+        "/home/sg272/current/baselog.log", "Base.py --mission_dir /home/sg272/current",
+    )
+    client = FakePrivExecClient()
+    cgroup_root = tmp_path / "cgroup"
+    dispatcher = BaseRunnerMulti.Dispatcher(client, cgroup_root=cgroup_root)
+    dispatcher.handle_run_file_event(site, run_file)
+    dispatcher.dispatch_queued()
+
+    que = next(iter(dispatcher.running_jobs))
+    job_id = dispatcher.running_jobs[que].job_id
+    job_cgroup = cgroup_root / "site-seaglider" / f"job-{job_id}"
+    job_cgroup.mkdir(parents=True)
+
+    (job_cgroup / "memory.current").write_text("1000\n")
+    dispatcher.poll_completions()
+    assert dispatcher.running_jobs[que].peak_memory_bytes == 1000
+
+    (job_cgroup / "memory.current").write_text("500\n")  # drops - peak must not decrease
+    dispatcher.poll_completions()
+    assert dispatcher.running_jobs[que].peak_memory_bytes == 1000
+
+    (job_cgroup / "memory.current").write_text("2000\n")
+    dispatcher.poll_completions()
+    assert dispatcher.running_jobs[que].peak_memory_bytes == 2000
 
 
 def test_dispatch_queued_outer_exception_is_caught(tmp_path, monkeypatch, caplog):

@@ -96,6 +96,13 @@ class SiteConfig:
             one core (e.g. 60 -> 60%); None means unthrottled.
         cpu_weight: Relative systemd cgroup CPUWeight for this site's jobs
             (below/above the default of 100); None means default.
+        memory_high_mb: Soft memory cap (systemd MemoryHigh-equivalent) for
+            this site's jobs, in MiB, written to each job's own memory.high;
+            None means unlimited (the kernel default).
+        memory_max_mb: Hard memory cap (systemd MemoryMax-equivalent) for
+            this site's jobs, in MiB; crossing it invokes the kernel OOM
+            killer scoped to that job's own cgroup only. None means
+            unlimited.
         runner_uid: Resolved uid of runner_user; -1 until resolve_ids() runs.
         runner_gid: Resolved gid of runner_user; -1 until resolve_ids() runs.
     """
@@ -115,6 +122,8 @@ class SiteConfig:
     use_docker_basestation: bool = False
     cpu_quota_pct: int | None = None
     cpu_weight: int | None = None
+    memory_high_mb: int | None = None
+    memory_max_mb: int | None = None
     runner_uid: int = dataclasses.field(default=-1, compare=False)
     runner_gid: int = dataclasses.field(default=-1, compare=False)
 
@@ -269,6 +278,8 @@ def _build_site(name: str, entry: dict) -> SiteConfig:
         use_docker_basestation=bool(entry.get("use_docker_basestation", False)),
         cpu_quota_pct=_optional_int(entry, "cpu_quota_pct"),
         cpu_weight=_optional_int(entry, "cpu_weight"),
+        memory_high_mb=_optional_int(entry, "memory_high_mb"),
+        memory_max_mb=_optional_int(entry, "memory_max_mb"),
     )
 
 

@@ -126,6 +126,8 @@ sample. Top-level mapping keyed by site name; each entry:
 | `use_docker_basestation` | no | `false` | Use the basestation install baked into the docker image instead of mounting this checkout. |
 | `cpu_quota_pct` | no | `null` | Hard CPU cap for this site's jobs, as a percentage of one core (e.g. `60` -> 60%). See "Per-site CPU throttling" below. |
 | `cpu_weight` | no | `null` | Relative cgroup `CPUWeight` for this site's jobs (systemd default is 100 when unset). |
+| `memory_high_mb` | no | `null` | Soft memory cap (systemd `MemoryHigh`-equivalent) for this site's jobs, in MiB, written to each job's own `memory.high`. See "Per-site memory limits" below. |
+| `memory_max_mb` | no | `null` | Hard memory cap (systemd `MemoryMax`-equivalent) for this site's jobs, in MiB; crossing it triggers the kernel OOM killer scoped to that one job's own cgroup. See "Per-site memory limits" below. |
 
 Loading is **fail-closed**: any single malformed or unresolvable entry
 (e.g. an unknown `runner_user`) aborts loading the whole file rather than
@@ -195,6 +197,58 @@ point at that subtree. Neither field is set by default (`cpu_quota_pct`/
 `cpu_weight` both default to `null`, meaning unthrottled) - only set them
 for a site that's shown to actually need it.
 
+## Per-site memory limits
+
+Memory can't reuse CPU throttling's shared, site-level cgroup. CPU quota
+degrades gracefully under contention - N concurrent jobs for the same
+site sharing one quota each get roughly `1/N` of it, nobody gets killed.
+A shared `memory.max` doesn't degrade the same way: once the *combined*
+usage of everything in that cgroup crosses the limit, the kernel's cgroup
+OOM killer picks a victim from whatever's in there - which could be an
+unrelated sibling job for the same site, killed purely as collateral
+damage from a different job's overrun.
+
+So every dispatched job gets its own leaf cgroup,
+`site-<name>/job-<job_id>`, nested under the existing site cgroup. This
+leaf is created **unconditionally** - even for a site with no
+`memory_high_mb`/`memory_max_mb` configured - purely so `memory.current`
+is always readable there for tracking. `memory_high_mb`/`memory_max_mb`
+only add the `memory.high`/`memory.max` writes on top of that leaf; a
+fresh cgroup's own `memory.max`/`memory.high` already default to `max`
+(the kernel's literal "unlimited") until written, so leaving these
+`null` reproduces "off" for free - no separate on/off flag is needed.
+
+The site-level aggregate view comes for free too: cgroup v2 always rolls
+a parent's accounting up from its children, so `site-<name>/memory.current`
+is automatically the sum of that site's concurrently-running jobs, with
+no extra code.
+
+`BaseRunnerMulti.py` reads (never writes) `memory.current`/`memory.peak`
+under its own `--cgroup_root`, which must match
+`baserunnerprivexec.service`'s `--cgroup_root` exactly, or memory
+reporting silently reads nothing - fail-open, like every other cgroup
+failure mode here, not fatal.
+
+**Deploy `baserunnerprivexec.service` and `baserunnermulti.service`
+together** when rolling this out (or `baserunnermulti.service` first) -
+dispatch requests now carry a `job_id` that older `BaseRunnerMulti.py`
+builds never sent, so an upgraded `baserunnerprivexec.service` paired
+with an old `baserunnermulti.service` rejects every dispatch until both
+are upgraded. The reverse order is safe: an old `baserunnerprivexec.service`
+just ignores the unknown `job_id` key.
+
+**Expected transient warning right after an upgrade restart**: a job
+dispatched under the *old* code that survives a
+`baserunnerprivexec.service` restart (`KillMode=process` lets it, see
+above) is still a direct member of `site-<name>` itself, not a
+`job-<job_id>` leaf. Until that straggler exits, any *new* dispatch for
+that same site fails to enable `memory` on `site-<name>`'s own
+`cgroup.subtree_control` (cgroup v2 refuses that while the cgroup still
+has member processes) and falls into `CgroupJoiner.join`'s existing
+fail-open path - logged as a `WARNING`, the new job runs
+untracked/unthrottled until the straggler drains. Self-healing, not a
+bug.
+
 ## Deployment
 
 Both processes need their own systemd unit. Neither should ever run as
@@ -225,8 +279,9 @@ Environment=MPLCONFIGDIR=/var/cache/baserunner
 AmbientCapabilities=CAP_SETUID CAP_SETGID
 CapabilityBoundingSet=CAP_SETUID CAP_SETGID
 # Delegates a cgroup subtree to this unit so CgroupJoiner can create
-# per-site child cgroups and write cpu.max/cpu.weight/cgroup.procs
-# without needing any additional Linux capability.
+# per-site (site-<name>) and per-job (site-<name>/job-<job_id>) child
+# cgroups and write cpu.max/cpu.weight/memory.high/memory.max/
+# cgroup.procs without needing any additional Linux capability.
 Delegate=yes
 ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunnerPrivExec.py \
     --sites_config /usr/local/basestation3/etc/sites.yaml \
@@ -275,7 +330,11 @@ Environment=MPLCONFIGDIR=/var/cache/baserunner
 ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunnerMulti.py \
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \
+    --cgroup_root /sys/fs/cgroup/system.slice/baserunnerprivexec.service \
     --base_log /var/log/baserunner/baserunnermulti.log
+# Read-only: only used to read memory.current/memory.peak for per-job
+# memory tracking (see "Per-site memory limits" above) - must match
+# baserunnerprivexec.service's own --cgroup_root exactly.
 LogsDirectory=baserunner
 WatchdogSec=30
 Restart=always
@@ -513,12 +572,34 @@ by that site's `runner-<site>` uid/gid, not `baserunner`.
 
 If using per-site CPU throttling, validate that chain too: with
 `cpu_quota_pct`/`cpu_weight` set for a test site, confirm
-`/sys/fs/cgroup/.../baserunnerprivexec.service/site-<name>/cgroup.procs`
-actually contains the dispatched job's pid after it launches, and that
-`cpu.max`/`cpu.weight` under that path match what `sites.yaml` asked for
-- `Delegate=yes` and cgroup v2 write permissions are worth confirming
-empirically rather than trusting the derivation in "Per-site CPU
-throttling" above.
+`cpu.max`/`cpu.weight` under
+`/sys/fs/cgroup/.../baserunnerprivexec.service/site-<name>/` match what
+`sites.yaml` asked for - `Delegate=yes` and cgroup v2 write permissions
+are worth confirming empirically rather than trusting the derivation in
+"Per-site CPU throttling" above.
+
+If using per-site memory limits, validate that chain too, and separately
+from CPU - this is the one that actually needs a real cgroup v2 host,
+since the unit tests fake cgroupfs with a plain `tmp_path` directory and
+can only verify *what CgroupJoiner writes*, not real kernel enforcement
+or the two-level `subtree_control` enablement chain "Per-site memory
+limits" above describes:
+
+- With `memory_max_mb` set for a test site, confirm the dispatched job's
+  pid actually lands in
+  `.../baserunnerprivexec.service/site-<name>/job-<job_id>/cgroup.procs`
+  (not `site-<name>/cgroup.procs` - that path now stays process-free
+  once `memory` is enabled there), and that `job-<job_id>/memory.max`
+  matches what `sites.yaml` asked for, in bytes, not MiB.
+- Deliberately drive one test job over its `memory_max_mb` (e.g. a small
+  limit against a script that allocates more) and confirm via
+  `dmesg`/`journalctl` that only *that job's* process gets OOM-killed -
+  look for the `oom-kill` line naming that job's own cgroup path - while
+  a concurrent sibling job dispatched for the *same site* keeps running
+  unaffected. This is the concrete test of the "no collateral damage"
+  property per-job cgroups exist for.
+- Confirm the `job-<job_id>` leaf directory is actually removed once the
+  job exits (`ChildTable`'s reap-time cleanup) - it shouldn't linger.
 
 ## Migrating a site
 

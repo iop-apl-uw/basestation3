@@ -285,13 +285,17 @@ class PrivExecClient(Protocol):
     with no real socket or helper process needed.
     """
 
-    def dispatch(self, site: str, argv: list[str], log_file: pathlib.Path) -> int:
+    def dispatch(
+        self, site: str, argv: list[str], log_file: pathlib.Path, job_id: str
+    ) -> int:
         """Requests a job be launched as site's runner account.
 
         Args:
             site: Site name to run as.
             argv: Full argv, including argv[0] as the executable path.
             log_file: Path the job's stdout/stderr should be appended to.
+            job_id: This dispatch's unique job id, used by the privileged
+                helper to name this job's own tracking/limiting cgroup.
 
         Returns:
             The pid of the launched job.
@@ -430,10 +434,12 @@ class UnixSocketPrivExecClient:
             raise PrivExecRejected(response.get("error", "unknown error"))
         return response
 
-    def dispatch(self, site: str, argv: list[str], log_file: pathlib.Path) -> int:
+    def dispatch(
+        self, site: str, argv: list[str], log_file: pathlib.Path, job_id: str
+    ) -> int:
         """See PrivExecClient.dispatch."""
         response = self._request(
-            {"site": site, "argv": argv, "log_file": str(log_file)}
+            {"site": site, "argv": argv, "log_file": str(log_file), "job_id": job_id}
         )
         return response["pid"]
 
@@ -461,6 +467,7 @@ class RunningJob:
     argv: list[str]
     log_file: pathlib.Path
     start_time: float
+    peak_memory_bytes: int = 0
 
 
 def _update_queue_length(argv: list[str], length: int) -> list[str]:
@@ -492,7 +499,12 @@ class Dispatcher:
     no shared mutable state leaking between tests.
     """
 
-    def __init__(self, priv_client: PrivExecClient, notify_vis: bool = False) -> None:
+    def __init__(
+        self,
+        priv_client: PrivExecClient,
+        notify_vis: bool = False,
+        cgroup_root: pathlib.Path | None = None,
+    ) -> None:
         """Initializes empty queues.
 
         Args:
@@ -500,13 +512,79 @@ class Dispatcher:
             notify_vis: Whether _notify_vis() should actually push to vis.
                 Defaults to False (the test-safe value); main() passes
                 the real base_opts.notify_vis value explicitly.
+            cgroup_root: Root of BaseRunnerPrivExec's own delegated cgroup
+                subtree, for READING per-job memory.current/memory.peak
+                stat files only - this class never writes to cgroupfs.
+                None (the default) disables memory reporting entirely
+                (fail-open: no errors, just no figures).
         """
         self._priv_client = priv_client
         self._notify_vis_enabled = notify_vis
+        self._cgroup_root = cgroup_root
         self.job_queues: collections.defaultdict[tuple, collections.deque] = (
             collections.defaultdict(collections.deque)
         )
         self.running_jobs: dict[tuple, RunningJob] = {}
+
+    def _job_cgroup_path(self, site_name: str, job_id: str) -> pathlib.Path:
+        """Path to a job's own leaf cgroup, per CgroupJoiner.join's layout.
+
+        Args:
+            site_name: The job's site name.
+            job_id: The job's own id.
+
+        Returns:
+            cgroup_root/site-<site_name>/job-<job_id>.
+        """
+        return self._cgroup_root / f"site-{site_name}" / f"job-{job_id}"
+
+    def _sample_job_memory(self, site_name: str, job_id: str) -> int | None:
+        """Reads this job's current memory.current, if its cgroup exists yet.
+
+        Args:
+            site_name: The job's site name.
+            job_id: The job's own id.
+
+        Returns:
+            Bytes of current memory usage, or None if unreadable - the job
+            cgroup not yet created (e.g. one poll tick before the
+            privileged helper has forked/joined it), --cgroup_root wasn't
+            configured, or a straggler job that predates this feature.
+            Never raises.
+        """
+        if self._cgroup_root is None:
+            return None
+        path = self._job_cgroup_path(site_name, job_id) / "memory.current"
+        try:
+            return int(path.read_text())
+        except (OSError, ValueError):
+            return None
+
+    def _final_job_memory_bytes(
+        self, site_name: str, job_id: str, peak_so_far: int
+    ) -> int | None:
+        """Best peak-memory figure available for a job that has just completed.
+
+        Prefers memory.peak (kernel >= 5.19, exact) over the Python-side
+        running max sampled at each poll tick (peak_so_far - coarser,
+        bounded by the poll interval, but works on older kernels).
+
+        Args:
+            site_name: The job's site name.
+            job_id: The job's own id.
+            peak_so_far: The running max of memory.current sampled across
+                this job's own poll ticks.
+
+        Returns:
+            Peak bytes used, or None if nothing was ever readable.
+        """
+        if self._cgroup_root is not None:
+            path = self._job_cgroup_path(site_name, job_id) / "memory.peak"
+            try:
+                return int(path.read_text())
+            except (OSError, ValueError):
+                pass
+        return peak_so_far if peak_so_far > 0 else None
 
     def handle_run_file_event(self, site: SiteConfig.SiteConfig, run_file: pathlib.Path) -> None:
         """Processes one detected `.run` file for site, if still valid.
@@ -665,7 +743,9 @@ class Dispatcher:
             None.
         """
         log_info(f"[{site.name}] Running {argv}")
-        pid = self._priv_client.dispatch(site.name, argv, pathlib.Path(log_file))
+        pid = self._priv_client.dispatch(
+            site.name, argv, pathlib.Path(log_file), str(uuid.uuid4())
+        )
         while True:
             done, returncode = self._priv_client.status(pid)
             if done:
@@ -751,6 +831,9 @@ class Dispatcher:
         """
         site_name, _seaglider_mission_dir, script_name, glider_id = que
         running = self.running_jobs[que]
+        current_memory = self._sample_job_memory(site_name, running.job_id)
+        if current_memory is not None and current_memory > running.peak_memory_bytes:
+            running.peak_memory_bytes = current_memory
         try:
             done, returncode = self._priv_client.status(running.pid)
         except PrivExecRejected as exc:
@@ -790,14 +873,19 @@ class Dispatcher:
         else:
             log_info(f"[{site_name}] Completed {running.job_id}:{running.argv}")
         self.running_jobs.pop(que)
+        peak_memory_bytes = self._final_job_memory_bytes(
+            site_name, running.job_id, running.peak_memory_bytes
+        )
 
         if script_name in timing_log_scripts:
-            self._write_timing_line(site_name, script_name, running, returncode)
+            self._write_timing_line(site_name, script_name, running, returncode, peak_memory_bytes)
 
         if script_name in vis_notify_scripts:
             uuids = [job.job_id for job in self.job_queues[que]]
             uuids.append(running.job_id)
-            self._notify_vis(que, glider_id, uuids, "complete", running.job_id, returncode)
+            self._notify_vis(
+                que, glider_id, uuids, "complete", running.job_id, returncode, peak_memory_bytes
+            )
 
     def _write_timing_line(
         self,
@@ -805,6 +893,7 @@ class Dispatcher:
         script_name: str,
         running: RunningJob,
         returncode: int | None,
+        peak_memory_bytes: int | None = None,
     ) -> None:
         """Appends a completion-timing line directly to the job's own log_file.
 
@@ -813,6 +902,10 @@ class Dispatcher:
             script_name: Basename of the script that ran.
             running: The completed job's bookkeeping record.
             returncode: The job's exit code.
+            peak_memory_bytes: This job's peak cgroup memory usage, if
+                known (see Dispatcher._final_job_memory_bytes). Omitted
+                from the line entirely when None - no working cgroup, or
+                --cgroup_root unset.
 
         Returns:
             None.
@@ -821,12 +914,17 @@ class Dispatcher:
             duration = time.time() - running.start_time
             now_str = time.strftime("%H:%M:%S %d %b %Y", time.gmtime())
             start_str = time.strftime("%H:%M:%S %d %b %Y", time.gmtime(running.start_time))
+            mem_str = (
+                f", peak_memory_mb={peak_memory_bytes / (1024 * 1024):.1f}"
+                if peak_memory_bytes is not None
+                else ""
+            )
             with running.log_file.open("a") as fo:
                 fo.write(
                     f"{now_str} UTC: INFO: BaseRunner: "
                     f"{script_name} (job_id={running.job_id}) started "
                     f"{start_str} UTC, completed in {duration:.2f}s, "
-                    f"returncode={returncode}\n"
+                    f"returncode={returncode}{mem_str}\n"
                 )
         except Exception:
             log_error(f"[{site_name}] Failed to write timing line to {running.log_file}", "exc")
@@ -866,7 +964,7 @@ class Dispatcher:
         log_info(f"[{site_name}] Starting {job.job_id}:{argv}")
         start_time = time.time()
         try:
-            pid = self._priv_client.dispatch(site_name, argv, job.log_file)
+            pid = self._priv_client.dispatch(site_name, argv, job.log_file, job.job_id)
         except PrivExecRejected as exc:
             # The helper is up and has told us this exact request is
             # invalid (unknown site, bad argv, log_file outside the site's
@@ -905,6 +1003,7 @@ class Dispatcher:
         action: str,
         target: str,
         returncode: int | None,
+        peak_memory_bytes: int | None = None,
     ) -> None:
         """Sends one proc-queue vis notification.
 
@@ -916,6 +1015,8 @@ class Dispatcher:
             action: One of "queued", "start", "complete".
             target: job_id this notification is about.
             returncode: Only meaningful for action="complete".
+            peak_memory_bytes: This job's peak cgroup memory usage, if
+                known; only meaningful for action="complete".
 
         Returns:
             None.
@@ -933,6 +1034,7 @@ class Dispatcher:
         }
         if action == "complete":
             msg["returncode"] = returncode
+            msg["peak_memory_bytes"] = peak_memory_bytes
         payload = orjson.dumps(msg).decode("utf-8")
         log_debug(payload)
         Utils.notifyVis(glider_id, "proc-queue", payload)
@@ -966,6 +1068,20 @@ def main() -> int:
                 str,
                 {"help": "UNIX socket path of the privileged exec helper"},
             ),
+            "cgroup_root": BaseOptsType.options_t(
+                "/sys/fs/cgroup/system.slice/baserunnerprivexec.service",
+                {"BaseRunnerMulti"},
+                ("--cgroup_root",),
+                str,
+                {
+                    "help": "Root of BaseRunnerPrivExec's own delegated cgroup "
+                    "subtree, for READING per-job memory.current/memory.peak "
+                    "stat files only - BaseRunnerMulti never writes to "
+                    "cgroupfs. Must match whatever --cgroup_root "
+                    "baserunnerprivexec.service was started with, or memory "
+                    "reporting silently reads nothing (fail-open, not fatal)."
+                },
+            ),
         },
     )
     BaseLogger(base_opts, include_time=True)
@@ -990,7 +1106,11 @@ def main() -> int:
         return 1
 
     priv_client = UnixSocketPrivExecClient(base_opts.priv_exec_socket)
-    dispatcher = Dispatcher(priv_client, notify_vis=base_opts.notify_vis)
+    dispatcher = Dispatcher(
+        priv_client,
+        notify_vis=base_opts.notify_vis,
+        cgroup_root=pathlib.Path(base_opts.cgroup_root) if base_opts.cgroup_root else None,
+    )
 
     notifier = sdnotify.SystemdNotifier()
     notifier.notify("READY=1")

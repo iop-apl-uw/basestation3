@@ -16,8 +16,9 @@ Environment=MPLCONFIGDIR=/var/cache/baserunner
 AmbientCapabilities=CAP_SETUID CAP_SETGID
 CapabilityBoundingSet=CAP_SETUID CAP_SETGID
 # Delegates a cgroup subtree to this unit so CgroupJoiner can create
-# per-site child cgroups and write cpu.max/cpu.weight/cgroup.procs
-# without needing any additional Linux capability.
+# per-site (site-<name>) and per-job (site-<name>/job-<job_id>) child
+# cgroups and write cpu.max/cpu.weight/memory.high/memory.max/
+# cgroup.procs without needing any additional Linux capability.
 Delegate=yes
 ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunnerPrivExec.py \
     --sites_config /usr/local/basestation3/etc/sites.yaml \
@@ -39,9 +40,10 @@ LogsDirectory=baserunner
 # as a PrivExecError connecting to priv_exec.sock right after boot.
 Type=notify
 Restart=always
-# Every dispatched job is moved into its own cgroup_root/site-<name>
-# sub-cgroup (see CgroupJoiner.join()) - a child of this unit's own
-# delegated cgroup tree. Without KillMode=process, systemd's default
+# Every dispatched job is moved into its own
+# cgroup_root/site-<name>/job-<job_id> leaf cgroup (see CgroupJoiner.join())
+# - a descendant of this unit's own delegated cgroup tree. Without
+# KillMode=process, systemd's default
 # KillMode=control-group would SIGTERM/SIGKILL every process in that
 # whole tree on any stop of this unit - including already-dispatched
 # jobs sitting in their own site cgroups, not just this unit's own
@@ -71,9 +73,11 @@ Restart=always
 # completion/exit code once this helper restarts.
 KillMode=process
 # KillMode=process alone is still not sufficient, also confirmed the
-# hard way: with a job surviving in site-<name>, that child cgroup
-# keeps "cpu" enabled in this unit's own cgroup.subtree_control across
-# the restart. Cgroup v2's "no internal process" rule then means
+# hard way: with a job surviving in site-<name>/job-<job_id>, that
+# child cgroup keeps "cpu" (and, since per-job memory tracking/limits
+# were added, "memory" too) enabled in this unit's own
+# cgroup.subtree_control across the restart. Cgroup v2's "no internal
+# process" rule then means
 # systemd can never place a *freshly started* invocation's raw main
 # process directly into this unit's own cgroup top level - which is
 # exactly what it tries to do, before any of our Python code (and

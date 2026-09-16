@@ -252,6 +252,51 @@ def test_load_sites_config_bad_cpu_weight_value(tmp_path, caplog, patch_lookup_u
     assert any(r.levelname == "ERROR" for r in caplog.records)
 
 
+def test_load_sites_config_memory_fields_present(tmp_path, patch_lookup_user):
+    seaglider_dir = tmp_path / "seaglider"
+    seaglider_dir.mkdir()
+    config_path = tmp_path / "sites.yaml"
+    config_path.write_text(
+        f"seaglider:\n"
+        f"  watch_dir: {seaglider_dir}\n"
+        f"  runner_user: ioprunner\n"
+        f"  memory_high_mb: 512\n"
+        f"  memory_max_mb: 1024\n"
+    )
+    sites = SiteConfig.load_sites_config(config_path)
+    assert sites is not None
+    assert sites["seaglider"].memory_high_mb == 512
+    assert sites["seaglider"].memory_max_mb == 1024
+
+
+def test_load_sites_config_bad_memory_high_mb_value(tmp_path, caplog, patch_lookup_user):
+    seaglider_dir = tmp_path / "seaglider"
+    seaglider_dir.mkdir()
+    config_path = tmp_path / "sites.yaml"
+    config_path.write_text(
+        f"seaglider:\n"
+        f"  watch_dir: {seaglider_dir}\n"
+        f"  runner_user: ioprunner\n"
+        f"  memory_high_mb: not-an-int\n"
+    )
+    assert SiteConfig.load_sites_config(config_path) is None
+    assert any(r.levelname == "ERROR" for r in caplog.records)
+
+
+def test_load_sites_config_bad_memory_max_mb_value(tmp_path, caplog, patch_lookup_user):
+    seaglider_dir = tmp_path / "seaglider"
+    seaglider_dir.mkdir()
+    config_path = tmp_path / "sites.yaml"
+    config_path.write_text(
+        f"seaglider:\n"
+        f"  watch_dir: {seaglider_dir}\n"
+        f"  runner_user: ioprunner\n"
+        f"  memory_max_mb: not-an-int\n"
+    )
+    assert SiteConfig.load_sites_config(config_path) is None
+    assert any(r.levelname == "ERROR" for r in caplog.records)
+
+
 def test_load_sites_config_unknown_runner_user(tmp_path, caplog, patch_lookup_user):
     seaglider_dir = tmp_path / "seaglider"
     seaglider_dir.mkdir()

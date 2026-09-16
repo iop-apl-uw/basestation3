@@ -27,7 +27,14 @@ Environment=MPLCONFIGDIR=/var/cache/baserunner
 ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunnerMulti.py \
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \
+    --cgroup_root /sys/fs/cgroup/system.slice/baserunnerprivexec.service \
     --base_log /var/log/baserunner/baserunnermulti.log
+# Read-only: BaseRunnerMulti.py only reads memory.current/memory.peak
+# stat files under this path for per-job memory tracking, it never
+# writes to cgroupfs. Must match baserunnerprivexec.service's own
+# --cgroup_root exactly, or memory reporting silently reads nothing
+# (fail-open, not fatal) - see "Per-site memory limits" in
+# docs/BaseRunnerMulti.md.
 # Creates /var/log/baserunner/ owned baserunner:baserunner (mode 0750) on
 # every start, recreating it if it's ever missing - no manual mkdir/chown
 # of the log directory needed. Requires systemd >= 235.

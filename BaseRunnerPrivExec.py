@@ -285,8 +285,10 @@ class CgroupJoiner:
     Delegate=yes and isn't available inside a pytest sandbox).
     """
 
-    def join(self, site: SiteConfig.SiteConfig, cgroup_root: pathlib.Path) -> None:
-        """Creates (if needed) and joins this process into site's own cgroup.
+    def join(
+        self, site: SiteConfig.SiteConfig, job_id: str, cgroup_root: pathlib.Path
+    ) -> None:
+        """Creates (if needed) and joins this process into this job's own cgroup.
 
         Must be called BEFORE PrivilegeDropper.drop_and_exec - cgroup
         membership is independent of uid, so this process can move itself
@@ -294,9 +296,24 @@ class CgroupJoiner:
         helper account, then drop to the site's runner_uid/runner_gid
         afterward and remain in the cgroup it already joined.
 
+        CPU throttling stays site-scoped (site-<name>), shared by every
+        concurrent job for that site - CPU quota degrades gracefully under
+        contention (N concurrent jobs each get ~1/N), so sharing is fine.
+        Memory does not degrade the same way: a shared memory.max would let
+        one job's overrun get an unrelated sibling job killed by the kernel
+        OOM killer, which picks a victim from whatever is in the over-limit
+        cgroup. So every job also gets its own leaf cgroup,
+        site-<name>/job-<job_id>, created unconditionally (even with no
+        memory limit configured for this site) purely so this leaf's own
+        memory.current is always readable for tracking.
+
         Args:
             site: The site whose job this process will become, via a
                 later drop_and_exec call.
+            job_id: This dispatch's unique job id (BaseRunnerMulti's
+                QueuedJob/RunningJob.job_id) - used to name this job's own
+                leaf cgroup so concurrent jobs for the same site never
+                share a memory.max/memory.high scope.
             cgroup_root: Root of this helper's own delegated cgroup
                 subtree (requires Delegate=yes on this process's own
                 systemd unit).
@@ -313,6 +330,7 @@ class CgroupJoiner:
             for the same pattern applied to a bad site's watch_dir).
         """
         site_cgroup = cgroup_root / f"site-{site.name}"
+        job_cgroup = site_cgroup / f"job-{job_id}"
         try:
             site_cgroup.mkdir(parents=True, exist_ok=True)
             if site.cpu_quota_pct is not None or site.cpu_weight is not None:
@@ -330,38 +348,87 @@ class CgroupJoiner:
                 )
             if site.cpu_weight is not None:
                 (site_cgroup / "cpu.weight").write_text(f"{site.cpu_weight}\n")
-            (site_cgroup / "cgroup.procs").write_text(f"{os.getpid()}\n")
+
+            # "memory" is enabled unconditionally (not gated on
+            # memory_high_mb/memory_max_mb being set) purely so job_cgroup's
+            # memory.current is readable for tracking - harmless, since a
+            # freshly created cgroup's memory.max/memory.high already
+            # default to the literal "max" (unlimited) until written. Must
+            # be enabled at BOTH levels: cgroup_root (parent of
+            # site_cgroup, mirrors the +cpu line above) and site_cgroup
+            # (parent of the new job_cgroup leaf) - a controller must be
+            # enabled at every level of the chain it's delegated through.
+            (cgroup_root / "cgroup.subtree_control").write_text("+memory\n")
+            (site_cgroup / "cgroup.subtree_control").write_text("+memory\n")
+
+            job_cgroup.mkdir(parents=True, exist_ok=True)
+            if site.memory_high_mb is not None:
+                (job_cgroup / "memory.high").write_text(
+                    f"{site.memory_high_mb * 1024 * 1024}\n"
+                )
+            if site.memory_max_mb is not None:
+                (job_cgroup / "memory.max").write_text(
+                    f"{site.memory_max_mb * 1024 * 1024}\n"
+                )
+
+            # Written to job_cgroup, not site_cgroup: once site_cgroup has
+            # "memory" enabled in its own subtree_control (above), cgroup
+            # v2's "no internal process" constraint means it can no longer
+            # hold member processes directly - same rule
+            # _move_self_into_leaf_cgroup already applies one level up, at
+            # cgroup_root.
+            (job_cgroup / "cgroup.procs").write_text(f"{os.getpid()}\n")
         except OSError as exc:
             log_warning(
-                f"[{site.name}] Could not join cgroup {site_cgroup}: {exc} "
-                "- job will run unthrottled"
+                f"[{site.name}] Could not join cgroup {job_cgroup}: {exc} "
+                "- job will run unthrottled and untracked"
             )
 
 
 class ChildTable:
     """Tracks pids this server has forked and reaps them as they exit."""
 
-    def __init__(self, waitpid_fn=os.waitpid) -> None:
+    def __init__(
+        self, waitpid_fn=os.waitpid, cgroup_root: pathlib.Path | None = None
+    ) -> None:
         """Initializes an empty table.
 
         Args:
             waitpid_fn: os.waitpid-compatible callable; overridable for
                 testing.
+            cgroup_root: Root of this helper's own delegated cgroup
+                subtree. When given (along with a pid's site_name/job_id
+                via note_started), a reaped pid's own job-<job_id> leaf
+                cgroup is removed - job cgroup cardinality is unbounded
+                over this daemon's lifetime, unlike site-<name> cgroups
+                (bounded by the number of configured sites), so unlike
+                those, these need active cleanup. None disables cleanup
+                entirely.
         """
         self._running: set[int] = set()
         self._completed: dict[int, int] = {}
         self._waitpid = waitpid_fn
+        self._cgroup_root = cgroup_root
+        self._job_locations: dict[int, tuple[str, str]] = {}
 
-    def note_started(self, pid: int) -> None:
+    def note_started(
+        self, pid: int, site_name: str | None = None, job_id: str | None = None
+    ) -> None:
         """Records that pid was just forked and is expected to exit later.
 
         Args:
             pid: The child's pid.
+            site_name: The site this pid is running as, if known - needed
+                (together with job_id) for this table to clean up the
+                pid's own job cgroup once it's reaped.
+            job_id: This pid's own job id, if known.
 
         Returns:
             None.
         """
         self._running.add(pid)
+        if site_name is not None and job_id is not None:
+            self._job_locations[pid] = (site_name, job_id)
 
     def reap_available(self) -> None:
         """Non-blocking reap of any tracked children that have already exited.
@@ -381,6 +448,30 @@ class ChildTable:
                 break
             self._running.discard(pid)
             self._completed[pid] = os.waitstatus_to_exitcode(status)
+            self._cleanup_job_cgroup(pid)
+
+    def _cleanup_job_cgroup(self, pid: int) -> None:
+        """Removes a just-reaped pid's own job-<job_id> leaf cgroup, if known.
+
+        Args:
+            pid: The pid that was just reaped.
+
+        Returns:
+            None.
+
+        Raises:
+            No exceptions are raised - a removal failure is logged and
+            otherwise ignored (fail-open, matching CgroupJoiner.join).
+        """
+        location = self._job_locations.pop(pid, None)
+        if self._cgroup_root is None or location is None:
+            return
+        site_name, job_id = location
+        job_cgroup = self._cgroup_root / f"site-{site_name}" / f"job-{job_id}"
+        try:
+            job_cgroup.rmdir()
+        except OSError as exc:
+            log_warning(f"[{site_name}] Could not remove job cgroup {job_cgroup}: {exc}")
 
     def status(self, pid: int) -> tuple[bool, int | None]:
         """Returns (done, returncode) for a previously-started pid.
@@ -410,6 +501,7 @@ class DispatchRequest:
     site: SiteConfig.SiteConfig
     argv: list[str]
     log_file: pathlib.Path
+    job_id: str
 
 
 def validate_dispatch_request(
@@ -424,7 +516,8 @@ def validate_dispatch_request(
 
     Args:
         sites: This helper's own resolved site table.
-        request: Raw request dict, expected keys "site", "argv", "log_file".
+        request: Raw request dict, expected keys "site", "argv", "log_file",
+            "job_id".
 
     Returns:
         The validated DispatchRequest.
@@ -454,7 +547,11 @@ def validate_dispatch_request(
             f"log_file {log_file} is not contained within site {site_name!r}'s tree"
         )
 
-    return DispatchRequest(site=site, argv=argv, log_file=log_file)
+    job_id = request.get("job_id")
+    if not isinstance(job_id, str) or not job_id:
+        raise ValueError("job_id must be a non-empty string")
+
+    return DispatchRequest(site=site, argv=argv, log_file=log_file, job_id=job_id)
 
 
 class PrivExecServer:
@@ -491,7 +588,7 @@ class PrivExecServer:
         self._fork = fork_fn
         self._joiner = joiner if joiner is not None else CgroupJoiner()
         self._cgroup_root = cgroup_root
-        self._children = ChildTable()
+        self._children = ChildTable(cgroup_root=cgroup_root)
 
     def handle_dispatch(self, request: dict) -> dict:
         """Validates, forks, and (in the child) execs a dispatch request.
@@ -535,7 +632,7 @@ class PrivExecServer:
             self._run_child(req, log_fd)  # never returns
 
         os.close(log_fd)
-        self._children.note_started(pid)
+        self._children.note_started(pid, site_name=req.site.name, job_id=req.job_id)
         log_info(f"Dispatched site={req.site.name} pid={pid} argv={req.argv}")
         return {"ok": True, "pid": pid}
 
@@ -564,7 +661,7 @@ class PrivExecServer:
                 # throttling failure must never prevent the job itself
                 # from launching.
                 try:
-                    self._joiner.join(req.site, self._cgroup_root)
+                    self._joiner.join(req.site, req.job_id, self._cgroup_root)
                 except Exception:
                     log_warning(f"[{req.site.name}] cgroup join raised - continuing unthrottled")
             # Runner accounts are typically created with no real home

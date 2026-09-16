@@ -264,6 +264,62 @@ def test_child_table_reap_stops_on_child_process_error():
     table.reap_available()  # must not raise
 
 
+def test_child_table_removes_job_cgroup_on_reap(tmp_path):
+    responses = iter([(111, 0), (0, 0)])
+
+    def fake_waitpid(pid, opts):
+        return next(responses)
+
+    cgroup_root = tmp_path / "cgroup"
+    job_cgroup = cgroup_root / "site-seaglider" / "job-abc123"
+    job_cgroup.mkdir(parents=True)
+
+    table = BaseRunnerPrivExec.ChildTable(waitpid_fn=fake_waitpid, cgroup_root=cgroup_root)
+    table.note_started(111, site_name="seaglider", job_id="abc123")
+    table.status(111)
+
+    assert not job_cgroup.exists()
+
+
+def test_child_table_no_cleanup_when_cgroup_root_unset():
+    responses = iter([(111, 0), (0, 0)])
+
+    def fake_waitpid(pid, opts):
+        return next(responses)
+
+    table = BaseRunnerPrivExec.ChildTable(waitpid_fn=fake_waitpid)  # cgroup_root=None
+    table.note_started(111, site_name="seaglider", job_id="abc123")
+    table.status(111)  # must not raise
+
+
+def test_child_table_no_cleanup_when_location_not_supplied(tmp_path):
+    responses = iter([(111, 0), (0, 0)])
+
+    def fake_waitpid(pid, opts):
+        return next(responses)
+
+    table = BaseRunnerPrivExec.ChildTable(
+        waitpid_fn=fake_waitpid, cgroup_root=tmp_path / "cgroup"
+    )
+    table.note_started(111)  # bare, as every pre-existing caller does
+    table.status(111)  # must not raise, nothing to clean up
+
+
+def test_child_table_rmdir_failure_is_caught_and_logged(tmp_path, caplog):
+    responses = iter([(111, 0), (0, 0)])
+
+    def fake_waitpid(pid, opts):
+        return next(responses)
+
+    # No job_cgroup ever created -> rmdir() raises FileNotFoundError.
+    cgroup_root = tmp_path / "cgroup"
+    table = BaseRunnerPrivExec.ChildTable(waitpid_fn=fake_waitpid, cgroup_root=cgroup_root)
+    table.note_started(111, site_name="seaglider", job_id="abc123")
+
+    assert table.status(111) == (True, 0)
+    assert any(r.levelname == "WARNING" for r in caplog.records)
+
+
 # --- validate_dispatch_request ---
 
 
@@ -271,13 +327,40 @@ def test_validate_dispatch_request_valid(tmp_path):
     site = _make_site(tmp_path)
     sites = {"seaglider": site}
     log_file = site.watch_dir / "baselog.log"
-    request = {"site": "seaglider", "argv": ["/bin/true"], "log_file": str(log_file)}
+    request = {
+        "site": "seaglider",
+        "argv": ["/bin/true"],
+        "log_file": str(log_file),
+        "job_id": "job-abc",
+    }
 
     req = BaseRunnerPrivExec.validate_dispatch_request(sites, request)
 
     assert req.site is site
     assert req.argv == ["/bin/true"]
     assert req.log_file == log_file
+    assert req.job_id == "job-abc"
+
+
+def test_validate_dispatch_request_missing_job_id(tmp_path):
+    site = _make_site(tmp_path)
+    log_file = site.watch_dir / "baselog.log"
+    request = {"site": "seaglider", "argv": ["/bin/true"], "log_file": str(log_file)}
+    with pytest.raises(ValueError, match="job_id"):
+        BaseRunnerPrivExec.validate_dispatch_request({"seaglider": site}, request)
+
+
+def test_validate_dispatch_request_empty_job_id(tmp_path):
+    site = _make_site(tmp_path)
+    log_file = site.watch_dir / "baselog.log"
+    request = {
+        "site": "seaglider",
+        "argv": ["/bin/true"],
+        "log_file": str(log_file),
+        "job_id": "",
+    }
+    with pytest.raises(ValueError, match="job_id"):
+        BaseRunnerPrivExec.validate_dispatch_request({"seaglider": site}, request)
 
 
 def test_validate_dispatch_request_unknown_site(tmp_path):
@@ -343,12 +426,18 @@ def test_handle_dispatch_success(tmp_path):
         {"seaglider": site}, mock.Mock(spec=BaseRunnerPrivExec.PrivilegeDropper), fork_fn=lambda: 4242
     )
     log_file = site.watch_dir / "baselog.log"
-    request = {"site": "seaglider", "argv": ["/bin/true"], "log_file": str(log_file)}
+    request = {
+        "site": "seaglider",
+        "argv": ["/bin/true"],
+        "log_file": str(log_file),
+        "job_id": "job1",
+    }
 
     response = server.handle_dispatch(request)
 
     assert response == {"ok": True, "pid": 4242}
     assert server._children.status(4242) == (False, None)
+    assert server._children._job_locations[4242] == ("seaglider", "job1")
 
 
 def test_handle_dispatch_child_branch_calls_run_child(monkeypatch, tmp_path):
@@ -367,7 +456,12 @@ def test_handle_dispatch_child_branch_calls_run_child(monkeypatch, tmp_path):
     monkeypatch.setattr(server, "_run_child", fake_run_child)
 
     log_file = site.watch_dir / "baselog.log"
-    request = {"site": "seaglider", "argv": ["/bin/true"], "log_file": str(log_file)}
+    request = {
+        "site": "seaglider",
+        "argv": ["/bin/true"],
+        "log_file": str(log_file),
+        "job_id": "job1",
+    }
 
     with pytest.raises(SystemExit):
         server.handle_dispatch(request)
@@ -391,7 +485,12 @@ def test_handle_dispatch_log_file_open_failure(tmp_path):
     )
     # A directory that doesn't exist as a parent -> os.open raises OSError.
     bad_log_file = site.watch_dir / "no" / "such" / "dir" / "baselog.log"
-    request = {"site": "seaglider", "argv": ["/bin/true"], "log_file": str(bad_log_file)}
+    request = {
+        "site": "seaglider",
+        "argv": ["/bin/true"],
+        "log_file": str(bad_log_file),
+        "job_id": "job1",
+    }
 
     response = server.handle_dispatch(request)
 
@@ -411,7 +510,12 @@ def test_handle_dispatch_fork_failure(monkeypatch, tmp_path):
         fork_fn=_raise_fork,
     )
     log_file = site.watch_dir / "baselog.log"
-    request = {"site": "seaglider", "argv": ["/bin/true"], "log_file": str(log_file)}
+    request = {
+        "site": "seaglider",
+        "argv": ["/bin/true"],
+        "log_file": str(log_file),
+        "job_id": "job1",
+    }
 
     response = server.handle_dispatch(request)
 
@@ -435,7 +539,7 @@ def test_run_child_drops_privilege_and_exits_126(monkeypatch, tmp_path):
     site = _make_site(tmp_path)
     server = BaseRunnerPrivExec.PrivExecServer({"seaglider": site}, dropper)
     req = BaseRunnerPrivExec.DispatchRequest(
-        site=site, argv=["/bin/true"], log_file=site.watch_dir / "baselog.log"
+        site=site, argv=["/bin/true"], log_file=site.watch_dir / "baselog.log", job_id="job1"
     )
 
     with pytest.raises(_ExitCalled) as excinfo:
@@ -473,7 +577,7 @@ def test_run_child_exits_127_on_exception(monkeypatch, tmp_path):
     site = _make_site(tmp_path)
     server = BaseRunnerPrivExec.PrivExecServer({"seaglider": site}, dropper)
     req = BaseRunnerPrivExec.DispatchRequest(
-        site=site, argv=["/bin/true"], log_file=site.watch_dir / "baselog.log"
+        site=site, argv=["/bin/true"], log_file=site.watch_dir / "baselog.log", job_id="job1"
     )
 
     with pytest.raises(_ExitCalled) as excinfo:
@@ -500,7 +604,7 @@ def test_run_child_joins_cgroup_before_dropping_privilege(monkeypatch, tmp_path)
         {"seaglider": site}, dropper, joiner=joiner, cgroup_root=cgroup_root
     )
     req = BaseRunnerPrivExec.DispatchRequest(
-        site=site, argv=["/bin/true"], log_file=site.watch_dir / "baselog.log"
+        site=site, argv=["/bin/true"], log_file=site.watch_dir / "baselog.log", job_id="job1"
     )
 
     with pytest.raises(_ExitCalled) as excinfo:
@@ -508,7 +612,7 @@ def test_run_child_joins_cgroup_before_dropping_privilege(monkeypatch, tmp_path)
 
     assert excinfo.value.code == 126
     assert calls == ["join", "drop_and_exec"]
-    joiner.join.assert_called_once_with(site, cgroup_root)
+    joiner.join.assert_called_once_with(site, "job1", cgroup_root)
 
 
 def test_run_child_skips_join_when_no_cgroup_root(monkeypatch, tmp_path):
@@ -523,7 +627,7 @@ def test_run_child_skips_join_when_no_cgroup_root(monkeypatch, tmp_path):
         {"seaglider": site}, dropper, joiner=joiner, cgroup_root=None
     )
     req = BaseRunnerPrivExec.DispatchRequest(
-        site=site, argv=["/bin/true"], log_file=site.watch_dir / "baselog.log"
+        site=site, argv=["/bin/true"], log_file=site.watch_dir / "baselog.log", job_id="job1"
     )
 
     with pytest.raises(_ExitCalled):
@@ -550,7 +654,7 @@ def test_run_child_still_execs_when_joiner_raises(monkeypatch, tmp_path, caplog)
         cgroup_root=tmp_path / "cgroup",
     )
     req = BaseRunnerPrivExec.DispatchRequest(
-        site=site, argv=["/bin/true"], log_file=site.watch_dir / "baselog.log"
+        site=site, argv=["/bin/true"], log_file=site.watch_dir / "baselog.log", job_id="job1"
     )
 
     with pytest.raises(_ExitCalled) as excinfo:
@@ -570,7 +674,7 @@ def test_cgroup_joiner_writes_cpu_max_for_quota(tmp_path):
     site = dataclasses.replace(site, cpu_quota_pct=60)
     cgroup_root = tmp_path / "cgroup"
 
-    BaseRunnerPrivExec.CgroupJoiner().join(site, cgroup_root)
+    BaseRunnerPrivExec.CgroupJoiner().join(site, "job1", cgroup_root)
 
     site_cgroup = cgroup_root / f"site-{site.name}"
     assert (site_cgroup / "cpu.max").read_text() == "60000 100000\n"
@@ -580,7 +684,7 @@ def test_cgroup_joiner_no_cpu_max_when_quota_unset(tmp_path):
     site = _make_site(tmp_path)  # cpu_quota_pct defaults to None
     cgroup_root = tmp_path / "cgroup"
 
-    BaseRunnerPrivExec.CgroupJoiner().join(site, cgroup_root)
+    BaseRunnerPrivExec.CgroupJoiner().join(site, "job1", cgroup_root)
 
     site_cgroup = cgroup_root / f"site-{site.name}"
     assert not (site_cgroup / "cpu.max").exists()
@@ -591,7 +695,7 @@ def test_cgroup_joiner_writes_cpu_weight(tmp_path):
     site = dataclasses.replace(site, cpu_weight=50)
     cgroup_root = tmp_path / "cgroup"
 
-    BaseRunnerPrivExec.CgroupJoiner().join(site, cgroup_root)
+    BaseRunnerPrivExec.CgroupJoiner().join(site, "job1", cgroup_root)
 
     site_cgroup = cgroup_root / f"site-{site.name}"
     assert (site_cgroup / "cpu.weight").read_text() == "50\n"
@@ -601,20 +705,90 @@ def test_cgroup_joiner_no_cpu_weight_when_unset(tmp_path):
     site = _make_site(tmp_path)  # cpu_weight defaults to None
     cgroup_root = tmp_path / "cgroup"
 
-    BaseRunnerPrivExec.CgroupJoiner().join(site, cgroup_root)
+    BaseRunnerPrivExec.CgroupJoiner().join(site, "job1", cgroup_root)
 
     site_cgroup = cgroup_root / f"site-{site.name}"
     assert not (site_cgroup / "cpu.weight").exists()
 
 
-def test_cgroup_joiner_writes_own_pid_to_cgroup_procs(tmp_path):
+def test_cgroup_joiner_creates_job_leaf_cgroup(tmp_path):
+    site = _make_site(tmp_path)  # no memory limits set
+    cgroup_root = tmp_path / "cgroup"
+
+    BaseRunnerPrivExec.CgroupJoiner().join(site, "job1", cgroup_root)
+
+    # Created unconditionally, even with no memory_high_mb/memory_max_mb -
+    # purely so memory.current is readable for tracking.
+    assert (cgroup_root / f"site-{site.name}" / "job-job1").is_dir()
+
+
+def test_cgroup_joiner_writes_memory_high(tmp_path):
+    site = _make_site(tmp_path)
+    site = dataclasses.replace(site, memory_high_mb=512)
+    cgroup_root = tmp_path / "cgroup"
+
+    BaseRunnerPrivExec.CgroupJoiner().join(site, "job1", cgroup_root)
+
+    job_cgroup = cgroup_root / f"site-{site.name}" / "job-job1"
+    assert (job_cgroup / "memory.high").read_text() == f"{512 * 1024 * 1024}\n"
+
+
+def test_cgroup_joiner_no_memory_high_when_unset(tmp_path):
+    site = _make_site(tmp_path)  # memory_high_mb defaults to None
+    cgroup_root = tmp_path / "cgroup"
+
+    BaseRunnerPrivExec.CgroupJoiner().join(site, "job1", cgroup_root)
+
+    job_cgroup = cgroup_root / f"site-{site.name}" / "job-job1"
+    assert not (job_cgroup / "memory.high").exists()
+
+
+def test_cgroup_joiner_writes_memory_max(tmp_path):
+    site = _make_site(tmp_path)
+    site = dataclasses.replace(site, memory_max_mb=1024)
+    cgroup_root = tmp_path / "cgroup"
+
+    BaseRunnerPrivExec.CgroupJoiner().join(site, "job1", cgroup_root)
+
+    job_cgroup = cgroup_root / f"site-{site.name}" / "job-job1"
+    assert (job_cgroup / "memory.max").read_text() == f"{1024 * 1024 * 1024}\n"
+
+
+def test_cgroup_joiner_no_memory_max_when_unset(tmp_path):
+    site = _make_site(tmp_path)  # memory_max_mb defaults to None
+    cgroup_root = tmp_path / "cgroup"
+
+    BaseRunnerPrivExec.CgroupJoiner().join(site, "job1", cgroup_root)
+
+    job_cgroup = cgroup_root / f"site-{site.name}" / "job-job1"
+    assert not (job_cgroup / "memory.max").exists()
+
+
+def test_cgroup_joiner_enables_memory_controller_at_both_levels(tmp_path):
     site = _make_site(tmp_path)
     cgroup_root = tmp_path / "cgroup"
 
-    BaseRunnerPrivExec.CgroupJoiner().join(site, cgroup_root)
+    BaseRunnerPrivExec.CgroupJoiner().join(site, "job1", cgroup_root)
 
     site_cgroup = cgroup_root / f"site-{site.name}"
-    assert (site_cgroup / "cgroup.procs").read_text() == f"{os.getpid()}\n"
+    assert (cgroup_root / "cgroup.subtree_control").read_text() == "+memory\n"
+    assert (site_cgroup / "cgroup.subtree_control").read_text() == "+memory\n"
+
+
+def test_cgroup_joiner_writes_pid_to_job_leaf_not_site_level(tmp_path):
+    site = _make_site(tmp_path)
+    cgroup_root = tmp_path / "cgroup"
+
+    BaseRunnerPrivExec.CgroupJoiner().join(site, "job1", cgroup_root)
+
+    site_cgroup = cgroup_root / f"site-{site.name}"
+    job_cgroup = site_cgroup / "job-job1"
+    assert (job_cgroup / "cgroup.procs").read_text() == f"{os.getpid()}\n"
+    # cgroup v2's "no internal process" rule: once "memory" is enabled in
+    # site_cgroup's own subtree_control (for job_cgroup's benefit), it can
+    # no longer hold member processes directly - the pid must live one
+    # level deeper now.
+    assert not (site_cgroup / "cgroup.procs").exists()
 
 
 def test_cgroup_joiner_write_failure_is_caught_and_logged(tmp_path, caplog):
@@ -624,7 +798,7 @@ def test_cgroup_joiner_write_failure_is_caught_and_logged(tmp_path, caplog):
     blocker = tmp_path / "cgroup"
     blocker.write_text("not a directory")
 
-    BaseRunnerPrivExec.CgroupJoiner().join(site, blocker)
+    BaseRunnerPrivExec.CgroupJoiner().join(site, "job1", blocker)
 
     assert any(r.levelname == "WARNING" for r in caplog.records)
 
