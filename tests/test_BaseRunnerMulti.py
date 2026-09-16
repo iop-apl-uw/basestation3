@@ -529,6 +529,90 @@ def test_poll_completions_writes_timing_line_for_timing_scripts(tmp_path):
     assert "returncode=0" in contents
 
 
+def test_poll_completions_appends_job_completion_log(tmp_path):
+    site = _site(tmp_path / "seaglider")
+    mission_dir = tmp_path / "sg272" / "current"
+    mission_dir.mkdir(parents=True)
+    log_file_path = mission_dir / "baselog.log"
+    log_file_path.write_text("")
+    run_file = _write_run_file(
+        site.watch_dir, "sg272.run", str(tmp_path / "sg272"), str(mission_dir),
+        str(log_file_path), f"Base.py --mission_dir {mission_dir}",
+    )
+    completions_log = tmp_path / "job_completions.jsonl"
+    client = FakePrivExecClient()
+    dispatcher = BaseRunnerMulti.Dispatcher(client, job_completions_log=completions_log)
+    dispatcher.handle_run_file_event(site, run_file)
+    dispatcher.dispatch_queued()
+
+    que = next(iter(dispatcher.running_jobs))
+    pid = dispatcher.running_jobs[que].pid
+    job_id = dispatcher.running_jobs[que].job_id
+
+    client.set_status(pid, True, 0)
+    dispatcher.poll_completions()
+
+    lines = completions_log.read_text().splitlines()
+    assert len(lines) == 1
+    record = orjson.loads(lines[0])
+    assert record["site_name"] == site.name
+    assert record["job_id"] == job_id
+    assert record["script_name"] == "Base.py"
+    assert record["returncode"] == 0
+    assert record["peak_memory_bytes"] is None  # no --cgroup_root configured
+    assert record["duration_seconds"] >= 0
+
+
+def test_poll_completions_no_job_completion_log_by_default(tmp_path):
+    """job_completions_log is opt-in - unset (the default) writes nothing."""
+    site = _site(tmp_path / "seaglider")
+    mission_dir = tmp_path / "sg272" / "current"
+    mission_dir.mkdir(parents=True)
+    log_file_path = mission_dir / "baselog.log"
+    log_file_path.write_text("")
+    run_file = _write_run_file(
+        site.watch_dir, "sg272.run", str(tmp_path / "sg272"), str(mission_dir),
+        str(log_file_path), f"Base.py --mission_dir {mission_dir}",
+    )
+    client = FakePrivExecClient()
+    dispatcher = BaseRunnerMulti.Dispatcher(client)
+    dispatcher.handle_run_file_event(site, run_file)
+    dispatcher.dispatch_queued()
+
+    que = next(iter(dispatcher.running_jobs))
+    pid = dispatcher.running_jobs[que].pid
+    client.set_status(pid, True, 0)
+    dispatcher.poll_completions()  # must not raise with job_completions_log unset
+
+    assert not (tmp_path / "job_completions.jsonl").exists()
+
+
+def test_poll_completions_job_completion_log_write_failure_is_caught_and_logged(tmp_path, caplog):
+    site = _site(tmp_path / "seaglider")
+    mission_dir = tmp_path / "sg272" / "current"
+    mission_dir.mkdir(parents=True)
+    log_file_path = mission_dir / "baselog.log"
+    log_file_path.write_text("")
+    run_file = _write_run_file(
+        site.watch_dir, "sg272.run", str(tmp_path / "sg272"), str(mission_dir),
+        str(log_file_path), f"Base.py --mission_dir {mission_dir}",
+    )
+    # A path whose parent doesn't exist - the open("a") inside
+    # _log_job_completion will raise, and must be caught, not propagate.
+    bad_completions_log = tmp_path / "no-such-dir" / "job_completions.jsonl"
+    client = FakePrivExecClient()
+    dispatcher = BaseRunnerMulti.Dispatcher(client, job_completions_log=bad_completions_log)
+    dispatcher.handle_run_file_event(site, run_file)
+    dispatcher.dispatch_queued()
+
+    que = next(iter(dispatcher.running_jobs))
+    pid = dispatcher.running_jobs[que].pid
+    client.set_status(pid, True, 0)
+    dispatcher.poll_completions()  # must not raise
+
+    assert any(r.levelname == "ERROR" for r in caplog.records)
+
+
 def test_poll_completions_handles_status_rpc_failure(tmp_path, caplog):
     site = _site(tmp_path / "seaglider")
     run_file = _write_run_file(

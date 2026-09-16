@@ -29,12 +29,18 @@ ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunnerMulti.py
     --priv_exec_socket /run/baserunner/priv_exec.sock \
     --cgroup_root /sys/fs/cgroup/baserunner.slice \
     --base_log /var/log/baserunner/baserunnermulti.log
+#    --job_completions_log /var/log/baserunner/job_completions.jsonl
 # Read-only: BaseRunnerMulti.py only reads memory.current/memory.peak
 # stat files under this path for per-job memory tracking, it never
 # writes to cgroupfs. Must match baserunnerprivexec.service's own
 # --cgroup_root exactly, or memory reporting silently reads nothing
 # (fail-open, not fatal) - see "Per-site memory limits" in
 # docs/BaseRunnerMulti.md.
+# --job_completions_log (commented out above - opt in by uncommenting
+# and pointing local/collect_cgroup_stats.py's own --job_completions_log
+# at the same path) is a per-job record that never misses a short-lived
+# job, unlike the periodic cgroup sampler - see "Per-site memory limits"
+# in docs/BaseRunnerMulti.md for why that gap exists.
 # Creates /var/log/baserunner/ owned baserunner:baserunner (mode 0750) on
 # every start, recreating it if it's ever missing - no manual mkdir/chown
 # of the log directory needed. Requires systemd >= 235.

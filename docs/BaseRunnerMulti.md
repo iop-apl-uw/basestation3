@@ -229,6 +229,18 @@ under its own `--cgroup_root`, which must match
 reporting silently reads nothing - fail-open, like every other cgroup
 failure mode here, not fatal.
 
+**A periodic cgroup sampler (`local/collect_cgroup_stats.py`) can still
+miss a job entirely** if it starts and exits between two sample ticks -
+common for short conversions. For a per-job record that's never missed,
+optionally set `--job_completions_log <path>`: `BaseRunnerMulti.py`
+appends one NDJSON line (site/job_id/script/returncode/duration/
+peak_memory_bytes) to that path right when each job completes, regardless
+of how long it ran. `local/collect_cgroup_stats.py`'s own
+`--job_completions_log` (pointed at the *same* path) ingests new lines
+into its `job_completions` table each run, tracking a byte offset so
+nothing is double-counted or missed. Both flags default to unset
+(disabled) - this is purely additive, opt-in on both sides.
+
 **Deploy `baserunnerprivexec.service` and `baserunnermulti.service`
 together** when rolling this out (or `baserunnermulti.service` first) -
 dispatch requests now carry a `job_id` that older `BaseRunnerMulti.py`

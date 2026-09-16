@@ -69,6 +69,7 @@ import threading
 import time
 import traceback
 import uuid
+from datetime import UTC, datetime
 from typing import Protocol
 
 import orjson
@@ -504,6 +505,7 @@ class Dispatcher:
         priv_client: PrivExecClient,
         notify_vis: bool = False,
         cgroup_root: pathlib.Path | None = None,
+        job_completions_log: pathlib.Path | None = None,
     ) -> None:
         """Initializes empty queues.
 
@@ -517,10 +519,20 @@ class Dispatcher:
                 stat files only - this class never writes to cgroupfs.
                 None (the default) disables memory reporting entirely
                 (fail-open: no errors, just no figures).
+            job_completions_log: Path to append one NDJSON line to per
+                completed job (site_name/job_id/script_name/returncode/
+                duration/peak_memory_bytes), for a downstream consumer
+                (e.g. local/collect_cgroup_stats.py) to ingest into a
+                durable, per-job record - unlike a periodic cgroup
+                sampler, this always captures every job's real peak,
+                since it's read right at completion rather than guessed
+                at on a timer. None (the default) disables this entirely
+                (fail-open: no errors, just no file).
         """
         self._priv_client = priv_client
         self._notify_vis_enabled = notify_vis
         self._cgroup_root = cgroup_root
+        self._job_completions_log = job_completions_log
         self.job_queues: collections.defaultdict[tuple, collections.deque] = (
             collections.defaultdict(collections.deque)
         )
@@ -876,6 +888,7 @@ class Dispatcher:
         peak_memory_bytes = self._final_job_memory_bytes(
             site_name, running.job_id, running.peak_memory_bytes
         )
+        self._log_job_completion(site_name, script_name, running, returncode, peak_memory_bytes)
 
         if script_name in timing_log_scripts:
             self._write_timing_line(site_name, script_name, running, returncode, peak_memory_bytes)
@@ -928,6 +941,62 @@ class Dispatcher:
                 )
         except Exception:
             log_error(f"[{site_name}] Failed to write timing line to {running.log_file}", "exc")
+
+    def _log_job_completion(
+        self,
+        site_name: str,
+        script_name: str,
+        running: RunningJob,
+        returncode: int | None,
+        peak_memory_bytes: int | None,
+    ) -> None:
+        """Appends one NDJSON line to --job_completions_log for every completed job.
+
+        Unlike the periodic cgroup sampler in local/collect_cgroup_stats.py
+        (which can miss a job entirely if it starts and exits between two
+        samples), this always fires exactly once per completion, with
+        peak_memory_bytes read right at that moment - so a downstream
+        consumer ingesting this file gets a durable, accurate per-job
+        record regardless of how long the job ran. Called unconditionally
+        for every completed job, not gated by timing_log_scripts/
+        vis_notify_scripts (those lists curate what's routinely useful to
+        a pilot/vis viewer; this is a comprehensive stats record instead).
+
+        Args:
+            site_name: Owning site's name, for error logging only.
+            script_name: Basename of the script that ran.
+            running: The completed job's bookkeeping record.
+            returncode: The job's exit code.
+            peak_memory_bytes: This job's peak cgroup memory usage, if
+                known (see Dispatcher._final_job_memory_bytes). Recorded
+                as null when unavailable, same as _write_timing_line.
+
+        Returns:
+            None.
+
+        Raises:
+            No exceptions are raised - a logging failure here must never
+            be able to affect dispatch (fail-open, matching every other
+            non-critical per-job side effect in this class).
+        """
+        if self._job_completions_log is None:
+            return
+        try:
+            record = {
+                "sampled_at": datetime.now(UTC).isoformat(),
+                "site_name": site_name,
+                "job_id": running.job_id,
+                "script_name": script_name,
+                "returncode": returncode,
+                "duration_seconds": time.time() - running.start_time,
+                "peak_memory_bytes": peak_memory_bytes,
+            }
+            with self._job_completions_log.open("a") as fo:
+                fo.write(orjson.dumps(record).decode("utf-8") + "\n")
+        except Exception:
+            log_error(
+                f"[{site_name}] Failed to append to {self._job_completions_log}", "exc"
+            )
 
     def dispatch_queued(self) -> None:
         """Launches the next queued job for every site/mission/script queue.
@@ -1083,6 +1152,21 @@ def main() -> int:
                     "nothing (fail-open, not fatal)."
                 },
             ),
+            "job_completions_log": BaseOptsType.options_t(
+                None,
+                {"BaseRunnerMulti"},
+                ("--job_completions_log",),
+                pathlib.Path,
+                {
+                    "help": "Path to append one NDJSON line to per completed "
+                    "job (site_name/job_id/script_name/returncode/duration/"
+                    "peak_memory_bytes), for a downstream consumer (e.g. "
+                    "local/collect_cgroup_stats.py) to ingest into a durable "
+                    "per-job record - unset (the default) disables this "
+                    "entirely.",
+                    "action": BaseOpts.FullPathlibAction,
+                },
+            ),
         },
     )
     BaseLogger(base_opts, include_time=True)
@@ -1111,6 +1195,9 @@ def main() -> int:
         priv_client,
         notify_vis=base_opts.notify_vis,
         cgroup_root=pathlib.Path(base_opts.cgroup_root) if base_opts.cgroup_root else None,
+        job_completions_log=(
+            pathlib.Path(base_opts.job_completions_log) if base_opts.job_completions_log else None
+        ),
     )
 
     notifier = sdnotify.SystemdNotifier()
