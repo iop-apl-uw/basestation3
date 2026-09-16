@@ -536,7 +536,7 @@ class Dispatcher:
         Returns:
             cgroup_root/site-<site_name>/job-<job_id>.
         """
-        return self._cgroup_root / f"site-{site_name}" / f"job-{job_id}"
+        return SiteConfig.job_cgroup_path(self._cgroup_root, site_name, job_id)
 
     def _sample_job_memory(self, site_name: str, job_id: str) -> int | None:
         """Reads this job's current memory.current, if its cgroup exists yet.

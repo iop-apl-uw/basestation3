@@ -4,7 +4,8 @@ VM - NOT real basestation processing. Just enough to prove
 BaseRunnerMulti/BaseRunnerPrivExec's dispatch mechanics: records who it
 actually ran as (proves the privilege-drop chain), and can optionally
 simulate a grandchild-forking job (for the PR_SET_CHILD_SUBREAPER
-zombie-reaping test) or a chosen exit code.
+zombie-reaping test), a memory-hungry job (for the memory.max cgroup
+enforcement test), or a chosen exit code.
 
 stdout/stderr are already redirected to the job's log_file by
 BaseRunnerPrivExec before this execs (see PrivExecServer._run_child), so
@@ -28,6 +29,7 @@ def main() -> int:
     parser.add_argument("--stub-fork-and-exit", action="store_true")
     parser.add_argument("--stub-exit-code", type=int, default=0)
     parser.add_argument("--stub-sleep-seconds", type=float, default=0.0)
+    parser.add_argument("--stub-allocate-mb", type=int, default=0)
     args, _unknown = parser.parse_known_args()
 
     user = pwd.getpwuid(os.getuid()).pw_name
@@ -35,6 +37,18 @@ def main() -> int:
         f"user={user} uid={os.getuid()} gid={os.getgid()} pid={os.getpid()} argv={sys.argv}",
         flush=True,
     )
+
+    if args.stub_allocate_mb:
+        # bytearray's C-level init memsets every byte to 0 immediately, so
+        # the kernel commits real pages right away - not just virtual
+        # address space a lazy/CoW zero-page mapping could dodge, which is
+        # what memory.max is actually meant to catch. Bound to a name (not
+        # a bare expression statement) so it isn't immediately
+        # refcount-freed before the sleep below - a job testing "stays
+        # alive under the limit" needs to actually keep holding this
+        # memory, not just have briefly touched it.
+        held_allocation = bytearray(args.stub_allocate_mb * 1024 * 1024)
+        print(f"allocated {len(held_allocation)} bytes", flush=True)
 
     if args.stub_sleep_seconds:
         # Keeps this process (and therefore its cgroup membership)

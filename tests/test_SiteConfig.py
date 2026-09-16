@@ -383,6 +383,17 @@ def test_is_contained_false_when_resolve_raises(tmp_path, monkeypatch):
     assert SiteConfig.is_contained(tmp_path / "x", tmp_path) is False
 
 
+def test_site_cgroup_path(tmp_path):
+    assert SiteConfig.site_cgroup_path(tmp_path, "aoml") == tmp_path / "site-aoml"
+
+
+def test_job_cgroup_path(tmp_path):
+    assert (
+        SiteConfig.job_cgroup_path(tmp_path, "aoml", "job-123")
+        == tmp_path / "site-aoml" / "job-job-123"
+    )
+
+
 def test_resolve_ids_unknown_user(monkeypatch, caplog):
     def _raise(name: str) -> pwd.struct_passwd:
         raise KeyError(name)

@@ -33,3 +33,12 @@ charlie:
   runner_user: runner-charlie
   archive: true
   python_version: /usr/local/basestation3/.venv/bin/python
+  # Exercises CgroupJoiner's memory.high/memory.max path specifically -
+  # "alpha"/"bravo" stay unset (memory.max reads cgroup v2's own "max"
+  # default) to prove that side of the fail-open contract too. high < max
+  # so there's a real soft-throttle-then-hard-kill ordering, not just two
+  # names for the same number. Values must match
+  # testlong/test_multipass_baserunner.py's CHARLIE_MEMORY_HIGH_MB/
+  # CHARLIE_MEMORY_MAX_MB constants.
+  memory_high_mb: 32
+  memory_max_mb: 64

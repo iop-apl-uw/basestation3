@@ -329,8 +329,8 @@ class CgroupJoiner:
             per-site setup (see BaseRunnerMulti.py's _try_activate_site
             for the same pattern applied to a bad site's watch_dir).
         """
-        site_cgroup = cgroup_root / f"site-{site.name}"
-        job_cgroup = site_cgroup / f"job-{job_id}"
+        site_cgroup = SiteConfig.site_cgroup_path(cgroup_root, site.name)
+        job_cgroup = SiteConfig.job_cgroup_path(cgroup_root, site.name, job_id)
         try:
             site_cgroup.mkdir(parents=True, exist_ok=True)
             if site.cpu_quota_pct is not None or site.cpu_weight is not None:
@@ -467,7 +467,7 @@ class ChildTable:
         if self._cgroup_root is None or location is None:
             return
         site_name, job_id = location
-        job_cgroup = self._cgroup_root / f"site-{site_name}" / f"job-{job_id}"
+        job_cgroup = SiteConfig.job_cgroup_path(self._cgroup_root, site_name, job_id)
         try:
             job_cgroup.rmdir()
         except OSError as exc:

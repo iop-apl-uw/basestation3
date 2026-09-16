@@ -52,6 +52,10 @@ import pytest
 
 SITES = ("alpha", "bravo", "charlie")
 
+# Must match testlong/fixtures/sites.yaml's charlie entry.
+CHARLIE_MEMORY_HIGH_MB = 32
+CHARLIE_MEMORY_MAX_MB = 64
+
 
 def _run(vm: multipassutils.Vm, cmd: list[str]) -> str:
     """Runs a command in the VM and returns stdout, failing loudly on error.
@@ -99,6 +103,82 @@ def _wait_until(predicate, timeout: float = 15.0, interval: float = 0.5) -> bool
             return True
         time.sleep(interval)
     return False
+
+
+def _find_job_cgroup(vm: multipassutils.Vm, site: str, pid: str) -> str | None:
+    """Finds pid's own job-<job_id> leaf cgroup under site's cgroup, if any.
+
+    job_id is an internal uuid4 BaseRunnerMulti generates per dispatch, not
+    something a test can predict ahead of time - so this discovers it by
+    checking which currently-present job-* leaf's own cgroup.procs lists
+    pid, rather than assuming a name.
+
+    Args:
+        vm: Target VM.
+        site: Site name.
+        pid: pid to search for, as a string.
+
+    Returns:
+        The job cgroup's absolute path, or None if no job-* leaf under
+        site's cgroup currently lists pid in its own cgroup.procs (e.g.
+        one poll tick before BaseRunnerPrivExec has forked/joined it yet,
+        or the site has no cgroup at all yet).
+    """
+    site_cgroup = f"/sys/fs/cgroup/system.slice/baserunnerprivexec.service/site-{site}"
+    listing = multipassutils.exec_in(vm, ["bash", "-c", f"ls {shlex.quote(site_cgroup)} 2>/dev/null"])
+    for entry in listing.stdout.split():
+        if not entry.startswith("job-"):
+            continue
+        job_cgroup = f"{site_cgroup}/{entry}"
+        procs = multipassutils.exec_in(vm, ["sudo", "cat", f"{job_cgroup}/cgroup.procs"])
+        if procs.returncode == 0 and pid in procs.stdout.split():
+            return job_cgroup
+    return None
+
+
+def _wait_for_job_cgroup(
+    vm: multipassutils.Vm, site: str, pid: str, timeout: float = 15.0
+) -> str:
+    """Polls _find_job_cgroup until pid's own job cgroup appears.
+
+    Args:
+        vm: Target VM.
+        site: Site name.
+        pid: pid to search for, as a string.
+        timeout: Max seconds to wait.
+
+    Returns:
+        The job cgroup's absolute path.
+
+    Raises:
+        AssertionError: If no job-* leaf ever lists pid within timeout.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        found = _find_job_cgroup(vm, site, pid)
+        if found is not None:
+            return found
+        time.sleep(0.5)
+    raise AssertionError(f"no job-* cgroup for site {site!r} ever contained pid {pid}")
+
+
+def _pid_from_log(vm: multipassutils.Vm, log_file: str) -> str:
+    """Extracts the stub's own reported pid= from its log_file.
+
+    Args:
+        vm: Target VM.
+        log_file: Path to the job's log_file (already contains at least
+            one "pid=<n>" line from the stub's identity print).
+
+    Returns:
+        The pid, as a string.
+
+    Raises:
+        AssertionError: If no "pid=<n>" is found in log_file yet.
+    """
+    match = re.search(r"pid=(\d+)", _read_file(vm, log_file))
+    assert match, f"could not find pid= in {log_file}"
+    return match.group(1)
 
 
 def _drop_run_file(
@@ -251,6 +331,139 @@ def test_cgroup_unset_for_unthrottled_site(running_baserunner: multipassutils.Vm
     site_cgroup = "/sys/fs/cgroup/system.slice/baserunnerprivexec.service/site-bravo"
     cpu_max = _read_file(vm, f"{site_cgroup}/cpu.max").strip()
     assert cpu_max == "max 100000", f"expected cgroup v2's own default, got: {cpu_max!r}"
+
+
+def test_cgroup_memory_limits_written_to_job_leaf_not_site(
+    running_baserunner: multipassutils.Vm,
+) -> None:
+    """Item 2 (memory): job-<job_id>'s memory.high/memory.max match sites.yaml,
+    and the job's pid lands in its own job leaf, never directly in the
+    shared site-<name> cgroup.
+
+    The site cgroup can no longer hold member processes at all once
+    "memory" is enabled in its own cgroup.subtree_control (cgroup v2's "no
+    internal process" rule) - see CgroupJoiner.join's docstring - so
+    checking the pid is genuinely absent from site-<name>/cgroup.procs is
+    as important here as checking it IS present in the job leaf.
+    """
+    vm = running_baserunner
+    _mission_dir, log_file = _drop_run_file(
+        vm, "charlie", 110, "Base.py --stub-sleep-seconds 5"
+    )
+    found = _wait_until(lambda: "user=runner-charlie" in _read_file(vm, log_file))
+    assert found, f"job never started - {log_file}"
+    job_pid = _pid_from_log(vm, log_file)
+
+    job_cgroup = _wait_for_job_cgroup(vm, "charlie", job_pid)
+
+    memory_high = _read_file(vm, f"{job_cgroup}/memory.high").strip()
+    assert memory_high == str(CHARLIE_MEMORY_HIGH_MB * 1024 * 1024), memory_high
+    memory_max = _read_file(vm, f"{job_cgroup}/memory.max").strip()
+    assert memory_max == str(CHARLIE_MEMORY_MAX_MB * 1024 * 1024), memory_max
+
+    site_cgroup = "/sys/fs/cgroup/system.slice/baserunnerprivexec.service/site-charlie"
+    site_procs = _read_file(vm, f"{site_cgroup}/cgroup.procs").split()
+    assert job_pid not in site_procs, (
+        "job pid found directly in the shared site cgroup, not its own job leaf"
+    )
+
+
+def test_cgroup_memory_unset_for_site_without_limits(
+    running_baserunner: multipassutils.Vm,
+) -> None:
+    """Item 2 (memory, negative case): a site with no memory_high_mb/
+    memory_max_mb configured never gets a real limit written - its job
+    leaf's memory.max/memory.high stay at cgroup v2's own "max" default,
+    mirroring test_cgroup_unset_for_unthrottled_site's CPU-side check.
+    """
+    vm = running_baserunner
+    _mission_dir, log_file = _drop_run_file(vm, "bravo", 111, "Base.py --stub-sleep-seconds 5")
+    found = _wait_until(lambda: "user=runner-bravo" in _read_file(vm, log_file))
+    assert found, f"job never started - {log_file}"
+    job_pid = _pid_from_log(vm, log_file)
+
+    job_cgroup = _wait_for_job_cgroup(vm, "bravo", job_pid)
+
+    memory_high = _read_file(vm, f"{job_cgroup}/memory.high").strip()
+    assert memory_high == "max", f"expected cgroup v2's own default, got: {memory_high!r}"
+    memory_max = _read_file(vm, f"{job_cgroup}/memory.max").strip()
+    assert memory_max == "max", f"expected cgroup v2's own default, got: {memory_max!r}"
+
+
+def test_cgroup_memory_max_oom_kills_only_the_overrun_job(
+    running_baserunner: multipassutils.Vm,
+) -> None:
+    """Item 2 (memory, isolation case): crossing memory_max_mb only
+    OOM-kills that job's own cgroup - a concurrent sibling job dispatched
+    for the SAME site keeps running unaffected. This is the concrete test
+    of the "no collateral damage" property per-job (rather than per-site)
+    memory cgroups exist for - see CgroupJoiner.join's docstring.
+    """
+    vm = running_baserunner
+
+    # Companion: well under charlie's 32 MiB memory_high_mb, should run to
+    # completion untouched regardless of what happens to the overrun job
+    # dispatched alongside it below.
+    _mission_dir_ok, log_file_ok = _drop_run_file(
+        vm, "charlie", 112, "Base.py --stub-allocate-mb 8 --stub-sleep-seconds 10"
+    )
+    started_ok = _wait_until(lambda: "user=runner-charlie" in _read_file(vm, log_file_ok))
+    assert started_ok, f"companion job never started - {log_file_ok}"
+    ok_pid = _pid_from_log(vm, log_file_ok)
+
+    # Overrun: well past charlie's 64 MiB memory_max_mb.
+    _mission_dir_bad, log_file_bad = _drop_run_file(
+        vm, "charlie", 113, "Base.py --stub-allocate-mb 200"
+    )
+    started_bad = _wait_until(lambda: "user=runner-charlie" in _read_file(vm, log_file_bad))
+    assert started_bad, f"overrun job never even started - {log_file_bad}"
+    bad_pid = _pid_from_log(vm, log_file_bad)
+
+    killed = _wait_until(
+        lambda: multipassutils.exec_in(vm, ["sudo", "kill", "-0", bad_pid]).returncode != 0,
+        timeout=15.0,
+    )
+    assert killed, "overrun job was never killed - memory.max isn't being enforced"
+
+    dmesg = _run(vm, ["sudo", "dmesg"])
+    assert "oom-kill" in dmesg or "Killed process" in dmesg, (
+        f"no OOM-kill evidence in dmesg for the overrun job (pid {bad_pid})"
+    )
+
+    # The core assertion: the companion job for the SAME site must be
+    # completely unaffected by the overrun job's OOM kill.
+    still_alive = multipassutils.exec_in(vm, ["sudo", "kill", "-0", ok_pid])
+    assert still_alive.returncode == 0, "companion job was killed as collateral damage"
+
+    finished_ok = _wait_until(
+        lambda: multipassutils.exec_in(vm, ["sudo", "kill", "-0", ok_pid]).returncode != 0,
+        timeout=15.0,
+    )
+    assert finished_ok, "companion job never exited on its own after the overrun job was killed"
+
+
+def test_cgroup_job_leaf_removed_after_exit(running_baserunner: multipassutils.Vm) -> None:
+    """Item 2 (memory): a job's own job-<job_id> leaf cgroup is removed
+    once ChildTable reaps it - job cgroup cardinality is unbounded over
+    the daemon's lifetime (unlike site-<name>, bounded by configured
+    sites), so unlike those, leftover leaves would accumulate forever
+    without this cleanup.
+    """
+    vm = running_baserunner
+    _mission_dir, log_file = _drop_run_file(vm, "charlie", 114, "Base.py")
+    found = _wait_until(lambda: "user=runner-charlie" in _read_file(vm, log_file))
+    assert found, f"job never started - {log_file}"
+    job_pid = _pid_from_log(vm, log_file)
+
+    job_cgroup = _wait_for_job_cgroup(vm, "charlie", job_pid)
+
+    # Base.py with no --stub-sleep-seconds exits almost immediately - give
+    # ChildTable a moment to reap it and remove the leaf.
+    removed = _wait_until(
+        lambda: multipassutils.exec_in(vm, ["sudo", "test", "-d", job_cgroup]).returncode != 0,
+        timeout=10.0,
+    )
+    assert removed, f"{job_cgroup} was never cleaned up after the job exited"
 
 
 def test_multi_site_dispatch_never_cross_wired(running_baserunner: multipassutils.Vm) -> None:

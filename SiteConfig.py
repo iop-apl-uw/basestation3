@@ -180,6 +180,37 @@ def resolve_ids(site: SiteConfig) -> bool:
     return True
 
 
+def site_cgroup_path(cgroup_root: pathlib.Path, site_name: str) -> pathlib.Path:
+    """Path to a site's own cgroup, shared by every job it ever dispatches.
+
+    Shared by BaseRunnerPrivExec.py (which creates/writes it) and
+    BaseRunnerMulti.py (which only ever reads it), so both agree on the
+    naming convention without duplicating the f-string in each.
+
+    Args:
+        cgroup_root: Root of BaseRunnerPrivExec's own delegated cgroup subtree.
+        site_name: The site's name.
+
+    Returns:
+        cgroup_root/site-<site_name>.
+    """
+    return cgroup_root / f"site-{site_name}"
+
+
+def job_cgroup_path(cgroup_root: pathlib.Path, site_name: str, job_id: str) -> pathlib.Path:
+    """Path to a job's own leaf cgroup, per CgroupJoiner.join's layout.
+
+    Args:
+        cgroup_root: Root of BaseRunnerPrivExec's own delegated cgroup subtree.
+        site_name: The job's site name.
+        job_id: The job's own id.
+
+    Returns:
+        cgroup_root/site-<site_name>/job-<job_id>.
+    """
+    return site_cgroup_path(cgroup_root, site_name) / f"job-{job_id}"
+
+
 def is_contained(path: pathlib.Path, root: pathlib.Path) -> bool:
     """Checks whether path resolves to root or one of its descendants.
 
