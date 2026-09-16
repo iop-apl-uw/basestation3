@@ -278,15 +278,22 @@ CacheDirectory=baserunner
 Environment=MPLCONFIGDIR=/var/cache/baserunner
 AmbientCapabilities=CAP_SETUID CAP_SETGID
 CapabilityBoundingSet=CAP_SETUID CAP_SETGID
-# Delegates a cgroup subtree to this unit so CgroupJoiner can create
-# per-site (site-<name>) and per-job (site-<name>/job-<job_id>) child
-# cgroups and write cpu.max/cpu.weight/memory.high/memory.max/
-# cgroup.procs without needing any additional Linux capability.
 Delegate=yes
+# Nests this unit under baserunner.slice instead of directly under
+# system.slice - see "KillMode and in-flight jobs" below for why this
+# (not DelegateSubgroup=, which doesn't work on systemd < 254) is what
+# actually keeps restarts working once any job has ever been dispatched.
+Slice=baserunner.slice
+# Idempotent bootstrap, runs as root (the "+" prefix) regardless of this
+# unit's own User=baserunner: makes baserunner.slice's own cgroup
+# writable by baserunner and enables cpu/memory there, one level up from
+# where CgroupJoiner creates per-site (site-<name>) and per-job
+# (site-<name>/job-<job_id>) child cgroups.
+ExecStartPre=+/bin/sh -c 'mkdir -p /sys/fs/cgroup/baserunner.slice && chown -R baserunner:baserunner /sys/fs/cgroup/baserunner.slice && echo "+cpu +memory" > /sys/fs/cgroup/baserunner.slice/cgroup.subtree_control'
 ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunnerPrivExec.py \
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \
-    --cgroup_root /sys/fs/cgroup/system.slice/baserunnerprivexec.service \
+    --cgroup_root /sys/fs/cgroup/baserunner.slice \
     --base_log /var/log/baserunner/baserunner-privexec.log
 RuntimeDirectory=baserunner
 # Creates /var/log/baserunner/ owned baserunner:baserunner (mode 0750) on
@@ -303,6 +310,8 @@ LogsDirectory=baserunner
 # priv_exec.sock right after boot.
 Type=notify
 Restart=always
+# See "KillMode and in-flight jobs" below.
+KillMode=process
 
 [Install]
 WantedBy=multi-user.target
@@ -330,7 +339,7 @@ Environment=MPLCONFIGDIR=/var/cache/baserunner
 ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunnerMulti.py \
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \
-    --cgroup_root /sys/fs/cgroup/system.slice/baserunnerprivexec.service \
+    --cgroup_root /sys/fs/cgroup/baserunner.slice \
     --base_log /var/log/baserunner/baserunnermulti.log
 # Read-only: only used to read memory.current/memory.peak for per-job
 # memory tracking (see "Per-site memory limits" above) - must match
@@ -411,55 +420,68 @@ untouched throughout. That description covers only jobs not yet
 dispatched at restart time - a job already in flight when the helper
 restarts is a separate case, covered next.
 
-### `KillMode` and in-flight jobs
+### `KillMode`, `Slice=`, and in-flight jobs
 
 Every dispatched job is moved into its own `cgroup_root/site-<name>`
-sub-cgroup (see `CgroupJoiner.join()`) - a child of
-`baserunnerprivexec.service`'s own delegated cgroup tree. Systemd's
+sub-cgroup (see `CgroupJoiner.join()`) - a child of `baserunner.slice`,
+**not** of `baserunnerprivexec.service`'s own cgroup (see `Slice=` in the
+unit above; this split is the whole point, explained below). Systemd's
 default `KillMode=control-group` would SIGTERM/SIGKILL every process in
-that whole tree on *any* stop of the unit, not just this unit's own
-tracked process - including the routine, documented
-`systemctl restart baserunnerprivexec.service` procedure below, not just
-a crash or reboot. `baserunnerprivexec.service` sets `KillMode=process`
-to avoid that: a stop signals only the main process, leaving dispatched
-jobs running completely untouched in their own site cgroups.
-`KillMode=mixed` looks like a safer middle ground but isn't - confirmed
-on real hardware - per `systemd.kill(5)`, `mixed` sends SIGTERM to only
-the main process but still sends SIGKILL to every other process in the
-cgroup as soon as that main process exits (not only as a
-`TimeoutStopSec` fallback), so it kills in-flight jobs just as fast as
-`control-group` does. Only `process` leaves them alone. The man page
-calls `process` "not recommended" because it normally lets processes
-escape the service manager's lifecycle by accident - here that's the
-deliberate, intended design: dispatched jobs are meant to outlive this
-helper's own restarts, tracked by `BaseRunnerMulti.py`'s own job-queue
-bookkeeping instead.
+this unit's own cgroup on *any* stop of the unit, not just this unit's
+own tracked process. `baserunnerprivexec.service` sets `KillMode=process`
+to avoid that: a stop signals only the main process. `KillMode=mixed`
+looks like a safer middle ground but isn't - confirmed on real hardware -
+per `systemd.kill(5)`, `mixed` sends SIGTERM to only the main process but
+still sends SIGKILL to every other process in the cgroup as soon as that
+main process exits (not only as a `TimeoutStopSec` fallback). Only
+`process` leaves other processes in the cgroup alone. The man page calls
+`process` "not recommended" because it normally lets processes escape
+the service manager's lifecycle by accident - here that's the deliberate,
+intended design: dispatched jobs are meant to outlive this helper's own
+restarts, tracked by `BaseRunnerMulti.py`'s own job-queue bookkeeping
+instead.
 
-`KillMode=process` alone is still not sufficient, also confirmed on real
-hardware: this unit has `Delegate=yes`, and cgroup v2's "no internal
+**Why `Slice=baserunner.slice` exists, and why `DelegateSubgroup=` (the
+obvious-looking alternative) doesn't work here**: cgroup v2's "no internal
 process" rule means a cgroup cannot simultaneously hold a process
-directly *and* have children with controllers enabled in its
-`cgroup.subtree_control`. `CgroupJoiner.join()` delegates the `cpu`
-controller down to `site-<name>` children - so as long as a job survives
-in one of them, that controller stays enabled at this unit's own cgroup
-top level across a restart, and systemd's own placement of a *freshly
-started* invocation's raw main process - which happens directly into
-that top level, before any of our Python code (including
-`_move_self_into_leaf_cgroup()`'s own mitigation) ever runs - now
-violates the constraint every time. The result was a hard, repeatable
-`status=219/CGROUP` start failure for as long as any job stayed alive,
-not a rare race: 5 rapid restart attempts, then systemd's rate limiter
-gave up and left the unit fully stopped until manually recovered - worse
-than the original bug. `DelegateSubgroup=supervisor` (systemd >= 254)
-fixes this declaratively: it tells systemd to place this unit's own
-freshly started main process into that named subgroup itself, never
-into the delegated cgroup's own top level, so the conflict with
-surviving job cgroups never arises. It reuses the same `supervisor` name
-`_move_self_into_leaf_cgroup()` already uses, making that function's own
-move a harmless no-op. A benign `"Found left-over process ... in
-control group ... Ignoring"` line in the journal during a
-restart-while-job-active is now expected - systemd noticing the
-surviving job, not an error.
+directly *and* have a controller enabled in its own `cgroup.subtree_control`
+for children. `CgroupJoiner.join()` enables `cpu`/`memory` unconditionally
+on `cgroup_root` (every site, not just throttled/memory-limited ones -
+see "Per-site memory limits" above) the moment the *first* job is ever
+dispatched to *any* site - and that enablement is permanent, nothing ever
+unsets it. If `cgroup_root` were this unit's own cgroup (as it used to
+be, before this split), then from that point on, *every* restart of
+`baserunnerprivexec.service` - not just while a job is in flight - would
+have systemd try to place the freshly started invocation's raw main
+process directly into that same top level, which now permanently
+violates the constraint. Confirmed on real hardware (Ubuntu 22.04/systemd
+249, matching production) as a hard, repeatable `status=219/CGROUP` start
+failure, not a rare race: 5 rapid restart attempts, then systemd's rate
+limiter gave up and left the unit fully stopped until manually
+recovered - worse than the original bug. `DelegateSubgroup=` (systemd >=
+254) is the systemd-native fix for exactly this shape of problem, but it
+does not help on systemd 249: the key is silently ignored
+(`Unknown key name 'DelegateSubgroup' in section 'Service', ignoring'`),
+so there is no working fallback for it on older hosts.
+
+`Slice=baserunner.slice` fixes this structurally instead, on every
+systemd version: nesting this unit *under* a slice means `cpu`/`memory`
+get enabled on the *slice's* own `cgroup.subtree_control` (see
+`ExecStartPre=` above) - one level **above** this unit's own cgroup, not
+on it. A slice never has a "main process" of its own (nothing systemd
+ever auto-places there), so it can safely delegate controllers to its
+children - this unit's own cgroup, plus every `site-<name>` - forever,
+with no restart-time conflict, because this unit's own cgroup itself
+never has a controller enabled on it and never needs to. Confirmed
+empirically (see `.claude/plans/2026-08-11-multipass-baserunner-validation.md`'s
+successor investigation, 2026-09-16): a process already living inside a
+`Delegate=yes`-chowned tree (placed there by root/systemd, exactly as
+`ExecStartPre=`+`Slice=` do here) can freely create and migrate into
+sibling cgroups within that same tree - which is exactly what
+`CgroupJoiner.join()` needs to do from within the forked child. A benign
+`"Found left-over process ... in control group ... Ignoring"` line in the
+journal during a restart-while-job-active is expected - systemd noticing
+the surviving job, not an error.
 
 That fixes the kill, but not for free: `ChildTable`
 (`BaseRunnerPrivExec.py`) is purely in-memory, per-process state with no
@@ -572,11 +594,10 @@ by that site's `runner-<site>` uid/gid, not `baserunner`.
 
 If using per-site CPU throttling, validate that chain too: with
 `cpu_quota_pct`/`cpu_weight` set for a test site, confirm
-`cpu.max`/`cpu.weight` under
-`/sys/fs/cgroup/.../baserunnerprivexec.service/site-<name>/` match what
-`sites.yaml` asked for - `Delegate=yes` and cgroup v2 write permissions
-are worth confirming empirically rather than trusting the derivation in
-"Per-site CPU throttling" above.
+`cpu.max`/`cpu.weight` under `/sys/fs/cgroup/baserunner.slice/site-<name>/`
+match what `sites.yaml` asked for - `Delegate=yes`/`Slice=` and cgroup v2
+write permissions are worth confirming empirically rather than trusting
+the derivation in "Per-site CPU throttling" above.
 
 If using per-site memory limits, validate that chain too, and separately
 from CPU - this is the one that actually needs a real cgroup v2 host,
@@ -587,7 +608,7 @@ limits" above describes:
 
 - With `memory_max_mb` set for a test site, confirm the dispatched job's
   pid actually lands in
-  `.../baserunnerprivexec.service/site-<name>/job-<job_id>/cgroup.procs`
+  `/sys/fs/cgroup/baserunner.slice/site-<name>/job-<job_id>/cgroup.procs`
   (not `site-<name>/cgroup.procs` - that path now stays process-free
   once `memory` is enabled there), and that `job-<job_id>/memory.max`
   matches what `sites.yaml` asked for, in bytes, not MiB.
@@ -598,6 +619,15 @@ limits" above describes:
   a concurrent sibling job dispatched for the *same site* keeps running
   unaffected. This is the concrete test of the "no collateral damage"
   property per-job cgroups exist for.
+  - **Check whether the host has swap first.** With no swap (confirmed
+    on the 2026-09-16 testlong validation VM), `memory_high_mb`'s
+    reclaim-based throttling has nothing reclaimable to work with once a
+    job crosses it, and can stall the job's forward progress almost to a
+    halt (~100KB grown in 30s, in one observed case) rather than letting
+    it climb to `memory_max_mb` and get OOM-killed promptly. A "runaway"
+    job may hang instead of dying cleanly on a swapless host - worth
+    confirming this host's actual swap configuration before assuming the
+    OOM-based collateral-damage protection kicks in promptly.
 - Confirm the `job-<job_id>` leaf directory is actually removed once the
   job exits (`ChildTable`'s reap-time cleanup) - it shouldn't linger.
 

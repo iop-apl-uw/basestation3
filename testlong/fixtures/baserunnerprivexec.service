@@ -12,21 +12,19 @@ CacheDirectory=baserunner
 Environment=MPLCONFIGDIR=/var/cache/baserunner
 AmbientCapabilities=CAP_SETUID CAP_SETGID
 CapabilityBoundingSet=CAP_SETUID CAP_SETGID
-# Delegates a cgroup subtree to this unit so CgroupJoiner can create
-# per-site child cgroups and write cpu.max/cpu.weight/cgroup.procs
-# without needing any additional Linux capability.
 Delegate=yes
+Slice=baserunner.slice
+ExecStartPre=+/bin/sh -c 'mkdir -p /sys/fs/cgroup/baserunner.slice && chown -R baserunner:baserunner /sys/fs/cgroup/baserunner.slice && echo "+cpu +memory" > /sys/fs/cgroup/baserunner.slice/cgroup.subtree_control'
 ExecStart=/usr/local/basestation3/.venv/bin/python /usr/local/basestation3/BaseRunnerPrivExec.py \
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \
-    --cgroup_root /sys/fs/cgroup/system.slice/baserunnerprivexec.service \
+    --cgroup_root /sys/fs/cgroup/baserunner.slice \
     --base_log /var/log/baserunner/baserunner-privexec.log
 RuntimeDirectory=baserunner
 LogsDirectory=baserunner
 Type=notify
 Restart=always
 KillMode=process
-DelegateSubgroup=supervisor
 
 [Install]
 WantedBy=multi-user.target

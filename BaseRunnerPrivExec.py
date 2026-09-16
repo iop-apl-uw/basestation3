@@ -176,45 +176,6 @@ def _set_child_subreaper() -> None:
         log_warning(f"prctl(PR_SET_CHILD_SUBREAPER) failed: errno={errno}")
 
 
-def _move_self_into_leaf_cgroup(cgroup_root: pathlib.Path) -> None:
-    """Moves this process into its own leaf child cgroup under cgroup_root.
-
-    cgroup v2's "no internal process" constraint means a cgroup can't both
-    hold member processes directly AND have a controller enabled in its
-    own cgroup.subtree_control for children - and systemd starts a
-    unit's main process directly inside that unit's own cgroup
-    (cgroup_root here). Without this, CgroupJoiner.join()'s later attempt
-    to enable "cpu" in cgroup_root/cgroup.subtree_control fails with
-    ENOTSUP, because this daemon's own pid is still sitting directly in
-    cgroup_root. Confirmed empirically on a real cgroup v2 mount (see
-    .claude/plans/2026-08-11-multipass-baserunner-validation.md) - not
-    something the original design derivation anticipated.
-
-    Called once at startup, before any CgroupJoiner.join() call.
-
-    Args:
-        cgroup_root: Root of this process's own delegated cgroup subtree.
-
-    Returns:
-        None.
-
-    Raises:
-        No exceptions are raised - failure here just means per-site CPU
-        throttling won't work (CgroupJoiner.join() will itself fail-open
-        the same way it does for any other cgroup error), not that the
-        daemon can't run.
-    """
-    leaf = cgroup_root / "supervisor"
-    try:
-        leaf.mkdir(parents=True, exist_ok=True)
-        (leaf / "cgroup.procs").write_text(f"{os.getpid()}\n")
-    except OSError as exc:
-        log_warning(
-            f"Could not move into leaf cgroup {leaf}: {exc} - "
-            "per-site CPU throttling will not be available"
-        )
-
-
 class PrivilegeDropper:
     """Thin, mockable boundary around the actual privilege-drop syscalls.
 
@@ -314,9 +275,18 @@ class CgroupJoiner:
                 QueuedJob/RunningJob.job_id) - used to name this job's own
                 leaf cgroup so concurrent jobs for the same site never
                 share a memory.max/memory.high scope.
-            cgroup_root: Root of this helper's own delegated cgroup
-                subtree (requires Delegate=yes on this process's own
-                systemd unit).
+            cgroup_root: Root of the delegated cgroup subtree this
+                process's own site/job cgroups live under - deliberately
+                a Slice (see docs/baserunnerprivexec.service's Slice=),
+                not this process's own unit cgroup: a cgroup can never
+                simultaneously hold a live process AND have a controller
+                enabled in its own cgroup.subtree_control (cgroup v2's
+                "no internal process" constraint), and this process's
+                own pid keeps living in its own unit cgroup across every
+                restart. Nesting the unit under a Slice instead means
+                the Slice can safely have "cpu"/"memory" enabled forever
+                - it only ever holds sub-cgroups (this unit's own, plus
+                every site-<name>), never a raw process of its own.
 
         Returns:
             None.
@@ -374,9 +344,10 @@ class CgroupJoiner:
             # Written to job_cgroup, not site_cgroup: once site_cgroup has
             # "memory" enabled in its own subtree_control (above), cgroup
             # v2's "no internal process" constraint means it can no longer
-            # hold member processes directly - same rule
-            # _move_self_into_leaf_cgroup already applies one level up, at
-            # cgroup_root.
+            # hold member processes directly - same rule that requires
+            # cgroup_root to be a Slice this process's own unit cgroup
+            # nests under, rather than this process's own unit cgroup
+            # itself (see join()'s docstring).
             (job_cgroup / "cgroup.procs").write_text(f"{os.getpid()}\n")
         except OSError as exc:
             log_warning(
@@ -804,16 +775,18 @@ def main() -> int:
                 {"help": "UNIX socket path to listen on"},
             ),
             "cgroup_root": BaseOptsType.options_t(
-                "/sys/fs/cgroup/system.slice/baserunnerprivexec.service",
+                "/sys/fs/cgroup/baserunner.slice",
                 {"BaseRunnerPrivExec"},
                 ("--cgroup_root",),
                 str,
                 {
-                    "help": "Root of this process's own delegated cgroup "
-                    "subtree (requires Delegate=yes on its systemd unit) - "
-                    "each dispatched job is joined into a site-scoped "
-                    "child cgroup under this root for per-site CPU "
-                    "throttling"
+                    "help": "Root of the delegated Slice this process's own "
+                    "systemd unit nests under (see Slice= in "
+                    "docs/baserunnerprivexec.service) - each dispatched job "
+                    "is joined into a site-scoped child cgroup under this "
+                    "root for per-site CPU throttling and memory tracking. "
+                    "Deliberately NOT this process's own unit cgroup - see "
+                    "CgroupJoiner.join()'s docstring for why"
                 },
             ),
         },
@@ -834,7 +807,6 @@ def main() -> int:
     os.umask(0o002)
 
     _set_child_subreaper()
-    _move_self_into_leaf_cgroup(pathlib.Path(base_opts.cgroup_root))
 
     socket_path = pathlib.Path(base_opts.priv_exec_socket)
     if socket_path.exists():

@@ -52,6 +52,9 @@ import pytest
 
 SITES = ("alpha", "bravo", "charlie")
 
+# Must match testlong/fixtures/baserunnerprivexec.service's --cgroup_root.
+CGROUP_ROOT = "/sys/fs/cgroup/baserunner.slice"
+
 # Must match testlong/fixtures/sites.yaml's charlie entry.
 CHARLIE_MEMORY_HIGH_MB = 32
 CHARLIE_MEMORY_MAX_MB = 64
@@ -124,7 +127,7 @@ def _find_job_cgroup(vm: multipassutils.Vm, site: str, pid: str) -> str | None:
         one poll tick before BaseRunnerPrivExec has forked/joined it yet,
         or the site has no cgroup at all yet).
     """
-    site_cgroup = f"/sys/fs/cgroup/system.slice/baserunnerprivexec.service/site-{site}"
+    site_cgroup = f"{CGROUP_ROOT}/site-{site}"
     listing = multipassutils.exec_in(vm, ["bash", "-c", f"ls {shlex.quote(site_cgroup)} 2>/dev/null"])
     for entry in listing.stdout.split():
         if not entry.startswith("job-"):
@@ -282,15 +285,16 @@ def test_privexec_holds_only_setuid_setgid(running_baserunner: multipassutils.Vm
 
 
 def test_cgroup_throttling(running_baserunner: multipassutils.Vm) -> None:
-    """Item 2: CgroupJoiner writes cpu.max/cpu.weight/cgroup.procs for a throttled site."""
+    """Item 2: CgroupJoiner writes cpu.max/cpu.weight for a throttled site."""
     vm = running_baserunner
-    _mission_dir, _log_file = _drop_run_file(
+    _mission_dir, log_file = _drop_run_file(
         vm, "alpha", 102, "Base.py --stub-sleep-seconds 5"
     )
+    found = _wait_until(lambda: "user=runner-alpha" in _read_file(vm, log_file))
+    assert found, f"job never started - {log_file}"
+    job_pid = _pid_from_log(vm, log_file)
 
-    site_cgroup = (
-        "/sys/fs/cgroup/system.slice/baserunnerprivexec.service/site-alpha"
-    )
+    site_cgroup = f"{CGROUP_ROOT}/site-alpha"
     found = _wait_until(
         lambda: multipassutils.exec_in(
             vm, ["sudo", "test", "-f", f"{site_cgroup}/cpu.max"]
@@ -304,10 +308,17 @@ def test_cgroup_throttling(running_baserunner: multipassutils.Vm) -> None:
     cpu_weight = _read_file(vm, f"{site_cgroup}/cpu.weight").strip()
     assert cpu_weight == "50", cpu_weight
 
-    # The job sleeps 5s, giving us a window to observe it still listed in
-    # cgroup.procs while alive.
-    procs = _read_file(vm, f"{site_cgroup}/cgroup.procs")
-    assert procs.strip() != "", "expected the running job's pid in cgroup.procs"
+    # The job's pid lands in its own job-<job_id> leaf, never directly in
+    # the shared site cgroup - "memory" is enabled unconditionally on
+    # every site (see CgroupJoiner.join()), so cgroup v2's "no internal
+    # process" rule applies here even though alpha has no memory limits
+    # configured. See test_cgroup_memory_limits_written_to_job_leaf_not_site
+    # for the same property tested with memory in mind specifically.
+    job_cgroup = _wait_for_job_cgroup(vm, "alpha", job_pid)
+    procs = _read_file(vm, f"{job_cgroup}/cgroup.procs")
+    assert procs.strip() != "", "expected the running job's pid in its own job leaf"
+    site_procs = _read_file(vm, f"{site_cgroup}/cgroup.procs").split()
+    assert job_pid not in site_procs, "job pid found directly in site cgroup, not its own job leaf"
 
 
 def test_cgroup_unset_for_unthrottled_site(running_baserunner: multipassutils.Vm) -> None:
@@ -328,7 +339,7 @@ def test_cgroup_unset_for_unthrottled_site(running_baserunner: multipassutils.Vm
     found = _wait_until(lambda: "user=runner-bravo" in _read_file(vm, log_file))
     assert found
 
-    site_cgroup = "/sys/fs/cgroup/system.slice/baserunnerprivexec.service/site-bravo"
+    site_cgroup = f"{CGROUP_ROOT}/site-bravo"
     cpu_max = _read_file(vm, f"{site_cgroup}/cpu.max").strip()
     assert cpu_max == "max 100000", f"expected cgroup v2's own default, got: {cpu_max!r}"
 
@@ -361,7 +372,7 @@ def test_cgroup_memory_limits_written_to_job_leaf_not_site(
     memory_max = _read_file(vm, f"{job_cgroup}/memory.max").strip()
     assert memory_max == str(CHARLIE_MEMORY_MAX_MB * 1024 * 1024), memory_max
 
-    site_cgroup = "/sys/fs/cgroup/system.slice/baserunnerprivexec.service/site-charlie"
+    site_cgroup = f"{CGROUP_ROOT}/site-charlie"
     site_procs = _read_file(vm, f"{site_cgroup}/cgroup.procs").split()
     assert job_pid not in site_procs, (
         "job pid found directly in the shared site cgroup, not its own job leaf"
@@ -450,15 +461,22 @@ def test_cgroup_job_leaf_removed_after_exit(running_baserunner: multipassutils.V
     without this cleanup.
     """
     vm = running_baserunner
-    _mission_dir, log_file = _drop_run_file(vm, "charlie", 114, "Base.py")
+    # A brief --stub-sleep-seconds keeps the job alive long enough for
+    # _wait_for_job_cgroup's polling to reliably catch its leaf before it
+    # exits and gets reaped - without this, a fast-exiting job can win the
+    # race against the first poll (observed in practice: "no job-* cgroup
+    # ... ever contained pid").
+    _mission_dir, log_file = _drop_run_file(
+        vm, "charlie", 114, "Base.py --stub-sleep-seconds 2"
+    )
     found = _wait_until(lambda: "user=runner-charlie" in _read_file(vm, log_file))
     assert found, f"job never started - {log_file}"
     job_pid = _pid_from_log(vm, log_file)
 
     job_cgroup = _wait_for_job_cgroup(vm, "charlie", job_pid)
 
-    # Base.py with no --stub-sleep-seconds exits almost immediately - give
-    # ChildTable a moment to reap it and remove the leaf.
+    # Once its 2s sleep finishes, give ChildTable a moment to reap it and
+    # remove the leaf.
     removed = _wait_until(
         lambda: multipassutils.exec_in(vm, ["sudo", "test", "-d", job_cgroup]).returncode != 0,
         timeout=10.0,
@@ -546,20 +564,24 @@ def test_privexec_restart_does_not_stop_watcher(running_baserunner: multipassuti
 def test_in_flight_job_survives_privexec_restart_but_completion_is_unknowable(
     running_baserunner: multipassutils.Vm,
 ) -> None:
-    """KillMode=process + DelegateSubgroup=supervisor: a dispatched job
-    outlives a privexec restart instead of being killed via the shared
-    cgroup tree - but BaseRunnerMulti can no longer track its completion
-    afterward (ChildTable is per-process, in-memory state - see
-    _poll_one_completion's PrivExecRejected handling).
+    """KillMode=process + baserunnerprivexec.service nesting under
+    baserunner.slice: a dispatched job outlives a privexec restart instead
+    of being killed via the shared cgroup tree - but BaseRunnerMulti can no
+    longer track its completion afterward (ChildTable is per-process,
+    in-memory state - see _poll_one_completion's PrivExecRejected handling).
 
-    DelegateSubgroup is required alongside KillMode=process, not optional:
-    without it, systemd's own placement of a freshly started invocation's
-    main process (directly into this Delegate=yes unit's own cgroup top
-    level) conflicts with cgroup v2's "no internal process" rule as long as
-    the survivor's site-<name> cgroup keeps a controller enabled there -
-    found on real hardware as a repeatable status=219/CGROUP start failure,
-    not a rare race. The unit-health assertion below is the regression test
-    for that specific failure mode, distinct from the job-survival check.
+    The Slice= nesting (see docs/baserunnerprivexec.service) is required
+    alongside KillMode=process, not optional: without it (i.e. if this
+    unit's own cgroup were itself the one CgroupJoiner enables controllers
+    on), systemd's own placement of a freshly started invocation's main
+    process directly into this Delegate=yes unit's own cgroup top level
+    would conflict with cgroup v2's "no internal process" rule as soon as
+    ANY site has ever been dispatched to - found on real hardware
+    (Ubuntu 22.04/systemd 249) as a repeatable status=219/CGROUP start
+    failure, not a rare race, and not something DelegateSubgroup= (systemd
+    >= 254 only) can fix on that systemd version. The unit-health assertion
+    below is the regression test for that specific failure mode, distinct
+    from the job-survival check.
     """
     vm = running_baserunner
     _mission_dir, log_file = _drop_run_file(
@@ -575,7 +597,7 @@ def test_in_flight_job_survives_privexec_restart_but_completion_is_unknowable(
     _run(vm, ["sudo", "systemctl", "restart", "baserunnerprivexec"])
 
     # The new invocation must actually come up, not hit status=219/CGROUP -
-    # regression test for the DelegateSubgroup requirement specifically.
+    # regression test for the Slice= nesting requirement specifically.
     privexec_active = _wait_until(
         lambda: _run(
             vm, ["systemctl", "show", "baserunnerprivexec", "--property=ActiveState", "--value"]
@@ -586,12 +608,12 @@ def test_in_flight_job_survives_privexec_restart_but_completion_is_unknowable(
     assert privexec_active, "baserunnerprivexec failed to restart while a job was in flight"
 
     # Must NOT have been killed by the restart: still alive well before its
-    # 20s sleep would have finished, and still in its own site cgroup.
+    # 20s sleep would have finished, and still in its own job leaf.
     still_alive = multipassutils.exec_in(vm, ["sudo", "kill", "-0", job_pid])
     assert still_alive.returncode == 0, "job was killed by baserunnerprivexec restart"
 
-    site_cgroup = "/sys/fs/cgroup/system.slice/baserunnerprivexec.service/site-alpha"
-    procs = _read_file(vm, f"{site_cgroup}/cgroup.procs")
+    job_cgroup = _wait_for_job_cgroup(vm, "alpha", job_pid)
+    procs = _read_file(vm, f"{job_cgroup}/cgroup.procs")
     assert job_pid in procs.split()
 
     # It should still run to completion on its own (proves it wasn't merely

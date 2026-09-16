@@ -1069,17 +1069,18 @@ def main() -> int:
                 {"help": "UNIX socket path of the privileged exec helper"},
             ),
             "cgroup_root": BaseOptsType.options_t(
-                "/sys/fs/cgroup/system.slice/baserunnerprivexec.service",
+                "/sys/fs/cgroup/baserunner.slice",
                 {"BaseRunnerMulti"},
                 ("--cgroup_root",),
                 str,
                 {
-                    "help": "Root of BaseRunnerPrivExec's own delegated cgroup "
-                    "subtree, for READING per-job memory.current/memory.peak "
-                    "stat files only - BaseRunnerMulti never writes to "
-                    "cgroupfs. Must match whatever --cgroup_root "
-                    "baserunnerprivexec.service was started with, or memory "
-                    "reporting silently reads nothing (fail-open, not fatal)."
+                    "help": "Root of the delegated Slice baserunnerprivexec's "
+                    "site/job cgroups live under, for READING per-job "
+                    "memory.current/memory.peak stat files only - "
+                    "BaseRunnerMulti never writes to cgroupfs. Must match "
+                    "whatever --cgroup_root baserunnerprivexec.service was "
+                    "started with, or memory reporting silently reads "
+                    "nothing (fail-open, not fatal)."
                 },
             ),
         },

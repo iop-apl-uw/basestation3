@@ -202,22 +202,6 @@ def test_privilege_dropper_call_order(monkeypatch):
     ]
 
 
-# --- _move_self_into_leaf_cgroup ---
-
-
-def test_move_self_into_leaf_cgroup_writes_own_pid(tmp_path):
-    cgroup_root = tmp_path / "cgroup"
-    BaseRunnerPrivExec._move_self_into_leaf_cgroup(cgroup_root)
-    assert (cgroup_root / "supervisor" / "cgroup.procs").read_text() == f"{os.getpid()}\n"
-
-
-def test_move_self_into_leaf_cgroup_failure_is_caught_and_logged(monkeypatch, tmp_path, caplog):
-    blocker = tmp_path / "cgroup"
-    blocker.write_text("not a directory")  # mkdir(parents=True) will raise
-    BaseRunnerPrivExec._move_self_into_leaf_cgroup(blocker)
-    assert any(r.levelname == "WARNING" for r in caplog.records)
-
-
 # --- ChildTable ---
 
 

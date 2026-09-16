@@ -15,15 +15,43 @@ CacheDirectory=baserunner
 Environment=MPLCONFIGDIR=/var/cache/baserunner
 AmbientCapabilities=CAP_SETUID CAP_SETGID
 CapabilityBoundingSet=CAP_SETUID CAP_SETGID
-# Delegates a cgroup subtree to this unit so CgroupJoiner can create
-# per-site (site-<name>) and per-job (site-<name>/job-<job_id>) child
-# cgroups and write cpu.max/cpu.weight/memory.high/memory.max/
-# cgroup.procs without needing any additional Linux capability.
+# This unit nests under baserunner.slice (see below) rather than being
+# its own top-level delegated cgroup - Delegate=yes still grants CgroupJoiner
+# write access to per-site (site-<name>) and per-job
+# (site-<name>/job-<job_id>) child cgroups it creates *inside the slice*,
+# but this unit's own cgroup itself is never touched by CgroupJoiner (see
+# Slice= below for why that split exists).
 Delegate=yes
+# Nests this unit's own cgroup one level under baserunner.slice instead of
+# directly under system.slice - see the long comment above DelegateSubgroup=
+# used to sit (removed; ExecStartPre= below is the actual fix now) for the
+# full "no internal process" rationale. Confirmed on Ubuntu 22.04/systemd
+# 249 (matches seaglider.pub) that DelegateSubgroup= (systemd >= 254 only)
+# is silently ignored there ("Unknown key name 'DelegateSubgroup'") and
+# does NOT protect against the resulting status=219/CGROUP restart failure
+# - this unit's own cgroup must simply never be the place CgroupJoiner
+# enables a controller, on any systemd version, full stop.
+Slice=baserunner.slice
+# baserunner.slice is auto-created (by the Slice= reference above) the
+# first time this unit starts, owned by root like any other cgroup - this
+# bootstraps it to match Delegate=yes's usual per-unit chown, but one level
+# up: mkdir is a no-op if the slice cgroup already exists (it always will,
+# after the first boot), chown -R is safe/idempotent to rerun even with
+# live site-*/job-* children already inside it (metadata-only, no real
+# I/O - cgroupfs is virtual), and re-enabling an already-enabled controller
+# is a harmless no-op. Runs as root (the "+" prefix) regardless of this
+# unit's own User=baserunner, via systemd's per-command privilege override
+# - PermissionsStartOnly= is deprecated in favor of exactly this.
+# Deliberately NOT gated on cpu_quota_pct/cpu_weight/memory_high_mb/
+# memory_max_mb being configured anywhere in sites.yaml: unlike CgroupJoiner
+# enabling controllers per-site (only once a site is actually dispatched
+# to), this unconditional bootstrap must happen before ANY dispatch, since
+# ExecStart itself needs baserunner.slice to already be write-accessible.
+ExecStartPre=+/bin/sh -c 'mkdir -p /sys/fs/cgroup/baserunner.slice && chown -R baserunner:baserunner /sys/fs/cgroup/baserunner.slice && echo "+cpu +memory" > /sys/fs/cgroup/baserunner.slice/cgroup.subtree_control'
 ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunnerPrivExec.py \
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \
-    --cgroup_root /sys/fs/cgroup/system.slice/baserunnerprivexec.service \
+    --cgroup_root /sys/fs/cgroup/baserunner.slice \
     --base_log /var/log/baserunner/baserunner-privexec.log
 RuntimeDirectory=baserunner
 # Creates /var/log/baserunner/ owned baserunner:baserunner (mode 0750) on
@@ -41,60 +69,16 @@ LogsDirectory=baserunner
 Type=notify
 Restart=always
 # Every dispatched job is moved into its own
-# cgroup_root/site-<name>/job-<job_id> leaf cgroup (see CgroupJoiner.join())
-# - a descendant of this unit's own delegated cgroup tree. Without
-# KillMode=process, systemd's default
-# KillMode=control-group would SIGTERM/SIGKILL every process in that
-# whole tree on any stop of this unit - including already-dispatched
-# jobs sitting in their own site cgroups, not just this unit's own
-# tracked process. That includes the routine, documented "systemctl
-# restart baserunnerprivexec.service" procedure for picking up a
-# sites.yaml/cgroup edit (see docs/BaseRunnerMulti.md), not just a
-# crash or reboot - silently killing an in-flight job (e.g. a
-# 30-minute Base.py run) with nothing in the job's own log pointing at
-# the real cause.
-#
-# KillMode=mixed is NOT enough here, despite looking like a safer
-# middle ground - confirmed the hard way on real hardware. Per
-# systemd.kill(5), mixed sends SIGTERM to only the main process, but
-# still sends SIGKILL to every *other* remaining process in the
-# cgroup as soon as that main process exits - it does not skip them,
-# it only changes which signal they get, and does so immediately
-# (not after TimeoutStopSec) once the main process is gone. Only
-# KillMode=process leaves every other process in the cgroup
-# completely untouched. The man page calls KillMode=process "not
-# recommended" because it normally lets processes escape the service
-# manager's lifecycle by accident - here that's the deliberate,
-# intended design: dispatched jobs are meant to outlive this helper's
-# own restarts, tracked by BaseRunnerMulti.py's own job-queue
-# bookkeeping, not by systemd's cgroup-kill mechanism. See
-# BaseRunnerMulti.py's _poll_one_completion for how the watcher copes
-# with no longer being able to learn a survivor's eventual
-# completion/exit code once this helper restarts.
+# cgroup_root/site-<name>/job-<job_id> leaf cgroup (see CgroupJoiner.join()),
+# a descendant of baserunner.slice - NOT of this unit's own cgroup (see
+# Slice= above). Without KillMode=process, systemd's default
+# KillMode=control-group would SIGTERM/SIGKILL every process in this
+# unit's own cgroup on any stop of this unit. That no longer includes
+# dispatched jobs at all now that they live under the slice instead of
+# under this unit - but KillMode=process is kept anyway as a second,
+# independent safeguard (and because this unit's own cgroup should only
+# ever equal "this daemon's own process" regardless).
 KillMode=process
-# KillMode=process alone is still not sufficient, also confirmed the
-# hard way: with a job surviving in site-<name>/job-<job_id>, that
-# child cgroup keeps "cpu" (and, since per-job memory tracking/limits
-# were added, "memory" too) enabled in this unit's own
-# cgroup.subtree_control across the restart. Cgroup v2's "no internal
-# process" rule then means
-# systemd can never place a *freshly started* invocation's raw main
-# process directly into this unit's own cgroup top level - which is
-# exactly what it tries to do, before any of our Python code (and
-# _move_self_into_leaf_cgroup()'s own mitigation) ever runs. The
-# result was a hard, repeatable start failure (status=219/CGROUP) for
-# as long as any job stayed alive, not a transient race - 5 rapid
-# restart attempts, then systemd's rate limiter gave up and left the
-# unit fully stopped until manually recovered. DelegateSubgroup=
-# (systemd >= 254) fixes this declaratively: it tells systemd to place
-# this unit's own freshly started main process into the named subgroup
-# itself, never into the delegated cgroup's own top level, so the
-# conflict with surviving job cgroups never arises in the first place.
-# Reuses the same "supervisor" name _move_self_into_leaf_cgroup()
-# already uses, making that function's own move a harmless no-op (it
-# finds itself already there) - left in place as a redundant safety
-# net rather than removed.
-DelegateSubgroup=supervisor
 
 [Install]
 WantedBy=multi-user.target
