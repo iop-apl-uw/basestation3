@@ -59,6 +59,11 @@ CGROUP_ROOT = "/sys/fs/cgroup/baserunner.slice"
 CHARLIE_MEMORY_HIGH_MB = 32
 CHARLIE_MEMORY_MAX_MB = 64
 
+# Must match testlong/fixtures/sites.yaml's alpha entry. Deliberately no
+# matching *_MEMORY_HIGH_MB - see alpha's own sites.yaml comment for why
+# the OOM-kill test needs memory_max_mb with no memory_high_mb in the way.
+ALPHA_MEMORY_MAX_MB = 64
+
 
 def _run(vm: multipassutils.Vm, cmd: list[str]) -> str:
     """Runs a command in the VM and returns stdout, failing loudly on error.
@@ -409,26 +414,47 @@ def test_cgroup_memory_max_oom_kills_only_the_overrun_job(
     for the SAME site keeps running unaffected. This is the concrete test
     of the "no collateral damage" property per-job (rather than per-site)
     memory cgroups exist for - see CgroupJoiner.join's docstring.
+
+    Uses "alpha" (memory_max_mb only, no memory_high_mb), not "charlie" -
+    found empirically (2026-09-16, real cgroup v2 host, no swap) that a
+    job crossing memory_high_mb first can get stuck in memory.high's
+    reclaim-based throttling almost indefinitely (nothing reclaimable to
+    work with, no swap), never reaching memory_max_mb in any bounded
+    test timeout even though enforcement itself isn't broken - it's just
+    very slow. Skipping straight to memory_max_mb keeps this test fast
+    and deterministic; see the alpha entry in testlong/fixtures/sites.yaml
+    for the full rationale.
     """
     vm = running_baserunner
 
-    # Companion: well under charlie's 32 MiB memory_high_mb, should run to
+    # Companion: well under alpha's 64 MiB memory_max_mb, should run to
     # completion untouched regardless of what happens to the overrun job
     # dispatched alongside it below.
     _mission_dir_ok, log_file_ok = _drop_run_file(
-        vm, "charlie", 112, "Base.py --stub-allocate-mb 8 --stub-sleep-seconds 10"
+        vm, "alpha", 112, "Base.py --stub-allocate-mb 8 --stub-sleep-seconds 10"
     )
-    started_ok = _wait_until(lambda: "user=runner-charlie" in _read_file(vm, log_file_ok))
+    started_ok = _wait_until(lambda: "user=runner-alpha" in _read_file(vm, log_file_ok))
     assert started_ok, f"companion job never started - {log_file_ok}"
     ok_pid = _pid_from_log(vm, log_file_ok)
 
-    # Overrun: well past charlie's 64 MiB memory_max_mb.
+    # Overrun: well past alpha's 64 MiB memory_max_mb.
     _mission_dir_bad, log_file_bad = _drop_run_file(
-        vm, "charlie", 113, "Base.py --stub-allocate-mb 200"
+        vm, "alpha", 113, "Base.py --stub-allocate-mb 200"
     )
-    started_bad = _wait_until(lambda: "user=runner-charlie" in _read_file(vm, log_file_bad))
+    started_bad = _wait_until(lambda: "user=runner-alpha" in _read_file(vm, log_file_bad))
     assert started_bad, f"overrun job never even started - {log_file_bad}"
     bad_pid = _pid_from_log(vm, log_file_bad)
+
+    # Best-effort: the overrun job can die (and get reaped, removing its
+    # leaf cgroup) fast enough to lose this race entirely once
+    # memory_high_mb isn't in the way slowing it down - that's the
+    # correct, desired behavior, not a bug, so a miss here just skips this
+    # specific value check rather than failing the test. The `killed`
+    # assertion below is the one that actually matters and always runs.
+    bad_job_cgroup = _find_job_cgroup(vm, "alpha", bad_pid)
+    if bad_job_cgroup is not None:
+        memory_max = _read_file(vm, f"{bad_job_cgroup}/memory.max").strip()
+        assert memory_max == str(ALPHA_MEMORY_MAX_MB * 1024 * 1024), memory_max
 
     killed = _wait_until(
         lambda: multipassutils.exec_in(vm, ["sudo", "kill", "-0", bad_pid]).returncode != 0,

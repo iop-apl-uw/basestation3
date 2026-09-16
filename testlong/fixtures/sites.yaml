@@ -8,8 +8,11 @@
 # cross-wired one just by checking file ownership.
 #
 # cpu_quota_pct/cpu_weight are set only on "alpha", to exercise
-# CgroupJoiner's throttling path specifically - "bravo"/"charlie" stay
-# unthrottled to prove the default (no cgroup limits written) path too.
+# CgroupJoiner's throttling path specifically - "bravo" stays unthrottled
+# to prove the default (no cgroup limits written) path too. Memory limits
+# are split across "alpha" (memory_max_mb alone, for a deterministic
+# OOM-kill test) and "charlie" (memory_high_mb + memory_max_mb together,
+# for a written-values check) - see each site's own comment below.
 
 alpha:
   watch_dir: /home/jails/alpha/gliderjail/home/rundir
@@ -20,6 +23,18 @@ alpha:
   # Default (/opt/basestation/bin/python) doesn't exist on this VM - uv
   # sync builds its own venv under the transferred checkout instead.
   python_version: /usr/local/basestation3/.venv/bin/python
+  # memory_max_mb only, deliberately no memory_high_mb - exercises the
+  # OOM-kill path specifically (test_cgroup_memory_max_oom_kills_only_the_overrun_job)
+  # without a memory_high_mb throttle zone in the way. Found empirically
+  # (2026-09-16, real cgroup v2 host, no swap) that memory.high's
+  # reclaim-based throttling has nothing reclaimable to work with on a
+  # swapless host and can stall a job's forward progress almost
+  # indefinitely rather than letting it reach memory_max_mb promptly -
+  # charlie (below) exercises high+max together for the *values are
+  # written correctly* checks, but deliberately isn't used for the
+  # OOM-kill test for this reason. Value must match
+  # testlong/test_multipass_baserunner.py's ALPHA_MEMORY_MAX_MB constant.
+  memory_max_mb: 64
 
 bravo:
   watch_dir: /home/jails/bravo/gliderjail/home/rundir
