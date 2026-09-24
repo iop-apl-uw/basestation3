@@ -222,3 +222,39 @@ function changeAlertSound(alertSound) {
         document.head.appendChild(scriptTag);
     }
 }
+
+// Resolve the effective mobile/desktop layout. An explicit stored
+// preference (set via the ?mobile / ?desktop query params, cleared via
+// ?auto) wins; otherwise follow what the browser says it is. Every
+// browser's "Request Desktop Site" / "Request Mobile Website" option works
+// by changing exactly this, so honoring it here makes that switch work.
+// Which one an iPad requests by default depends on the browser and its
+// settings.
+function resolveVisMode() {
+    let mode = localStorage.getItem('visMode');
+    if (mode == 'mobile' || mode == 'desktop')
+        return mode;
+    // Chromium browsers - reflects "Desktop site" directly
+    if (navigator.userAgentData)
+        return navigator.userAgentData.mobile ? 'mobile' : 'desktop';
+    // Safari/Firefox - desktop-site mode swaps in a desktop UA string
+    return /Mobi|Android|iPhone|iPod/.test(navigator.userAgent) ? 'mobile' : 'desktop';
+}
+
+// Handle the ?mobile / ?desktop / ?auto override query params, which
+// set or clear the stored preference resolveVisMode() checks first.
+function setVisModeFromParams(params) {
+    if (params.has('mobile'))
+        localStorage.setItem('visMode', 'mobile');
+    else if (params.has('desktop'))
+        localStorage.setItem('visMode', 'desktop');
+    else if (params.has('auto'))
+        localStorage.removeItem('visMode');
+}
+
+// Tag <html> with the resolved mode as soon as this script loads, so every
+// page that includes util.js gets the :where(html.mobile)/:where(html.desktop)
+// rules in the shared stylesheets - including elements created later
+// (annunciators, chat, dialogs, index tiles).
+setVisModeFromParams(new URLSearchParams(window.location.search));
+document.documentElement.classList.add(resolveVisMode());
