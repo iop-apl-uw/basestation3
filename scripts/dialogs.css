@@ -47,163 +47,159 @@
 
 #capLockIndicator { font-size: 0.8rem; }
 
-@media (pointer: coarse)  {
 
-    .about-content {
-      /* max-width: 400px; */
-      max-width: 90vw;
-      min-width: 40vw;
-      background-color: #bbb;
-      font-size: 1rem;
-      display: flex;
-      flex-direction: column;
-      margin: 5px;
-      padding-right: 5px;
-    }
-
-    #aboutContent tbody {
-        font-size: 1rem;
-    }
-
-    /* Add styles to the form container */
-    .form-login {
-      font-size: 1.2rem;
-      background-color: #777;
-      max-width: 40vw;
-      flex-direction: column;
-      justify-content: space-between;
-      margin: 5px;
-      padding-right: 5px;
-    }
-
-    label {
-        font-size: 1.2rem;
-    }
-
-    /* Full-width input fields */
-    .form-login input[type=text], .form-login input[type=password] {
-      width: 100%;
-      border: none;
-      background: #bbb;
-      margin: 5px;
-      font-size: 1.2rem;
-    }
-
-   .alert-popup, #processPopup {
-        display: none;
-        height: min-content;
-        max-height: 90vh;
-        overflow-y: scroll;
-        border: 4px solid black;
-        z-index: 5001;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        min-width: 320px;
-        width: auto;
-        max-width: 60%;
-        background: rgba(200, 200, 200, 1.0);
-        justify-content: left;
-        text-align: left;
-        padding: 5px;
-    }
-
-    #processPopup {
-        top: 0px;
-        left: 0px;
-        transform: translate(-50%, -50%); 
-        z-index: 5000;
-    }
-
-    /* Set a style for the submit/login button */
-    .form-login .btn, .about-content .btn, .alert-popup .btn, .process-popup .btn {
-      background-color: #04AA6D;
-      color: white;
-      border: none;
-      cursor: pointer;
-      width: calc(100% - 10px);
-      opacity: 0.8;
-      margin: 5px;
-      padding-top: 5px;
-      padding-bottom: 5px;
-      font-size: 1.3rem;
-    }
+:where(html.mobile) .about-content {
+  /* max-width: 400px; */
+  max-width: 90vw;
+  min-width: 40vw;
+  background-color: #bbb;
+  font-size: 1rem;
+  display: flex;
+  flex-direction: column;
+  margin: 5px;
+  padding-right: 5px;
 }
 
-@media (pointer: fine) {
-    .about-content {
-      max-width: 800px;
-      min-width: 300px;
-      background-color: #777;
-      font-size: 1rem;
-      display: flex;
-      flex-direction: column;
-      margin: 5px;
-      padding-right: 5px;
-    }
+:where(html.mobile) #aboutContent tbody {
+    font-size: 1rem;
+}
 
-    .form-login {
-      max-width: 200px;
-      background-color: #777;
-      font-size: 1rem;
-      display: flex;
-      flex-direction: column;
-      margin: 5px;
-      padding-right: 5px;
-    }
+/* Add styles to the form container */
+:where(html.mobile) .form-login {
+  font-size: 1.2rem;
+  background-color: #777;
+  max-width: 40vw;
+  flex-direction: column;
+  justify-content: space-between;
+  margin: 5px;
+  padding-right: 5px;
+}
 
-   .alert-popup, .process-popup {
-        display: none;
-        height: min-content;
-        max-height: 90vh;
-        overflow-y: scroll;
-        border: 4px solid black;
-        z-index: 5001;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: auto;
-        min-width: 320px;
-        max-width: 60%;
-        background: rgba(200, 200, 200, 1.0);
-        justify-content: left;
-        text-align: left;
-        padding: 5px;
-    }
+:where(html.mobile) label {
+    font-size: 1.2rem;
+}
 
-    .process-popup {
-        top: 0px;
-        left: 0px;
-        transform: translate(-50%, -50%);
-        max-width: 75%;
-    }
+/* Full-width input fields */
+:where(html.mobile) .form-login input[type=text], :where(html.mobile) .form-login input[type=password] {
+  width: 100%;
+  border: none;
+  background: #bbb;
+  margin: 5px;
+  font-size: 1.2rem;
+}
 
-    label {
-        font-size: 1.2rem;
-    }
+   :where(html.mobile) .alert-popup, :where(html.mobile) #processPopup {
+    display: none;
+    height: min-content;
+    max-height: 90vh;
+    overflow-y: scroll;
+    border: 4px solid black;
+    z-index: 5001;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 320px;
+    width: auto;
+    max-width: 60%;
+    background: rgba(200, 200, 200, 1.0);
+    justify-content: left;
+    text-align: left;
+    padding: 5px;
+}
 
-    .form-login input[type=text], .form-login input[type=password] {
-      width: 100%;
-      border: none;
-      background: #bbb;
-      margin: 5px;
-      font-size: 1.2rem;
-    }
+:where(html.mobile) #processPopup {
+    top: 0px;
+    left: 0px;
+    transform: translate(-50%, -50%); 
+    z-index: 5000;
+}
 
-    .form-login .btn, .about-content .btn, .alert-popup .btn, .process-popup .btn {
-      background-color: #04AA6D;
-      color: white;
-      border: none;
-      cursor: pointer;
-      width: calc(100% - 5px);
-      opacity: 0.8;
-      margin: 5px;
-      padding-top: 5px;
-      padding-bottom: 5px;
-      font-size: 1.3rem;
-    }
+/* Set a style for the submit/login button */
+:where(html.mobile) .form-login .btn, :where(html.mobile) .about-content .btn, :where(html.mobile) .alert-popup .btn, :where(html.mobile) .process-popup .btn {
+  background-color: #04AA6D;
+  color: white;
+  border: none;
+  cursor: pointer;
+  width: calc(100% - 10px);
+  opacity: 0.8;
+  margin: 5px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  font-size: 1.3rem;
+}
+
+:where(html.desktop) .about-content {
+  max-width: 800px;
+  min-width: 300px;
+  background-color: #777;
+  font-size: 1rem;
+  display: flex;
+  flex-direction: column;
+  margin: 5px;
+  padding-right: 5px;
+}
+
+:where(html.desktop) .form-login {
+  max-width: 200px;
+  background-color: #777;
+  font-size: 1rem;
+  display: flex;
+  flex-direction: column;
+  margin: 5px;
+  padding-right: 5px;
+}
+
+   :where(html.desktop) .alert-popup, :where(html.desktop) .process-popup {
+    display: none;
+    height: min-content;
+    max-height: 90vh;
+    overflow-y: scroll;
+    border: 4px solid black;
+    z-index: 5001;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: auto;
+    min-width: 320px;
+    max-width: 60%;
+    background: rgba(200, 200, 200, 1.0);
+    justify-content: left;
+    text-align: left;
+    padding: 5px;
+}
+
+:where(html.desktop) .process-popup {
+    top: 0px;
+    left: 0px;
+    transform: translate(-50%, -50%);
+    max-width: 75%;
+}
+
+:where(html.desktop) label {
+    font-size: 1.2rem;
+}
+
+:where(html.desktop) .form-login input[type=text], :where(html.desktop) .form-login input[type=password] {
+  width: 100%;
+  border: none;
+  background: #bbb;
+  margin: 5px;
+  font-size: 1.2rem;
+}
+
+:where(html.desktop) .form-login .btn, :where(html.desktop) .about-content .btn, :where(html.desktop) .alert-popup .btn, :where(html.desktop) .process-popup .btn {
+  background-color: #04AA6D;
+  color: white;
+  border: none;
+  cursor: pointer;
+  width: calc(100% - 5px);
+  opacity: 0.8;
+  margin: 5px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  font-size: 1.3rem;
 }
 
 

@@ -62,196 +62,94 @@
     }
 
 
-    @media (pointer: coarse) {
-
-        @media screen and (orientation:portrait) {
-            #main {
-                top: 1rem;
-                width: 100vw;
-                overflow: auto;
-                scroll-snap-type: y mandatory;
-/*
-                overflow-y: scroll;
-                overflow-x: hidden;
-*/
-                display: flex;
-                flex-direction: column; 
-            }
-        
-            .tile {
-                scroll-snap-align: center;
-                background: #bbb;
-                width: 90vw;
-                height: 136vw;
-                border: 2px solid black;
-                margin-left: 10px;
-                margin-top: 10px;
-                float: left; 
-                padding: 4px;
-                position: relative; 
-                /* box-sizing: border-box; */
-                font-size: 1rem;
-                overflow: hidden;
-            }
-
-            .header {
-                font-size: 6vw;
-                font-weight: bold;
-            }
-            .position {
-                font-size: 5vw;
-                font-weight: bold;
-            }
-
-            .label {
-                float: left;
-                width: 8vw;
-            }
-
-            .box {
-                display: flex;
-                align-items: center;  
-                margin-top: 5px;
-            }
-          
-            .imgbox {
-                display: flex;
-                align-items: center;  
-                margin-top: 0px;
-                justify-content: center;
-                flex-direction: column; 
-            }
-
-            .indexImg {
-                max-width: calc(90vw - 10px);
-                max-height: calc(103vw - 10px);
-                mix-blend-mode:multiply;
-            }
-
-{% if runMode == 'pilot' %}
-            .dashImg {
-                max-width:calc(90vw - 10px);
-                max-height:calc(75vw - 10px);
-                mix-blend-mode:multiply;
-                display: block;
-            }
-
-
-            .commbox {
-                display: none;
-                flex-direction: column; 
-                overflow-x:none;
-                overflow-y:auto;
-                font-size: 10px;
-                white-space:pre;
-            }
-
-            .chart {
-                background: rgba(255, 255, 255, 0.4);
-                justify-content: flex-start;
-                border-radius: 50px;
-                align-items: center;
-                position: relative;
-                padding: 0 5px;
-                display: flex;
-                height: 5vw;
-                width: 86vw;
-            }
-
-            .chart span {
-                margin-left: 2px;
-                color: #555;
-                font-weight: bolder;
-            }
-
-            .bar {
-                border-radius: 0px;
-                background: #00ff00;
-                height: 5vw;
-                width: 100%;
-                margin-left: 0px;
-            }
-
-            .barPercent {
-                border-radius: 10px;
-                background: #00ff00;
-                height: 3.5vw;
-                width: 100%;
-                margin-left: -2px;
-            }
-{% endif %}
-        }
-    }
-
-    @media (pointer: fine) {
-        body: {
-            font-size: 0.8rem;
-        }
-
-        #main {
+    /* Mobile/desktop layout is decided by resolveVisMode() (script/util.js,
+       which tags <html> with the mode), following the browser's User-Agent
+       so "Request Desktop Site" works - unlike @media (pointer: ...), which
+       a browser's desktop-site switch can't change. :where() keeps each
+       rule's specificity the same as it was inside the @media block. */
+    @media screen and (orientation:portrait) {
+        :where(html.mobile) #main {
             top: 1rem;
-            width: 100%;
+            width: 100vw;
             overflow: auto;
+            scroll-snap-type: y mandatory;
+/*
+            overflow-y: scroll;
+            overflow-x: hidden;
+*/
+            display: flex;
+            flex-direction: column;
         }
-    
-        .tile {
+
+        :where(html.mobile) .tile {
+            scroll-snap-align: center;
             background: #bbb;
-            width: 300px;
-            height: 480px;
+            width: 90vw;
+            height: 136vw;
             border: 2px solid black;
             margin-left: 10px;
             margin-top: 10px;
             float: left;
             padding: 4px;
             position: relative;
-            font-size: 0.8rem;
+            /* box-sizing: border-box; */
+            font-size: 1rem;
+            overflow: hidden;
         }
 
-        .header {
-            font-size: 20px;
+        :where(html.mobile) .header {
+            font-size: 6vw;
             font-weight: bold;
         }
-        .position {
-            font-size: 14px;
+        :where(html.mobile) .position {
+            font-size: 5vw;
             font-weight: bold;
         }
 
-        .label {
+        :where(html.mobile) .label {
             float: left;
-            width: 30px;
+            width: 8vw;
         }
 
-        .box {
+        :where(html.mobile) .box {
             display: flex;
-            align-items: center;  
+            align-items: center;
             margin-top: 5px;
         }
-      
-        .imgbox {
+
+        :where(html.mobile) .imgbox {
             display: flex;
-            align-items: center;  
+            align-items: center;
             margin-top: 0px;
             justify-content: center;
-            flex-direction: column; 
+            flex-direction: column;
         }
 
-        .indexImg {
-            max-width:290px; 
-            max-height:330px; 
+        :where(html.mobile) .indexImg {
+            max-width: calc(90vw - 10px);
+            max-height: calc(103vw - 10px);
             mix-blend-mode:multiply;
         }
 
 {% if runMode == 'pilot' %}
-        .dashImg {
-            /* position: absolute;  */
-            top: 200px; 
-            max-width:290px; 
-            max-height:240px; 
+        :where(html.mobile) .dashImg {
+            max-width:calc(90vw - 10px);
+            max-height:calc(75vw - 10px);
             mix-blend-mode:multiply;
             display: block;
         }
 
-        .chart {
+
+        :where(html.mobile) .commbox {
+            display: none;
+            flex-direction: column;
+            overflow-x:none;
+            overflow-y:auto;
+            font-size: 10px;
+            white-space:pre;
+        }
+
+        :where(html.mobile) .chart {
             background: rgba(255, 255, 255, 0.4);
             justify-content: flex-start;
             border-radius: 50px;
@@ -259,48 +157,153 @@
             position: relative;
             padding: 0 5px;
             display: flex;
-            height: 20px;
-            width: 260px;
+            height: 5vw;
+            width: 86vw;
         }
 
-        .chart span {
+        :where(html.mobile) .chart span {
             margin-left: 2px;
             color: #555;
             font-weight: bolder;
         }
 
-        .bar {
+        :where(html.mobile) .bar {
             border-radius: 0px;
             background: #00ff00;
-            height: 16px;
+            height: 5vw;
             width: 100%;
             margin-left: 0px;
         }
 
-        .barPercent {
+        :where(html.mobile) .barPercent {
             border-radius: 10px;
             background: #00ff00;
-            height: 16px;
+            height: 3.5vw;
             width: 100%;
             margin-left: -2px;
         }
+{% endif %}
+    }
 
-        .commbox {
-            display: none;
-            flex-direction: column; 
-            overflow-x:none;
-            overflow-y:auto;
-            font-size: 10px;
-            white-space:pre;
-            max-width:290px; 
-            max-height:240px; 
-            min-width:290px; 
-            min-height:240px; 
-        }
+    /* Was "body: { font-size: 0.8rem; }" - the stray colon made it an
+       invalid selector, so it never applied. Left disabled so the desktop
+       layout doesn't change; enabling it shrinks all index page text.
+    :where(html.desktop) {
+        font-size: 0.8rem;
+    }
+    */
+
+    :where(html.desktop) #main {
+        top: 1rem;
+        width: 100%;
+        overflow: auto;
+    }
+
+    :where(html.desktop) .tile {
+        background: #bbb;
+        width: 300px;
+        height: 480px;
+        border: 2px solid black;
+        margin-left: 10px;
+        margin-top: 10px;
+        float: left;
+        padding: 4px;
+        position: relative;
+        font-size: 0.8rem;
+    }
+
+    :where(html.desktop) .header {
+        font-size: 20px;
+        font-weight: bold;
+    }
+    :where(html.desktop) .position {
+        font-size: 14px;
+        font-weight: bold;
+    }
+
+    :where(html.desktop) .label {
+        float: left;
+        width: 30px;
+    }
+
+    :where(html.desktop) .box {
+        display: flex;
+        align-items: center;
+        margin-top: 5px;
+    }
+
+    :where(html.desktop) .imgbox {
+        display: flex;
+        align-items: center;
+        margin-top: 0px;
+        justify-content: center;
+        flex-direction: column;
+    }
+
+    :where(html.desktop) .indexImg {
+        max-width:290px;
+        max-height:330px;
+        mix-blend-mode:multiply;
+    }
+
+{% if runMode == 'pilot' %}
+    :where(html.desktop) .dashImg {
+        /* position: absolute;  */
+        top: 200px;
+        max-width:290px;
+        max-height:240px;
+        mix-blend-mode:multiply;
+        display: block;
+    }
+
+    :where(html.desktop) .chart {
+        background: rgba(255, 255, 255, 0.4);
+        justify-content: flex-start;
+        border-radius: 50px;
+        align-items: center;
+        position: relative;
+        padding: 0 5px;
+        display: flex;
+        height: 20px;
+        width: 260px;
+    }
+
+    :where(html.desktop) .chart span {
+        margin-left: 2px;
+        color: #555;
+        font-weight: bolder;
+    }
+
+    :where(html.desktop) .bar {
+        border-radius: 0px;
+        background: #00ff00;
+        height: 16px;
+        width: 100%;
+        margin-left: 0px;
+    }
+
+    :where(html.desktop) .barPercent {
+        border-radius: 10px;
+        background: #00ff00;
+        height: 16px;
+        width: 100%;
+        margin-left: -2px;
+    }
+
+    :where(html.desktop) .commbox {
+        display: none;
+        flex-direction: column;
+        overflow-x:none;
+        overflow-y:auto;
+        font-size: 10px;
+        white-space:pre;
+        max-width:290px;
+        max-height:240px;
+        min-width:290px;
+        min-height:240px;
+    }
 
 {% endif %}
-
-    }
 
 </style>
 <script src="script/util.js"></script>
