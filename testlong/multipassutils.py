@@ -37,14 +37,32 @@ docker_build|start_detached/exec_in/stop - swapping Docker's
 container-id-keyed model for multipass's name-keyed one (multipass has
 no separate "id" concept; every operation addresses the VM by the name
 it was launched with).
+
+Set TESTLONG_MULTIPASS_SSH_KEY to a copy of multipassd's private key (on
+macOS: /var/root/Library/Application Support/multipassd/ssh-keys/id_rsa,
+root-only - copy it once with sudo) to have exec_in/transfer use the
+system ssh instead of `multipass exec`/`multipass transfer`. Recent macOS
+releases silently deny the multipass client's own connection to the VM
+under Local Network privacy ("ssh connection failed: No route to host"),
+without ever listing it in System Settings to allow it, while Apple's own
+ssh is exempt. Unset (the default), nothing changes.
 """
 
 from __future__ import annotations
 
+import json
+import os
+import shlex
 import subprocess
 import time
 from dataclasses import dataclass
 from typing import Any
+
+SSH_KEY_ENV = "TESTLONG_MULTIPASS_SSH_KEY"
+
+# Never copied into the VM by the ssh transfer path: host-specific (a macOS
+# .venv is useless in the VM, which uv syncs its own) and large.
+TRANSFER_EXCLUDES = (".venv", ".git", "__pycache__", ".ruff_cache", ".pytest_cache")
 
 
 @dataclass(frozen=True)
@@ -130,6 +148,53 @@ def delete(vm: Vm) -> None:
     )
 
 
+def _ssh_key() -> str | None:
+    """The TESTLONG_MULTIPASS_SSH_KEY path, if the ssh fallback is enabled."""
+    return os.environ.get(SSH_KEY_ENV) or None
+
+
+def _vm_ip(vm: Vm) -> str:
+    """Looks up a VM's IPv4 address from the multipass daemon.
+
+    `multipass info` talks to multipassd over its local socket, so it isn't
+    affected by the Local Network restriction the ssh fallback works around.
+
+    Raises:
+        subprocess.CalledProcessError: If `multipass info` fails.
+        KeyError: If the VM has no IPv4 address yet.
+    """
+    result = subprocess.run(
+        ["multipass", "info", "--format", "json", vm.name],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return json.loads(result.stdout)["info"][vm.name]["ipv4"][0]
+
+
+def _ssh_argv(vm: Vm, key: str) -> list[str]:
+    """ssh command prefix reaching vm as the default "ubuntu" account."""
+    return [
+        "ssh",
+        "-i",
+        key,
+        "-o",
+        "StrictHostKeyChecking=no",
+        "-o",
+        "UserKnownHostsFile=/dev/null",
+        "-o",
+        "LogLevel=ERROR",
+        "-o",
+        "BatchMode=yes",
+        # Offer only this key: otherwise ssh tries every ssh-agent key first,
+        # and a well-stocked agent exhausts sshd's MaxAuthTries before this
+        # key is reached ("Too many authentication failures").
+        "-o",
+        "IdentitiesOnly=yes",
+        f"ubuntu@{_vm_ip(vm)}",
+    ]
+
+
 def transfer(local_path: str, vm: Vm, remote_path: str) -> None:
     """Copies a local file or directory into the VM.
 
@@ -138,17 +203,51 @@ def transfer(local_path: str, vm: Vm, remote_path: str) -> None:
         vm: Target VM.
         remote_path: Destination path inside the VM.
 
+    With TESTLONG_MULTIPASS_SSH_KEY set, a directory is streamed as a tar
+    over ssh (symlinks kept as symlinks, as `multipass transfer` does;
+    TRANSFER_EXCLUDES left out) and a file is copied with ssh + cat.
+
     Raises:
         subprocess.CalledProcessError: If the transfer fails.
     """
-    subprocess.run(
-        ["multipass", "transfer", "-r", local_path, f"{vm.name}:{remote_path}"],
-        check=True,
+    key = _ssh_key()
+    if key is None:
+        subprocess.run(
+            ["multipass", "transfer", "-r", local_path, f"{vm.name}:{remote_path}"],
+            check=True,
+        )
+        return
+
+    ssh = _ssh_argv(vm, key)
+    remote = shlex.quote(remote_path)
+    if not os.path.isdir(local_path):
+        with open(local_path, "rb") as fi:
+            subprocess.run([*ssh, f"cat > {remote}"], stdin=fi, check=True)
+        return
+
+    excludes = [arg for name in TRANSFER_EXCLUDES for arg in ("--exclude", name)]
+    tar = subprocess.Popen(
+        ["tar", "--no-mac-metadata", *excludes, "-C", local_path, "-cf", "-", "."],
+        stdout=subprocess.PIPE,
+        # bsdtar: don't add AppleDouble ._* files for extended attributes
+        env={**os.environ, "COPYFILE_DISABLE": "1"},
     )
+    try:
+        subprocess.run(
+            [*ssh, f"mkdir -p {remote} && tar --warning=no-unknown-keyword -C {remote} -xf -"],
+            stdin=tar.stdout,
+            check=True,
+        )
+    finally:
+        assert tar.stdout is not None
+        tar.stdout.close()
+        if tar.wait() != 0:
+            raise subprocess.CalledProcessError(tar.returncode, "tar")
 
 
 def exec_in(vm: Vm, cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
-    """Runs a command inside a running VM via `multipass exec`.
+    """Runs a command inside a running VM via `multipass exec` (or ssh, see
+    TESTLONG_MULTIPASS_SSH_KEY), as the VM's default "ubuntu" account.
 
     Args:
         vm: Target VM.
@@ -161,4 +260,13 @@ def exec_in(vm: Vm, cmd: list[str], **kwargs: Any) -> subprocess.CompletedProces
     kwargs.setdefault("capture_output", True)
     kwargs.setdefault("text", True)
     kwargs.setdefault("check", False)
-    return subprocess.run(["multipass", "exec", vm.name, "--", *cmd], **kwargs)
+    key = _ssh_key()
+    if key is None:
+        return subprocess.run(["multipass", "exec", vm.name, "--", *cmd], **kwargs)
+    try:
+        ssh = _ssh_argv(vm, key)
+    except (subprocess.CalledProcessError, KeyError, IndexError) as exc:
+        # e.g. no IPv4 yet right after launch - report as a failed command,
+        # as `multipass exec` would, so launch()'s readiness poll retries.
+        return subprocess.CompletedProcess(cmd, 255, "", str(exc))
+    return subprocess.run([*ssh, shlex.join(cmd)], **kwargs)

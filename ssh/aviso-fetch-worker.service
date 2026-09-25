@@ -2,8 +2,15 @@
 # ever started by aviso-fetch-trigger.service (via `--job-mode=fail`) --
 # never enabled/started directly, and not WantedBy= anything.
 #
-# Runs as ioprunner:gliders -- that account/group needs read/write access to
-# /home/ssh/data. See ../makekml-systemd-setup.md.
+# Runs as baserunner, which owns /home/ssh/data and must be able to read
+# ssh/config.py (Copernicus credentials). UMask=0022 keeps the downloaded
+# data readable by every site's runner account, which
+# makekml-ssh-worker.service runs each group's KML generation as. See
+# makekml-systemd-setup.md.
+#
+# baserunner has no home directory, but copernicusmarine and matplotlib both
+# write under $HOME; point HOME/MPLCONFIGDIR at a unit-owned cache directory
+# instead (same fix as baserunnermulti.service / basesms-worker.service).
 #
 # Logging: no --base_log is passed, so BaseLog.py's BaseLogger only attaches
 # a stdout StreamHandler (see ../BaseLog.py) -- no log file is written.
@@ -19,8 +26,11 @@ Description=AvisoUtils.py worker (fetch/decimate/prune SSH altimetry data)
 
 [Service]
 Type=oneshot
-User=ioprunner
-Group=gliders
+User=baserunner
+Group=baserunner
+UMask=0022
+CacheDirectory=aviso-fetch
+Environment=HOME=/var/cache/aviso-fetch MPLCONFIGDIR=/var/cache/aviso-fetch
 ExecStart=/opt/basestation/bin/python /usr/local/basestation3/ssh/AvisoUtils.py --delete_older 30 --verbose /home/ssh/data
 StandardOutput=journal
 StandardError=journal

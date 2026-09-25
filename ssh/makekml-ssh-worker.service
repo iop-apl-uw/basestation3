@@ -2,9 +2,23 @@
 # Only ever started by makekml-ssh-trigger.service (via `--job-mode=fail`)
 # -- never enabled/started directly, and not WantedBy= anything.
 #
-# Runs as ioprunner:gliders -- that account/group needs read access to
-# /home/ssh/data and read/write access to /home/seaglider/... (mission
-# directories, missions.yml). See ../makekml-systemd-setup.md.
+# Runs as baserunner. MakeKMLSSHMissions.py walks the master missions.yml
+# (following its domains:/includes: into each group's own missions.yml),
+# assigns each active mission to the site in /home/admin/sites.yml whose tree
+# contains it, and processes each site's missions in a child process running
+# as that site's runner_user -- so every KML/KMZ file is written by, and
+# owned by, the group's own runner. Starting those children as another user
+# needs CAP_SETUID/CAP_SETGID, granted below as ambient capabilities;
+# baserunner itself needs no write access to any mission directory.
+#
+# baserunner needs read access to /home/admin/sites.yml and the master
+# missions.yml; each runner needs read access to /home/ssh/data. See
+# makekml-systemd-setup.md.
+#
+# HOME/MPLCONFIGDIR point at a unit-owned cache directory for baserunner's
+# own process. Site children get a per-runner /tmp/makekml-ssh-<runner>
+# instead (they can't write baserunner's cache), made private to this unit
+# by PrivateTmp=yes.
 #
 # MakeKMLSSHMissions.py shells out to MakeKML.py per active mission
 # (Utils.run_cmd_shell) -- KillMode=mixed makes sure a stop/timeout reaches
@@ -27,9 +41,20 @@ Description=MakeKMLSSHMissions.py worker (generate per-mission SSH KML/KMZ)
 
 [Service]
 Type=oneshot
-User=ioprunner
-Group=gliders
-ExecStart=/opt/basestation/bin/python /usr/local/basestation3/ssh/MakeKMLSSHMissions.py --verbose /home/ssh/data /home/seaglider/home/missions.yml
+User=baserunner
+Group=baserunner
+AmbientCapabilities=CAP_SETUID CAP_SETGID
+CapabilityBoundingSet=CAP_SETUID CAP_SETGID
+CacheDirectory=makekml-ssh
+Environment=HOME=/var/cache/makekml-ssh MPLCONFIGDIR=/var/cache/makekml-ssh
+PrivateTmp=yes
+# Defense in depth: nothing under this unit can gain privileges through exec
+# (setuid binaries, file capabilities) - see drop_all_capabilities() in
+# MakeKMLSSHMissions.py for how the site children shed the ambient ones.
+NoNewPrivileges=yes
+ExecStart=/opt/basestation/bin/python /usr/local/basestation3/ssh/MakeKMLSSHMissions.py \
+    --verbose --sites_config /home/admin/sites.yml \
+    /home/ssh/data /home/seaglider/home/missions.yml
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=makekml-ssh
