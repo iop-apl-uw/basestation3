@@ -42,8 +42,9 @@ is no code path by which a compromised caller could ask this helper to
 become an arbitrary uid.
 
 Non-negotiable invariant: the privilege-drop syscall order in
-PrivilegeDropper.drop_and_exec is setgroups -> setgid -> setuid -> execve,
-in that exact order. See that method's docstring for why.
+PrivilegeDropper.drop_and_exec is setgroups -> setgid -> setuid ->
+drop all capabilities -> execve, in that exact order. See that method's
+docstring for why.
 """
 
 from __future__ import annotations
@@ -63,6 +64,7 @@ import sdnotify
 
 import BaseOpts
 import BaseOptsType
+import Capabilities
 import SiteConfig
 from BaseLog import BaseLogger, log_error, log_info, log_warning
 
@@ -206,8 +208,16 @@ class PrivilegeDropper:
            uid/gid, to reach.
         2. setgid(gid) SECOND - must happen before setuid, since a
            non-root process cannot change its gid.
-        3. setuid(uid) LAST - irreversible; only safe once group
+        3. setuid(uid) THIRD - irreversible; only safe once group
            membership is already correct.
+        4. Capabilities.drop_all_capabilities() LAST before execve - this
+           helper runs as non-root baserunner with *ambient*
+           CAP_SETUID/CAP_SETGID, and Linux keeps those across a setuid
+           between two non-root uids and across execve. Without this the
+           job would run as the runner but still hold
+           cap_setuid,cap_setgid=eip - able to setuid(0). Found by
+           testlong's makekml-ssh capability check; asserted by
+           test_privilege_drop_chain.
 
         Args:
             user: Target account name to become (a site's runner_user) -
@@ -221,11 +231,12 @@ class PrivilegeDropper:
             Never returns on success (the process image is replaced).
 
         Raises:
-            OSError: If any of initgroups/setgid/setuid/execve fails.
+            OSError: If any of initgroups/setgid/setuid/capset/execve fails.
         """
         os.initgroups(user, gid)
         os.setgid(gid)
         os.setuid(uid)
+        Capabilities.drop_all_capabilities()
         os.execve(argv[0], argv, env)
 
 

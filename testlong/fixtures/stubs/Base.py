@@ -33,8 +33,16 @@ def main() -> int:
     args, _unknown = parser.parse_known_args()
 
     user = pwd.getpwuid(os.getuid()).pw_name
+    # Capability masks as in /proc/self/status (hex), e.g. CapEff=0000000000000000
+    caps = " ".join(
+        f"{key}={value.strip()}"
+        for key, _, value in (
+            line.partition(":") for line in open("/proc/self/status").read().splitlines()
+        )
+        if key in ("CapInh", "CapPrm", "CapEff", "CapAmb")
+    )
     print(
-        f"user={user} uid={os.getuid()} gid={os.getgid()} pid={os.getpid()} argv={sys.argv}",
+        f"user={user} uid={os.getuid()} gid={os.getgid()} pid={os.getpid()} {caps} argv={sys.argv}",
         flush=True,
     )
 

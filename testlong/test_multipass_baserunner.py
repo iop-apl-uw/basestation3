@@ -274,6 +274,11 @@ def test_privilege_drop_chain(running_baserunner: multipassutils.Vm) -> None:
     content = _read_file(vm, log_file)
     assert f"uid={_uid_of(vm, 'runner-alpha')}" in content
     assert "uid=0" not in content  # never ran as root
+    # Dropping from baserunner (ambient CAP_SETUID/CAP_SETGID) to the runner
+    # must not leave the job any capability - Linux keeps ambient caps across
+    # a non-root -> non-root setuid and across execve unless they're dropped.
+    for cap_set in ("CapInh", "CapPrm", "CapEff", "CapAmb"):
+        assert f"{cap_set}=0000000000000000" in content, content
 
 
 def test_privexec_holds_only_setuid_setgid(running_baserunner: multipassutils.Vm) -> None:

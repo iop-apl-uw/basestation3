@@ -187,6 +187,11 @@ def test_privilege_dropper_call_order(monkeypatch):
     monkeypatch.setattr(os, "setgid", lambda gid: calls.append(("setgid", gid)))
     monkeypatch.setattr(os, "setuid", lambda uid: calls.append(("setuid", uid)))
     monkeypatch.setattr(
+        BaseRunnerPrivExec.Capabilities,
+        "drop_all_capabilities",
+        lambda: calls.append(("drop_all_capabilities",)),
+    )
+    monkeypatch.setattr(
         os, "execve", lambda path, argv, env: calls.append(("execve", path, argv, env))
     )
 
@@ -198,8 +203,29 @@ def test_privilege_dropper_call_order(monkeypatch):
         ("initgroups", "sg090-runner", 4343),
         ("setgid", 4343),
         ("setuid", 4242),
+        ("drop_all_capabilities",),
         ("execve", "/bin/true", ["/bin/true"], {"PATH": "/bin"}),
     ]
+
+
+def test_privilege_dropper_never_execs_if_capabilities_remain(monkeypatch):
+    """If the capability drop fails, the job must not be exec'd at all."""
+    calls = []
+    monkeypatch.setattr(os, "initgroups", lambda user, gid: None)
+    monkeypatch.setattr(os, "setgid", lambda gid: None)
+    monkeypatch.setattr(os, "setuid", lambda uid: None)
+
+    def _fail():
+        raise OSError(1, "Operation not permitted")
+
+    monkeypatch.setattr(BaseRunnerPrivExec.Capabilities, "drop_all_capabilities", _fail)
+    monkeypatch.setattr(os, "execve", lambda *a: calls.append("execve"))
+
+    with pytest.raises(OSError):
+        BaseRunnerPrivExec.PrivilegeDropper().drop_and_exec(
+            "sg090-runner", 4242, 4343, ["/bin/true"], {"PATH": "/bin"}
+        )
+    assert calls == []
 
 
 # --- ChildTable ---

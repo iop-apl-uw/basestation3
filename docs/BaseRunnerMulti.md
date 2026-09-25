@@ -604,6 +604,18 @@ On a scratch host: start `baserunnerprivexec.service`, then
 real site's rundir to confirm the resulting job's output files are owned
 by that site's `runner-<site>` uid/gid, not `baserunner`.
 
+Also confirm the **job itself holds no capabilities**. While a dispatched
+job is running, `getpcaps <job pid>` should print an empty set, and
+`grep ^Cap /proc/<job pid>/status` should show all zeros. A correct uid
+and correct file ownership do *not* prove this. The helper holds its
+capabilities as *ambient* capabilities under the non-root `baserunner`
+account, and Linux keeps ambient capabilities across a setuid from one
+non-root uid to another, and across execve. Before
+`Capabilities.drop_all_capabilities()` was added to
+`PrivilegeDropper.drop_and_exec`, every job ran as its runner with
+`cap_setgid,cap_setuid=eip`, and so could setuid(0). testlong's
+`test_privilege_drop_chain` now asserts this.
+
 If using per-site CPU throttling, validate that chain too: with
 `cpu_quota_pct`/`cpu_weight` set for a test site, confirm
 `cpu.max`/`cpu.weight` under `/sys/fs/cgroup/baserunner.slice/site-<name>/`
