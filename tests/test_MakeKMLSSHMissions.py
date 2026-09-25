@@ -477,7 +477,7 @@ def test_site_child_drops_capabilities_first(
     events: list[str] = []
     monkeypatch.setattr(MakeKMLSSHMissions, "BaseLogger", lambda *a, **kw: None)
     monkeypatch.setattr(
-        MakeKMLSSHMissions, "drop_all_capabilities", lambda: events.append("drop")
+        MakeKMLSSHMissions.Capabilities, "drop_all_capabilities", lambda: events.append("drop")
     )
     monkeypatch.setattr(
         MakeKMLSSHMissions,
@@ -494,15 +494,10 @@ def test_site_child_drops_capabilities_first(
         raise PermissionError(1, "Operation not permitted")
 
     events.clear()
-    monkeypatch.setattr(MakeKMLSSHMissions, "drop_all_capabilities", _fail)
+    monkeypatch.setattr(MakeKMLSSHMissions.Capabilities, "drop_all_capabilities", _fail)
     monkeypatch.setattr(sys, "stdin", io.StringIO(MakeKMLSSHMissions.missions_to_json([])))
     assert MakeKMLSSHMissions.main(base_opts=base_opts) == 1
     assert events == []
-
-
-def test_drop_all_capabilities_is_a_noop_off_linux(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(MakeKMLSSHMissions.sys, "platform", "darwin")
-    MakeKMLSSHMissions.drop_all_capabilities()
 
 
 # --- main -------------------------------------------------------------------

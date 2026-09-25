@@ -51,7 +51,6 @@ makekml-systemd-setup.md).
 """
 
 import argparse
-import ctypes
 import dataclasses
 import json
 import logging
@@ -72,6 +71,7 @@ import MakeKMLSSH
 
 import BaseOpts
 import BaseOptsType
+import Capabilities
 import SiteConfig
 import Utils
 from BaseLog import BaseLogger, log_critical, log_error, log_info, log_warning
@@ -575,46 +575,6 @@ def run_sites(
     return failed
 
 
-# capset(2) ABI - see <linux/capability.h>
-_LINUX_CAPABILITY_VERSION_3 = 0x20080522
-
-
-class _CapUserHeader(ctypes.Structure):
-    _fields_ = [("version", ctypes.c_uint32), ("pid", ctypes.c_int)]
-
-
-class _CapUserData(ctypes.Structure):
-    _fields_ = [
-        ("effective", ctypes.c_uint32),
-        ("permitted", ctypes.c_uint32),
-        ("inheritable", ctypes.c_uint32),
-    ]
-
-
-def drop_all_capabilities() -> None:
-    """Irreversibly empties this process's capability sets (Linux only).
-
-    The worker holds ambient CAP_SETUID/CAP_SETGID so it can start each
-    site's child as that site's runner. Linux keeps ambient capabilities
-    across a uid change between two non-root accounts, and across exec, so
-    without this a site child - and anything it runs, like MakeKML.py -
-    would still hold CAP_SETUID, and could make itself root. Emptying the
-    permitted and inheritable sets empties the effective and ambient sets
-    too. Lowering capabilities is always allowed.
-
-    Raises:
-        OSError: If capset(2) fails.
-    """
-    if not sys.platform.startswith("linux"):
-        return
-    libc = ctypes.CDLL(None, use_errno=True)
-    header = _CapUserHeader(_LINUX_CAPABILITY_VERSION_3, 0)
-    data = (_CapUserData * 2)()  # version 3 takes two 32-bit halves, all zero
-    if libc.capset(ctypes.byref(header), data) != 0:
-        err = ctypes.get_errno()
-        raise OSError(err, os.strerror(err))
-
-
 def run_site_child(base_opts: BaseOpts.BaseOptions) -> int:
     """The --site_child entry point: processes the missions given on stdin.
 
@@ -630,7 +590,9 @@ def run_site_child(base_opts: BaseOpts.BaseOptions) -> int:
         No exceptions are raised.
     """
     try:
-        drop_all_capabilities()
+        # Shed the worker's ambient CAP_SETUID/CAP_SETGID before touching any
+        # mission - see Capabilities.drop_all_capabilities
+        Capabilities.drop_all_capabilities()
     except OSError:
         log_critical(f"{base_opts.site_child}: could not drop capabilities - not processing", "exc")
         return 1
