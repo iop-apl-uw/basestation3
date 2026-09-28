@@ -267,6 +267,48 @@ class LogFile:
                 fo.write("\n")
 
 
+# Log parameters whose single line has grown extra comma separated fields over
+# firmware revisions.  Maps the parameter to {field count: component parameter names}
+multi_value_parms: dict[str, dict[int, tuple[str, ...]]] = {
+    "$HUMID": {
+        1: ("$HUMID",),
+        4: ("$HUMID", "$HUMID_LIMIT", "$HUMID_MIN", "$HUMID_MAX"),
+    },
+    "$INTERNAL_PRESSURE": {
+        # psia, nv_intp_latch, g_minInternalPressure, g_maxInternalPressure
+        1: ("$INTERNAL_PRESSURE",),
+        2: ("$INTERNAL_PRESSURE", "$INTERNAL_PRESSURE_LATCH"),
+        4: (
+            "$INTERNAL_PRESSURE",
+            "$INTERNAL_PRESSURE_LATCH",
+            "$INTERNAL_PRESSURE_MIN",
+            "$INTERNAL_PRESSURE_MAX",
+        ),
+    },
+}
+
+
+def split_multi_value_parm(parm_name: str, value: str) -> list[tuple[str, str]] | None:
+    """Splits a multi-valued log parameter into its component parameters
+
+    Args:
+        parm_name: log parameter name, including the leading '$' - must be a key of multi_value_parms
+        value: the raw, comma separated value string
+
+    Returns:
+        List of (component parameter name, component value string) or None if
+        the number of fields is not a known form for parm_name
+
+    Raises:
+        KeyError: parm_name is not in multi_value_parms
+    """
+    splits = value.split(",")
+    component_names = multi_value_parms[parm_name].get(len(splits))
+    if component_names is None:
+        return None
+    return list(zip(component_names, splits, strict=True))
+
+
 def parse_value(parm_name: str, str_value: str, log_file: LogFile) -> None:
     # parse the value
     nc_var_name = BaseNetCDF.nc_sg_log_prefix + parm_name.lstrip("$")
@@ -512,54 +554,13 @@ def parse_log_file(in_filename, issue_warn=False):
             # Drop these
             elif parm_name in ("$EKF", "$INTR"):
                 pass
-            elif parm_name == "$HUMID":
-                humid_splits = value.split(",")
-                match len(humid_splits):
-                    case 1:
-                        parse_value(parm_name, value, log_file)
-                    case 4:
-                        humid_var_names = (
-                            "$HUMID",
-                            "$HUMID_LIMIT",
-                            "$HUMID_MIN",
-                            "$HUMID_MAX",
-                        )
-                        for humid_parm_name, value in zip(
-                            humid_var_names, humid_splits, strict=True
-                        ):
-                            parse_value(humid_parm_name, value, log_file)
-                    case _:
-                        log_warning(f"Unknown form of {parm_name} - {value} - skipping")
-            elif parm_name == "$INTERNAL_PRESSURE":
-                # psia, nv_intp_latch, g_minInternalPressure, g_maxInternalPressure);
-                int_press_splits = value.split(",")
-                match len(int_press_splits):
-                    case 1:
-                        parse_value(parm_name, value, log_file)
-                    case 2:
-                        int_press_var_names = (
-                            "$INTERNAL_PRESSURE",
-                            "$INTERNAL_PRESSURE_LATCH",
-                        )
-                        for int_press_parm_name, value in zip(
-                            int_press_var_names, int_press_splits, strict=True
-                        ):
-                            parse_value(int_press_parm_name, value, log_file)
-
-                    case 4:
-                        int_press_var_names = (
-                            "$INTERNAL_PRESSURE",
-                            "$INTERNAL_PRESSURE_LATCH",
-                            "$INTERNAL_PRESSURE_MIN",
-                            "$INTERNAL_PRESSURE_MAX",
-                        )
-                        for int_press_parm_name, value in zip(
-                            int_press_var_names, int_press_splits, strict=True
-                        ):
-                            parse_value(int_press_parm_name, value, log_file)
-                    case _:
-                        log_warning(f"Unknown form of {parm_name} - {value} - skipping")
-
+            elif parm_name in multi_value_parms:
+                parm_splits = split_multi_value_parm(parm_name, value)
+                if parm_splits is None:
+                    log_warning(f"Unknown form of {parm_name} - {value} - skipping")
+                else:
+                    for split_parm_name, split_value in parm_splits:
+                        parse_value(split_parm_name, split_value, log_file)
             else:
                 # parse the value and update the object
                 parse_value(parm_name, value, log_file)

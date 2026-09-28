@@ -2003,6 +2003,32 @@ def load_dive_profile_data(
                             # When we 'upgrade' a log parameters (e.g., $MEM) from a double to a string because of extra members, we need to convert types
                             # Also, if we define new log parameters but don't declare them, they are saved as strings and later we may need to convert them
                             # This works for scalars only...
+
+                            # Multi-valued log parameters (e.g. $INTERNAL_PRESSURE,psia,latch) used to be
+                            # saved as a single string; split them as LogFile.parse_log_file() now does
+                            log_parm_name = "$" + dive_nc_varname.removeprefix(
+                                BaseNetCDF.nc_sg_log_prefix
+                            )
+                            if (
+                                nc_typecode == "c"
+                                and log_var.search(dive_nc_varname)
+                                and log_parm_name in LogFile.multi_value_parms
+                            ):
+                                value = nc_var[:].tobytes().decode("utf-8")
+                                parm_splits = LogFile.split_multi_value_parm(
+                                    log_parm_name, value
+                                )
+                                if parm_splits is not None:
+                                    log_debug(
+                                        f"Splitting {dive_nc_varname} string '{value}' into {[p for p, _ in parm_splits]}"
+                                    )
+                                    for split_parm_name, split_value in parm_splits:
+                                        LogFile.parse_value(
+                                            split_parm_name, split_value, log_f
+                                        )
+                                    continue
+                                # Unknown form - fall through and fail below
+
                             nc_var_convert = None
                             if len(mdp_dim_info) == 0:  # scalar?
                                 if nc_typecode == "c" and nc_data_type in [

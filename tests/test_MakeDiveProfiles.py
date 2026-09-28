@@ -30,6 +30,8 @@
 import pathlib
 import time
 
+import netCDF4
+import numpy as np
 import pytest
 import testutils
 
@@ -72,3 +74,89 @@ def test_reprocess(caplog, additional_options, required_msgs, allowed_msgs):
     # import pdb
 
     # pdb.set_trace()
+
+
+def _make_legacy_int_pressure_nc(nc_path: pathlib.Path, value: str) -> None:
+    """Rewrites nc_path as a pre-Apr 2026 basestation would have, with
+    log_INTERNAL_PRESSURE saved as a single multi-valued string
+
+    Args:
+        nc_path: dive netCDF file to rewrite in place
+        value: the comma separated string to store for log_INTERNAL_PRESSURE
+
+    Returns:
+        None
+
+    Raises:
+        None
+    """
+    drop_vars = {"log_INTERNAL_PRESSURE", "log_INTERNAL_PRESSURE_LATCH"}
+    src_path = nc_path.with_suffix(".orig.nc")
+    nc_path.rename(src_path)
+    # netCDF4 requires str paths
+    with (
+        netCDF4.Dataset(str(src_path)) as src,
+        netCDF4.Dataset(str(nc_path), "w") as dst,
+    ):
+        src.set_auto_maskandscale(False)
+        src.set_auto_chartostring(False)
+        dst.set_auto_chartostring(False)
+        dst.setncatts({k: src.getncattr(k) for k in src.ncattrs()})
+        for name, dim in src.dimensions.items():
+            dst.createDimension(name, None if dim.isunlimited() else len(dim))
+        for name, var in src.variables.items():
+            if name in drop_vars:
+                continue
+            attrs = {k: var.getncattr(k) for k in var.ncattrs()}
+            fill_value = attrs.pop("_FillValue", None)
+            new_var = dst.createVariable(
+                name, var.datatype, var.dimensions, fill_value=fill_value
+            )
+            new_var.set_auto_maskandscale(False)
+            new_var.setncatts(attrs)
+            new_var[...] = var[...]
+        string_dim = f"string_{len(value)}"
+        if string_dim not in dst.dimensions:
+            dst.createDimension(string_dim, len(value))
+        legacy_var = dst.createVariable("log_INTERNAL_PRESSURE", "S1", (string_dim,))
+        legacy_var[:] = np.array(list(value), dtype="S1")
+    src_path.unlink()
+
+
+@pytest.mark.parametrize("legacy_nc", [False, True])
+def test_reload_legacy_multi_value_log_string(caplog, legacy_nc):
+    """Pre-Apr 2026 netCDF files hold $INTERNAL_PRESSURE,psia,latch as one string -
+    reloading must split it (as LogFile does) rather than fail and drop it"""
+    data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_makediveprofiles")
+    mission_dir = data_dir.joinpath("mission_dir")
+
+    def make_legacy(mission_dir: pathlib.Path) -> None:
+        if legacy_nc:
+            _make_legacy_int_pressure_nc(
+                mission_dir / "p2720002.nc", "8.35631,14.8032"
+            )
+
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        MakeDiveProfiles.main,
+        f"--verbose --mission_dir {mission_dir} 2".split(),
+        caplog,
+        # Pre-existing warnings from this fixture, unrelated to the reload
+        [
+            "Substantial unmodeled flight time",
+            "Large mis-match between predicted and observed w",
+            "codaTODO_c0 not found",
+        ],
+        required_msgs=["Loading data from netCDF files"],
+        pre_test_hook=make_legacy,
+    )
+
+    # netCDF4 requires str paths
+    with netCDF4.Dataset(str(mission_dir / "p2720002.nc")) as ds:
+        for var_name, expected in (
+            ("log_INTERNAL_PRESSURE", 8.35631),
+            ("log_INTERNAL_PRESSURE_LATCH", 14.8032),
+        ):
+            assert ds.variables[var_name].dtype == np.float64
+            assert ds.variables[var_name].getValue().item() == pytest.approx(expected)
