@@ -2040,7 +2040,9 @@ def load_dive_profile_data(
                                             "Failed to convert %s from string '%s' to type '%s'"
                                             % (
                                                 dive_nc_varname,
-                                                nc_var[:].tostring(),
+                                                nc_var[:]
+                                                .tobytes()
+                                                .decode("utf-8", errors="replace"),
                                                 nc_data_type,
                                             ),
                                             "exc",
