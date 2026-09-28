@@ -160,7 +160,7 @@ expected_schema = pa.schema(
 # - How to do playback/route tracing?  (Have dives and fixes show up as they occur)
 
 
-def cmp_function(a:pathlib.Path, b:pathlib.Path) -> int:
+def cmp_function(a: pathlib.Path, b: pathlib.Path) -> int:
     """Compares two archived targets files, sorting in reverse chronilogical order (most recent one first)"""
     a_dive = None
     b_dive = None
@@ -898,12 +898,17 @@ def printDive(
         num_points = len(time_vals)
 
         pq_df = pq_df_c.find_first_col("log_TGT_LATLONG")
-        latlong = (
-            get_df_var(pq_df, dive_num, "log_TGT_LATLONG")
-            .astype(bytes)
-            .tobytes()
-            .decode("utf-8")
-        )
+        try:
+            latlong = (
+                get_df_var(pq_df, dive_num, "log_TGT_LATLONG")
+                .astype(bytes)
+                .tobytes()
+                .decode("utf-8")
+            )
+        except KeyError:
+            log_error("log_TGT_LATLONG missing")
+            # If this is missing, others below are likely to be missing, so bail out now
+            return curr_dive_position
 
         try:
             pq_df = pq_df_c.find_first_col("north_displacement")
@@ -1100,10 +1105,10 @@ def printDive(
     surface_time = gps_time_start - gps_time_one
     if call_time and surface_time:
         log_debug(
-            f"dive:{dive_num},surface_time:{surface_time},call_time:{call_time},diff:{surface_time-call_time:.1f}"
+            f"dive:{dive_num},surface_time:{surface_time},call_time:{call_time},diff:{surface_time - call_time:.1f}"
         )
     if surface_time:
-        ballon_pairs.append(("Surface Time", f"{(surface_time)/60.0:.1f} minutes"))
+        ballon_pairs.append(("Surface Time", f"{(surface_time) / 60.0:.1f} minutes"))
     if call_time:
         ballon_pairs.append(("Call Time", f"{call_time / 60.0:.1f} minutes"))
 
