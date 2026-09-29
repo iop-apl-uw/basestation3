@@ -340,8 +340,9 @@ _LEGATO_SUPPLEMENT: dict[str, tuple[bool, str]] = {
         False,
         "Bitfield describing the Legato configuration when run as a logdev",
     ),
-    # Read in Sensors/legato_ext.py:249 but never netCDF-registered at all
-    # (not even via a runtime extension) - a genuine pre-existing gap.
+    # Read in Sensors/legato_ext.py (remap_engfile_columns_netcdf); registered
+    # as sg_cal_ignore_truck_legato in BaseNetCDF.py, and the renamed truck
+    # columns as eng_ignore_rbr_* in legato_ext.init_sensor.
     "ignore_truck_legato": (
         False,
         "Ignore any Legato columns present in the truck .eng file",

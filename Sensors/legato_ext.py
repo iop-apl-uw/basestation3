@@ -126,6 +126,31 @@ def init_sensor(module_name, init_dict=None):
             },
             (BaseNetCDF.nc_sg_data_info,),
         ],
+        # legato via truck, but ignored: with ignore_truck_legato set in
+        # sg_calib_constants, remap_engfile_columns_netcdf() renames the truck
+        # rbr_* columns to ignore_rbr_* so nothing processes them (e.g. a
+        # scicon legato is the primary CTD). They're kept in the per-dive
+        # netCDF for reference - without these entries MDP logged
+        # "Unknown nc metadata"/"Unknown result variable ... dropped" errors
+        # for every dive. No standard_name, so CF tools don't mistake them
+        # for the glider's primary T/S; not included in mission profiles.
+        **{
+            f"eng_ignore_rbr_{col}": [
+                False,
+                "d",
+                {
+                    "units": units,
+                    "description": f"{desc} (truck legato - ignored for processing: ignore_truck_legato set)",
+                },
+                (BaseNetCDF.nc_sg_data_info,),
+            ]
+            for col, units, desc in (
+                ("conduc", "mS/cm", "Conductivity as reported by the instrument"),
+                ("temp", "degrees_Celsius", "Temperature (in situ) as reported by the instrument"),
+                ("conducTemp", "degrees_Celsius", "Conductivity cell temperature as reported by the instrument"),
+                ("pressure", "dbar", "CTD reported pressure"),
+            )
+        },
         # legato via scicon
         "legato_time": [
             True,

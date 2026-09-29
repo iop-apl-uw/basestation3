@@ -28,6 +28,7 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import pathlib
+import shutil
 import time
 
 import netCDF4
@@ -35,7 +36,12 @@ import numpy as np
 import pytest
 import testutils
 
+import Base
+import BaseLog
+import BaseNetCDF
+import FlightModel
 import MakeDiveProfiles
+import Sensors
 
 test_cases = (
     ("", ["Files up-to-date for dive:2; nothing to do"], [""]),
@@ -160,3 +166,41 @@ def test_reload_legacy_multi_value_log_string(caplog, legacy_nc):
         ):
             assert ds.variables[var_name].dtype == np.float64
             assert ds.variables[var_name].getValue().item() == pytest.approx(expected)
+
+
+def test_ignore_truck_legato_columns_kept_without_errors(tmp_path, caplog):
+    """sg267 (WHIRLS, Sep 2026) sets ignore_truck_legato = 1, so its truck
+    eng columns rbr_* are renamed ignore_rbr_* (Sensors/legato_ext.py) to
+    keep them out of CT processing. Nothing registered netCDF metadata for
+    those names, so every dive logged 8 errors ("Unknown nc metadata for
+    ignore_rbr_*" / "Unknown result variable eng_ignore_rbr_* -- dropped")
+    and a "Missing metadata for sg_cal_ignore_truck_legato" warning. They
+    must now be kept in the .nc, quietly.
+
+    This dive's Legato had failed (truck columns all NaN, no scicon ct.dat),
+    so MDP still bails out on "Legato CT data specified, but no data found" -
+    a genuine data problem, not what this test is about."""
+    src = pathlib.Path("testdata/sg267_WHIRLS_Sep26_ignore_truck_legato")
+    mission_dir = tmp_path / "mission_dir"
+    shutil.copytree(src, mission_dir)
+    # Stand-in for a fresh process, as in testutils.run_mission()
+    Sensors.set_globals()
+    BaseNetCDF.set_globals()
+    FlightModel.set_globals()
+    Base.set_globals()
+    BaseLog.BaseLogger.reset()
+
+    MakeDiveProfiles.main(["--verbose", "--force", "--mission_dir", str(mission_dir)])
+
+    messages = [r.getMessage() for r in caplog.records]
+    assert not [m for m in messages if "ignore_rbr" in m or "sg_cal_ignore_truck_legato" in m]
+    assert any("Legato CT data specified, but no data found" in m for m in messages)
+
+    with netCDF4.Dataset(str(mission_dir / "p2670399.nc")) as ds:
+        assert float(ds["sg_cal_ignore_truck_legato"][...]) == 1.0
+        for col in ("conduc", "conducTemp", "temp", "pressure"):
+            var = ds[f"eng_ignore_rbr_{col}"]
+            assert var.dimensions == ("sg_data_point",)
+            assert "ignore_truck_legato" in var.comment
+            assert not hasattr(var, "standard_name")
+        assert "eng_rbr_temp" not in ds.variables

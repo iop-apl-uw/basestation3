@@ -1525,6 +1525,14 @@ def set_globals() -> None:
             },
             nc_scalar,
         ],
+        "sg_cal_ignore_truck_legato": [
+            False,
+            "d",
+            {
+                "description": "Ignore any legato columns in the truck eng file (non-zero): they are kept as eng_ignore_rbr_* but not used for processing."
+            },
+            nc_scalar,
+        ],
         "sg_cal_legato_cond_press_correction": [
             False,
             "d",
