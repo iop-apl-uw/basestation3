@@ -39,6 +39,7 @@ import os
 import pathlib
 import pdb
 import pstats
+import sqlite3
 import sys
 import time
 import traceback
@@ -99,6 +100,38 @@ def get_dive_plots(base_opts: BaseOpts.BaseOptions) -> dict:
 def get_mission_plots(base_opts: BaseOpts.BaseOptions) -> dict:
     """Loads up the dictionary of selected mission plots"""
     return {x: Plotting.mission_plot_funcs[x] for x in base_opts.mission_plots}
+
+
+def _commit_plot_writes(con: sqlite3.Connection | None, where: str) -> None:
+    """Commits any mission-db writes a plot function made through con.
+
+    Some plot functions store derived values in the mission db (e.g.
+    DivePitchRoll/DiveVertVelocityNew via BaseDB.addValToDB). Python's
+    sqlite3 opens a transaction implicitly on the first write and keeps the
+    db write-locked until commit, so committing only once at the end of
+    plot_dives()/plot_mission() held the lock for the whole plotting stage
+    (minutes). With every connection's busy_timeout at 200 ms, any other
+    writer in that window failed - notably GliderEarlyGPS logging the next
+    call's session when a glider redialed after a dropped call.
+
+    Args:
+        con: The mission db connection the plot functions were given, or
+            None if the db couldn't be opened (nothing to commit).
+        where: Label for the error message.
+
+    Returns:
+        None.
+
+    Raises:
+        Nothing - a failed commit is rolled back and logged.
+    """
+    if con is None:
+        return
+    try:
+        con.commit()
+    except Exception as e:
+        con.rollback()
+        log_error(f"Failed commit, {where} {e}", "exc", alert="DB_LOCKED")
 
 
 def plot_dives(
@@ -166,6 +199,10 @@ def plot_dives(
                     output_files.append(file_name)
             finally:
                 dive_plot_times[plot_name] += time.time() - t0
+                if dbcon is None:
+                    # Don't hold the db write lock across plot functions -
+                    # a caller passing dbcon owns its own transaction
+                    _commit_plot_writes(con, f"plot_dives {plot_name}")
 
     if len(dive_nc_file_names):
         for plot_name, elapsed_time in dive_plot_times.items():
@@ -174,13 +211,9 @@ def plot_dives(
             )
 
     if dbcon is None:
-        try:
-            con.commit()
-        except Exception as e:
-            con.rollback()
-            log_error(f"Failed commit, plot_dives {e}", "exc", alert="DB_LOCKED")
-
-        con.close()
+        _commit_plot_writes(con, "plot_dives")
+        if con is not None:
+            con.close()
         log_info("plot_dives db closed")
 
     return (figs, output_files)
@@ -247,16 +280,16 @@ def plot_mission(
                 output_files.append(file_name)
         finally:
             mission_plot_times[plot_name] = time.time() - t0
+            if dbcon is None:
+                # Don't hold the db write lock across plot functions -
+                # a caller passing dbcon owns its own transaction
+                _commit_plot_writes(con, f"plot_mission {plot_name}")
     for plot_name, elapsed_time in mission_plot_times.items():
         log_info(f"Mission {plot_name} took {elapsed_time:.2f} secs")
     if dbcon is None:
-        try:
-            con.commit()
-        except Exception as e:
-            con.rollback()
-            log_error(f"Failed commit, plot_mission {e}", "exc", alert="DB_LOCKED")
-
-        con.close()
+        _commit_plot_writes(con, "plot_mission")
+        if con is not None:
+            con.close()
         log_info("plot_mission db closed")
 
     return (figs, output_files)

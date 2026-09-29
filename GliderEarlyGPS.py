@@ -78,6 +78,10 @@ class GliderEarlyGPSClient:
         self._commlog_linecount = 0
         self.__comm_log = None
         self._first_time = first_time
+        # Sessions whose calls-table insert failed because the mission db was
+        # locked (e.g. Base.py still processing the previous, dropped call) -
+        # retried each pass of the main loop instead of blocking callbacks
+        self._pending_sessions: list = []
 
         # Callback functions for the CommLog processor
         self.callbacks = {}
@@ -105,6 +109,7 @@ class GliderEarlyGPSClient:
                             f"Error processing comm.log {comm_log_error_count} times - bailing out"
                         )
                         self.cleanup_shutdown()
+                self._retry_pending_sessions()
                 if self._first_time:
                     log_info(f"First time finished - start_pos:{self._start_pos}")
                     if (
@@ -281,10 +286,53 @@ class GliderEarlyGPSClient:
             except Exception:
                 log_error("Could not update {commlog}")
 
+    def _log_session(self, session) -> None:
+        """Adds a session to the mission db calls table without blocking.
+
+        If the db is locked, the session is queued and retried on the next
+        pass of the main loop (see _retry_pending_sessions), so the rest of
+        the comm.log callbacks (url/vis notifications) aren't delayed.
+
+        Args:
+            session: The comm.log session to record.
+
+        Returns:
+            None.
+        """
+        if not BaseDB.addSession(self.__base_opts, session, retry_on_lock=True):
+            self._pending_sessions.append(session)
+
+    def _retry_pending_sessions(self, final: bool = False) -> None:
+        """Retries sessions whose calls-table insert failed earlier.
+
+        Args:
+            final: Last chance before shutdown - report any that still fail.
+
+        Returns:
+            None.
+        """
+        if not self._pending_sessions:
+            return
+        still_pending = []
+        for session in self._pending_sessions:
+            if BaseDB.addSession(self.__base_opts, session, retry_on_lock=True):
+                log_info(
+                    f"Logged queued session dive:{session.dive_num} call:{session.calls_made} to the mission db"
+                )
+            else:
+                still_pending.append(session)
+        self._pending_sessions = still_pending
+        if final and still_pending:
+            log_warning(
+                f"Could not log {len(still_pending)} session(s) to the mission db (database locked)"
+            )
+
     def cleanup_shutdown(self):
         """
         Terminates the process
         """
+        # Last chance to record any sessions queued behind a locked db
+        self._retry_pending_sessions(final=True)
         # Clean up and shutdown
         Utils.cleanup_lock_file(self.__base_opts, gliderearlygps_lockfile_name)
         log_info(
@@ -420,7 +468,7 @@ class GliderEarlyGPSClient:
             if session is None:
                 log_warning("iridium callback called with empty session")
             else:
-                BaseDB.addSession(self.__base_opts, session)
+                self._log_session(session)
 
     def process_counter_line(self, session, force=False):
         """
@@ -464,7 +512,7 @@ class GliderEarlyGPSClient:
                 log_info(
                     f"Adding session to basestation (sg{self.__base_opts.instrument_id:03d})"
                 )
-                BaseDB.addSession(self.__base_opts, session)
+                self._log_session(session)
 
                 payload = session.to_message_dict()
                 BaseDotFiles.process_urls(

@@ -1173,8 +1173,12 @@ def checkSchema(base_opts, con):
                     if new_c not in cols:
                         mycon.cursor().execute(f"ALTER TABLE dives ADD COLUMN {new_c} FLOAT;")
             # elif i == 4:
-        
-        mycon.cursor().execute(f'PRAGMA user_version = {currentSchemaVersion}')
+
+        # Only write when something changed: this runs on every addSession()
+        # (each glider call), and an unconditional write needed the db write
+        # lock even for an up-to-date schema.
+        if ver < currentSchemaVersion:
+            mycon.cursor().execute(f'PRAGMA user_version = {currentSchemaVersion}')
     except Exception:
         log_error("could not check schema", "exc")
 
@@ -1527,21 +1531,43 @@ def logParameterChanges(base_opts, dive_num, cmdname, con=None):
         mycon.close()
         log_info("logParameterChanges db closed")
 
-def addSession(base_opts, session, con=None, sms=0):
+def _is_locked(exc: Exception) -> bool:
+    """True if exc is sqlite's "database is locked" (busy_timeout expired)."""
+    return isinstance(exc, sqlite3.OperationalError) and "locked" in str(exc)
+
+
+def addSession(base_opts, session, con=None, sms=0, retry_on_lock=False) -> bool:
+    """Adds (or replaces) a comm.log session in the calls table
+
+    Args:
+        base_opts: Basestation options (used to open the mission db).
+        session: The comm.log session, or None (nothing to do).
+        con: An open mission db connection, or None to open, commit and
+            close one here.
+        sms: Value for the sms column.
+        retry_on_lock: The caller will retry if the db is locked, so log a
+            "database is locked" failure at INFO rather than ERROR.
+
+    Returns:
+        True if the session was written (or there was nothing to write),
+        False otherwise. The insert is INSERT OR REPLACE keyed on
+        (dive, cycle, call), so retrying a failed write is safe.
+    """
     if session is None:
-        return
+        return True
 
     if con is None:
         mycon = Utils.open_mission_database(base_opts)
         if mycon is None:
             log_error("Failed to open mission db")
-            return
+            return False
         log_info("addSession db opened")
     else:
         mycon = con
 
     checkSchema(None, mycon)
 
+    ok = True
     try:
         d = session.to_message_dict()
         d.update({ "sms": sms })
@@ -1551,17 +1577,28 @@ def addSession(base_opts, session, con=None, sms=0):
                      VALUES(:dive, :cycle, :call, :connected, :lat, :lon, :epoch, :RH, :intP, :temp, :volts10, :volts24, :pitch, :depth, :pitchAD, :rollAD, :vbdAD, :sms, :iridLat, :iridLon, :irid_t, :sst, :sss, :density);", d)
         cur.close()
     except Exception as e:
-        log_error(f"{e} inserting comm.log session")
+        ok = False
+        if retry_on_lock and _is_locked(e):
+            log_info(f"{e} inserting comm.log session - will retry")
+        else:
+            log_error(f"{e} inserting comm.log session")
 
     if con is None:
-        try:
-            mycon.commit()
-        except Exception as e:
-            mycon.rollback()
-            log_error(f"Failed commit, addSession {e}", "exc", alert="DB_LOCKED")
+        if ok:
+            try:
+                mycon.commit()
+            except Exception as e:
+                ok = False
+                mycon.rollback()
+                if retry_on_lock and _is_locked(e):
+                    log_info(f"Failed commit, addSession {e} - will retry")
+                else:
+                    log_error(f"Failed commit, addSession {e}", "exc", alert="DB_LOCKED")
 
         mycon.close()
         log_info("addSession db closed")
+
+    return ok
 
 
 def main():
