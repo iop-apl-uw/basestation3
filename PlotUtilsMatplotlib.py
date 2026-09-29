@@ -586,6 +586,40 @@ def _resolve_color_range(
     return cmap, vmin, vmax
 
 
+def _ordered_color_range(
+    vmin: float | None, vmax: float | None, z: np.ndarray
+) -> tuple[float | None, float | None]:
+    """Makes a Plotly color range safe to hand to matplotlib.
+
+    Plotly accepts a one-sided range (only zmin or only zmax) and clips data
+    outside it. matplotlib fills the missing bound from the data, and raises
+    "minvalue must be less than or equal to maxvalue" if the data lies
+    entirely beyond the given bound - e.g. a sections.yml with min: 23 for
+    sigma_t, but lab-tank water far below it (sg274, 2026-09). So fill the
+    missing bound from the finite data such that the range stays ordered
+    (everything renders at the clipped end, as in Plotly), and put a
+    reversed min/max back in order.
+
+    Args:
+        vmin: Lower bound from zmin/cmin, or None for auto.
+        vmax: Upper bound from zmax/cmax, or None for auto.
+        z: The trace's data.
+
+    Returns:
+        (vmin, vmax), either still None where there's no finite data to
+        derive it from.
+    """
+    finite = z[np.isfinite(z)]
+    if finite.size:
+        if vmin is not None and vmax is None:
+            vmax = max(float(finite.max()), vmin)
+        elif vmax is not None and vmin is None:
+            vmin = min(float(finite.min()), vmax)
+    if vmin is not None and vmax is not None and vmin > vmax:
+        vmin, vmax = vmax, vmin
+    return vmin, vmax
+
+
 def _render_heatmap(ax: matplotlib.axes.Axes, trace: Any, layout: Any) -> None:
     """Draws one Heatmap trace as a matplotlib `pcolormesh`.
 
@@ -600,6 +634,7 @@ def _render_heatmap(ax: matplotlib.axes.Axes, trace: Any, layout: Any) -> None:
     """
     z = _as_float_array(trace.z)
     cmap, vmin, vmax = _resolve_color_range(trace, layout)
+    vmin, vmax = _ordered_color_range(vmin, vmax, z)
     if trace.x is not None and trace.y is not None:
         x, y, z = _align_grid(_as_float_array(trace.x), _as_float_array(trace.y), z)
         ax.pcolormesh(x, y, z, cmap=cmap, vmin=vmin, vmax=vmax, shading="auto")
@@ -628,6 +663,7 @@ def _render_contour(ax: matplotlib.axes.Axes, trace: Any, layout: Any) -> None:
     filled = getattr(getattr(trace, "contours", None), "coloring", None) == "heatmap"
     if filled:
         cmap, vmin, vmax = _resolve_color_range(trace, layout)
+        vmin, vmax = _ordered_color_range(vmin, vmax, z)
         ax.contourf(x, y, z, cmap=cmap, vmin=vmin, vmax=vmax)
     else:
         line = trace.line

@@ -810,3 +810,54 @@ def test_render_thumbnail_fill_toself_band(tmp_path) -> None:
     output_path = tmp_path / "thumb.webp"
     PlotUtilsMatplotlib.render_thumbnail(fig, output_path)
     assert output_path.exists()
+
+
+# ---------------------------------------------------------------------------
+# _ordered_color_range - one-sided / reversed Plotly ranges (sg274, 2026-09:
+# sections.yml "min: 23, max 27.5" typo left sigma_t with only zmin, and the
+# lab-tank data was entirely below it -> "minvalue must be less than or
+# equal to maxvalue" on every sg_sigma_t_section thumbnail)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("vmin", "vmax", "z", "expected"),
+    [
+        (23.0, None, [0.0, 1.0], (23.0, 23.0)),  # data entirely below zmin
+        (23.0, None, [22.0, 30.0], (23.0, 30.0)),  # data spans zmin
+        (None, 5.0, [10.0, 12.0], (5.0, 5.0)),  # data entirely above zmax
+        (None, 5.0, [1.0, 12.0], (1.0, 5.0)),
+        (2.0, 1.0, [0.0, 3.0], (1.0, 2.0)),  # reversed min/max
+        (None, None, [0.0, 3.0], (None, None)),  # auto both - untouched
+        (0.0, 10.0, [1.0, 2.0], (0.0, 10.0)),  # explicit, ordered - untouched
+        (23.0, None, [np.nan, np.nan], (23.0, None)),  # no finite data to fill from
+    ],
+)
+def test_ordered_color_range(vmin, vmax, z, expected) -> None:
+    assert PlotUtilsMatplotlib._ordered_color_range(vmin, vmax, np.array(z)) == expected
+
+
+def test_render_heatmap_zmin_above_all_data() -> None:
+    ax = _new_axes()
+    trace = go.Heatmap(z=[[0.0, 0.5], [1.0, np.nan]], x=[0, 1], y=[0, 1], zmin=23)
+    PlotUtilsMatplotlib._render_heatmap(ax, trace, go.Layout())
+    assert ax.collections[0].get_clim() == (23, 23)
+
+
+def test_render_contour_filled_zmax_below_all_data() -> None:
+    ax = _new_axes()
+    trace = go.Contour(
+        z=[[10, 11, 12], [11, 12, 13], [12, 13, 14]], zmax=5, contours=dict(coloring="heatmap")
+    )
+    PlotUtilsMatplotlib._render_contour(ax, trace, go.Layout())
+    assert len(ax.collections) >= 1
+
+
+def test_render_thumbnail_one_sided_range_below_data(tmp_path) -> None:
+    """End to end, the MissionProfiles section case that failed in production."""
+    fig = go.Figure(
+        data=[go.Heatmap(z=[[-1.0, 0.2], [0.4, 0.9]], x=[1, 2], y=[0, 5], zmin=23, colorscale="Viridis")]
+    )
+    output_path = tmp_path / "sg_sigma_t_section_000.webp"
+    PlotUtilsMatplotlib.render_thumbnail(fig, output_path)
+    assert output_path.exists()

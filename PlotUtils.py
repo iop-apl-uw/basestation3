@@ -570,6 +570,11 @@ def collect_timeouts(dive_nc_file, instr_cls):
 #     return new_run
 
 
+# Deeper than any ocean - a larger "max depth" is bad data (e.g. a bench/lab
+# test's pressure sensor), not a profile to bin
+MAX_PLAUSIBLE_DEPTH_M = 12000.0
+
+
 def add_sample_range_overlay(
     base_opts, instr_name, dive_num, time_var, max_depth_i, start_time, fig, f_depth
 ):
@@ -598,7 +603,18 @@ def add_sample_range_overlay(
 
         # Generate the samples/meter trace
         depth = f_depth(ttime)
-        max_depth = np.nanmax(depth)
+        finite_depth = depth[np.isfinite(depth)]
+        max_depth = finite_depth.max() if finite_depth.size else np.nan
+        # Bench/lab-test data can have no usable depth, a negative one (empty
+        # bin grid - IndexError below) or an absurd one (sg274, 2026-09: a
+        # ~1e12 m depth asked np.arange for 1.33 TiB). Skip the overlay then,
+        # rather than losing the whole plot.
+        if not (0.0 <= max_depth <= MAX_PLAUSIBLE_DEPTH_M):
+            log_warning(
+                f"{instr_name} dive {dive_num}: implausible max depth ({max_depth}) for {name.lower()} "
+                "- skipping the samples/meter overlay"
+            )
+            continue
         bin_width = 5.0
         bin_edges = np.arange(
             -bin_width / 2.0,
