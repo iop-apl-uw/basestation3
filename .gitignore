@@ -22,5 +22,6 @@ adcp
 data/
 site
 /Plotting/local/
+/review/
 .claude
 /log/
