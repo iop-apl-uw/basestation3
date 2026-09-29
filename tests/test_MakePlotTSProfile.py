@@ -27,6 +27,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
 import pathlib
 import shutil
 
@@ -130,3 +131,21 @@ def test_makeplottsprofile_ncdf_with_wl_variables(tmp_path, caplog):
     plot_dir = mission_dir / "plots"
     assert (plot_dir / "dv0005_reduced_ts.div").exists()
     assert (plot_dir / "dv0005_reduced_wl.div").exists()
+
+
+def test_makeplottsprofile_skips_missing_profile_files(tmp_path, caplog):
+    """A profile name that was never created (production case: a bare
+    .npro passed on by Base.py after x3decode_ts r7560, iopbase3 sg262
+    dive 102) is skipped with a warning, not a FileNotFoundError traceback."""
+    base_opts = BaseOpts.BaseOptions(
+        "test",
+        cmdline_args=["--verbose", "--mission_dir", str(tmp_path)],
+        calling_module="MakePlotTSProfile",
+    )
+    missing = [tmp_path / "p2620102.npro", tmp_path / "p2620102.npro_wl.dat"]
+    with caplog.at_level(logging.WARNING):
+        MakePlotTSProfile.main(base_opts=base_opts, processed_other_files=list(missing))
+    msgs = [(r.levelname, r.getMessage()) for r in caplog.records]
+    for f in missing:
+        assert any(level == "WARNING" and f"{f} not found - skipping" in m for level, m in msgs)
+    assert not any(level in ("ERROR", "CRITICAL") for level, _ in msgs)

@@ -33,6 +33,7 @@ Processes network files
 """
 
 import collections
+import glob
 import io
 import os
 import pathlib
@@ -764,8 +765,16 @@ def convert_network_profile(
     base_opts: BaseOpts.BaseOptions,
     in_file_name: pathlib.Path,
     out_file_name: pathlib.Path | None,
-) -> pathlib.Path | None:
+) -> list[pathlib.Path] | None:
     """Converts a network ct profile plain text output
+
+    The decompressor's output naming depends on the compressed file's
+    header style: old-style (single ct data set) files are written to
+    out_file_name itself, while new-style files - which can pack several
+    data sets (e.g. ct and wetlabs) into one compressed file - are written
+    to one "<out_file_name>_<instrument>.dat" per data set, and
+    out_file_name itself is never created. So the files actually produced
+    are returned, not out_file_name.
 
     Args:
         base_opts: Basestation options object.
@@ -775,7 +784,9 @@ def convert_network_profile(
             info, in the same directory as the input file.
 
     Returns:
-        Path to the converted output file, or None on failure.
+        The converted output files (out_file_name and/or its
+        "_<instrument>.dat" siblings), or None on failure or if the
+        decompressor produced no output.
     """
 
     convertor = base_opts.network_profile_decompressor or pathlib.Path(
@@ -815,7 +826,8 @@ def convert_network_profile(
 
     if out_file_name is None:
         log_debug(f"Could not formulate output file name for {in_file_name}")
-        return out_file_name
+        return None
+    out_file_name = pathlib.Path(out_file_name)
 
     cmdline = f"{convertor} -i {in_file_name} -o {out_file_name}"
     log_info(f"Running {cmdline}")
@@ -840,7 +852,15 @@ def convert_network_profile(
 
         return None
 
-    return out_file_name
+    # Old-style header: out_file_name itself. New-style: one
+    # "<out_file_name>_<instrument>.dat" per packed data set.
+    outputs = [out_file_name] if out_file_name.is_file() else []
+    outputs += sorted(out_file_name.parent.glob(f"{glob.escape(out_file_name.name)}_*.dat"))
+    if not outputs:
+        log_error(f"{cmdline} reported success but produced no output files")
+        return None
+
+    return outputs
 
 
 # def parse_timestamp(rs):

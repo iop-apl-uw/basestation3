@@ -1044,11 +1044,14 @@ def process_file_group(
                     if converted_name is not None:
                         processed_other_files.append(converted_name)
                 elif fc.is_network_profile():
-                    converted_name = BaseNetwork.convert_network_profile(
+                    # The files actually written - out_file_name itself for
+                    # old-style profiles, "<name>_<instrument>.dat" per data
+                    # set for new-style ones (e.g. .npro_ct.dat/.npro_wl.dat)
+                    converted_names = BaseNetwork.convert_network_profile(
                         base_opts, pathlib.Path(in_file_name), fc.mk_base_datfile_name()
                     )
-                    if converted_name is not None:
-                        processed_other_files.append(converted_name)
+                    if converted_names is not None:
+                        processed_other_files.extend(converted_names)
             else:
                 log_error(
                     f"Don't know how to deal with file ({in_file_name}) - unknown type"

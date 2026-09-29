@@ -517,7 +517,90 @@ def test_convert_network_profile_success_with_fake_decompressor(tmp_path):
     in_file.write_bytes(b"raw profile data")
     out_file = tmp_path / "p2720002.npro"
     result = BaseNetwork.convert_network_profile(base_opts, in_file, out_file)
-    assert result == out_file
+    assert result == [out_file]
+
+
+# A decompressor that behaves like x3decode_ts >= r7560 on a new-style
+# ("#..#" header) file packing ct and wetlabs data sets: exits 0, writes one
+# "<out>_<inst>.dat" per data set, and never creates <out> itself.
+_NEW_STYLE_DECOMPRESSOR = (
+    "#!/bin/sh\n"
+    "while [ $# -gt 0 ]; do\n"
+    '  case "$1" in\n'
+    '    -i) in_file="$2"; shift 2;;\n'
+    '    -o) out_file="$2"; shift 2;;\n'
+    "    *) shift;;\n"
+    "  esac\n"
+    "done\n"
+    'printf "%%first_bin_depth: 7.50\\n%%bin_width: 5.00\\n%%columns: temperature salinity \\n'
+    '10.5 34.2 \\n10.3 34.1 \\n" > "${out_file}_ct.dat"\n'
+    'printf "%%first_bin_depth: 2.50\\n%%bin_width: 5.00\\n%%columns: 470sig 700sig Chlsig temp \\n'
+    '74.0 74.0 53.0 572.0 \\n73.0 73.0 54.0 571.0 \\n" > "${out_file}_wl.dat"\n'
+)
+
+
+def test_convert_network_profile_new_style_returns_per_instrument_outputs(tmp_path):
+    """Regression (2026-09-29): once x3decode_ts r7560 started exiting 0,
+    returning out_file_name (never created for new-style files) put a
+    nonexistent .npro into processed_other_files - MakePlotTSProfile
+    crashed on it and make_netcdf_network_files dropped T/S from the .ncdf."""
+    convertor = tmp_path / "fake_x3decode_ts"
+    convertor.write_text(_NEW_STYLE_DECOMPRESSOR)
+    convertor.chmod(0o755)
+    base_opts = _make_base_opts(network_profile_decompressor=str(convertor))
+    in_file = tmp_path / "sg0004rn.r"
+    in_file.write_bytes(b"#7.50 5.00#SG256#sc0004b#ct#...\n")
+    out_file = tmp_path / "p2560004.npro"
+    result = BaseNetwork.convert_network_profile(base_opts, in_file, out_file)
+    assert result == [tmp_path / "p2560004.npro_ct.dat", tmp_path / "p2560004.npro_wl.dat"]
+    assert not out_file.exists()
+
+
+def test_convert_network_profile_success_without_output(tmp_path, caplog):
+    convertor = tmp_path / "fake_profile"
+    convertor.write_text("#!/bin/sh\nexit 0\n")
+    convertor.chmod(0o755)
+    base_opts = _make_base_opts(network_profile_decompressor=str(convertor))
+    in_file = tmp_path / "sg0004rn.r"
+    in_file.write_bytes(b"data")
+    with caplog.at_level(logging.ERROR):
+        result = BaseNetwork.convert_network_profile(base_opts, in_file, str(tmp_path / "p2560004.npro"))
+    assert result is None
+    assert any("produced no output files" in r.message for r in caplog.records)
+
+
+def test_new_style_network_profile_reaches_ncdf_with_ct_and_wl(tmp_path):
+    """End to end through the same selection Base.py makes: the .ncdf built
+    from a new-style network profile keeps temperature/salinity as well as
+    the wetlabs channels."""
+    convertor = tmp_path / "fake_x3decode_ts"
+    convertor.write_text(_NEW_STYLE_DECOMPRESSOR)
+    convertor.chmod(0o755)
+    base_opts = _make_base_opts(network_profile_decompressor=str(convertor))
+    nlog = tmp_path / "p2560004.nlog"
+    nlog.write_text("$ID,256\n$DIVE,4\nstart:01 01 26 00 00 00\n")
+    in_file = tmp_path / "sg0004rn.r"
+    in_file.write_bytes(b"#7.50 5.00#SG256#sc0004b#ct#...\n")
+
+    processed_other_files = [nlog]
+    converted = BaseNetwork.convert_network_profile(base_opts, in_file, tmp_path / "p2560004.npro")
+    assert converted is not None
+    processed_other_files.extend(converted)
+    network_files = [
+        f
+        for f in processed_other_files
+        if FileMgr.is_processed_network_log(f) or FileMgr.is_processed_network_profile(f)
+    ]
+    created: list[pathlib.Path] = []
+    assert BaseNetwork.make_netcdf_network_files(network_files, created) == 0
+    assert created == [tmp_path / "p2560004.ncdf"]
+    ds = xr.open_dataset(created[0])
+    try:
+        assert np.allclose(ds["temperature"][0], [10.5, 10.3])
+        assert np.allclose(ds["salinity"][0], [34.2, 34.1])
+        assert np.allclose(ds["sig470nm"], [74.0, 73.0])
+    finally:
+        ds.close()
 
 
 # ---------------------------------------------------------------------------
@@ -549,7 +632,7 @@ def test_convert_network_profile_real_decompressor_smoke(tmp_path):
     in_file = tmp_path / "p2720002.x"
     in_file.write_bytes(b"")
     result = BaseNetwork.convert_network_profile(base_opts, in_file, None)
-    assert result is None or isinstance(result, pathlib.Path)
+    assert result is None or isinstance(result, list)
 
 
 # ---------------------------------------------------------------------------

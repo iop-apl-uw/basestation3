@@ -53,6 +53,7 @@ from BaseLog import (
     log_debug,
     log_error,
     log_info,
+    log_warning,
 )
 
 DEBUG_PDB = False
@@ -620,6 +621,9 @@ def main(
 
     for profile_file_name in profile_file_names:
         log_info(f"Processing {profile_file_name}")
+        if not profile_file_name.is_file():
+            log_warning(f"{profile_file_name} not found - skipping")
+            continue
         try:
             dive_num = int(profile_file_name.name[4:8])
         except ValueError:
@@ -635,13 +639,16 @@ def main(
             break
         except Exception:
             log_error(
-                "Error in plotting vertical velocity for %s - skipping"
+                "Error in plotting ts profile for %s - skipping"
                 % profile_file_name,
                 "exc",
             )
 
     for wl_profile_file_name in wl_profile_file_names:
         log_info(f"Processing {wl_profile_file_name}")
+        if not wl_profile_file_name.is_file():
+            log_warning(f"{wl_profile_file_name} not found - skipping")
+            continue
         try:
             dive_num = int(wl_profile_file_name.name[4:8])
         except ValueError:
@@ -676,7 +683,7 @@ def main(
             break
         except Exception:
             log_error(
-                "Error in plotting vertical velocity for %s - skipping"
+                "Error in plotting network profile for %s - skipping"
                 % ncdf_file_name,
                 "exc",
             )

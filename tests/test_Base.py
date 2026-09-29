@@ -347,8 +347,9 @@ def test_process_file_group_network_profile_casts_str_to_path(
 def test_process_file_group_network_profile_appends_on_success(
     monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
 ) -> None:
-    """When convert_network_profile succeeds (returns the created Path),
-    that Path - and only that Path - must land in processed_other_files."""
+    """When convert_network_profile succeeds (returns the created files -
+    e.g. .npro_ct.dat and .npro_wl.dat for a new-style profile), those
+    files - and only those - must land in processed_other_files."""
     Base.set_globals()
     fragment = tmp_path / "sg0000rn.x"
     data = b"dummy network profile bytes"
@@ -357,8 +358,8 @@ def test_process_file_group_network_profile_appends_on_success(
     comm_log = MagicMock()
     comm_log.find_fragment_transfer_method.return_value = "raw"
 
-    converted_path = tmp_path / "p0000000.npro_ct.dat"
-    convert_mock = MagicMock(return_value=converted_path)
+    converted_paths = [tmp_path / "p0000000.npro_ct.dat", tmp_path / "p0000000.npro_wl.dat"]
+    convert_mock = MagicMock(return_value=converted_paths)
     monkeypatch.setattr(Base.BaseNetwork, "convert_network_profile", convert_mock)
 
     base_opts = MagicMock()
@@ -381,4 +382,4 @@ def test_process_file_group_network_profile_appends_on_success(
     )
 
     assert ret_val == 0
-    assert Base.processed_other_files == [converted_path]
+    assert Base.processed_other_files == converted_paths
