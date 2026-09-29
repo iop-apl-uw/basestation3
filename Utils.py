@@ -1120,24 +1120,113 @@ def ensure_basename(basename: str) -> str:
 # print(f"Local version: {version}")
 
 
-def check_versions(base_opts: BaseOpts.BaseOptions) -> None:
-    """Checks and reports versions of various libraries"""
+_COMMIT_HASH_RE = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
+COMMIT_ID_LEN = 7
+
+
+def get_commit_id(basestation_directory: pathlib.Path | str) -> tuple[str | None, str | None]:
+    """Reads the checked-out commit of a git checkout without running git.
+
+    Reads `.git/HEAD` and the ref it points at (a loose ref file or
+    `packed-refs`) directly. That takes microseconds instead of a `git`
+    subprocess, and doesn't depend on a `git` binary or git's
+    safe.directory ownership check - GliderEarlyGPS logs this at every
+    glider login, where startup time matters. Handles a detached HEAD and a
+    `.git` file pointing elsewhere (worktrees, submodules).
+
+    Args:
+        basestation_directory: Root of the checkout.
+
+    Returns:
+        `(commit, None)` with the commit abbreviated to `COMMIT_ID_LEN`
+        characters (matching `git describe --always` on an untagged
+        checkout), or `(None, reason)` if it can't be determined - e.g. no
+        `.git` at all when installed from a release tarball, or `.git`
+        unreadable by the running account.
+
+    Raises:
+        Nothing - all errors are reported through `reason`.
+    """
+    dot_git = pathlib.Path(basestation_directory) / ".git"
+    try:
+        if not dot_git.exists():
+            return None, f"no {dot_git} - not a git checkout (e.g. installed from a release tarball)"
+        git_dir = dot_git
+        if dot_git.is_file():
+            # Worktree/submodule: "gitdir: <path>"
+            content = dot_git.read_text().strip()
+            if not content.startswith("gitdir:"):
+                return None, f"{dot_git} is a file but not a 'gitdir:' pointer"
+            git_dir = dot_git.parent / content[len("gitdir:") :].strip()
+        # Refs live in the common dir for worktrees
+        common_dir = git_dir
+        if (git_dir / "commondir").is_file():
+            common_dir = git_dir / (git_dir / "commondir").read_text().strip()
+
+        head = (git_dir / "HEAD").read_text().strip()
+        if head.startswith("ref: "):
+            ref = head[len("ref: ") :]
+            sha = None
+            for ref_file in (git_dir / ref, common_dir / ref):
+                if ref_file.is_file():
+                    sha = ref_file.read_text().strip()
+                    break
+            if sha is None:
+                packed = common_dir / "packed-refs"
+                if packed.is_file():
+                    for line in packed.read_text().splitlines():
+                        fields = line.split()
+                        if len(fields) == 2 and fields[1] == ref:
+                            sha = fields[0]
+                            break
+            if sha is None:
+                return None, f"{ref} not found in {common_dir}"
+        else:
+            sha = head  # detached HEAD
+    except OSError as exc:
+        return None, f"{exc.filename or dot_git}: {exc.strerror or exc}"
+
+    if not _COMMIT_HASH_RE.fullmatch(sha):
+        return None, f"unexpected commit value {sha!r} in {git_dir}"
+    return sha[:COMMIT_ID_LEN], None
+
+
+def log_version_banner(base_opts: BaseOpts.BaseOptions) -> None:
+    """Logs the basestation version and git commit.
+
+    These two lines identify the release that wrote a log, e.g.:
+        Basestation version: 3.0.9; QC version: 1.12
+        Commit-ID: 1917788
+    Log-scanning tools key on this exact format. Cheap enough (no
+    subprocess) for time-sensitive callers such as GliderEarlyGPS. When the
+    commit can't be determined, logs "Commit-ID: unknown" plus the reason
+    at INFO - not WARNING, which would reach pilot notifications on every
+    run of a misconfigured install.
+
+    Args:
+        base_opts: Options; supplies basestation_directory.
+
+    Returns:
+        None.
+
+    Raises:
+        Nothing.
+    """
     log_info(
         "Basestation version: %s; QC version: %s"
         % (Globals.basestation_version, Globals.quality_control_version)
     )
-    # Try for the commit id
-    cmd_line = f"git --git-dir {pathlib.Path(base_opts.basestation_directory) / '.git'} describe --always"
-
-    try:
-        sts, fo = run_cmd_shell(cmd_line)
-        if not sts and fo is not None:
-            log_info(f"Commit-ID: {fo.readline().decode().rstrip()}")
-            fo.close()
-        else:
-            log_info("Commit-ID: unknown")
-    except Exception:
+    commit, reason = get_commit_id(base_opts.basestation_directory)
+    if commit is not None:
+        log_info(f"Commit-ID: {commit}")
+    else:
         log_info("Commit-ID: unknown")
+        log_info(f"Commit-ID could not be determined: {reason}")
+
+
+def check_versions(base_opts: BaseOpts.BaseOptions) -> None:
+    """Checks and reports versions of various libraries"""
+    log_version_banner(base_opts)
 
     # Check python version
     log_info(

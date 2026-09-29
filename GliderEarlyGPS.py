@@ -691,6 +691,9 @@ def main():
         "Started processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
+    # Version + commit only (not Utils.check_versions()) - login-time path,
+    # so no subprocess and nothing that can raise
+    Utils.log_version_banner(base_opts)
 
     # Sensor extensions
     (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
