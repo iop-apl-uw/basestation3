@@ -42,9 +42,15 @@
 # and the failure mode (or silent stale-state bug, for globals with no
 # guard) only shows up under pytest, never in production.
 #
+# BaseLog.BaseLogger is the same kind of singleton: only the first
+# BaseLogger(opts) in a process takes effect, so the first test to run a
+# main() fixes the log level (e.g. WARNING without --verbose, silently
+# dropping every later test's log_info()), logger name and --base_log file
+# for the rest of the session. BaseLogger.reset() undoes that.
+#
 # The actual fix for this repo lives in tests/testutils.py:run_mission() -
-# it resets Sensors/BaseNetCDF/FlightModel/Base immediately before every
-# main_func(cmd_line) call, since that call is the real "simulated fresh
+# it resets Sensors/BaseNetCDF/FlightModel/Base and BaseLog immediately
+# before every main_func(cmd_line) call, since that call is the real "simulated fresh
 # process" boundary tests use, and a single test can invoke it (or a
 # main()-shaped function directly) more than once. See
 # tests/test_FlightModelCLI.py for an example of a direct (non-run_mission)

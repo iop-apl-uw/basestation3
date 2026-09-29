@@ -100,6 +100,9 @@ class BaseLogger:
     # List of all logs calls that requested an "exc" or "stack"
     traceback_stream: StringIO = StringIO()
 
+    # Every handler setHandler() has added (to log and py.warnings), so reset() can undo them
+    _handlers: list[logging.Handler] = []
+
     def __init__(self, opts: BaseOptions, include_time: bool = False) -> None:
         """
         Initializes a logging.Logger object, according to options (opts).
@@ -208,6 +211,57 @@ class BaseLogger:
         logging.captureWarnings(True)
         warnings_logger = logging.getLogger("py.warnings")
         warnings_logger.addHandler(handle)
+        BaseLogger._handlers.append(handle)
+
+    @classmethod
+    def reset(cls) -> None:
+        """Returns BaseLog to its just-imported state, as if in a fresh process.
+
+        BaseLogger is a process-wide singleton: only the first BaseLogger(opts)
+        takes effect, fixing the log level, logger name and --base_log file for
+        the life of the process. Production runs one job per process, so it
+        never needs this. Tests that run several main()s in one pytest process
+        call it (via tests/testutils.py:run_mission()) so each run gets its own
+        logging setup and alert/stream state instead of the first test's.
+
+        Removes and closes every handler setHandler() added (from the logger
+        and from py.warnings), clears alerts, the WARNING+/traceback capture
+        streams and the log_*() max-count counters, and marks the logger
+        uninitialized so the next BaseLogger(opts) configures it afresh.
+
+        Returns:
+            None.
+
+        Raises:
+            Nothing.
+        """
+        warnings_logger = logging.getLogger("py.warnings")
+        for handle in cls._handlers:
+            if cls.log is not None:
+                cls.log.removeHandler(handle)
+            warnings_logger.removeHandler(handle)
+            handle.close()
+        cls._handlers = []
+
+        cls.is_initialized = False
+        cls.self = None
+        cls.opts = None
+        cls.log = None
+        cls.stringHandler = None
+        cls.stringBuffer = None
+        cls.log_level = logging.WARNING
+        cls.alerts_d = {}
+        cls.conversion_alerts_d = {}
+        cls.warn_error_stream = StringIO()
+        cls.traceback_stream = StringIO()
+
+        for counts in (
+            log_error_max_count,
+            log_warning_max_count,
+            log_info_max_count,
+            log_debug_max_count,
+        ):
+            counts.clear()
 
     def getLogger(self) -> logging.Logger:
         """getLogger: access function to log (static member)"""
@@ -238,6 +292,12 @@ class BaseLogger:
         else:
             assert self.log is not None
             self.log.removeHandler(self.stringHandler)
+            # setHandler() also attached it to py.warnings - detach it there too
+            logging.getLogger("py.warnings").removeHandler(self.stringHandler)
+            # Stop tracking it too, so repeated captures (FlightModel restarts
+            # one per dive) don't accumulate handlers for reset()
+            if self.stringHandler in BaseLogger._handlers:
+                BaseLogger._handlers.remove(self.stringHandler)
             self.stringHandler.flush()
             self.stringHandler = None
 

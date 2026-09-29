@@ -38,6 +38,7 @@ from collections.abc import Callable
 import pytest
 
 import Base
+import BaseLog
 import BaseNetCDF
 import FlightModel
 import Sensors
@@ -97,11 +98,14 @@ def run_mission(
     # reset module-level singleton state (e.g. Sensors.sensor_extensions)
     # immediately before each call, since a single test may call run_mission
     # more than once (or call a main()-shaped function directly in addition
-    # to this) to simulate more than one pipeline stage.
+    # to this) to simulate more than one pipeline stage. That includes
+    # logging: without BaseLogger.reset(), the first main() of the session
+    # fixes the log level/handlers for every later one.
     Sensors.set_globals()
     BaseNetCDF.set_globals()
     FlightModel.set_globals()
     Base.set_globals()
+    BaseLog.BaseLogger.reset()
     result = main_func(cmd_line)
     assert result == 0
     bad_errors = ""
