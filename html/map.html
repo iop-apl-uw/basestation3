@@ -1299,7 +1299,7 @@ imestamp
                     if (a.type == 'fixed') {
                         console.log('adding fixed ' + a.asset);
                         html = [ a.asset, formatPos(dd2ddmm(a.lat)) + "," + formatPos(dd2ddmm(a.lon)), 
-                                 `<span onclick="activateAsset('${a.id}');">activate</span>` ].join('<br/>');
+                                 `<span onclick="activateAsset('${a.asset}');">activate</span>` ].join('<br/>');
                         try {
                             mk = new L.shapeMarker([a.lat, a.lon],
                                                {
@@ -1522,6 +1522,7 @@ imestamp
                                             `<span onclick="activateAsset('${aa.asset}');">activate</span>` ].join('<br/>');
                                     if ('sog' in d && 'cog' in d) {
                                         html = html + '<br/>' + d.sog + " @ " + d.cog;
+                                        document.getElementById('info').style.display = 'block';
                                     }
                                     mk = new L.shapeMarker([d.lat, d.lon],
                                                        {
@@ -1552,6 +1553,9 @@ imestamp
                                                             html = [ aa.asset, formatPos(dd2ddmm(d.lat)) + "," + formatPos(dd2ddmm(d.lon))].join('<br/>');
                                                             if ('sog' in d && 'cog' in d) { 
                                                                 html = html + '<br/>' + d.sog + " @ " + d.cog;
+                                                            }
+                                                            if ('heading' in d) {
+                                                                mk.setRotation(d.heading);
                                                             }
                                                             mk.setPopupContent(html);
                                                             mk.setLatLng([d.lat, d.lon]);
