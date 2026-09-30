@@ -552,7 +552,9 @@ def mission_energy(
                 {
                     "name": "Fuel Gauge",
                     "x": fg_df["dive"],
-                    "y": (fg_df["fg_kJ_used_24V"] if fg_df["fg_kJ_used_24V"] is not None else 0) + fg_df["fg_kJ_used_10V"],
+                    # A Series is never None - an all-NULL 24V column (single pack) comes back
+                    # as object dtype of None, so coerce to NaN then 0 to avoid a NaN sum
+                    "y": pd.to_numeric(fg_df["fg_kJ_used_24V"], errors="coerce").fillna(0) + fg_df["fg_kJ_used_10V"],
                     "yaxis": "y1",
                     "mode": "lines",
                     "line": {"width": 1, "color": "DarkBlue"},
@@ -564,7 +566,7 @@ def mission_energy(
                 {
                     "name": "Modeled",
                     "x": batt_df["dive"],
-                    "y": batt_df["batt_kJ_used_10V"] + (batt_df["batt_kJ_used_24V"] if batt_df["batt_kJ_used_24V"] is not None else 0),
+                    "y": batt_df["batt_kJ_used_10V"] + pd.to_numeric(batt_df["batt_kJ_used_24V"], errors="coerce").fillna(0),
                     "yaxis": "y1",
                     "mode": "lines",
                     "line": {"width": 1, "color": "DarkGrey"},
