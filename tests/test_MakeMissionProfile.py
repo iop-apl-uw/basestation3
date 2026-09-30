@@ -36,9 +36,9 @@ import xarray as xr
 import MakeMissionProfile
 
 
-def test_mission_config(caplog):
+def test_mission_config(tmp_path, caplog):
     data_dir = pathlib.Path("testdata/sg249_NANOOS_Apr24")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
     allowed_msgs = [""]
     cmd_line = [
         "--verbose",

@@ -16,17 +16,29 @@ rufflintpath:
 typecheck:
 	uv run ty check --output-format github 2>/dev/null
 
+# Tests run in parallel across all cores (pytest-xdist). --dist worksteal lets
+# idle workers take queued tests from busy ones, so the few very slow tests
+# (test_FlightModelCLI.py's ~70-110s each) don't all end up queued behind each
+# other on one worker, as they did with --dist load. Tests must build their
+# mission_dir under tmp_path (see .claude/CLAUDE.md) for this to be safe.
+PYTEST_PARALLEL = -n auto --dist worksteal
+
 test:
+	uv run pytest -rsx $(PYTEST_PARALLEL) tests/
+
+# Serial run - for debugging ordering/state issues, or comparing with parallel
+test-serial:
 	uv run pytest -rsx tests/
 
+# --pdb needs a single process
 testpdb:
 	uv run pytest --pdb -rsx tests/
 
 testcov:
-	uv run pytest -rsx --cov --cov-report term-missing tests/
+	uv run pytest -rsx $(PYTEST_PARALLEL) --cov --cov-report term-missing tests/
 
 testhtml:
-	uv run pytest -rsx --cov --cov-report html tests/
+	uv run pytest -rsx $(PYTEST_PARALLEL) --cov --cov-report html tests/
 
 # Slow, Docker-based validation of the Dockerfile and install/ scripts.
 # Not part of the normal check-in/CI pipeline - run manually.

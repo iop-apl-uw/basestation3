@@ -107,4 +107,5 @@ jobs:
     #  run: sleep 3600 # Keeps the container alive for 1 hour
 
     - name: Test with pytest
-      run: uv run pytest -rsx --cov --cov-report term-missing tests
+      # Parallel across the runner's cores (pytest-xdist), same as `make testcov`
+      run: uv run pytest -rsx -n auto --dist worksteal --cov --cov-report term-missing tests

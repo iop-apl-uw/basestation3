@@ -114,13 +114,13 @@ def _assert_leg_trend(depth: np.ndarray, increasing: bool) -> None:
 
 
 @pytest.mark.parametrize("data_dir_name,dive_base,allowed_msgs", test_cases)
-def test_sbe43_dive_climb_alignment(caplog, data_dir_name, dive_base, allowed_msgs):
+def test_sbe43_dive_climb_alignment(tmp_path, caplog, data_dir_name, dive_base, allowed_msgs):
     """Builds a mission to netCDF via the real pipeline and checks that
     plot_sbe43()'s dive/climb traces have matching, correctly-aligned x/y data
     for each SBE43 sensor hardware path.
     """
     data_dir = pathlib.Path("testdata").joinpath(data_dir_name)
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     cmd_line = [
         "--verbose",
@@ -167,7 +167,7 @@ def test_sbe43_dive_climb_alignment(caplog, data_dir_name, dive_base, allowed_ms
             _assert_leg_trend(np.asarray(trace.y), increasing=deepening)
 
 
-def test_sbe43_zero_frequency_marked_unsampled(caplog):
+def test_sbe43_zero_frequency_marked_unsampled(tmp_path, caplog):
     """Dive 4 of the gpctd fixture has a truncated climb-phase telemetry
     upload that leaves raw gpctd_oxygen frequency at exactly 0 Hz for most of
     the dive. Confirms Sensors/sbe43_ext.py now flags those samples
@@ -175,7 +175,7 @@ def test_sbe43_zero_frequency_marked_unsampled(caplog):
     oxygen values).
     """
     data_dir = pathlib.Path("testdata/sg525_RMH0726_sbe43_gpctd")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     cmd_line = [
         "--verbose",

@@ -37,10 +37,10 @@ import FlightModelCLI
 
 
 @pytest.mark.parametrize("fm_plot_engine", ["matplotlib", "plotly"])
-def test_fmcli(caplog, fm_plot_engine):
+def test_fmcli(tmp_path, caplog, fm_plot_engine):
     """Tests that the mission with completes a FMS run"""
     data_dir = pathlib.Path("testdata/sg561_provolo_lofoten_may2016_dive2on")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     allowed_msgs = [
     ]
@@ -81,11 +81,11 @@ def test_fmcli(caplog, fm_plot_engine):
 
 
 @pytest.mark.parametrize("fm_plot_engine", ["matplotlib", "plotly"])
-def test_fmcli_replot_and_dac_dives(caplog, fm_plot_engine):
+def test_fmcli_replot_and_dac_dives(tmp_path, caplog, fm_plot_engine):
     """Tests --replot (Phase 2) and dive_specs-driven DAC plot generation
     (Phase 3) against an already-processed flight/ directory"""
     data_dir = pathlib.Path("testdata/sg561_provolo_lofoten_may2016_dive2on")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     cmd_line = [
         "--verbose",

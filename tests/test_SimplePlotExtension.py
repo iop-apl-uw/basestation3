@@ -36,14 +36,15 @@ import Base
 import SimplePlotExtension
 
 data_dir = pathlib.Path("testdata/sg171_EKAMSAT_Apr24_SimplePlotExtension")
-mission_dir = data_dir.joinpath("mission_dir")
-
-test_cases = (["--mission_dir", str(mission_dir)], [str(mission_dir / "p1710100.nc")] )
+# {mission_dir} is filled in per test (a tmp_path, so parallel runs don't collide)
+test_cases = (["--mission_dir", "{mission_dir}"], ["{mission_dir}/p1710100.nc"])
 
 @pytest.mark.parametrize(
     "additional_args", test_cases,
 )
-def test_simpleplotextension(caplog, additional_args):
+def test_simpleplotextension(tmp_path, caplog, additional_args):
+    mission_dir = tmp_path / "mission_dir"
+    additional_args = [arg.replace("{mission_dir}", str(mission_dir)) for arg in additional_args]
     allowed_msgs = [""]
     cmd_line = [
         "--verbose",
@@ -64,9 +65,9 @@ def test_simpleplotextension(caplog, additional_args):
         assert out_file.exists()
 
 
-def test_simpleplotextensionbase(caplog):
+def test_simpleplotextensionbase(tmp_path, caplog):
     data_dir = pathlib.Path("testdata/sg178_Guam_Oct19_SimplePlotExtension/")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
     allowed_msgs = [""]
 
     testutils.run_mission(

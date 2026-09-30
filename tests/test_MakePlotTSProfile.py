@@ -68,9 +68,9 @@ test_cases: list[tuple[str, list[str]]] = [
     "filename,expected_files",
     test_cases,
 )
-def test_makeplottsprofile(caplog, filename, expected_files):
+def test_makeplottsprofile(tmp_path, caplog, filename, expected_files):
     data_dir = pathlib.Path("testdata/sg256_AMOS_Aug24_TSPlot")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
     allowed_msgs = [""]
     filename = filename if filename else ""
 

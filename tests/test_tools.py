@@ -78,9 +78,9 @@ test_cases = (
     "entry_point,selftest,required_msgs,allowed_msgs",
     test_cases,
 )
-def test_selftest(caplog, capsys, entry_point, selftest, required_msgs, allowed_msgs):
+def test_selftest(tmp_path, caplog, capsys, entry_point, selftest, required_msgs, allowed_msgs):
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_tools")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
     st = mission_dir / selftest
 
     testutils.run_mission(
@@ -95,9 +95,9 @@ def test_selftest(caplog, capsys, entry_point, selftest, required_msgs, allowed_
     )
 
 
-def test_plot_bathymap(caplog):
+def test_plot_bathymap(tmp_path, caplog):
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_tools")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     bathy_maps = ""
     for ii in range(1, 4):

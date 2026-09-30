@@ -35,10 +35,10 @@ import testutils
 import MoveData
 
 
-def test_movedata(caplog):
+def test_movedata(tmp_path, caplog):
     """Tests MoveData"""
     data_dir = pathlib.Path("testdata") / "sg272_NANOOS_Feb26_MoveData"
-    mission_dir = data_dir / "mission_dir"
+    mission_dir = tmp_path / "mission_dir"
     target_dir = mission_dir / "tmp"
 
     allowed_msgs = [""]

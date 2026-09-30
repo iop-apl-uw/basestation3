@@ -83,9 +83,9 @@ test_cases = (
     "entry_point,extra_args,required_msgs,allowed_msgs",
     test_cases,
 )
-def test_lowlevelcli(caplog, entry_point, extra_args, required_msgs, allowed_msgs):
+def test_lowlevelcli(tmp_path, caplog, entry_point, extra_args, required_msgs, allowed_msgs):
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_lowlevelcli")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
     mission_dir_opt = f"--mission_dir {mission_dir}"
 
     testutils.run_mission(
@@ -106,9 +106,9 @@ strip_sizes = (0, 2048, 4096)
     "strip_size",
     strip_sizes,
 )
-def test_strip1a(caplog, strip_size):
+def test_strip1a(tmp_path, caplog, strip_size):
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_lowlevelcli")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
     inp_file = mission_dir / "sc0002ag.x"
     out_file = mission_dir / "sc0002ag.x.1a"
     strip_size_str = f"{strip_size}" if strip_size else ""
@@ -128,9 +128,9 @@ def test_strip1a(caplog, strip_size):
         assert out_file.stat().st_size == strip_size
 
 
-def test_pagers_yml(caplog):
+def test_pagers_yml(tmp_path, caplog):
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_lowlevelcli")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
     group_etc = mission_dir / "etc"
 
     testutils.run_mission(

@@ -133,16 +133,18 @@ for test_data_dir, glider, additional_args, allowed_msgs in test_cases:
     test_inputs.append(
         (
             test_data_dir,
-            f"--verbose --local --plot_types none --no-notify_vis {additional_args} --mission_dir {test_data_dir}/mission_dir --config {test_data_dir}/mission_dir/{glider}.conf".split(),
+            # {mission_dir} is filled in per test (a tmp_path, so parallel runs don't collide)
+            f"--verbose --local --plot_types none --no-notify_vis {additional_args} --mission_dir {{mission_dir}} --config {{mission_dir}}/{glider}.conf".split(),
             allowed_msgs,
         )
     )
 
 
 @pytest.mark.parametrize("test_data_dir,cmd_line,allowed_msgs", test_inputs)
-def test_conversion(caplog, test_data_dir, cmd_line, allowed_msgs):
+def test_conversion(tmp_path, caplog, test_data_dir, cmd_line, allowed_msgs):
     data_dir = pathlib.Path(test_data_dir)
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
+    cmd_line = [arg.replace("{mission_dir}", str(mission_dir)) for arg in cmd_line]
 
     testutils.run_mission(
         data_dir, mission_dir, Base.main, cmd_line, caplog, allowed_msgs
@@ -160,9 +162,9 @@ reprocess_test_cases = (
     "additional_options,required_msgs,allowed_msgs",
     reprocess_test_cases,
 )
-def test_reprocess(caplog, additional_options, required_msgs, allowed_msgs):
+def test_reprocess(tmp_path, caplog, additional_options, required_msgs, allowed_msgs):
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_base")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     def update_timestamps(mission_dir: pathlib.Path) -> None:
         for p in mission_dir.iterdir():
@@ -183,9 +185,9 @@ def test_reprocess(caplog, additional_options, required_msgs, allowed_msgs):
     )
 
 
-def test_skip_files(caplog):
+def test_skip_files(tmp_path, caplog):
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_magcal")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     def create_skip_file(mission_dir: pathlib.Path) -> None:
         skip_file_name = mission_dir / "files_to_skip.txt"
@@ -208,9 +210,9 @@ def test_skip_files(caplog):
     )
 
 
-def test_eng_precision(caplog):
+def test_eng_precision(tmp_path, caplog):
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_base")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     testutils.run_mission(
         data_dir,

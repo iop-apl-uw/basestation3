@@ -80,9 +80,9 @@ def test_parse_mag_cal_returns_callable_pqrc() -> None:
     "magcal_filename,required_msgs,allowed_msgs",
     test_cases,
 )
-def test_simpleplotextensionbase(caplog, magcal_filename, required_msgs, allowed_msgs):
+def test_simpleplotextensionbase(tmp_path, caplog, magcal_filename, required_msgs, allowed_msgs):
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_magcal")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
     magcal_filename = mission_dir / magcal_filename
 
     testutils.run_mission(
@@ -100,9 +100,9 @@ def test_simpleplotextensionbase(caplog, magcal_filename, required_msgs, allowed
     "magcal_filename,required_msgs,allowed_msgs",
     test_cases,
 )
-def test_simpleplotextensionMDP(caplog, magcal_filename, required_msgs, allowed_msgs):
+def test_simpleplotextensionMDP(tmp_path, caplog, magcal_filename, required_msgs, allowed_msgs):
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_magcal_ncf")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
     magcal_filename = mission_dir / magcal_filename
 
     testutils.run_mission(
@@ -171,7 +171,7 @@ def test_build_fit_line_text_negative_values_not_swallowed() -> None:
     assert fit_line == 'hard0="-1.5 -20.2 -100.0"'
 
 
-def test_magcal_handles_nan_magnetometer_sample(caplog: pytest.LogCaptureFixture) -> None:
+def test_magcal_handles_nan_magnetometer_sample(tmp_path, caplog: pytest.LogCaptureFixture) -> None:
     """A single NaN sample in eng_mag_x must not poison the whole hard-iron
     fit into an all-NaN result - regression test for a bug (sg196 dive 13)
     where a NaN anywhere in eng_mag_x/y/z propagated, via an unguarded
@@ -181,7 +181,7 @@ def test_magcal_handles_nan_magnetometer_sample(caplog: pytest.LogCaptureFixture
     """
     baseplot_options, data_dir_name, nc_filename = _MAGCAL_DIVE
     data_dir = pathlib.Path("testdata").joinpath(data_dir_name)
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     def inject_nan(mission_dir: pathlib.Path) -> None:
         nc_file = Utils.open_netcdf_file(str(mission_dir / nc_filename), mode="r+")
@@ -214,7 +214,7 @@ def test_magcal_handles_nan_magnetometer_sample(caplog: pytest.LogCaptureFixture
     assert np.isfinite(hard).all()
 
 
-def test_copy_button_copies_hard0_soft0(caplog: pytest.LogCaptureFixture) -> None:
+def test_copy_button_copies_hard0_soft0(tmp_path, caplog: pytest.LogCaptureFixture) -> None:
     """The magcal plot's "Copy calibration" button copies the exact
     hard0=/soft0= text shown in the title to the clipboard, as plain
     (non-HTML) text.
@@ -234,7 +234,7 @@ def test_copy_button_copies_hard0_soft0(caplog: pytest.LogCaptureFixture) -> Non
     """
     baseplot_options, data_dir_name, nc_filename = _MAGCAL_DIVE
     data_dir = pathlib.Path("testdata").joinpath(data_dir_name)
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     cmd_line = ["--verbose", "--mission_dir", str(mission_dir)]
     cmd_line += baseplot_options.split(" ")
@@ -359,12 +359,12 @@ def test_magcal_worker_phase_split_produces_different_fits() -> None:
     assert "(climb)" in fig_climb.layout.title.text
 
 
-def test_plot_mag_dive_climb_split(caplog: pytest.LogCaptureFixture) -> None:
+def test_plot_mag_dive_climb_split(tmp_path, caplog: pytest.LogCaptureFixture) -> None:
     """--plot_magcal_dive_climb makes DiveMagCal emit dv####_magcal_dive/
     _climb instead of the combined dv####_magcal."""
     baseplot_options, data_dir_name, _nc_filename = _MAGCAL_DIVE
     data_dir = pathlib.Path("testdata").joinpath(data_dir_name)
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     cmd_line = ["--verbose", "--mission_dir", str(mission_dir)]
     cmd_line += baseplot_options.split(" ")

@@ -660,9 +660,9 @@ def test_make_netcdf_network_file_from_perdive(tmp_path):
         ds.close()
 
 
-def test_ncf_subparser_end_to_end(caplog):
+def test_ncf_subparser_end_to_end(tmp_path, caplog):
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_lowlevelcli")
-    mission_dir = data_dir / "mission_dir"
+    mission_dir = tmp_path / "mission_dir"
 
     testutils.run_mission(
         data_dir,

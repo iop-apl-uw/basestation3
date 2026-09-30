@@ -74,9 +74,9 @@ def _skip_adcp_postnetcdf_extension(monkeypatch):
     )
 
 
-def test_reprocess_default_unchanged(caplog):
+def test_reprocess_default_unchanged(tmp_path, caplog):
     """With neither new flag set, no pressure_raw is added (regression guard)."""
-    mission_dir = DATA_DIR / "mission_dir"
+    mission_dir = tmp_path / "mission_dir"
     testutils.run_mission(
         DATA_DIR,
         mission_dir,
@@ -90,9 +90,9 @@ def test_reprocess_default_unchanged(caplog):
         assert "pressure_raw" not in ds.variables
 
 
-def test_reprocess_smoothing_enabled(caplog):
+def test_reprocess_smoothing_enabled(tmp_path, caplog):
     """With smooth_truck_pressure=1, pressure_raw is added and pressure is smoother."""
-    mission_dir = DATA_DIR / "mission_dir"
+    mission_dir = tmp_path / "mission_dir"
 
     def enable_smoothing(mission_dir: pathlib.Path) -> None:
         _append_calib_const(mission_dir, "smooth_truck_pressure = 1;")
@@ -117,9 +117,9 @@ def test_reprocess_smoothing_enabled(caplog):
         assert np.max(np.abs(press - press_raw)) < 5.0  # dbar
 
 
-def test_reprocess_gold_standard_slope_correction(caplog):
+def test_reprocess_gold_standard_slope_correction(tmp_path, caplog):
     """With depth_slope_correction_gold_standard set, pressure tracks ad2cp_pressure better."""
-    mission_dir = DATA_DIR / "mission_dir"
+    mission_dir = tmp_path / "mission_dir"
 
     def enable_gold_standard(mission_dir: pathlib.Path) -> None:
         _append_calib_const(

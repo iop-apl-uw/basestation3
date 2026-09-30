@@ -39,7 +39,7 @@ import MakeMissionTimeSeries
 import Reprocess
 
 
-def test_reprocess(caplog):
+def test_reprocess(tmp_path, caplog):
     extension_filename = pathlib.Path.cwd().joinpath("etc/.extensions")
     if not extension_filename.exists():
         pytest.skip(reason=f"{extension_filename} does not exist")
@@ -56,7 +56,7 @@ def test_reprocess(caplog):
             pytest.skip(reason=f"BaseADCP.py not installed in {extension_filename}")
 
     data_dir = pathlib.Path("testdata/sg171_EKAMSAT_Apr24")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     allowed_msgs = [""]
     cmd_line = [
@@ -91,7 +91,7 @@ def test_reprocess(caplog):
         assert dsi.variables[v].dtype == t
 
 
-def test_whole_mission(caplog):
+def test_whole_mission(tmp_path, caplog):
     extension_filename = pathlib.Path.cwd().joinpath("etc/.extensions")
     if not extension_filename.exists():
         pytest.skip(reason=f"{extension_filename} does not exist")
@@ -108,7 +108,7 @@ def test_whole_mission(caplog):
             pytest.skip(reason=f"BaseADCP.py not installed in {extension_filename}")
 
     data_dir = pathlib.Path("testdata/sg171_EKAMSAT_Apr24_with_adcp")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     allowed_msgs = [""]
     cmd_line = [

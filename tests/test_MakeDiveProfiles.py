@@ -59,9 +59,9 @@ test_cases = (
     "additional_options,required_msgs,allowed_msgs",
     test_cases,
 )
-def test_reprocess(caplog, additional_options, required_msgs, allowed_msgs):
+def test_reprocess(tmp_path, caplog, additional_options, required_msgs, allowed_msgs):
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_makediveprofiles")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     def update_ncdf_timestamp(mission_dir: pathlib.Path) -> None:
         time.sleep(1)
@@ -130,11 +130,11 @@ def _make_legacy_int_pressure_nc(nc_path: pathlib.Path, value: str) -> None:
 
 
 @pytest.mark.parametrize("legacy_nc", [False, True])
-def test_reload_legacy_multi_value_log_string(caplog, legacy_nc):
+def test_reload_legacy_multi_value_log_string(tmp_path, caplog, legacy_nc):
     """Pre-Apr 2026 netCDF files hold $INTERNAL_PRESSURE,psia,latch as one string -
     reloading must split it (as LogFile does) rather than fail and drop it"""
     data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_makediveprofiles")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     def make_legacy(mission_dir: pathlib.Path) -> None:
         if legacy_nc:

@@ -68,7 +68,7 @@ DEPLOYMENT_CONFIG_UNDEFINED_VAR = (
 )
 
 
-def _build_mission(caplog) -> pathlib.Path:
+def _build_mission(caplog, tmp_path: pathlib.Path) -> pathlib.Path:
     """Runs the real raw-to-netCDF pipeline for the sg160_sbe43_scicon
     fixture and returns the resulting mission_dir.
 
@@ -79,7 +79,7 @@ def _build_mission(caplog) -> pathlib.Path:
         The mission_dir the per-dive netCDF was built into.
     """
     data_dir = pathlib.Path("testdata").joinpath(DATA_DIR_NAME)
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
     testutils.run_mission(
         data_dir,
         mission_dir,
@@ -137,12 +137,12 @@ def _run_gliderdac(mission_dir: pathlib.Path, gliderdac_dir: pathlib.Path, bin_w
     return xr.open_dataset(out_files[0])
 
 
-def test_gliderdac_qc_interpolated(caplog):
+def test_gliderdac_qc_interpolated(tmp_path, caplog):
     """Checks that the timeseries (interpolated) GliderDAC output marks
     depth/lat/lon points that were interpolated onto sbe43's own sample
     time as QC_INTERPOLATED, while CTD-timebase points stay QC_NO_CHANGE.
     """
-    mission_dir = _build_mission(caplog)
+    mission_dir = _build_mission(caplog, tmp_path)
 
     ds = _run_gliderdac(mission_dir, mission_dir / "gliderdac_interp", bin_width=0.0)
     try:
@@ -169,12 +169,12 @@ def test_gliderdac_qc_interpolated(caplog):
         ds.close()
 
 
-def test_gliderdac_binned_excludes_interpolated_depth_qc(caplog):
+def test_gliderdac_binned_excludes_interpolated_depth_qc(tmp_path, caplog):
     """Checks that the binned GliderDAC output never marks depth_qc
     QC_INTERPOLATED - bin centers are a fixed regular grid, not
     interpolated estimates, per GliderDAC.py's binned code path.
     """
-    mission_dir = _build_mission(caplog)
+    mission_dir = _build_mission(caplog, tmp_path)
 
     ds = _run_gliderdac(mission_dir, mission_dir / "gliderdac_binned", bin_width=1.0)
     try:
@@ -184,14 +184,14 @@ def test_gliderdac_binned_excludes_interpolated_depth_qc(caplog):
         ds.close()
 
 
-def test_gliderdac_plot_dives(caplog):
+def test_gliderdac_plot_dives(tmp_path, caplog):
     """Checks that --gliderdac_plot_dives generates the expected quick-check
     plots (temperature+salinity combined, plus every other science
     timeseries variable in this fixture's deployment config - here just
     oxygen - and the always-computed density) into mission_dir/plots/,
     following the dv%04d_gliderdac_<tag> naming convention.
     """
-    mission_dir = _build_mission(caplog)
+    mission_dir = _build_mission(caplog, tmp_path)
 
     result = GliderDAC.main(
         cmdline_args=[
@@ -229,7 +229,7 @@ def test_gliderdac_plot_dives(caplog):
         assert not (plot_dir / f"dv0001_gliderdac_{excluded}.div").exists()
 
 
-def test_gliderdac_undefined_template_var_skips_gracefully(caplog):
+def test_gliderdac_undefined_template_var_skips_gracefully(tmp_path, caplog):
     """Checks that a timeseries_vars mapping naming a target variable not
     defined in any loaded template (e.g. a deployment config typo/mismatch)
     logs a clear error and is skipped, rather than crashing GliderDAC.main
@@ -237,7 +237,7 @@ def test_gliderdac_undefined_template_var_skips_gracefully(caplog):
     sbe43_dissolved_oxygen -> "fluorescence" (undefined) crash a community
     user hit.
     """
-    mission_dir = _build_mission(caplog)
+    mission_dir = _build_mission(caplog, tmp_path)
 
     result = GliderDAC.main(
         cmdline_args=[

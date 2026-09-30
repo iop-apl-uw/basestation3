@@ -47,10 +47,10 @@ test_dive_inputs = (
 @pytest.mark.parametrize(
     "baseplot_options,data_dir,expected_output_files", test_dive_inputs
 )
-def test_dive_plot(caplog, baseplot_options, data_dir, expected_output_files):
+def test_dive_plot(tmp_path, caplog, baseplot_options, data_dir, expected_output_files):
     """Tests Plotting routines"""
     data_dir = pathlib.Path("testdata").joinpath(data_dir)
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     allowed_msgs = [""]
     cmd_line = [
@@ -238,6 +238,7 @@ test_dive_plot_coverage_inputs = (
     test_dive_plot_coverage_inputs,
 )
 def test_dive_plot_coverage(
+    tmp_path,
     caplog, plot_name, data_dir, dive_nc, extra_args, instrument_id, use_base_pipeline
 ):
     """Every registered dive plot produces at least one .webp thumbnail without crashing."""
@@ -260,7 +261,7 @@ def test_dive_plot_coverage(
         pytest.skip(reason="plot_compare_cp needs Sensors/ad2cpMAT, not present")
 
     data_dir_path = pathlib.Path("testdata").joinpath(data_dir)
-    mission_dir = data_dir_path.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     allowed_msgs = [""]
     cmd_line = [
@@ -296,7 +297,7 @@ def test_dive_plot_coverage(
     assert webp_files, f"{plot_name} produced no .webp thumbnail"
 
 
-def test_plot_wkb_schedule_partial_dive_does_not_crash(caplog):
+def test_plot_wkb_schedule_partial_dive_does_not_crash(tmp_path, caplog):
     """plot_wkb_schedule skips gracefully, rather than crashing, when the trailing window includes a partial dive.
 
     Regression test for a production incident (SG283_WHIRLS_CRUISE dive
@@ -315,7 +316,7 @@ def test_plot_wkb_schedule_partial_dive_does_not_crash(caplog):
     reproducing the exact file shape from the incident.
     """
     data_dir = pathlib.Path("testdata").joinpath("sg283_WHIRLS_CRUISE_partial_wkb")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     allowed_msgs = ["Skipping plot_wkb_schedule for dive 362"]
     cmd_line = [
@@ -393,10 +394,10 @@ test_mission_plot_coverage_inputs = (
 @pytest.mark.parametrize(
     "plot_name,data_dir,dive_nc", test_mission_plot_coverage_inputs
 )
-def test_mission_plot_coverage(caplog, plot_name, data_dir, dive_nc):
+def test_mission_plot_coverage(tmp_path, caplog, plot_name, data_dir, dive_nc):
     """Every registered mission plot produces at least one .webp thumbnail without crashing."""
     data_dir_path = pathlib.Path("testdata").joinpath(data_dir)
-    mission_dir = data_dir_path.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     allowed_msgs = [""]
     cmd_line = [

@@ -37,9 +37,9 @@ import Base
 import CTDAdjustment
 
 
-def test_base(caplog):
+def test_base(tmp_path, caplog):
     data_dir = pathlib.Path("testdata/sg236_NANOOS_May23")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
     allowed_msgs = [""]
     cmd_line = [
         "--verbose",
@@ -80,9 +80,9 @@ def test_base(caplog):
         assert dsi.variables[v].dtype == t
 
 
-def test_ctdadjustment(caplog):
+def test_ctdadjustment(tmp_path, caplog):
     data_dir = pathlib.Path("testdata/sg236_NANOOS_May23_netcdfs")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
     allowed_msgs = [""]
     cmd_line = [
         "--verbose",

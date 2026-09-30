@@ -41,10 +41,10 @@ test_dive_inputs = (
 
 
 @pytest.mark.parametrize("reprocess_dive_extensions,ncf_exists", test_dive_inputs)
-def test_dive_extension(caplog, reprocess_dive_extensions, ncf_exists):
+def test_dive_extension(tmp_path, caplog, reprocess_dive_extensions, ncf_exists):
     """Tests that the dive extension is being picked up and run and ignored under switch"""
     data_dir = pathlib.Path("testdata/sg171_EKAMSAT_Apr24")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     allowed_msgs = [""]
     cmd_line = [
@@ -83,10 +83,10 @@ test_mission_inputs = (
 @pytest.mark.parametrize(
     "reprocess_mission_extensions,report_divencf", test_mission_inputs
 )
-def test_mission_extension(caplog, reprocess_mission_extensions, report_divencf):
+def test_mission_extension(tmp_path, caplog, reprocess_mission_extensions, report_divencf):
     """Tests that the mission extension is being picked up and run and ignored under switch"""
     data_dir = pathlib.Path("testdata/sg171_EKAMSAT_Apr24")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     allowed_msgs = [""]
     cmd_line = [
@@ -119,7 +119,7 @@ def test_mission_extension(caplog, reprocess_mission_extensions, report_divencf)
             for x in (
                 "SimpleExtension",
                 "Created",
-                "testdata/sg171_EKAMSAT_Apr24/mission_dir/p1710100.nc",
+                str(mission_dir / "p1710100.nc"),
             )
         ):
             f_found_msg = True
@@ -128,10 +128,10 @@ def test_mission_extension(caplog, reprocess_mission_extensions, report_divencf)
     assert f_found_msg == report_divencf
 
 
-def test_reprocess_simw(caplog):
+def test_reprocess_simw(tmp_path, caplog):
     """Tests that the mission with a simw dive issues and error"""
     data_dir = pathlib.Path("testdata/sg561_provolo_lofoten_may2016_simw")
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
 
     allowed_msgs = [
         "SBECT temperature coefficient",

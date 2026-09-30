@@ -107,7 +107,8 @@ for (
         (
             main_func,
             test_data_dir,
-            f"--verbose {flags} --mission_dir {test_data_dir}/mission_dir".split(),
+            # {mission_dir} is filled in per test (a tmp_path, so parallel runs don't collide)
+            f"--verbose {flags} --mission_dir {{mission_dir}}".split(),
             allowed_msgs,
             required_msgs,
         )
@@ -118,10 +119,12 @@ for (
     "main_func,test_data_dir,cmd_line,allowed_msgs,required_msgs", test_inputs
 )
 def test_BaseHooks(
+    tmp_path,
     caplog, main_func, test_data_dir, cmd_line, allowed_msgs, required_msgs
 ):
     data_dir = pathlib.Path(test_data_dir)
-    mission_dir = data_dir.joinpath("mission_dir")
+    mission_dir = tmp_path / "mission_dir"
+    cmd_line = [arg.replace("{mission_dir}", str(mission_dir)) for arg in cmd_line]
 
     testutils.run_mission(
         data_dir,

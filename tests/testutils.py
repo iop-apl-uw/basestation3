@@ -43,8 +43,11 @@ import BaseNetCDF
 import FlightModel
 import Sensors
 
-# Each test in a "mission_dir" under the testdata/XXXX directory - testdata/sg179_Guam_Oct19/mission_dir for example
-# Previous runs are removed and the contents of testdata/XXXX (no sub-directories) are copied to testdata/XXXX/mission_dir
+# Each test runs in its own mission_dir - tests pass tmp_path / "mission_dir" -
+# never inside testdata/XXXX: several test files share fixtures, and parallel
+# runs (pytest-xdist) would otherwise wipe each other's output. The contents of
+# testdata/XXXX (no sub-directories) are copied into mission_dir, after
+# removing anything left from a previous run.
 
 
 def run_mission(
