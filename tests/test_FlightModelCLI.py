@@ -32,6 +32,7 @@ import pathlib
 import pytest
 import testutils
 
+import Base
 import FlightModel
 import FlightModelCLI
 
@@ -133,3 +134,50 @@ def test_fmcli_replot_and_dac_dives(tmp_path, caplog, fm_plot_engine):
     warnings = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
     for dive_num in (6, 7, 8):
         assert any(f"dive {dive_num}" in w for w in warnings)
+
+
+@pytest.mark.parametrize("fm_plot_engine", ["matplotlib"])
+def test_fmcli_after_sgx_mission_in_same_process(tmp_path, caplog, fm_plot_engine):
+    """Regression (2026-09-29): FlightModel built its a/b contour mesh
+    (HD_A/HD_B) once per process. After an SGX mission (25-point drag grid)
+    ran in the same process, a standard Seaglider mission (17-point grid) -
+    here sg263 then sg561, the order a pytest-xdist worker happened to run
+    them in - failed plotting with "Shapes of x (25, 31) and z (17, 31) do
+    not match". Production runs one mission per process, so only the test
+    suite (and anything else running several missions in one process) hit it.
+    """
+    # 1. An SGX mission (sg263: 72.98 kg > FlightModel.SGX_MASS) through Base,
+    #    which runs FlightModel and leaves its figure state behind
+    sgx_data_dir = pathlib.Path("testdata/sg263_NANOOS_Mar25_missingupload")
+    sgx_mission_dir = tmp_path / "sgx_mission_dir"
+    testutils.run_mission(
+        sgx_data_dir,
+        sgx_mission_dir,
+        Base.main,
+        f"--verbose --local --plot_types none --no-notify_vis --mission_dir {sgx_mission_dir} "
+        f"--config {sgx_mission_dir}/sg263.conf".split(),
+        caplog,
+        [""],  # this fixture's known transfer errors don't matter here
+    )
+    # hd_b_grid only exists once set_globals()/FlightModel.main() has run
+    hd_b_grid = FlightModel.hd_b_grid  # ty: ignore[unresolved-attribute]
+    assert hd_b_grid is not None and len(hd_b_grid) == 25  # SGX drag grid
+
+    # 2. A standard Seaglider mission (17-point drag grid) in the same process
+    caplog.clear()
+    data_dir = pathlib.Path("testdata/sg561_provolo_lofoten_may2016_dive2on")
+    mission_dir = tmp_path / "mission_dir"
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        FlightModelCLI.main,
+        ["--verbose", "--mission_dir", str(mission_dir), "--fm_plot_engine", fm_plot_engine],
+        caplog,
+        [],
+    )
+    hd_a_grid = FlightModel.hd_a_grid  # ty: ignore[unresolved-attribute]
+    hd_b_grid = FlightModel.hd_b_grid  # ty: ignore[unresolved-attribute]
+    assert hd_b_grid is not None and len(hd_b_grid) == 17
+    assert FlightModel.HD_A is not None and FlightModel.HD_A.shape == (17, len(hd_a_grid))
+    for basename in ("eng_FM_vbdbias", "eng_FM_abs_compress", "eng_FM_ab_dives"):
+        assert (mission_dir / "flight" / f"{basename}.webp").exists()

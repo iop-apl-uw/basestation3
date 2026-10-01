@@ -28,6 +28,7 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import pathlib
+import shutil
 
 import numpy as np
 import playwright.sync_api
@@ -325,15 +326,31 @@ def test_copy_button_copies_hard0_soft0(tmp_path, caplog: pytest.LogCaptureFixtu
     assert clipboard_text == expected_copy_text
 
 
-def test_magcal_worker_phase_split_produces_different_fits() -> None:
+def _copy_magcal_nc(tmp_path: pathlib.Path) -> pathlib.Path:
+    """Copies the checked-in magcal per-dive netCDF into a fresh mission_dir under tmp_path.
+
+    Args:
+        tmp_path: pytest-provided per-test temporary directory.
+
+    Returns:
+        The mission_dir containing the copied netCDF file.
+    """
+    _baseplot_options, data_dir_name, nc_filename = _MAGCAL_DIVE
+    mission_dir = tmp_path / "mission_dir"
+    mission_dir.mkdir()
+    shutil.copy(pathlib.Path("testdata") / data_dir_name / nc_filename, mission_dir)
+    return mission_dir
+
+
+def test_magcal_worker_phase_split_produces_different_fits(tmp_path: pathlib.Path) -> None:
     """magcal_worker(phase="dive")/phase="climb") must fit against
     disjoint sample sets, not silently fall back to the combined
     (phase="all") behavior - regression guard for the dive/climb split
     feature: proves the two fits actually differ rather than both
     happening to compute the same "all" result.
     """
-    _baseplot_options, data_dir_name, nc_filename = _MAGCAL_DIVE
-    mission_dir = pathlib.Path("testdata").joinpath(data_dir_name, "mission_dir")
+    _baseplot_options, _data_dir_name, nc_filename = _MAGCAL_DIVE
+    mission_dir = _copy_magcal_nc(tmp_path)
 
     nc_file = Utils.open_netcdf_file(str(mission_dir / nc_filename))
     try:
@@ -377,13 +394,13 @@ def test_plot_mag_dive_climb_split(tmp_path, caplog: pytest.LogCaptureFixture) -
     assert not (plots_dir / "dv0005_magcal.html").exists()
 
 
-def test_magcal_function_phase_split_produces_different_fits() -> None:
+def test_magcal_function_phase_split_produces_different_fits(tmp_path: pathlib.Path) -> None:
     """Magcal.magcal()'s phase parameter threads through to
     magcal_worker() - regression guard for the batch-CLI split feature's
     underlying function (Magcal.py:main() is a thin argparse/file-writing
     wrapper around this)."""
-    _baseplot_options, data_dir_name, _nc_filename = _MAGCAL_DIVE
-    mission_dir = str(pathlib.Path("testdata").joinpath(data_dir_name, "mission_dir"))
+    # Magcal.magcal() takes the mission directory as a str
+    mission_dir = str(_copy_magcal_nc(tmp_path))
 
     hard_dive, soft_dive, _cover_dive, _circ_dive, html_dive = Magcal.magcal(
         mission_dir, 686, [5], True, "html", phase="dive"

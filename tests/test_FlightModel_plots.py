@@ -39,6 +39,7 @@ import types
 import numpy as np
 import plotly.graph_objects
 import pytest
+from matplotlib.font_manager import FontProperties
 
 import FlightModel
 
@@ -290,3 +291,17 @@ def test_render_ab_dives_plot(engine):
         _assert_plotly_result(result, expected_trace_name="a*10")
     else:
         _assert_matplotlib_result(result)
+
+
+def test_set_globals_resets_ab_figure_state() -> None:
+    """The a/b contour mesh and related figure state must not survive into the
+    next run in the same process - a different glider's grid size made the
+    reused mesh fail (see test_FlightModelCLI.test_fmcli_after_sgx_mission_in_same_process)."""
+    FlightModel.font = FontProperties(size="x-small")
+    FlightModel.HD_A, FlightModel.HD_B = np.meshgrid(np.arange(31.0), np.arange(25.0))
+    FlightModel.w_misfit_rms_levels = np.ones(4, dtype=np.float64)
+    FlightModel.prev_w_misfit_rms_levels = [1.0]
+    FlightModel.glider_mission_string = "SGX263 previous mission"
+    FlightModel.set_globals()
+    for name in ("font", "HD_A", "HD_B", "w_misfit_rms_levels", "prev_w_misfit_rms_levels", "glider_mission_string"):
+        assert getattr(FlightModel, name) is None, name

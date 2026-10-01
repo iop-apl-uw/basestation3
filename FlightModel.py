@@ -192,7 +192,13 @@ def set_globals() -> None:
         hd_a_grid, \
         hd_b_grid, \
         ab_grid_cache_d, \
-        restart_cache_d
+        restart_cache_d, \
+        font, \
+        HD_A, \
+        HD_B, \
+        w_misfit_rms_levels, \
+        prev_w_misfit_rms_levels, \
+        glider_mission_string
     # see load_dive_data() these are the vectors we collect for each dive to compute various flight model parameters
     # deliberately NOT vol_comp, vol_comp_ref, and therm_expan_term, which are computed and cached
     # if compare_velo is non-zero we add 'velo_speed' to this list below
@@ -381,6 +387,18 @@ def set_globals() -> None:
     hd_b_grid = None
     ab_grid_cache_d = None
     restart_cache_d = None
+
+    # Figure state built from a mission's a/b grid (see process_dive()). Reset
+    # per run: a second mission in the same process (e.g. the test suite) with
+    # a different grid size - SGX 25-point vs Seaglider 17-point drag grid -
+    # otherwise reused the first mission's HD_A/HD_B mesh and the a/b contour
+    # failed with "Shapes of x (25, 31) and z (17, 31) do not match".
+    font = None
+    HD_A = None
+    HD_B = None
+    w_misfit_rms_levels = None
+    prev_w_misfit_rms_levels = None
+    glider_mission_string = None
 
 
 # Set globals on import
@@ -3660,13 +3678,13 @@ def update_restart_cache(
     )
 
 
-# static globals for generate_figures
-font = None
-HD_A = None
-HD_B = None
-w_misfit_rms_levels = None
-prev_w_misfit_rms_levels = None
-glider_mission_string = None
+# static globals for generate_figures - also reset per run by set_globals()
+font: FontProperties | None = None
+HD_A: npt.NDArray[np.float64] | None = None
+HD_B: npt.NDArray[np.float64] | None = None
+w_misfit_rms_levels: npt.NDArray[np.float64] | None = None
+prev_w_misfit_rms_levels: list[float] | None = None
+glider_mission_string: str | None = None
 
 
 # Process a (possible) single new dive into the flight data base
@@ -3714,10 +3732,17 @@ def process_dive(
     # unpack some operational constants
     ac_min_press = flight_dive_data_d["ac_min_press"]
 
+    if generate_figures and (  # ty: ignore[unresolved-reference]
+        HD_A is None or np.shape(HD_A) != (len(hd_b_grid), len(hd_a_grid))  # ty: ignore[unresolved-reference]
+    ):
+        # The contour mesh must match the current mission's a/b grid, whose
+        # size depends on the glider (25-point SGX vs 17-point Seaglider drag
+        # grid) - don't rely on it having been built for this mission
+        (HD_A, HD_B) = np.meshgrid(hd_a_grid, hd_b_grid)
+
     if generate_figures and font is None:
         # compute these variables once
         font = FontProperties(size="x-small")
-        (HD_A, HD_B) = np.meshgrid(hd_a_grid, hd_b_grid)
         w_misfit_rms_levels = ab_tolerance * np.array(
             [1.0, 2.0, 3.0, 4.0]
         )  # reduce clutter
