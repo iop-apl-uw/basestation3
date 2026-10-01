@@ -1,0 +1,680 @@
+Connected at 2026-09-30T14:58:39Z (sg554)
+logged in
+0:0:1:0:32:89:0:1664:2077:501:-4.0:-0.06:17.8:15.00:15.19:8.41:54.7:12.4:0.0:-0.5 GPS,300926,144931,4738.643,-12220.213,36,1.0,47,16.2
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:144724
+Iridium bars: 5 geolocation: 4738.868164,-12218.956055,300926,145737
+2026-09-30T14:59:03Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T14:59:03Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+2026-09-30T14:59:30Z [sg554] ready to receive 2 files
+2026-09-30T14:59:36Z [sg554] Receiving 711 bytes of st0005dz.x
+2026-09-30T14:59:37Z [sg554] Received 711 bytes of st0005dz.x (624.5 Bps)
+2026-09-30T14:59:37Z [sg554] OK
+2026-09-30T14:59:43Z [sg554] Receiving 1989 bytes of st0005lz.x
+2026-09-30T14:59:48Z [sg554] Received 1989 bytes of st0005lz.x (384.6 Bps)
+2026-09-30T14:59:48Z [sg554] OK
+2026-09-30T15:00:04Z [sg554] ready to receive st0005kz.x
+2026-09-30T15:00:08Z [sg554] Receiving 20759 bytes of st0005kz.x
+Disconnected at 2026-09-30T15:00:29Z (hangup)
+
+
+Connected at 2026-09-30T15:01:55Z (sg554)
+logged in
+0:0:2:0:32:89:0:1664:2077:501:-4.0:-0.06:17.8:15.00:15.19:8.41:54.7:12.4:0.0:-0.5 GPS,300926,144931,4738.643,-12220.213,36,1.0,47,16.2
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:144724
+Iridium bars: 5 geolocation: 4738.868164,-12218.956055,300926,145831
+2026-09-30T15:02:08Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T15:02:08Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+2026-09-30T15:02:22Z [sg554] ready to receive st0005kz.x
+2026-09-30T15:02:23Z [sg554] Receiving 22382 bytes of st0005kz.x
+2026-09-30T15:03:30Z [sg554] Received 22382 bytes of st0005kz.x (334.5 Bps)
+2026-09-30T15:03:30Z [sg554] OK
+0:0:2:0:32:89:1 logout
+Disconnected at 2026-09-30T15:03:36Z (normal)
+
+
+Connected at 2026-09-30T15:29:50Z (sg554)
+logged in
+0:1:1:0:32:89:0:1664:2077:501:-4.3:-0.10:16.9:15.00:15.43:8.37:54.8:13.2:0.0:-0.6 GPS,300926,152846,4740.082,-12224.239,57,1.1,71,16.3
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:144724
+Iridium bars: 5 geolocation: 4738.868164,-12218.956055,300926,150147
+2026-09-30T15:30:04Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T15:30:04Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+2026-09-30T15:30:12Z [sg554] ready to receive sg0000kl.x
+2026-09-30T15:30:13Z [sg554] Receiving 3382 bytes of sg0000kl.x
+2026-09-30T15:30:23Z [sg554] Received 3382 bytes of sg0000kl.x (342.4 Bps)
+2026-09-30T15:30:23Z [sg554] OK
+0:1:1:0:32:89:1 logout
+Disconnected at 2026-09-30T15:30:29Z (normal)
+
+
+Connected at 2026-09-30T15:33:20Z (sg554)
+logged in
+0:2:1:0:33:89:0:237:2080:499:-5.8:-0.10:16.8:15.00:15.40:8.36:54.8:13.5:0.0:-0.7 GPS,300926,153223,4740.427,-12224.598,6,1.1,17,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=NO_RECOVERY_REASON
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4740.816895,-12223.367188,300926,152942
+2026-09-30T15:33:33Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T15:33:33Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+2026-09-30T15:33:39Z [sg554] ready to receive 2 files
+2026-09-30T15:33:40Z [sg554] Receiving 3649 bytes of sg0000kz.x
+2026-09-30T15:33:51Z [sg554] Received 3649 bytes of sg0000kz.x (342.6 Bps)
+2026-09-30T15:33:51Z [sg554] OK
+2026-09-30T15:33:53Z [sg554] Receiving 1566 bytes of sg0000lz.x
+2026-09-30T15:33:57Z [sg554] Received 1566 bytes of sg0000lz.x (346.2 Bps)
+2026-09-30T15:33:57Z [sg554] OK
+0:2:1:0:33:89:1 logout
+Disconnected at 2026-09-30T15:34:02Z (normal)
+
+
+Connected at 2026-09-30T15:44:01Z (sg554)
+logged in
+0:3:4:0:33:89:-2:236:2087:501:-8.2:-0.12:16.7:15.00:15.40:8.36:54.8:13.1:0.0:-0.6 GPS,300926,153727,4741.727,-12225.199,5,1.1,18,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.473633,-12222.378906,300926,154024
+2026-09-30T15:44:13Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T15:44:13Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:3:4:0:33:89:1 logout
+Disconnected at 2026-09-30T15:44:21Z (normal)
+
+
+Connected at 2026-09-30T15:49:45Z (sg554)
+logged in
+0:4:1:0:33:89:0:236:2088:500:-2.6:-0.12:16.5:15.00:15.40:8.35:54.8:13.0:0.0:-0.6 GPS,300926,154843,4743.467,-12224.443,35,1.3,75,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 3 geolocation: 4742.878906,-12210.841797,300926,154352
+2026-09-30T15:50:01Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T15:50:01Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:4:1:0:33:89:1 logout
+Disconnected at 2026-09-30T15:50:10Z (normal)
+
+
+Connected at 2026-09-30T15:55:16Z (sg554)
+logged in
+0:5:1:0:33:89:0:236:2087:500:-3.8:-0.14:16.4:15.00:15.38:8.35:54.9:14.2:0.0:-0.8 GPS,300926,155407,4743.401,-12224.456,5,1.1,46,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4748.471680,-11845.837891,300926,154933
+2026-09-30T15:55:29Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T15:55:29Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:5:1:0:33:89:1 logout
+Disconnected at 2026-09-30T15:55:38Z (normal)
+
+
+Connected at 2026-09-30T16:02:26Z (sg554)
+logged in
+0:6:2:0:33:89:-2:236:2086:500:-3.7:-0.11:16.3:15.00:15.39:8.34:54.9:14.6:0.0:-0.8 GPS,300926,155936,4743.330,-12224.473,5,1.2,46,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4742.858398,-12252.576172,300926,155506
+2026-09-30T16:02:49Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T16:02:49Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:6:2:0:33:89:1 logout
+Disconnected at 2026-09-30T16:03:04Z (normal)
+
+
+Connected at 2026-09-30T16:08:13Z (sg554)
+logged in
+0:7:1:0:33:89:0:236:2087:500:-3.7:-0.12:16.1:15.00:15.38:8.34:54.8:13.0:0.0:-0.6 GPS,300926,160702,4743.247,-12224.483,5,1.8,46,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4743.021484,-12222.378906,300926,160217
+2026-09-30T16:08:40Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T16:08:40Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:7:1:0:33:89:1 logout
+Disconnected at 2026-09-30T16:09:07Z (normal)
+
+
+Connected at 2026-09-30T16:13:59Z (sg554)
+logged in
+0:8:1:0:33:89:0:236:2087:500:-5.6:-0.14:16.1:15.00:15.36:8.33:54.9:15.2:0.0:-0.9 GPS,300926,161305,4743.182,-12224.506,5,1.2,46,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.473633,-12222.378906,300926,160803
+2026-09-30T16:14:12Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T16:14:12Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:8:1:0:33:89:1 logout
+Disconnected at 2026-09-30T16:14:21Z (normal)
+
+
+Connected at 2026-09-30T16:18:42Z (sg554)
+logged in
+0:9:1:0:33:89:0:236:2089:500:-52.6:0.57:15.9:15.00:15.38:8.31:54.8:13.3:30.5:22.9 GPS,300926,161750,4743.131,-12224.516,5,1.0,17,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4743.021484,-12222.378906,300926,161351
+2026-09-30T16:18:59Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T16:18:59Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:9:1:0:33:89:1 logout
+Disconnected at 2026-09-30T16:19:12Z (normal)
+
+
+Connected at 2026-09-30T16:23:30Z (sg554)
+logged in
+0:10:1:0:33:89:0:236:2090:500:-16.3:0.21:15.6:15.00:15.36:8.30:54.8:13.3:30.5:22.9 GPS,300926,162235,4743.128,-12224.511,5,1.0,12,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.966797,-12226.797852,300926,161834
+2026-09-30T16:23:44Z [sg554] Sending 294 bytes of cmdfile
+2026-09-30T16:23:44Z [sg554] Sent 294 bytes of cmdfile
+Parsed RESUME from cmdfile
+0:10:1:0:33:89:1 logout
+Disconnected at 2026-09-30T16:23:52Z (normal)
+
+
+Connected at 2026-09-30T16:52:02Z (sg554)
+logged in
+1:0:1:0:33:89:0:240:2097:501:-24.5:0.32:14.8:15.00:15.08:8.28:54.9:13.3:30.5:22.9 GPS,300926,165050,4743.111,-12224.454,26,1.0,42,16.3
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 4 geolocation: 4743.021484,-12222.378906,300926,162320
+2026-09-30T16:52:17Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T16:52:17Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+2026-09-30T16:52:23Z [sg554] ready to receive 6 files
+2026-09-30T16:52:25Z [sg554] Receiving 7638 bytes of sg0001dz.x
+2026-09-30T16:52:47Z [sg554] Received 7638 bytes of sg0001dz.x (338.8 Bps)
+2026-09-30T16:52:47Z [sg554] OK
+2026-09-30T16:52:49Z [sg554] Receiving 8192 bytes of sg0001kz.x00
+2026-09-30T16:53:14Z [sg554] Received 8192 bytes of sg0001kz.x00 (328.1 Bps)
+2026-09-30T16:53:14Z [sg554] OK
+2026-09-30T16:53:16Z [sg554] Receiving 8192 bytes of sg0001kz.x01
+2026-09-30T16:53:42Z [sg554] Received 8192 bytes of sg0001kz.x01 (310.0 Bps)
+2026-09-30T16:53:42Z [sg554] OK
+2026-09-30T16:53:44Z [sg554] Receiving 8192 bytes of sg0001kz.x02
+2026-09-30T16:54:08Z [sg554] Received 8192 bytes of sg0001kz.x02 (337.9 Bps)
+2026-09-30T16:54:08Z [sg554] OK
+2026-09-30T16:54:10Z [sg554] Receiving 3204 bytes of sg0001kz.x03
+2026-09-30T16:54:21Z [sg554] Received 3204 bytes of sg0001kz.x03 (284.7 Bps)
+2026-09-30T16:54:21Z [sg554] OK
+2026-09-30T16:54:22Z [sg554] Receiving 3246 bytes of sg0001lz.x
+2026-09-30T16:54:32Z [sg554] Received 3246 bytes of sg0001lz.x (338.6 Bps)
+2026-09-30T16:54:32Z [sg554] OK
+1:0:1:0:33:89:1 logout
+Disconnected at 2026-09-30T16:54:37Z (normal)
+
+
+Connected at 2026-09-30T16:55:53Z (sg554)
+logged in
+1:1:1:0:33:89:0:240:2102:498:-25.9:0.30:14.7:15.00:15.11:8.28:54.9:13.3:30.4:22.8 GPS,300926,165455,4743.112,-12224.458,4,1.1,11,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.473633,-12222.378906,300926,165150
+2026-09-30T16:56:05Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T16:56:05Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+1:1:1:0:33:89:1 logout
+Disconnected at 2026-09-30T16:56:16Z (normal)
+
+
+Connected at 2026-09-30T17:00:41Z (sg554)
+logged in
+1:2:1:0:33:89:0:240:2101:498:-27.7:0.37:14.8:15.00:15.29:8.28:55.0:13.3:30.3:22.7 GPS,300926,165937,4743.113,-12224.446,4,1.0,10,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4743.617676,-12225.082031,300926,165545
+2026-09-30T17:00:56Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T17:00:56Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+1:2:1:0:33:89:1 logout
+Disconnected at 2026-09-30T17:01:05Z (normal)
+
+
+Connected at 2026-09-30T17:05:27Z (sg554)
+logged in
+1:3:1:0:33:89:0:240:2100:498:-26.6:0.35:14.8:15.00:15.32:8.28:54.9:13.3:30.4:22.8 GPS,300926,170424,4743.122,-12224.431,5,1.0,10,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4746.780762,-12219.673828,300926,170032
+2026-09-30T17:05:45Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T17:05:45Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+1:3:1:0:33:89:1 logout
+Disconnected at 2026-09-30T17:05:56Z (normal)
+
+
+Connected at 2026-09-30T17:10:15Z (sg554)
+logged in
+1:4:1:0:33:89:0:240:2102:498:-32.8:0.47:14.7:15.00:15.36:8.27:54.9:13.3:29.4:22.0 GPS,300926,170922,4743.133,-12224.418,7,1.0,15,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 4 geolocation: 4744.473633,-12222.378906,300926,170512
+2026-09-30T17:10:32Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T17:10:32Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+1:4:1:0:33:89:1 logout
+Disconnected at 2026-09-30T17:10:42Z (normal)
+
+
+Connected at 2026-09-30T17:14:59Z (sg554)
+logged in
+1:5:1:0:33:89:0:240:2101:498:-20.9:0.22:14.7:15.00:15.37:8.27:54.9:13.3:30.5:22.9 GPS,300926,171404,4743.144,-12224.410,5,1.0,12,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4743.514160,-12226.797852,300926,171007
+2026-09-30T17:15:12Z [sg554] Sending 292 bytes of cmdfile
+2026-09-30T17:15:12Z [sg554] Sent 292 bytes of cmdfile
+Parsed QUIT from cmdfile
+1:5:1:0:33:89:1 logout
+Disconnected at 2026-09-30T17:15:20Z (normal)
+
+
+Connected at 2026-09-30T17:33:44Z (sg554)
+logged in
+1:7:1:1:33:89:-2:234:2104:497:-2.9:-0.19:14.6:15.00:15.41:8.27:54.8:14.3:0.0:-0.8 GPS,300926,173238,4743.496,-12224.387,103,1.8,143,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.473633,-12222.378906,300926,171451
+2026-09-30T17:33:57Z [sg554] Sending 317 bytes of cmdfile
+2026-09-30T17:33:57Z [sg554] Sent 317 bytes of cmdfile
+Parsed QUIT from cmdfile
+1:7:1:1:33:89:1 logout
+Disconnected at 2026-09-30T17:34:06Z (normal)
+
+
+Connected at 2026-09-30T17:38:53Z (sg554)
+logged in
+1:8:1:0:33:89:0:233:2103:498:-37.6:0.51:14.5:15.00:15.39:8.26:54.9:13.3:30.5:22.9 GPS,300926,173801,4743.549,-12224.387,5,0.8,44,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.473633,-12222.378906,300926,173336
+2026-09-30T17:39:06Z [sg554] Sending 319 bytes of cmdfile
+2026-09-30T17:39:06Z [sg554] Sent 319 bytes of cmdfile
+Parsed RESUME from cmdfile
+1:8:1:0:33:89:1 logout
+Disconnected at 2026-09-30T17:39:15Z (normal)
+
+
+Connected at 2026-09-30T18:05:17Z (sg554)
+logged in
+2:0:1:0:33:89:0:244:1943:1000:-52.7:0.69:14.2:15.00:15.06:8.30:54.8:13.3:30.5:22.9 GPS,300926,180406,4743.685,-12224.396,46,1.2,46,16.3
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 4 geolocation: 4741.671387,-12220.666016,300926,173846
+2026-09-30T18:05:28Z [sg554] Sending 317 bytes of cmdfile
+2026-09-30T18:05:28Z [sg554] Sent 317 bytes of cmdfile
+Parsed QUIT from cmdfile
+2026-09-30T18:05:34Z [sg554] ready to receive 6 files
+2026-09-30T18:05:35Z [sg554] Receiving 6542 bytes of sg0002dz.x
+2026-09-30T18:05:54Z [sg554] Received 6542 bytes of sg0002dz.x (341.5 Bps)
+2026-09-30T18:05:54Z [sg554] OK
+2026-09-30T18:05:55Z [sg554] Receiving 8192 bytes of sg0002kz.x00
+2026-09-30T18:06:19Z [sg554] Received 8192 bytes of sg0002kz.x00 (345.2 Bps)
+2026-09-30T18:06:19Z [sg554] OK
+2026-09-30T18:06:21Z [sg554] Receiving 8192 bytes of sg0002kz.x01
+2026-09-30T18:06:44Z [sg554] Received 8192 bytes of sg0002kz.x01 (345.1 Bps)
+2026-09-30T18:06:44Z [sg554] OK
+2026-09-30T18:06:46Z [sg554] Receiving 8192 bytes of sg0002kz.x02
+2026-09-30T18:07:10Z [sg554] Received 8192 bytes of sg0002kz.x02 (344.9 Bps)
+2026-09-30T18:07:10Z [sg554] OK
+2026-09-30T18:07:11Z [sg554] Receiving 5951 bytes of sg0002kz.x03
+2026-09-30T18:07:28Z [sg554] Received 5951 bytes of sg0002kz.x03 (344.7 Bps)
+2026-09-30T18:07:28Z [sg554] OK
+2026-09-30T18:07:30Z [sg554] Receiving 3499 bytes of sg0002lz.x
+2026-09-30T18:07:40Z [sg554] Received 3499 bytes of sg0002lz.x (344.6 Bps)
+2026-09-30T18:07:40Z [sg554] OK
+2:0:1:0:33:89:1 logout
+Disconnected at 2026-09-30T18:07:45Z (normal)
+
+
+Connected at 2026-09-30T18:09:03Z (sg554)
+logged in
+2:1:1:0:33:89:0:243:1943:993:-51.6:0.77:14.1:15.00:15.11:8.30:54.9:13.3:30.5:22.9 GPS,300926,180809,4743.696,-12224.382,6,1.2,11,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4743.514160,-12226.797852,300926,180508
+2026-09-30T18:09:17Z [sg554] Sending 317 bytes of cmdfile
+2026-09-30T18:09:17Z [sg554] Sent 317 bytes of cmdfile
+Parsed QUIT from cmdfile
+2:1:1:0:33:89:1 logout
+Disconnected at 2026-09-30T18:09:24Z (normal)
+
+
+Connected at 2026-09-30T18:13:43Z (sg554)
+logged in
+2:2:1:0:33:89:0:244:1942:992:-56.5:0.81:14.2:15.00:15.28:8.30:54.9:13.3:30.5:22.9 GPS,300926,181244,4743.711,-12224.362,5,1.2,14,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.473633,-12222.378906,300926,180854
+2026-09-30T18:13:55Z [sg554] Sending 319 bytes of cmdfile
+2026-09-30T18:13:55Z [sg554] Sent 319 bytes of cmdfile
+Parsed QUIT from cmdfile
+2026-09-30T18:14:06Z [sg554] Sending 89 bytes of tcm2mat.cal
+2026-09-30T18:14:06Z [sg554] Sent 89 bytes of tcm2mat.cal
+2:2:1:0:33:89:1 logout
+Disconnected at 2026-09-30T18:14:13Z (normal)
+
+
+Connected at 2026-09-30T18:18:33Z (sg554)
+logged in
+2:3:1:0:33:89:0:243:1942:992:-50.8:0.68:14.3:15.00:15.32:8.30:54.9:13.3:30.5:22.9 GPS,300926,181738,4743.726,-12224.341,5,1.2,14,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.966797,-12226.797852,300926,181335
+2026-09-30T18:18:44Z [sg554] Sending 321 bytes of cmdfile
+2026-09-30T18:18:44Z [sg554] Sent 321 bytes of cmdfile
+Parsed RESUME from cmdfile
+2:3:1:0:33:89:1 logout
+Disconnected at 2026-09-30T18:18:52Z (normal)
+
+
+Connected at 2026-09-30T19:09:03Z (sg554)
+logged in
+3:0:1:0:33:89:0:244:2112:497:-40.0:0.55:13.4:15.00:15.44:8.23:54.8:13.4:30.6:22.9 GPS,300926,190807,4743.821,-12224.523,40,1.1,80,16.3
+EOP_CODE=ABORT_DEPTH_EXCEEDED
+RECOV_CODE=EXCEEDED_ABORT_DEPTH
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.473633,-12222.378906,300926,181825
+2026-09-30T19:09:15Z [sg554] Sending 318 bytes of cmdfile
+2026-09-30T19:09:15Z [sg554] Sent 318 bytes of cmdfile
+Parsed QUIT from cmdfile
+2026-09-30T19:09:22Z [sg554] ready to receive 6 files
+2026-09-30T19:09:23Z [sg554] Receiving 5727 bytes of sg0003dz.x
+2026-09-30T19:09:40Z [sg554] Received 5727 bytes of sg0003dz.x (344.7 Bps)
+2026-09-30T19:09:40Z [sg554] OK
+2026-09-30T19:09:41Z [sg554] Receiving 8192 bytes of sg0003kz.x00
+2026-09-30T19:10:06Z [sg554] Received 8192 bytes of sg0003kz.x00 (339.5 Bps)
+2026-09-30T19:10:06Z [sg554] OK
+2026-09-30T19:10:07Z [sg554] Receiving 8192 bytes of sg0003kz.x01
+2026-09-30T19:10:31Z [sg554] Received 8192 bytes of sg0003kz.x01 (341.6 Bps)
+2026-09-30T19:10:31Z [sg554] OK
+2026-09-30T19:10:33Z [sg554] Receiving 8192 bytes of sg0003kz.x02
+Disconnected at 2026-09-30T19:11:01Z (hangup)
+
+
+Connected at 2026-09-30T19:12:49Z (sg554)
+logged in
+3:0:2:0:33:89:0:244:2112:497:-40.0:0.55:13.4:15.00:15.44:8.23:54.8:13.4:30.6:22.9 GPS,300926,190807,4743.821,-12224.523,40,1.1,80,16.3
+EOP_CODE=ABORT_DEPTH_EXCEEDED
+RECOV_CODE=EXCEEDED_ABORT_DEPTH
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.473633,-12222.378906,300926,190854
+2026-09-30T19:13:01Z [sg554] Sending 318 bytes of cmdfile
+2026-09-30T19:13:01Z [sg554] Sent 318 bytes of cmdfile
+Parsed QUIT from cmdfile
+2026-09-30T19:13:07Z [sg554] ready to receive 3 files
+2026-09-30T19:13:11Z [sg554] Receiving 8192 bytes of sg0003kz.x02
+2026-09-30T19:13:35Z [sg554] Received 8192 bytes of sg0003kz.x02 (341.9 Bps)
+2026-09-30T19:13:35Z [sg554] OK
+2026-09-30T19:13:36Z [sg554] Receiving 5349 bytes of sg0003kz.x03
+2026-09-30T19:13:52Z [sg554] Received 5349 bytes of sg0003kz.x03 (344.3 Bps)
+2026-09-30T19:13:52Z [sg554] OK
+2026-09-30T19:13:53Z [sg554] Receiving 3312 bytes of sg0003lz.x
+2026-09-30T19:14:03Z [sg554] Received 3312 bytes of sg0003lz.x (342.0 Bps)
+2026-09-30T19:14:03Z [sg554] OK
+3:0:2:0:33:89:1 logout
+Disconnected at 2026-09-30T19:14:09Z (normal)
+
+
+Connected at 2026-09-30T19:19:54Z (sg554)
+logged in
+3:1:1:0:33:89:0:243:2113:497:-45.4:0.59:13.7:15.00:15.30:8.24:54.9:13.4:30.6:22.9 GPS,300926,191901,4743.869,-12224.548,73,1.0,102,16.3
+EOP_CODE=ABORT_DEPTH_EXCEEDED
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.473633,-12222.378906,300926,191238
+2026-09-30T19:20:06Z [sg554] Sending 320 bytes of cmdfile
+2026-09-30T19:20:06Z [sg554] Sent 320 bytes of cmdfile
+Parsed RESUME from cmdfile
+3:1:1:0:33:89:1 logout
+Disconnected at 2026-09-30T19:20:20Z (normal)
+
+
+Connected at 2026-09-30T20:20:03Z (sg554)
+logged in
+4:0:1:0:33:89:0:242:1941:1001:-55.2:0.76:13.4:15.00:15.05:8.27:54.7:13.4:30.5:22.9 GPS,300926,201849,4743.780,-12224.878,26,1.1,43,16.3
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4745.824219,-12224.094727,300926,191946
+2026-09-30T20:20:17Z [sg554] Sending 318 bytes of cmdfile
+2026-09-30T20:20:17Z [sg554] Sent 318 bytes of cmdfile
+Parsed QUIT from cmdfile
+2026-09-30T20:20:24Z [sg554] ready to receive 9 files
+2026-09-30T20:20:25Z [sg554] Receiving 8192 bytes of sg0004dz.x00
+2026-09-30T20:20:49Z [sg554] Received 8192 bytes of sg0004dz.x00 (343.7 Bps)
+2026-09-30T20:20:49Z [sg554] OK
+2026-09-30T20:20:51Z [sg554] Receiving 7610 bytes of sg0004dz.x01
+2026-09-30T20:21:13Z [sg554] Received 7610 bytes of sg0004dz.x01 (343.2 Bps)
+2026-09-30T20:21:13Z [sg554] OK
+2026-09-30T20:21:14Z [sg554] Receiving 8192 bytes of sg0004kz.x00
+2026-09-30T20:21:39Z [sg554] Received 8192 bytes of sg0004kz.x00 (337.4 Bps)
+2026-09-30T20:21:39Z [sg554] OK
+2026-09-30T20:21:40Z [sg554] Receiving 8192 bytes of sg0004kz.x01
+2026-09-30T20:22:04Z [sg554] Received 8192 bytes of sg0004kz.x01 (343.2 Bps)
+2026-09-30T20:22:04Z [sg554] OK
+2026-09-30T20:22:06Z [sg554] Receiving 8192 bytes of sg0004kz.x02
+2026-09-30T20:22:31Z [sg554] Received 8192 bytes of sg0004kz.x02 (320.4 Bps)
+2026-09-30T20:22:31Z [sg554] OK
+2026-09-30T20:22:35Z [sg554] Receiving 8192 bytes of sg0004kz.x03
+2026-09-30T20:23:01Z [sg554] Received 8192 bytes of sg0004kz.x03 (320.1 Bps)
+2026-09-30T20:23:01Z [sg554] OK
+2026-09-30T20:23:02Z [sg554] Receiving 8192 bytes of sg0004kz.x04
+2026-09-30T20:23:26Z [sg554] Received 8192 bytes of sg0004kz.x04 (345.5 Bps)
+2026-09-30T20:23:26Z [sg554] OK
+2026-09-30T20:23:28Z [sg554] Receiving 470 bytes of sg0004kz.x05
+2026-09-30T20:23:31Z [sg554] Received 470 bytes of sg0004kz.x05 (153.2 Bps)
+2026-09-30T20:23:31Z [sg554] OK
+2026-09-30T20:23:32Z [sg554] Receiving 4417 bytes of sg0004lz.x
+2026-09-30T20:23:45Z [sg554] Received 4417 bytes of sg0004lz.x (339.0 Bps)
+2026-09-30T20:23:45Z [sg554] OK
+4:0:1:0:33:89:1 logout
+Disconnected at 2026-09-30T20:23:51Z (normal)
+
+
+Connected at 2026-09-30T20:25:04Z (sg554)
+logged in
+4:1:1:0:33:89:0:242:1941:992:-56.7:0.76:13.5:15.00:15.06:8.27:54.8:13.5:30.5:22.9 GPS,300926,202412,4743.789,-12224.915,5,1.0,8,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.473633,-12222.378906,300926,201955
+2026-09-30T20:25:17Z [sg554] Sending 318 bytes of cmdfile
+2026-09-30T20:25:17Z [sg554] Sent 318 bytes of cmdfile
+Parsed QUIT from cmdfile
+4:1:1:0:33:89:1 logout
+Disconnected at 2026-09-30T20:25:25Z (normal)
+
+
+Connected at 2026-09-30T20:29:41Z (sg554)
+logged in
+4:2:1:0:33:89:0:242:1940:992:-55.3:0.74:13.7:15.00:15.26:8.27:54.8:13.5:30.5:22.8 GPS,300926,202844,4743.797,-12224.950,5,1.0,9,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.966797,-12226.797852,300926,202456
+2026-09-30T20:29:53Z [sg554] Sending 359 bytes of cmdfile
+2026-09-30T20:29:53Z [sg554] Sent 359 bytes of cmdfile
+Parsed RESUME from cmdfile
+2026-09-30T20:29:59Z [sg554] Sending 204 bytes of science
+2026-09-30T20:29:59Z [sg554] Sent 204 bytes of science
+4:2:1:0:33:89:1 logout
+Disconnected at 2026-09-30T20:30:06Z (normal)
+
+
+Connected at 2026-09-30T21:25:58Z (sg554)
+logged in
+5:0:1:0:33:89:0:241:2115:1000:-56.8:0.76:13.5:15.00:15.03:8.27:54.6:13.4:30.6:22.9 GPS,300926,212431,4743.569,-12225.074,41,1.0,51,16.3
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.473633,-12222.378906,300926,202932
+2026-09-30T21:26:18Z [sg554] Sending 357 bytes of cmdfile
+2026-09-30T21:26:18Z [sg554] Sent 357 bytes of cmdfile
+Parsed QUIT from cmdfile
+2026-09-30T21:26:25Z [sg554] ready to receive 8 files
+2026-09-30T21:26:29Z [sg554] Receiving 6646 bytes of sg0005dz.x
+2026-09-30T21:26:48Z [sg554] Received 6646 bytes of sg0005dz.x (340.8 Bps)
+2026-09-30T21:26:48Z [sg554] OK
+2026-09-30T21:26:50Z [sg554] Receiving 8192 bytes of sg0005kz.x00
+2026-09-30T21:27:13Z [sg554] Received 8192 bytes of sg0005kz.x00 (345.1 Bps)
+2026-09-30T21:27:13Z [sg554] OK
+2026-09-30T21:27:15Z [sg554] Receiving 8192 bytes of sg0005kz.x01
+2026-09-30T21:27:38Z [sg554] Received 8192 bytes of sg0005kz.x01 (345.0 Bps)
+2026-09-30T21:27:38Z [sg554] OK
+2026-09-30T21:27:40Z [sg554] Receiving 8192 bytes of sg0005kz.x02
+2026-09-30T21:28:04Z [sg554] Received 8192 bytes of sg0005kz.x02 (343.4 Bps)
+2026-09-30T21:28:04Z [sg554] OK
+2026-09-30T21:28:05Z [sg554] Receiving 8192 bytes of sg0005kz.x03
+2026-09-30T21:28:29Z [sg554] Received 8192 bytes of sg0005kz.x03 (345.2 Bps)
+2026-09-30T21:28:29Z [sg554] OK
+2026-09-30T21:28:30Z [sg554] Receiving 8192 bytes of sg0005kz.x04
+2026-09-30T21:28:54Z [sg554] Received 8192 bytes of sg0005kz.x04 (344.8 Bps)
+2026-09-30T21:28:54Z [sg554] OK
+2026-09-30T21:28:55Z [sg554] Receiving 494 bytes of sg0005kz.x05
+2026-09-30T21:28:57Z [sg554] Received 494 bytes of sg0005kz.x05 (336.7 Bps)
+2026-09-30T21:28:57Z [sg554] OK
+2026-09-30T21:28:58Z [sg554] Receiving 4552 bytes of sg0005lz.x
+2026-09-30T21:29:11Z [sg554] Received 4552 bytes of sg0005lz.x (344.7 Bps)
+2026-09-30T21:29:11Z [sg554] OK
+5:0:1:0:33:89:1 logout
+Disconnected at 2026-09-30T21:29:16Z (normal)
+
+
+Connected at 2026-09-30T21:30:31Z (sg554)
+logged in
+5:1:1:0:33:89:0:241:2114:993:-56.0:0.75:13.5:15.00:15.07:8.27:54.7:13.4:30.6:22.9 GPS,300926,212938,4743.576,-12225.103,5,1.0,10,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4748.131836,-12221.388672,300926,212550
+2026-09-30T21:30:44Z [sg554] Sending 357 bytes of cmdfile
+2026-09-30T21:30:44Z [sg554] Sent 357 bytes of cmdfile
+Parsed QUIT from cmdfile
+5:1:1:0:33:89:1 logout
+Disconnected at 2026-09-30T21:30:53Z (normal)
+
+
+Connected at 2026-09-30T21:35:12Z (sg554)
+logged in
+5:2:1:0:33:89:0:241:2115:993:-52.1:0.73:13.7:15.00:15.25:8.27:54.7:13.4:30.6:22.9 GPS,300926,213415,4743.584,-12225.124,6,1.0,12,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.966797,-12226.797852,300926,213023
+2026-09-30T21:35:25Z [sg554] Sending 357 bytes of cmdfile
+2026-09-30T21:35:25Z [sg554] Sent 357 bytes of cmdfile
+Parsed QUIT from cmdfile
+5:2:1:0:33:89:1 logout
+Disconnected at 2026-09-30T21:35:35Z (normal)
+
+
+Connected at 2026-09-30T21:42:07Z (sg554)
+logged in
+5:3:2:0:33:89:-3:241:2115:992:-56.6:0.79:13.8:15.00:15.31:8.27:54.6:13.4:30.6:22.9 GPS,300926,213900,4743.593,-12225.150,8,1.0,14,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.966797,-12226.797852,300926,213949
+2026-09-30T21:42:18Z [sg554] Sending 359 bytes of cmdfile
+2026-09-30T21:42:18Z [sg554] Sent 359 bytes of cmdfile
+Parsed RESUME from cmdfile
+2026-09-30T21:42:24Z [sg554] Sending 204 bytes of science
+2026-09-30T21:42:24Z [sg554] Sent 204 bytes of science
+5:3:2:0:33:89:1 logout
+Disconnected at 2026-09-30T21:42:31Z (normal)
+
+
+Connected at 2026-09-30T22:27:13Z (sg554)
+logged in
+6:0:1:0:33:89:0:240:2044:901:-53.8:0.65:13.5:15.00:15.03:8.25:54.5:13.5:30.6:22.9 GPS,300926,222601,4743.406,-12225.068,26,0.9,55,16.3
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.473633,-12222.378906,300926,214200
+2026-09-30T22:27:25Z [sg554] Sending 357 bytes of cmdfile
+2026-09-30T22:27:25Z [sg554] Sent 357 bytes of cmdfile
+Parsed QUIT from cmdfile
+2026-09-30T22:27:31Z [sg554] ready to receive 7 files
+2026-09-30T22:27:32Z [sg554] Receiving 2850 bytes of sg0006dz.x
+2026-09-30T22:27:41Z [sg554] Received 2850 bytes of sg0006dz.x (344.4 Bps)
+2026-09-30T22:27:41Z [sg554] OK
+2026-09-30T22:27:42Z [sg554] Receiving 8192 bytes of sg0006kz.x00
+2026-09-30T22:28:06Z [sg554] Received 8192 bytes of sg0006kz.x00 (344.0 Bps)
+2026-09-30T22:28:06Z [sg554] OK
+2026-09-30T22:28:07Z [sg554] Receiving 8192 bytes of sg0006kz.x01
+2026-09-30T22:28:31Z [sg554] Received 8192 bytes of sg0006kz.x01 (344.4 Bps)
+2026-09-30T22:28:31Z [sg554] OK
+2026-09-30T22:28:33Z [sg554] Receiving 8192 bytes of sg0006kz.x02
+2026-09-30T22:28:57Z [sg554] Received 8192 bytes of sg0006kz.x02 (339.9 Bps)
+2026-09-30T22:28:57Z [sg554] OK
+2026-09-30T22:29:01Z [sg554] Receiving 8192 bytes of sg0006kz.x03
+2026-09-30T22:29:25Z [sg554] Received 8192 bytes of sg0006kz.x03 (338.5 Bps)
+2026-09-30T22:29:25Z [sg554] OK
+2026-09-30T22:29:29Z [sg554] Receiving 2783 bytes of sg0006kz.x04
+2026-09-30T22:29:34Z [sg554] Received 2783 bytes of sg0006kz.x04 (482.0 Bps)
+2026-09-30T22:29:34Z [sg554] OK
+2026-09-30T22:29:36Z [sg554] Receiving 4090 bytes of sg0006lz.x
+2026-09-30T22:29:48Z [sg554] Received 4090 bytes of sg0006lz.x (337.5 Bps)
+2026-09-30T22:29:48Z [sg554] OK
+6:0:1:0:33:89:1 logout
+Disconnected at 2026-09-30T22:29:53Z (normal)
+
+
+Connected at 2026-09-30T22:31:15Z (sg554)
+logged in
+6:1:1:0:33:89:0:240:2045:894:-57.7:0.76:13.5:15.00:15.08:8.26:54.5:13.5:30.6:22.9 GPS,300926,223015,4743.401,-12225.107,8,0.9,9,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4744.473633,-12222.378906,300926,222704
+2026-09-30T22:31:27Z [sg554] Sending 357 bytes of cmdfile
+2026-09-30T22:31:27Z [sg554] Sent 357 bytes of cmdfile
+Parsed QUIT from cmdfile
+6:1:1:0:33:89:1 logout
+Disconnected at 2026-09-30T22:31:34Z (normal)
+
+
+Connected at 2026-09-30T22:35:45Z (sg554)
+logged in
+6:2:1:0:33:89:0:238:2043:892:-59.6:0.34:13.7:15.00:15.25:8.26:54.6:13.3:0.0:-0.6 GPS,300926,223451,4743.377,-12225.155,8,0.9,11,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 5 geolocation: 4745.082031,-12238.341797,300926,223105
+2026-09-30T22:36:01Z [sg554] Sending 357 bytes of cmdfile
+2026-09-30T22:36:01Z [sg554] Sent 357 bytes of cmdfile
+Parsed QUIT from cmdfile
+6:2:1:0:33:89:1 logout
+Disconnected at 2026-09-30T22:36:17Z (normal)
+
+
+Connected at 2026-09-30T22:48:44Z (sg554)
+logged in
+6:3:5:0:33:89:-2:234:2048:893:-5.4:-0.24:13.8:15.00:15.31:8.27:54.5:18.0:0.0:-1.4 GPS,300926,223948,4743.219,-12225.191,6,1.0,20,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7538:7540M,frag=8,launch=300926:153051
+Iridium bars: 1 geolocation: 4744.473633,-12222.378906,300926,224435
+2026-09-30T22:49:00Z [sg554] Sending 357 bytes of cmdfile
+2026-09-30T22:49:00Z [sg554] Sent 357 bytes of cmdfile
+Parsed QUIT from cmdfile
+2026-09-30T22:49:14Z [sg554] Sending 26 bytes of pdoscmds.bat
+2026-09-30T22:49:14Z [sg554] Sent 26 bytes of pdoscmds.bat
+shutdown Wed Sep 30 22:49:16 202
+Disconnected at 2026-09-30T22:49:32Z (hangup)
+
+

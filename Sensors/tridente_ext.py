@@ -29,10 +29,11 @@ Tridente Sensor extension
 # extension simply generates metadata
 
 import collections
+import re
 
 import BaseNetCDF
 import Utils2
-from BaseLog import log_error
+from BaseLog import log_debug, log_error, log_warning
 
 scale_off_pts = collections.namedtuple("scale_off_pts", ("scale", "off", "pts"))
 
@@ -55,6 +56,209 @@ scale_off_pt_dict = {
 }
 
 
+scattering_units = "meter^-1 steradian^-1"
+chl_units = "micrograms/liter"
+ppb_units = "1e-9"  # a part per billion
+turbidity_units = "FTU"  # Formazin Turbidity Units
+
+# See the Tridente instrument and column naming document in the docs directory for a
+# description of the namespace
+
+channels = {
+    "chla470": {
+        "_FillValue": BaseNetCDF.nc_nan,
+        "units": chl_units,
+        "description": "chlorophyll-a concentration (470nm excitation/695nm emission) scaled to the fluorescence response from a monoculture of Thalassiosira weissflogii.",
+    },
+    "chla435": {
+        "_FillValue": BaseNetCDF.nc_nan,
+        "units": chl_units,
+        "description": "chlorophyll-a concentration (435nm excitation/695nm emission) scaled to the fluorescence response from a monoculture of Thalassiosira weissflogii.",
+    },
+    "fdom365": {
+        "_FillValue": BaseNetCDF.nc_nan,
+        "units": ppb_units,
+        "description": "fDOM fluorescence (365nm excitation/450m emission)",
+    },
+    "pc590": {
+        "_FillValue": BaseNetCDF.nc_nan,
+        "units": chl_units,
+        "description": "Phycocyanin (590nm excitation/654nm emission)",
+    },
+    "pc525": {
+        "_FillValue": BaseNetCDF.nc_nan,
+        "units": chl_units,
+        "description": "Phycoerythrin (525nm excitation/600nm emission)",
+    },
+    "rd550": {
+        "_FillValue": BaseNetCDF.nc_nan,
+        "units": chl_units,
+        "description": "Rhodamine (550nm excitation/600nm emission)",
+    },
+    "fitc470": {
+        "_FillValue": BaseNetCDF.nc_nan,
+        "units": chl_units,
+        "description": "Fluorescein (470nm excitation/550nm emission)",
+    },
+    "bb470": {
+        "_FillValue": BaseNetCDF.nc_nan,
+        "units": scattering_units,
+        "description": "total volume 470nm scattering coefficient",
+    },
+    "bb525": {
+        "_FillValue": BaseNetCDF.nc_nan,
+        "units": scattering_units,
+        "description": "total volume 525nm scattering coefficient",
+    },
+    "bb650": {
+        "_FillValue": BaseNetCDF.nc_nan,
+        "units": scattering_units,
+        "description": "total volume 650nm scattering coefficient",
+    },
+    "bb700": {
+        "_FillValue": BaseNetCDF.nc_nan,
+        "units": scattering_units,
+        "description": "total volume 700nm scattering coefficient",
+    },
+    "tu650": {
+        "_FillValue": BaseNetCDF.nc_nan,
+        "units": turbidity_units,
+        "description": "Turbidity (650nm)",
+    },
+    "tu700": {
+        "_FillValue": BaseNetCDF.nc_nan,
+        "units": turbidity_units,
+        "description": "Turbidity (700nm)",
+    },
+}
+
+
+# Truck (serdev) instrument names are compressed to fit the 14 character
+# .cnf buffer limit - t[instnum]chan1chan2chan3, where each chan is the single
+# character ChAbbr and the 3 digit (excitation) wavelength. See docs/tridente.md
+truck_name_re = re.compile(r"^t([1-9]?)((?:[a-z][0-9]{3}){1,3})$")
+truck_chan_re = re.compile(r"([a-z])([0-9]{3})")
+
+
+def expand_truck_name(name: str) -> str | None:
+    """Expands a compressed truck tridente instrument name to the full name space.
+
+    For example, tb700c470f365 -> tridentebb700chla470fdom365
+
+    Args:
+        name: The truck instrument name (the .cnf prefix)
+
+    Returns:
+        The full instrument name or None if name is not a truck tridente name
+        for a known channel combination.
+
+    Raises:
+        None
+    """
+    m = truck_name_re.match(name)
+    if m is None:
+        return None
+    instnum, chans = m.groups()
+    full_chans = []
+    for abbr, wavelength in truck_chan_re.findall(chans):
+        candidates = [
+            ch for ch in channels if ch[0] == abbr and ch.endswith(wavelength)
+        ]
+        if len(candidates) != 1:
+            log_debug(f"{name} does not map to a tridente instrument")
+            return None
+        full_chans.append(candidates[0])
+    full_chan_str = "".join(full_chans)
+    if full_chan_str not in Utils2.known_tridente_channels():
+        log_warning(
+            f"Truck instrument {name} looks like a tridente, but {full_chan_str} is not in the list of known tridente channels - not processed"
+        )
+        return None
+    return f"tridente{instnum}{full_chan_str}"
+
+
+def asc2eng(base_opts, module_name, datafile=None) -> int:
+    """Converts truck tridente columns to engineering units and the full instrument name
+
+    Args:
+        base_opts: Command line options
+        module_name: Name of this module
+        datafile: The asc DataFile being converted
+
+    Returns:
+        -1 - error in processing
+         0 - success (data found and processed)
+         1 - no data found to process
+
+    Raises:
+        None
+    """
+    if datafile is None:
+        log_error("No datafile supplied for asc2eng conversion - version mismatch?")
+        return -1
+
+    ret_val = 1
+
+    for asc_col_name in list(datafile.columns):
+        if "." not in asc_col_name:
+            continue
+        instrument_name, col_name = asc_col_name.split(".", 1)
+        full_instrument_name = expand_truck_name(instrument_name)
+        if full_instrument_name is None or col_name not in scale_off_pt_dict:
+            continue
+        column = datafile.remove_col(asc_col_name)
+        if column is None:
+            continue
+        eng_col_name = f"{full_instrument_name}.{col_name}"
+        datafile.eng_cols.append(eng_col_name)
+        datafile.eng_dict[eng_col_name] = (
+            column - scale_off_pt_dict[col_name].off
+        ) / scale_off_pt_dict[col_name].scale
+        ret_val = 0
+
+    return ret_val
+
+
+# Needed even though asc2eng renames the data columns - truck timeout class
+# names (from the .dat file) only pass through this hook (see DataFiles.py)
+def remap_engfile_columns_netcdf(
+    base_opts, module, calib_consts=None, column_names=None
+) -> int:
+    """Remaps compressed truck tridente names to the full instrument name space
+
+    Handles both bare instrument names (timeout class names) and instrument_column
+    names (from previously generated .eng files)
+
+    Args:
+        base_opts: Command line options
+        module: Name of this module
+        calib_consts: sg_calib_constants (unused)
+        column_names: List of names - updated in place
+
+    Returns:
+        -1 - error in processing
+         0 - match found and processed
+         1 - no match found
+
+    Raises:
+        None
+    """
+    if column_names is None:
+        log_error(
+            "Missing arguments for tridente remap_engfile_columns_netcdf - version mismatch?"
+        )
+        return -1
+
+    ret_val = 1
+    for ii, name in enumerate(column_names):
+        instrument_name, sep, col_name = name.partition("_")
+        full_instrument_name = expand_truck_name(instrument_name)
+        if full_instrument_name is not None:
+            column_names[ii] = f"{full_instrument_name}{sep}{col_name}"
+            ret_val = 0
+    return ret_val
+
+
 def init_sensor(module_name, init_dict=None):
     """
     init_sensor
@@ -66,82 +270,6 @@ def init_sensor(module_name, init_dict=None):
     if init_dict is None:
         log_error("No datafile supplied for init_sensors - version mismatch?")
         return -1
-
-    scattering_units = "meter^-1 steradian^-1"
-    chl_units = "micrograms/liter"
-    ppb_units = "1e-9"  # a part per billion
-    turbidity_units = "FTU"  # Formazin Turbidity Units
-
-    # See the Tridente instrument and column naming document in the docs directory for a
-    # description of the namespace
-
-    channels = {
-        "chla470": {
-            "_FillValue": BaseNetCDF.nc_nan,
-            "units": chl_units,
-            "description": "chlorophyll-a concentration (470nm excitation/695nm emission) scaled to the fluorescence response from a monoculture of Thalassiosira weissflogii.",
-        },
-        "chla435": {
-            "_FillValue": BaseNetCDF.nc_nan,
-            "units": chl_units,
-            "description": "chlorophyll-a concentration (435nm excitation/695nm emission) scaled to the fluorescence response from a monoculture of Thalassiosira weissflogii.",
-        },
-        "fdom365": {
-            "_FillValue": BaseNetCDF.nc_nan,
-            "units": ppb_units,
-            "description": "fDOM fluorescence (365nm excitation/450m emission)",
-        },
-        "pc590": {
-            "_FillValue": BaseNetCDF.nc_nan,
-            "units": chl_units,
-            "description": "Phycocyanin (590nm excitation/654nm emission)",
-        },
-        "pc525": {
-            "_FillValue": BaseNetCDF.nc_nan,
-            "units": chl_units,
-            "description": "Phycoerythrin (525nm excitation/600nm emission)",
-        },
-        "rd550": {
-            "_FillValue": BaseNetCDF.nc_nan,
-            "units": chl_units,
-            "description": "Rhodamine (550nm excitation/600nm emission)",
-        },
-        "fitc470": {
-            "_FillValue": BaseNetCDF.nc_nan,
-            "units": chl_units,
-            "description": "Fluorescein (470nm excitation/550nm emission)",
-        },
-        "bb470": {
-            "_FillValue": BaseNetCDF.nc_nan,
-            "units": scattering_units,
-            "description": "total volume 470nm scattering coefficient",
-        },
-        "bb525": {
-            "_FillValue": BaseNetCDF.nc_nan,
-            "units": scattering_units,
-            "description": "total volume 525nm scattering coefficient",
-        },
-        "bb650": {
-            "_FillValue": BaseNetCDF.nc_nan,
-            "units": scattering_units,
-            "description": "total volume 650nm scattering coefficient",
-        },
-        "bb700": {
-            "_FillValue": BaseNetCDF.nc_nan,
-            "units": scattering_units,
-            "description": "total volume 700nm scattering coefficient",
-        },
-        "tu650": {
-            "_FillValue": BaseNetCDF.nc_nan,
-            "units": turbidity_units,
-            "description": "Turbidity (650nm)",
-        },
-        "tu700": {
-            "_FillValue": BaseNetCDF.nc_nan,
-            "units": turbidity_units,
-            "description": "Turbidity (700nm)",
-        },
-    }
 
     meta_data_adds = {}
 
@@ -213,11 +341,10 @@ def init_sensor(module_name, init_dict=None):
             ("", data_info),
         ):
             for channel, md in channels.items():
-                md["instrument"] = instrument
                 meta_data_adds[f"{prefix}{instrument}_{channel}"] = [
                     "f",
                     "d",
-                    md,
+                    md | {"instrument": instrument},
                     (d_i,),
                 ]
 
