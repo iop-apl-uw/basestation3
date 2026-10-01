@@ -39,10 +39,20 @@ installation" section and the Dockerfile's runtime-dependencies apt-get line.
 """
 
 import shutil
+import sys
 
 import pytest
 
-REQUIRED_COMMANDS = ["tcsh", "bc", "dos2unix"]
+# dos2unix isn't shipped with macOS, and selftest.sh is only run on the
+# Linux basestation, so don't require it for local development on a Mac
+REQUIRED_COMMANDS = [
+    "tcsh",
+    "bc",
+    pytest.param(
+        "dos2unix",
+        marks=pytest.mark.skipif(sys.platform == "darwin", reason="dos2unix not required on macOS"),
+    ),
+]
 
 
 @pytest.mark.parametrize("command", REQUIRED_COMMANDS)
