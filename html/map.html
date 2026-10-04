@@ -1148,9 +1148,9 @@ imestamp
             function activateGlider(mk) {
                 if (mk.options.hasOwnProperty('id') && mk.options.id == "seagliderPositionHighlightState") {
                     console.log('getting glider from kml icon ' + mk['key']);
-                    console.log(mk);
-                    if ('key' in mk && mk['key'] in gliderMarkers)
-                        mk = gliderMarkers[mk['key']];
+                    var k = mk['key'].split(' ')[0];
+                    if (Object.hasOwn(gliderMarkers, k))
+                        mk = gliderMarkers[k];
                     else
                         mk = null;
                     console.log('now');
