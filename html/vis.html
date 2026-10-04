@@ -2404,7 +2404,7 @@
 
     /* CMDFILE EDITOR */
 
-    var parmGroups = ["BASIC", "NAV", "DIVE", "SURFACE", "FLIGHT", "PITCH", "ROLL", "VBD", "ALTIMETER", "POWER", "HARDWARE"];
+    var parmGroups = ["BASIC", "NAV", "DIVE", "SURFACE", "FLIGHT", "PITCH", "ROLL", "VBD", "ALTIMETER", "POWER", "HARDWARE", "RAFOS"];
     function changeParmGroup(group) {
         for (g of parmGroups) {
             console.log(g);
@@ -4599,7 +4599,8 @@ parms[p]
                 <span id="tabVBD" class="spanClick" onclick="changeParmGroup('VBD'); return false;">VBD</span> <b>&#124;</b>
                 <span id="tabALTIMETER" class="spanClick" onclick="changeParmGroup('ALTIMETER'); return false;">Altimeter</span> <b>&#124;</b>
                 <span id="tabPOWER" class="spanClick" onclick="changeParmGroup('POWER'); return false;">Power</span> <b>&#124;</b>
-                <span id="tabHARDWARE" class="spanClick" onclick="changeParmGroup('HARDWARE'); return false;">Hardware</span> 
+                <span id="tabHARDWARE" class="spanClick" onclick="changeParmGroup('HARDWARE'); return false;">Hardware</span> <b>&#124;</b>
+                <span id="tabRAFOS" class="spanClick" onclick="changeParmGroup('RAFOS'); return false;">RAFOS</span> 
             </div>
             <div id="pilotWheelCmdfileControls">
                 <div id="pilotParmsList">
@@ -4629,6 +4630,7 @@ parms[p]
                     <div id="pilotALTIMETER" class="hide" oncontextmenu="parameterHelp('pilotALTIMETER');"></div>
                     <div id="pilotPOWER" class="hide" oncontextmenu="parameterHelp('pilotPOWER');"></div>
                     <div id="pilotHARDWARE" class="hide" oncontextmenu="parameterHelp('pilotHARDWARE');"></div>
+                    <div id="pilotRAFOS" class="hide" oncontextmenu="parameterHelp('pilotRAFOS');"></div>
                 </div>
                 
                 <div id="pilotDirectiveList">
