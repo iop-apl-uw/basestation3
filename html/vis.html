@@ -491,15 +491,15 @@
                         $('DOG').innerHTML = dog.toFixed(0) + 'm';
                         $('dt').innerHTML = dt.toFixed(0) + 's';
 
-                        var next_t = (connect_t + dt)*1000; 
-                        $('nextCall').innerHTML = new Date(next_t).toISOString().slice(11,19); 
+                        // var next_t = (connect_t + dt)*1000; 
+                        // $('nextCall').innerHTML = new Date(next_t).toISOString().slice(11,19); 
                     }
                     else {
                         $('SOG').innerHTML = '0';
                         $('COG').innerHTML = '0';
                         $('DOG').innerHTML = '0';
                         $('dt').innerHTML = '0';
-                        $('nextCall').innerHTML = '-';
+                        // $('nextCall').innerHTML = '-';
                     }
 
                     $('position').innerHTML = formatPos(dd2ddmm(json['lat'])) + ',' + formatPos(dd2ddmm(json['lon']));
@@ -1198,7 +1198,9 @@
         cell.innerHTML = datestr; // appendChild(text);
 
         cell = row.insertCell(2); 
-        text = document.createTextNode('' + ((d['log_gps_time'] - d['log_start'])/60).toFixed(0));
+
+        // text = document.createTextNode('' + ((d['log_gps_time'] - d['log_start'])/60).toFixed(0));
+        text = document.createTextNode('' + (d['time_seconds_diving']/60).toFixed(0));
         cell.appendChild(text);
 
         cell = row.insertCell(3);
@@ -2696,6 +2698,8 @@ parms[p]
                 console.log(text);
                 return;
             }
+
+            $('nextCall').innerHTML = new Date(data['next']*1000).toISOString().slice(11,19); 
 
             let { element, divs, reds, yellows } = makeAnnunciators(data, mobile ? 5 : 9);
             $('annunciators').innerHTML = '';
