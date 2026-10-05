@@ -230,6 +230,17 @@ if ( $ndat_files > 10 || $nsc_files > 10 ) then
     echo "There are a lot of old dive or SciCon data files onboard!"
 endif
 
+set batfiles = `grep -E '[0-9 :-]+ [a-z0-9_]+\.bat' $fname | awk '{print $4}'`
+if ( "$batfiles" != "" ) then
+
+echo "--------------------------------------------"
+echo "Summary of currently installed batch files"
+echo 
+echo $batfiles | tr ' ' '\n'
+
+endif
+
+
 set fname = `basename $fname .cap`
 
 echo "--------------------------------------------"
