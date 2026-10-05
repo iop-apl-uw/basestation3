@@ -72,8 +72,10 @@ def checkHelp(line):
 def format(line):
     h = checkHelp(line)
 
+    
     reds = ["errors", "error", "Failed", "failed", "[crit]", "timed out"]
     yellows = ["WARNING"]
+    batch = [ "noccomm.bat", "disconnect.bat", "connect.bat", "dive.bat", "climb.bat", "apogee.bat", "loiter.bat", "launch.bat", "boot.bat", "recovery_start.bat", "recovery_exit.bat", "recovery.bat", "selftest.bat", "surface.bat", "escape.bat", "finish.bat"]
     bolds = ["SSYS,N,Rev", "SSYS,N,Version 6"]
     for r in reds:
         if line.find(r) > -1:
@@ -82,6 +84,11 @@ def format(line):
     for y in yellows:
         if line.find(y) > -1:
             line = line.replace(y, "<span style='background-color:orange;'>%s</span>" % y)
+            break
+
+    for b in batch:
+        if line.find(b) > -1:
+            line = line.replace(b, "<span style='background-color:orange;'>%s</span> (this file is auto executed every named phase)" % b)
             break
 
     a = re.search('(\d+\.\d+,[SH][A-Z0-9]+,[NCD],)(.+)?', line)
