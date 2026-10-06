@@ -706,6 +706,53 @@ def process_pagers(
             )
 
 
+REDACTED_PASSWORD = "****"
+
+
+def redact_ftp_line(ftp_line: str) -> str:
+    """Masks the password in a .ftp/.ftps line so it can be logged.
+
+    The line is of the form [user[:password]@]host[:port]/path,tags...
+    Everything between the first ':' and the first '@' is masked, even if
+    the password holds characters (',', ':', '/') that would defeat the
+    line parser - a malformed line is exactly the one that gets logged.
+
+    Args:
+        ftp_line: A line from a .ftp or .ftps file.
+
+    Returns:
+        The line with any password replaced by REDACTED_PASSWORD.
+
+    Raises:
+        None.
+    """
+    at = ftp_line.find("@")
+    colon = ftp_line.find(":")
+    if at == -1 or colon == -1 or colon > at:
+        return ftp_line
+    return f"{ftp_line[: colon + 1]}{REDACTED_PASSWORD}{ftp_line[at:]}"
+
+
+def redact_sftp_line(sftp_line: str) -> str:
+    """Masks the password in a .sftp line so it can be logged.
+
+    The line is of the form host,user,password,path_to_key,...
+
+    Args:
+        sftp_line: A line from a .sftp file.
+
+    Returns:
+        The line with the password field replaced by REDACTED_PASSWORD.
+
+    Raises:
+        None.
+    """
+    fields = sftp_line.split(",")
+    if len(fields) > 2 and fields[2]:
+        fields[2] = REDACTED_PASSWORD
+    return ",".join(fields)
+
+
 def process_ftp_tags(
     base_opts,
     processed_file_names,
@@ -800,14 +847,15 @@ def process_ftp_line(
     """
 
     ftp_line = ftp_line.rstrip()
-    log_debug(f"ftp line = ({ftp_line})")
+    safe_ftp_line = redact_ftp_line(ftp_line)
+    log_debug(f"ftp line = ({safe_ftp_line})")
     if ftp_line == "":  # blank line
         return 0
     if ftp_line[0] == "#":  # not a comment
         return 0
 
     log_debug(f"{processed_file_names}")
-    log_info(f"Processing ftp line ({ftp_line})")
+    log_info(f"Processing ftp line ({safe_ftp_line})")
     # Lines of the form
     # [user[:password]@]host[:port]/path
     # see .ftp in sg000 for more details
@@ -854,7 +902,7 @@ def process_ftp_line(
         mission_profile_name,
         ftp_tags[1:],
         known_ftp_tags,
-        ftp_line,
+        safe_ftp_line,
     )
 
     if len(ftp_file_names_to_send) < 1:
@@ -964,19 +1012,20 @@ def process_sftp_line(
     """
 
     sftp_line = sftp_line.rstrip()
-    log_debug(f"ftp line = ({sftp_line})")
+    safe_sftp_line = redact_sftp_line(sftp_line)
+    log_debug(f"ftp line = ({safe_sftp_line})")
     if sftp_line == "":  # blank line
         return 0
     if sftp_line[0] == "#":  # not a comment
         return 0
 
     log_debug(f"{processed_file_names}")
-    log_info(f"Processing sftp line ({sftp_line})")
+    log_info(f"Processing sftp line ({safe_sftp_line})")
 
     # sftp specification of the form host, user,password,path_to_key,port,path,[files]
     sftp_tags = sftp_line.split(",")
     if len(sftp_tags) < 7:
-        log_error(f"Incomplete sftp specification {sftp_line} - skipping")
+        log_error(f"Incomplete sftp specification {safe_sftp_line} - skipping")
         return 1
 
     # Address
@@ -1017,7 +1066,7 @@ def process_sftp_line(
         mission_profile_name,
         sftp_tags[7:],
         known_ftp_tags,
-        sftp_line,
+        safe_sftp_line,
     )
 
     if len(sftp_file_names_to_send) < 1:
@@ -1038,7 +1087,7 @@ def process_sftp_line(
         )
         sftp = client.open_sftp()
     except Exception:
-        log_error(f"Could not connect {sftp_line}", "exc")
+        log_error(f"Could not connect {safe_sftp_line}", "exc")
         return 1
 
     for sftp_file_name_to_send in sftp_file_names_to_send:
@@ -1061,7 +1110,7 @@ def process_ftp(
     known_ftp_tags,
     ftp_type=".ftp",
 ):
-    def process_one_ftp(ftp_file, process_line):
+    def process_one_ftp(ftp_file, process_line, redact_line):
         """Process the .ftp/.sftp/.ftps file and push the data to a ftp/sftp/ftps server"""
 
         for ftp_line in ftp_file:
@@ -1075,7 +1124,7 @@ def process_ftp(
                     known_ftp_tags,
                 )
             except Exception:
-                log_error(f"Could not process {ftp_line} - skipping", "exc")
+                log_error(f"Could not process {redact_line(ftp_line.rstrip())} - skipping", "exc")
 
     if ftp_type not in (".ftp", ".sftp", ".ftps"):
         log_error(f"Unsupported ftp type {ftp_type}")
@@ -1083,10 +1132,13 @@ def process_ftp(
 
     if ftp_type == ".ftp":
         process_line = process_ftp_line
+        redact_line = redact_ftp_line
     elif ftp_type == ".ftps":
         process_line = functools.partial(process_ftp_line, use_ftps=True)
+        redact_line = redact_ftp_line
     else:
         process_line = process_sftp_line
+        redact_line = redact_sftp_line
 
     log_info(f"Starting processing on {ftp_type}")
 
@@ -1104,7 +1156,7 @@ def process_ftp(
             continue
         try:
             with open(ftp_file_name, "r") as ftp_file:
-                process_one_ftp(ftp_file, process_line)
+                process_one_ftp(ftp_file, process_line, redact_line)
         except Exception:
             log_error(f"Could not process {ftp_file_name} - no ftp sent", "exc")
 

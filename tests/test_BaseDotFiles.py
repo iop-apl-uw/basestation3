@@ -342,3 +342,85 @@ def test_process_ftp_unsupported_type(caplog: LogCaptureFixture) -> None:
         )
     assert result == 1
     assert "Unsupported ftp type" in caplog.text
+
+
+# --- credential redaction in logged ftp/sftp lines --------------------------
+
+
+@pytest.mark.parametrize(
+    "line, expected",
+    [
+        (
+            "someone:passwd@ftp.example.com/remote/path,nc",
+            "someone:****@ftp.example.com/remote/path,nc",
+        ),
+        # Characters that break the line parser must still be masked
+        ("someone:pa:ss,wd@host/path,nc", "someone:****@host/path,nc"),
+        ("someone:pa_AT_ss@host/path,nc", "someone:****@host/path,nc"),
+        ("someone@host/path,nc", "someone@host/path,nc"),
+        ("host:2121/path,nc", "host:2121/path,nc"),
+        ("host/path,nc", "host/path,nc"),
+    ],
+)
+def test_redact_ftp_line(line: str, expected: str) -> None:
+    assert BaseDotFiles.redact_ftp_line(line) == expected
+
+
+@pytest.mark.parametrize(
+    "line, expected",
+    [
+        (
+            "host,user,secret,~/.ssh/key,,22,remote,nc",
+            "host,user,****,~/.ssh/key,,22,remote,nc",
+        ),
+        ("host,user,,~/.ssh/key,,22,remote,nc", "host,user,,~/.ssh/key,,22,remote,nc"),
+        ("host,user", "host,user"),
+    ],
+)
+def test_redact_sftp_line(line: str, expected: str) -> None:
+    assert BaseDotFiles.redact_sftp_line(line) == expected
+
+
+@pytest.mark.parametrize("ftp_type", [".ftp", ".ftps", ".sftp"])
+def test_process_ftp_never_logs_password(
+    caplog: LogCaptureFixture, tmp_path, ftp_type: str
+) -> None:
+    """No log line may carry the password, including the per-line failure traceback.
+
+    Mirrors the sg263 2026-09-11 leak: the transfer raised out of the line
+    processor and process_ftp logged the full line at ERROR, which then
+    went out in the Mattermost alert.
+    """
+    base_opts = MagicMock()
+    base_opts.basestation_etc = tmp_path / "etc"
+    base_opts.basestation_etc.mkdir()
+    base_opts.group_etc = None
+    base_opts.mission_dir = tmp_path / "mission"
+    base_opts.mission_dir.mkdir()
+    (base_opts.mission_dir / "test.eng").write_text("data")
+
+    secret = "s3cr3t"
+    if ftp_type == ".sftp":
+        known_hosts = tmp_path / "known_hosts"
+        known_hosts.write_text("")
+        line = f"host.example.com,someuser,{secret},,{known_hosts},,remote,file_test.eng,bogus_tag"
+    else:
+        line = f"someone:{secret}@ftp.example.com/remote/path,file_test.eng,bogus_tag"
+    (base_opts.mission_dir / ftp_type).write_text(line + "\n")
+
+    mock_ftp = MagicMock()
+    mock_ftp.quit.side_effect = Exception("451 Failure writing to local file.")
+    mock_client = MagicMock()
+    mock_client.open_sftp.return_value.put.side_effect = Exception("write failed")
+
+    with (
+        patch("BaseDotFiles.FTP", return_value=mock_ftp),
+        patch("BaseDotFiles.FTP_TLS", return_value=mock_ftp),
+        patch("BaseDotFiles.paramiko.SSHClient", return_value=mock_client),
+        caplog.at_level("DEBUG"),
+    ):
+        BaseDotFiles.process_ftp(base_opts, [], None, None, [], ftp_type=ftp_type)
+
+    assert "Could not process" in caplog.text
+    assert BaseDotFiles.REDACTED_PASSWORD in caplog.text
+    assert secret not in caplog.text
