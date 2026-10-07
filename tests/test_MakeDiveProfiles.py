@@ -27,9 +27,11 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
 import pathlib
 import shutil
 import time
+import types
 
 import netCDF4
 import numpy as np
@@ -204,3 +206,29 @@ def test_ignore_truck_legato_columns_kept_without_errors(tmp_path, caplog):
             assert "ignore_truck_legato" in var.comment
             assert not hasattr(var, "standard_name")
         assert "eng_rbr_temp" not in ds.variables
+
+
+def _fix(time_s: float, lat_dd: float, lon_dd: float) -> types.SimpleNamespace:
+    return types.SimpleNamespace(time_s=time_s, lat_dd=lat_dd, lon_dd=lon_dd, error=10.0)
+
+
+def test_gps_surface_drift_northward() -> None:
+    # 0.001 deg of latitude (~111 m) in 600 s, due north: ~18.6 cm/s
+    drift = MakeDiveProfiles.gps_surface_drift(
+        _fix(0.0, 47.000, -122.0), _fix(600.0, 47.001, -122.0)
+    )
+    assert drift["surface_curr_north"] == pytest.approx(18.55, abs=0.01)
+    assert drift["surface_curr_east"] == pytest.approx(0.0, abs=1e-6)
+    assert drift["surface_curr_error"] == pytest.approx(20.0 / 600.0)
+
+
+@pytest.mark.parametrize("dt", [0.0, -30.0])
+def test_gps_surface_drift_no_time_advance(caplog: pytest.LogCaptureFixture, dt: float) -> None:
+    """GPS1 and GPS2 at the same time must not divide by zero (sg250 dive 451)."""
+    with caplog.at_level(logging.WARNING):
+        drift = MakeDiveProfiles.gps_surface_drift(
+            _fix(1000.0, 77.4, 10.0), _fix(1000.0 + dt, 77.4, 10.0)
+        )
+    assert np.isnan(drift["surface_curr_east"]) and np.isnan(drift["surface_curr_north"])
+    assert "surface_curr_error" not in drift
+    assert "Unable to determine surface drift" in caplog.text

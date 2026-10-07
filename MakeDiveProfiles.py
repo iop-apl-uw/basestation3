@@ -2713,6 +2713,89 @@ def avg_longitude(lon1, lon2):
         return (lon1 + lon2) / 2.0
 
 
+def gps_surface_drift(GPS1, GPS2) -> dict[str, float]:
+    """Surface current from the glider's drift between GPS1 and GPS2.
+
+    Args:
+        GPS1: The fix before the drift (needs time_s, lat_dd, lon_dd, error).
+        GPS2: The fix at the end of the drift, before the dive.
+
+    Returns:
+        surface_curr_east and surface_curr_north [cm/s] and surface_curr_error
+        [m/s]; east and north are NaN (and no error) if GPS2 isn't after GPS1.
+
+    Raises:
+        None.
+    """
+    # Calculate the drift speed and direction between GPS1 and GPS2
+    gps_drift_time_s = GPS2.time_s - GPS1.time_s
+    log_debug("gps_drift_time_s = %f" % gps_drift_time_s)
+    if not gps_drift_time_s > 0:
+        # Same as the main path (GPS12_ok). Untrustworthy GPS can leave GPS1 and
+        # GPS2 at the same time, and the divisions below raised ZeroDivisionError
+        # (sg250 AMOS_Jul25 dive 451).
+        log_warning(
+            f"Unable to determine surface drift - GPS2 is {gps_drift_time_s:.0f} s after GPS1"
+        )
+        return {
+            "surface_curr_east": BaseNetCDF.nc_nan,
+            "surface_curr_north": BaseNetCDF.nc_nan,
+        }
+
+    surface_GPS_mean_lat_dd = (GPS1.lat_dd + GPS2.lat_dd) / 2.0
+    surface_mean_lat_factor = math.cos(math.radians(surface_GPS_mean_lat_dd))
+
+    surface_delta_GPS_lat_dd = GPS2.lat_dd - GPS1.lat_dd
+    surface_delta_GPS_lon_dd = GPS2.lon_dd - GPS1.lon_dd
+
+    surface_delta_GPS_lat_m = surface_delta_GPS_lat_dd * m_per_deg
+    surface_delta_GPS_lon_m = (
+        surface_delta_GPS_lon_dd * m_per_deg * surface_mean_lat_factor
+    )
+
+    log_debug(
+        "surface_delta_GPS_lat_m = %f, surface_delta_GPS_lon_m = %f"
+        % (surface_delta_GPS_lat_m, surface_delta_GPS_lon_m)
+    )
+
+    surface_current_drift_cm_s = (
+        m2cm
+        * math.sqrt(
+            surface_delta_GPS_lat_m * surface_delta_GPS_lat_m
+            + surface_delta_GPS_lon_m * surface_delta_GPS_lon_m
+        )
+        / gps_drift_time_s
+    )
+    try:
+        # compute polar (not compass!) angle of surface current
+        # convert to degrees to handle bounds checking below
+        surface_current_set_deg = math.degrees(
+            math.atan2(surface_delta_GPS_lat_m, surface_delta_GPS_lon_m)
+        )
+    except ZeroDivisionError:  #  atan2
+        surface_current_set_deg = 0.0
+
+    if surface_current_set_deg < 0:
+        surface_current_set_deg = surface_current_set_deg + 360.0
+
+    surface_current_set_rad = math.radians(surface_current_set_deg)
+
+    # given polar (not compass) angle cos() gets the east (U) component; sin() get the north (V) component of drift speed
+    surface_curr_east = surface_current_drift_cm_s * np.cos(surface_current_set_rad)
+    surface_curr_north = surface_current_drift_cm_s * np.sin(surface_current_set_rad)
+
+    log_debug(
+        "surface_current_drift_cm_s = %f, polar surface_current_set_deg = %f"
+        % (surface_current_drift_cm_s, surface_current_set_deg)
+    )
+    surface_curr_error = (GPS1.error + GPS2.error) / gps_drift_time_s  # [m/s]
+    return {
+        "surface_curr_east": surface_curr_east,
+        "surface_curr_north": surface_curr_north,
+        "surface_curr_error": surface_curr_error,
+    }
+
+
 def compute_GSM_simple(
     vehicle_heading_mag_degrees_v,
     vehicle_pitch_rad_v,
@@ -2879,64 +2962,7 @@ def compute_GSM_simple(
             "longitude_gsm": gsm_lon_dd_v,
         }
     )
-    # Calculate the drift speed and direction between GPS1 and GPS2
-    gps_drift_time_s = GPS2.time_s - GPS1.time_s
-    log_debug("gps_drift_time_s = %f" % gps_drift_time_s)
-
-    surface_GPS_mean_lat_dd = (GPS1.lat_dd + GPS2.lat_dd) / 2.0
-    surface_mean_lat_factor = math.cos(math.radians(surface_GPS_mean_lat_dd))
-
-    surface_delta_GPS_lat_dd = GPS2.lat_dd - GPS1.lat_dd
-    surface_delta_GPS_lon_dd = GPS2.lon_dd - GPS1.lon_dd
-
-    surface_delta_GPS_lat_m = surface_delta_GPS_lat_dd * m_per_deg
-    surface_delta_GPS_lon_m = (
-        surface_delta_GPS_lon_dd * m_per_deg * surface_mean_lat_factor
-    )
-
-    log_debug(
-        "surface_delta_GPS_lat_m = %f, surface_delta_GPS_lon_m = %f"
-        % (surface_delta_GPS_lat_m, surface_delta_GPS_lon_m)
-    )
-
-    surface_current_drift_cm_s = (
-        m2cm
-        * math.sqrt(
-            surface_delta_GPS_lat_m * surface_delta_GPS_lat_m
-            + surface_delta_GPS_lon_m * surface_delta_GPS_lon_m
-        )
-        / gps_drift_time_s
-    )
-    try:
-        # compute polar (not compass!) angle of surface current
-        # convert to degrees to handle bounds checking below
-        surface_current_set_deg = math.degrees(
-            math.atan2(surface_delta_GPS_lat_m, surface_delta_GPS_lon_m)
-        )
-    except ZeroDivisionError:  #  atan2
-        surface_current_set_deg = 0.0
-
-    if surface_current_set_deg < 0:
-        surface_current_set_deg = surface_current_set_deg + 360.0
-
-    surface_current_set_rad = math.radians(surface_current_set_deg)
-
-    # given polar (not compass) angle cos() gets the east (U) component; sin() get the north (V) component of drift speed
-    surface_curr_east = surface_current_drift_cm_s * np.cos(surface_current_set_rad)
-    surface_curr_north = surface_current_drift_cm_s * np.sin(surface_current_set_rad)
-
-    log_debug(
-        "surface_current_drift_cm_s = %f, polar surface_current_set_deg = %f"
-        % (surface_current_drift_cm_s, surface_current_set_deg)
-    )
-    surface_curr_error = (GPS1.error + GPS2.error) / gps_drift_time_s  # [m/s]
-    results_d.update(
-        {
-            "surface_curr_east": surface_curr_east,
-            "surface_curr_north": surface_curr_north,
-            "surface_curr_error": surface_curr_error,
-        }
-    )
+    results_d.update(gps_surface_drift(GPS1, GPS2))
 
 
 # TODO add None for eng_file_name, log_file_name, sg_calib_file_name
@@ -5193,6 +5219,19 @@ def make_dive_profile(
         # temp_raw_v, cond_raw_v plus qc vectors
         # ctd_press and ctd_depth_m
         # ctd_np, ctd_epoch_time_s_v
+
+        # Record the CTD coordinates now. Results on the CTD dimension (GSM
+        # speeds, ctd_pressure_qc) go in before ctd_time otherwise would, and a
+        # bail-out in between writes the .nc with whatever is in results_d -
+        # leaving them with no time coordinate (sg250 AMOS_Jul25 dive 938,
+        # "Glider never dove?"). The full update below rewrites these.
+        results_d.update(
+            {
+                "ctd_time": ctd_epoch_time_s_v,
+                "ctd_depth": ctd_depth_m_v,
+                "ctd_pressure": ctd_press_v,
+            }
+        )
 
         if deck_dive and max(cond_raw_v) < 1.0:
             # a deck dive in air
