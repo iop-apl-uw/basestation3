@@ -229,15 +229,18 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
         fname = os.path.join(path, f'p{glider:03d}{d:04d}.nc')
         try:
             nc = Utils.open_netcdf_file(fname)
-        except:
-            pass
+        except Exception as e:
+            # Name the reason - this used to be a bare pass, which left no
+            # trace of why a dive that exists couldn't be used (sg675 dive 206)
+            log_warning(f"Could not open {fname} ({e!r}) - skipping")
 
         if nc:
             latest = d
             break
 
     if nc is None:
-        return  0, _, _, (0, 0), None, None, None
+        log_warning(f"No dive netcdf files could be opened for dives {list(dives)} in {path} - no regression")
+        return 0, None, None, (0, 0), None, None, None
 
     basis_C_VBD = nc.variables["log_C_VBD"].getValue()
     basis_HD_A = nc.variables["log_HD_A"].getValue()
@@ -736,6 +739,10 @@ def main():
                       base_opts.mass,
                       fmt, True, rho=base_opts.rho)
 
+    if hd is None:
+        log_error("No regression - see the warnings above")
+        return 1
+
     if fmt == 'html':
         fid = open(base_opts.out, 'w')
         fid.write("<br>".join(plt))
@@ -752,6 +759,7 @@ def main():
     log_info(f"HD a,b,c    = [{hd[0]:.5f},{hd[1]:.5f},{hd[2]:.3e}]")
     log_info(f"Implied volmax = {log['implied_volmax']:.1f} cc")
     log_info(f"Implied C_VBD  = {log['implied_C_VBD']:.1f}")
+    return 0
 
 if __name__ == "__main__":
     retval = 1
