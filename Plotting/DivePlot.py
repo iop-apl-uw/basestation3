@@ -74,6 +74,39 @@ def clock_compass(heading):
     return heading
 
 
+def on_time_base(
+    name: str, values: np.ndarray | None, time_base: np.ndarray | None, dive_number: int
+) -> np.ndarray | None:
+    """Returns values if they can be plotted against time_base, otherwise None.
+
+    A dive file can carry results on the CTD dimension without a ctd_time
+    (sg250 p2500938.nc: GSM speeds on ctd_data_point, no ctd_time). The plot
+    then falls back to the truck time, and indexing it with a mask built from
+    the CTD-length values raised IndexError.
+
+    Args:
+        name: Variable name, for the warning.
+        values: The values to plot, or None if the variable isn't present.
+        time_base: The time axis they would be plotted against, or None.
+        dive_number: Dive number, for the warning.
+
+    Returns:
+        values, or None if there's no time base or the lengths differ.
+
+    Raises:
+        None.
+    """
+    if values is None:
+        return None
+    if time_base is None or len(values) != len(time_base):
+        log_warning(
+            f"Dive {dive_number}: {name} has {len(values)} points but the time base has "
+            f"{'none' if time_base is None else len(time_base)} - not plotted"
+        )
+        return None
+    return values
+
+
 @plotdivesingle
 def plot_diveplot(
     base_opts: BaseOpts.BaseOptions,
@@ -273,14 +306,20 @@ def plot_diveplot(
         except KeyError:
             pass
 
+        density = on_time_base(
+            "density",
+            dive_nc_file.variables["density"][:]
+            if "density" in dive_nc_file.variables
+            else None,
+            ctd_time,
+            dive_nc_file.dive_number,
+        )
         if (
-            "density" in dive_nc_file.variables
+            density is not None
             and "log_MASS" in dive_nc_file.variables
             and "log_RHO" in dive_nc_file.variables
         ):
-            eng_density = np.interp(
-                eng_vbd_time, ctd_time, dive_nc_file.variables["density"][:]
-            )
+            eng_density = np.interp(eng_vbd_time, ctd_time, density)
 
             mass = dive_nc_file.variables["log_MASS"].getValue()
             rho = dive_nc_file.variables["log_RHO"].getValue()
@@ -310,6 +349,28 @@ def plot_diveplot(
             # so we show it as well
             with contextlib.suppress(KeyError):
                 ctd_depth = dive_nc_file.variables["ctd_depth"][:]
+
+        # Everything below is plotted against ctd_time
+        vert_speed_gsm, horz_speed_gsm, glide_angle_gsm = (
+            on_time_base(n, v, ctd_time, dive_nc_file.dive_number)
+            for n, v in (
+                ("vert_speed_gsm", vert_speed_gsm),
+                ("horz_speed_gsm", horz_speed_gsm),
+                ("glide_angle_gsm", glide_angle_gsm),
+            )
+        )
+        vert_speed_hdm, horz_speed_hdm, glide_angle, buoy, sigma_t, buoy_f, ctd_depth = (
+            on_time_base(n, v, ctd_time, dive_nc_file.dive_number)
+            for n, v in (
+                ("vert_speed", vert_speed_hdm),
+                ("horz_speed", horz_speed_hdm),
+                ("glide_angle", glide_angle),
+                ("buoyancy", buoy),
+                ("sigma_t", sigma_t),
+                ("buoyancy frequency", buoy_f),
+                ("ctd_depth", ctd_depth),
+            )
+        )
 
         aux_depth_name = None
         if "auxB_press" in dive_nc_file.variables:
