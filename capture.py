@@ -318,8 +318,11 @@ async def formatCaptureFile(file, firstPlot=False):
                 elif inside.search(line):
                     try:
                         d = list(map(lambda x: float(x), line.split()))
-                        moveRecord.append(d)
-                        continue
+                        # A truncated cap file can end mid-row (e.g. "2999.1 2911.3 2494.6 1759.");
+                        # drop short rows so plotMoveRecord doesn't index past the end
+                        if not moveRecord or len(d) == len(moveRecord[0]):
+                            moveRecord.append(d)
+                            continue
                     except Exception:
                         pass
                 elif summary.search(line):
