@@ -1671,7 +1671,10 @@ def make_netcdf_network_file_from_perdive(
     bin_width = 5.0
     first_bin_depth = 7.5
 
-    dsi = xr.open_dataset(ncf_filename)
+    # Times stay as epoch seconds. Decoding them breaks on dive files whose
+    # character variables carry "seconds since" units (compass_timeouts_times_truck
+    # before the metadata fix): ValueError, sg244 p2440895.nc.
+    dsi = xr.open_dataset(ncf_filename, decode_times=False, decode_timedelta=False)
 
     if ts_outputfile:
         start_ts = time.strftime("%Y%m%dT%H%M", time.gmtime(dsi.attrs["start_time"]))
@@ -1695,7 +1698,7 @@ def make_netcdf_network_file_from_perdive(
         bin_edges = np.append(-20, np.append(bin_edges, max_depth + 50.0))
 
         max_depth_i = int(dsi["ctd_depth"].argmax())  # ty: ignore[invalid-argument-type]
-        ctd_time = dsi["ctd_time"].data.astype(np.float64) / 1000000000.0
+        ctd_time = dsi["ctd_time"].data.astype(np.float64)
         if not dsi["ctd_depth"][:max_depth_i].size or not ctd_time[:max_depth_i].size:
             t_down = None
         else:
@@ -1737,7 +1740,7 @@ def make_netcdf_network_file_from_perdive(
             )
 
         # GPS positions
-        log_gps_time = dsi["log_gps_time"].data.astype(np.float64) / 1000000000.0
+        log_gps_time = dsi["log_gps_time"].data.astype(np.float64)
 
         for ii, gps_name in ((1, "log_GPS2"), (2, "log_GPS")):
             create_ds_var(
@@ -1796,7 +1799,7 @@ def make_netcdf_network_file_from_perdive(
 
         # GC table
 
-        gc_st_secs = dsi["gc_st_secs"].data.astype(np.float64) / 1000000000.0
+        gc_st_secs = dsi["gc_st_secs"].data.astype(np.float64)
         full_gc_table = np.vstack(
             (
                 gc_st_secs,
@@ -1814,7 +1817,7 @@ def make_netcdf_network_file_from_perdive(
             )
         ).transpose()
 
-        gc_state_secs = dsi["gc_state_secs"].data.astype(np.float64) / 1000000000.0
+        gc_state_secs = dsi["gc_state_secs"].data.astype(np.float64)
         for ii in range(len(gc_state_secs)):
             full_gc_table = np.vstack(
                 [

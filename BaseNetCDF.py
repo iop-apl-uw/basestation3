@@ -726,7 +726,9 @@ def set_globals() -> None:
             False,
             "c",
             {
-                "units": "seconds since 1970-1-1 00:00:00",
+                # Do not specify - xarray gets horribly confused if the units are supplied
+                # (as for the <instrument>_timeouts_times_<cast> variables in Utils2.py)
+                # "units": "seconds since 1970-1-1 00:00:00",
                 "description": "compass epoch times for of timeouts truck",
             },
             nc_scalar,

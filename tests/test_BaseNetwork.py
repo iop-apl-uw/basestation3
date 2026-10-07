@@ -32,11 +32,13 @@ import pathlib
 import shutil
 import sys
 
+import netCDF4
 import numpy as np
 import pytest
 import testutils
 import xarray as xr
 
+import BaseNetCDF
 import BaseNetwork
 import BaseOpts
 import FileMgr
@@ -690,6 +692,44 @@ def test_make_netcdf_network_file_from_perdive(tmp_path):
         assert int(ds["dive_number"].item()) == 2
     finally:
         ds.close()
+
+
+def test_make_netcdf_network_file_from_perdive_char_var_with_time_units(tmp_path):
+    """A character variable with "seconds since" units must not stop the build.
+
+    Opening with CF time decoding raised ValueError on such a variable
+    (compass_timeouts_times_truck, sg244 p2440895.nc, 2026-09-21).
+    """
+    src = pathlib.Path("testdata/sg272_NANOOS_Feb26_lowlevelcli/p2720002.nc")
+    dst = tmp_path / "p2720002.nc"
+    shutil.copy(src, dst)
+    # Path -> str: netCDF4.Dataset wants a string path
+    with netCDF4.Dataset(str(dst), "a") as nc:
+        if "string_15" not in nc.dimensions:
+            nc.createDimension("string_15", 15)
+        var = nc.createVariable("compass_timeouts_times_truck", "S1", ("string_15",))
+        var.units = "seconds since 1970-1-1 00:00:00"
+        var.set_auto_chartostring(False)
+        var[:] = np.array(list("1789000000,1789"), dtype="S1")
+
+    result = BaseNetwork.make_netcdf_network_file_from_perdive(dst)
+
+    assert result == dst.with_suffix(".ncdf")
+    ds = xr.open_dataset(result, decode_times=False)
+    try:
+        assert "temperature" in ds.variables
+        # Times stay epoch seconds - not nanoseconds, not 1e-9 of them
+        times = ds["time"].values[np.isfinite(ds["time"].values)]
+        assert times.size and np.all((times > 1.5e9) & (times < 2.5e9))
+    finally:
+        ds.close()
+
+
+def test_compass_timeouts_times_metadata_has_no_units():
+    """Char variable: "seconds since" units make xarray try to decode it as a time."""
+    _, nc_type, attrs, _ = BaseNetCDF.nc_var_metadata["compass_timeouts_times_truck"]
+    assert nc_type == "c"
+    assert "units" not in attrs
 
 
 def test_ncf_subparser_end_to_end(tmp_path, caplog):
