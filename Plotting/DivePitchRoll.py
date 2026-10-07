@@ -704,6 +704,15 @@ def plot_pitch_roll(
         c_roll_climb_imp = 0
         fitc = None
  
+    # linregress on no points returns an all-NaN result rather than raising,
+    # so a fit with no observations would otherwise be plotted, and min() of
+    # the empty climb points raised (sg686 2026_09_18_TH_Line dive 106).
+    # The NaN implied centers still go to the database, as before.
+    if fit_d_error:
+        fitd = None
+    if fit_c_error:
+        fitc = None
+
     log_info(f"c_roll_dive {c_roll_dive_imp}, c_roll_climb {c_roll_climb_imp}")
 
     BaseDB.addValToDB(

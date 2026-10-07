@@ -82,6 +82,16 @@ def plot_legato_pressure(
             )
             return ([], [])
 
+    missing = PlotUtils.missing_variables(
+        dive_nc_file, ["ctd_time", "ctd_pressure", "ctd_pressure_qc", "pressure", "time"]
+    )
+    if missing:
+        # e.g. bench-test dives with no CTD processing (sg554 Shilshole_30Sep26)
+        log_error(
+            f"Dive {dive_nc_file.dive_number}: no {', '.join(missing)} - skipping plot_legato_pressure"
+        )
+        return ([], [])
+
     try:
         ctd_time = dive_nc_file.variables["ctd_time"][:]
         ctd_pressure = dive_nc_file.variables["ctd_pressure"][:]

@@ -99,6 +99,12 @@ def plot_vert_vel_new(
         inds = np.nonzero(np.logical_and.reduce((np.isfinite(density_ctd),)))[0]
         ctd_depth = ctd_depth[inds]
         density_ctd = density_ctd[inds]
+        if ctd_depth.size == 0:
+            # e.g. lab-test dives where density is all NaN (sg274)
+            log_error(
+                f"Dive {dive_num}: no finite density - skipping vert_vel_new/vert_vel__regression"
+            )
+            return ([], [])
         isurf = np.nonzero(
             np.logical_and.reduce(
                 (

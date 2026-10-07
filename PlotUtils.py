@@ -953,6 +953,25 @@ def add_timeout_overlays(
     )
 
 
+def missing_variables(dive_nc_file, names: list[str]) -> list[str]:
+    """Lists the variables a plot needs that aren't in a dive file.
+
+    For dives without the data a plot needs (bench and lab tests, dives with
+    no CTD), so the plot can say what is missing instead of raising.
+
+    Args:
+        dive_nc_file: An open dive netCDF file.
+        names: The variables the plot needs.
+
+    Returns:
+        The names not in dive_nc_file, in the order given.
+
+    Raises:
+        None.
+    """
+    return [name for name in names if name not in dive_nc_file.variables]
+
+
 def interp_missing_depth(sg_time, sg_depth):
     sg_depth_good_b = np.logical_not(np.isnan(sg_depth))
     if len(np.squeeze(np.nonzero(sg_depth_good_b))) < 2:

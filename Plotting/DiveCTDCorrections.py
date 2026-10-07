@@ -101,6 +101,27 @@ def plot_ctd_corrections(
 
     # qc_data = [x for x in qc_data if "raw " not in x.qc_str]
 
+    missing = PlotUtils.missing_variables(
+        dive_nc_file,
+        [
+            "ctd_time",
+            "ctd_depth",
+            "ctd_pressure",
+            "temperature",
+            "temperature_qc",
+            "temperature_raw_qc",
+            "salinity",
+            "salinity_qc",
+            "salinity_raw_qc",
+        ],
+    )
+    if missing:
+        # e.g. bench and lab-test dives with no CTD processing (sg274, sg554)
+        log_error(
+            f"Dive {dive_nc_file.dive_number}: no {', '.join(missing)} - skipping plot_ctd_corrections"
+        )
+        return ([], [])
+
     qc_data = QC.qc_log_list_from_history(dive_nc_file)
 
     try:
