@@ -48,6 +48,7 @@ import zipfile
 # import importlib.util
 # import importlib
 import numpy as np
+import pandas as pd
 import pyarrow as pa
 
 import BaseNetCDF
@@ -332,6 +333,32 @@ def printHeader(name, description, glider_color, fo):
     fo.write("            <styleUrl>#paamDetectionHighlightState</styleUrl>\n")
     fo.write("         </Pair>\n")
     fo.write("    </StyleMap>\n")
+
+
+def complete_track_points(
+    dive_track: pd.DataFrame, dive_vars: list[str]
+) -> tuple[np.ndarray, ...] | None:
+    """Returns the dive track columns, keeping only rows where all of them have a value.
+
+    Dropping NaNs from each column separately leaves the columns different
+    lengths, and printDive indexed past the end of the shorter ones
+    (IndexError, sg274 2026-09-21).
+
+    Args:
+        dive_track: One dive's rows from a parquet dimension data frame.
+        dive_vars: Track columns, in the order depth, longitude, latitude, time.
+
+    Returns:
+        One array per column in dive_vars, all the same length, or None if
+        no row has every column.
+
+    Raises:
+        KeyError: If a column in dive_vars isn't in dive_track.
+    """
+    complete = dive_track[dive_vars].dropna()
+    if complete.empty:
+        return None
+    return tuple(complete[v].to_numpy() for v in dive_vars)
 
 
 def printDivePlacemark(
@@ -867,31 +894,20 @@ def printDive(
             ["ctd_depth", "longitude", "latitude", BaseNetCDF.nc_ctd_time_var],
             ["depth", "longitude_gsm", "latitude_gsm", "time"],
         ):
-            f_found_one = False
+            dive_track_vectors = None
             for _, pq_df in pq_df_c.find_all_cols(dive_vars[1]).items():
                 if all(ii in pq_df.columns for ii in dive_vars):
-                    dive_track = pq_df.loc[pq_df["trajectory"] == dive_num][dive_vars]
-                    if all(
-                        dive_track[dive_vars[ii]][
-                            dive_track[dive_vars[ii]].notna()
-                        ].size
-                        != 0
-                        for ii in range(len(dive_vars))
-                    ):
-                        f_found_one = True
+                    dive_track_vectors = complete_track_points(
+                        pq_df.loc[pq_df["trajectory"] == dive_num], dive_vars
+                    )
+                    if dive_track_vectors is not None:
                         break
-            if f_found_one:
+            if dive_track_vectors is not None:
                 break
         else:
-            log_warning(f"Could not process dive {dive_num}")
-            log_info("Skipping this dive...")
-            return curr_dive_position
-        dive_track_vectors = tuple(
-            dive_track[dive_vars[ii]][dive_track[dive_vars[ii]].notna()].to_numpy()
-            for ii in range(len(dive_vars))
-        )
-        if not all(x.size for x in dive_track_vectors):
-            log_error(f"Mismatch in columns {dive_vars} for dive {dive_num} - skipping")
+            log_warning(
+                f"No complete track points (depth, lat, lon and time) for dive {dive_num} - skipping"
+            )
             return curr_dive_position
 
         depth, lon, lat, time_vals = dive_track_vectors
