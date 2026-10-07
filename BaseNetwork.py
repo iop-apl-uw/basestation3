@@ -1623,7 +1623,10 @@ def make_netcdf_network_files(
         # is never synthesized this way: most dives simply have no optical
         # puck installed, so a missing wl file is not worth a warning.
         if log_file is None and ct_file is not None:
-            log_file = ct_file.with_suffix(".nlog")
+            # Not with_suffix(): on p<SSS><DDDD>.npro_ct.dat that gives
+            # .npro_ct.nlog, and the network file was then built without
+            # the log and written as .npro_ct.ncdf (sg261 dive 150).
+            log_file = ct_file.parent / f"{ct_file.name.split('.', 1)[0]}.nlog"
         if ct_file is None and log_file is not None:
             ct_file = log_file.with_suffix(".npro")
             if not ct_file.exists():

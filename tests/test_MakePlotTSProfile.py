@@ -149,3 +149,51 @@ def test_makeplottsprofile_skips_missing_profile_files(tmp_path, caplog):
     for f in missing:
         assert any(level == "WARNING" and f"{f} not found - skipping" in m for level, m in msgs)
     assert not any(level in ("ERROR", "CRITICAL") for level, _ in msgs)
+
+
+@pytest.mark.parametrize(
+    "file_name, expected",
+    [
+        ("p2610150.npro", "ts"),
+        ("p2610150.npro_ct.dat", "ts"),
+        ("p2610150.npro_wl.dat", "wl"),
+        ("p2610150.ncdf", "ncdf"),
+        # A stray network file named after the ct profile is still netcdf
+        # (sg261 dive 150, 2026-10-04: sent to the text reader, UnicodeDecodeError)
+        ("p2610150.npro_ct.ncdf", "ncdf"),
+    ],
+)
+def test_makeplottsprofile_routes_by_full_name(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path, file_name: str, expected: str
+) -> None:
+    mission_dir = tmp_path / "mission_dir"
+    mission_dir.mkdir()
+    (mission_dir / file_name).write_bytes(b"\xc9 not text")
+    # Pass add_to_arguments as main() does, so this doesn't depend on an
+    # earlier test having registered MakePlotTSProfile for --mission_dir.
+    add_to_arguments, _, _ = MakePlotTSProfile.load_additional_arguments()
+    base_opts = BaseOpts.BaseOptions(
+        "",
+        add_to_arguments=add_to_arguments,
+        cmdline_args=["--mission_dir", str(mission_dir)],
+        calling_module="MakePlotTSProfile",
+    )
+
+    routed: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        MakePlotTSProfile, "plot_ts_profile", lambda f, d, b: routed.append(("ts", f.name))
+    )
+    monkeypatch.setattr(
+        MakePlotTSProfile, "plot_wl_profile", lambda f, d, b: routed.append(("wl", f.name))
+    )
+    monkeypatch.setattr(
+        MakePlotTSProfile, "plot_ncdf_profile", lambda f, b: routed.append(("ncdf", f.name))
+    )
+
+    assert (
+        MakePlotTSProfile.main(
+            [], base_opts=base_opts, processed_other_files=[mission_dir / file_name]
+        )
+        == 0
+    )
+    assert routed == [(expected, file_name)]

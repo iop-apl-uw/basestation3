@@ -608,13 +608,13 @@ def main(
 
     wl_profile_file_names = []
     for ff in processed_other_files:
-        if ff.suffix == ".npro" or (
-            len(ff.suffixes) == 2 and ff.suffixes[0].startswith(".npro_ct")
-        ):
+        # Match whole names, as BaseNetwork.make_netcdf_network_files does:
+        # a stray p<SSS><DDDD>.npro_ct.ncdf is a netcdf file, not a text profile.
+        if ff.suffix == ".npro" or ff.name.endswith(".npro_ct.dat"):
             # While the glider can produce reduced profile up or down,
             # only plot the downcast.
             profile_file_names.append(ff)
-        elif len(ff.suffixes) == 2 and ff.suffixes[0].startswith(".npro_wl"):
+        elif ff.name.endswith(".npro_wl.dat"):
             wl_profile_file_names.append(ff)
         elif ff.suffix == ".ncdf":
             ncdf_file_names.append(ff)

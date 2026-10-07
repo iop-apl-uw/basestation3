@@ -169,6 +169,38 @@ def test_make_netcdf_network_files_groups_by_dive_number(monkeypatch, tmp_path):
     assert len(processed) == 2
 
 
+def test_make_netcdf_network_files_ct_only_uses_dive_log_name(monkeypatch, tmp_path):
+    """A run that gets only p<SSS><DDDD>.npro_ct.dat must pair it with p<SSS><DDDD>.nlog.
+
+    with_suffix(".nlog") gave .npro_ct.nlog, so the network file was built
+    without the log and written as .npro_ct.ncdf (sg261 dive 150, 2026-10-04).
+    """
+    calls = []
+
+    def fake_make_netcdf_network_file(
+        network_logfile: pathlib.Path,
+        network_profile_ct: pathlib.Path,
+        network_profile_wl: pathlib.Path | None = None,
+        ts_outputfile: bool = False,
+    ) -> pathlib.Path:
+        calls.append((network_logfile, network_profile_ct, network_profile_wl))
+        return network_logfile.with_suffix(".ncdf")
+
+    monkeypatch.setattr(
+        BaseNetwork, "make_netcdf_network_file", fake_make_netcdf_network_file
+    )
+
+    processed: list[pathlib.Path] = []
+    ret_val = BaseNetwork.make_netcdf_network_files(
+        [tmp_path / "p2610150.npro_ct.dat"], processed
+    )
+    assert ret_val == 0
+    assert calls == [
+        (tmp_path / "p2610150.nlog", tmp_path / "p2610150.npro_ct.dat", None)
+    ]
+    assert processed == [tmp_path / "p2610150.ncdf"]
+
+
 def test_make_netcdf_network_files_warns_on_unknown_suffix(
     monkeypatch, tmp_path, caplog
 ):
