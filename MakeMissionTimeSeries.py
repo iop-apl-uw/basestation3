@@ -290,7 +290,7 @@ def make_mission_timeseries(
                 platform_var = globals_d["platform"]
 
             if not mission_timeseries_name:
-                mission_title = Utils.ensure_basename(calib_consts["mission_title"])
+                mission_title = Utils.mission_title_basename(calib_consts)
                 mission_timeseries_name = base_opts.mission_dir / (
                     "sg%03d_%s_timeseries.nc" % (instrument_id, mission_title)
                 )

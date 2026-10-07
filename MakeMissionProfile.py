@@ -503,7 +503,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                 platform_id = "SG%03d" % instrument_id
                 platform_var = globals_d["platform"]
 
-                mission_title = Utils.ensure_basename(calib_consts["mission_title"])
+                mission_title = Utils.mission_title_basename(calib_consts)
                 mission_profile_name = base_opts.mission_dir / (
                     "sg%03d_%s_%1.1fm_%s_profile.nc"
                     % (instrument_id, mission_title, bin_width, wh_file)

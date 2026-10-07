@@ -279,3 +279,18 @@ def test_log_version_banner(
     assert any("Commit-ID could not be determined: " in m and "HEAD" in m for m in msgs)
     # Never WARNING or above - that would reach pilot notifications on every run.
     assert all(r.levelname == "INFO" for r in caplog.records)
+
+
+@pytest.mark.parametrize(
+    "calib_consts, expected",
+    [
+        ({"mission_title": "2026 08/28 Drake, Test"}, "2026_08_28_Drake__Test"),
+        # getSGCalibrationConstants maps a missing required key to None
+        ({"mission_title": None}, "UNKNOWN"),
+        ({"mission_title": ""}, "UNKNOWN"),
+        ({}, "UNKNOWN"),
+        (None, "UNKNOWN"),
+    ],
+)
+def test_mission_title_basename(calib_consts: dict | None, expected: str) -> None:
+    assert Utils.mission_title_basename(calib_consts) == expected

@@ -1103,6 +1103,29 @@ def ensure_basename(basename: str) -> str:
     )
 
 
+def mission_title_basename(calib_consts: dict | None) -> str:
+    """Returns the mission title from calib_consts, safe for use in a filename.
+
+    getSGCalibrationConstants maps a missing mission_title to None (and logs
+    that it's missing), so this falls back to "UNKNOWN" rather than raising.
+
+    Args:
+        calib_consts: Calibration constants, as from
+            CalibConst.getSGCalibrationConstants, or None.
+
+    Returns:
+        The mission title with problematic filename characters replaced, or
+        "UNKNOWN" if there is no usable title.
+
+    Raises:
+        None.
+    """
+    mission_title = calib_consts.get("mission_title") if calib_consts else None
+    if not isinstance(mission_title, str) or not mission_title:
+        return "UNKNOWN"
+    return ensure_basename(mission_title)
+
+
 # TODO - when pythnon version is greater then 3.11, go to this approach to report the version
 # import tomllib
 # from pathlib import Path

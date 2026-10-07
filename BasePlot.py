@@ -297,10 +297,7 @@ def plot_mission(
 
 def get_mission_str(base_opts: BaseOpts.BaseOptions, calib_consts: dict) -> str:
     """Constructs a mission title string"""
-    if not calib_consts:
-        mission_title = "UNKNOWN"
-    else:
-        mission_title = Utils.ensure_basename(calib_consts["mission_title"])
+    mission_title = Utils.mission_title_basename(calib_consts)
     return f"SG{'%03d' % base_opts.instrument_id} {mission_title}"
 
 

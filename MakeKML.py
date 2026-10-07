@@ -1402,8 +1402,8 @@ def main(
             log_error("Could not get instrument id - bailing out")
             return 1
 
-    mission_title = Utils.ensure_basename(calib_consts["mission_title"])
-    mission_title_raw = calib_consts["mission_title"]
+    mission_title = Utils.mission_title_basename(calib_consts)
+    mission_title_raw = calib_consts.get("mission_title") or "UNKNOWN"
 
     if True:
         mission_kml_file_name_base = "sg%03d.kml" % (base_opts.instrument_id)

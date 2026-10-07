@@ -28,12 +28,14 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import pathlib
+import types
 
 import pytest
 import testutils
 
 import Base
 import BasePlot
+import CalibConst
 
 test_dive_inputs = (
     (
@@ -431,3 +433,21 @@ def test_mission_plot_coverage(tmp_path, caplog, plot_name, data_dir, dive_nc):
     )
     webp_files = list(mission_dir.joinpath("plots").glob("*.webp"))
     assert webp_files, f"{plot_name} produced no .webp thumbnail"
+
+
+def test_get_mission_str_missing_mission_title(tmp_path: pathlib.Path) -> None:
+    """Every mission_title line commented out must not raise (sg194, 2026-08-28).
+
+    That traceback escaped Base.main and stopped the whole run.
+    """
+    calib_file = tmp_path / "sg_calib_constants.m"
+    calib_file.write_text(
+        "id_str = '194';\n"
+        "%mission_title = '2026 08 28 Drake Test';\n"
+        "mass = 52.0;\n"
+    )
+    calib_consts = CalibConst.getSGCalibrationConstants(calib_file)
+    assert calib_consts["mission_title"] is None
+
+    base_opts = types.SimpleNamespace(instrument_id=194)
+    assert BasePlot.get_mission_str(base_opts, calib_consts) == "SG194 UNKNOWN"

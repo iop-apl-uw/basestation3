@@ -254,10 +254,7 @@ def get_mission_timeseries_name(
 
     # platform_id = "SG%03d" % instrument_id
 
-    if isinstance(calib_consts["mission_title"], str):
-        mission_title = Utils.ensure_basename(calib_consts["mission_title"])
-    else:
-        mission_title = "UNKNOWN"
+    mission_title = Utils.mission_title_basename(calib_consts)
     return mydir / f"sg{instrument_id:03d}_{mission_title}_{basename}.nc"
 
 
