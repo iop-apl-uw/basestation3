@@ -424,3 +424,71 @@ def test_process_ftp_never_logs_password(
     assert "Could not process" in caplog.text
     assert BaseDotFiles.REDACTED_PASSWORD in caplog.text
     assert secret not in caplog.text
+
+
+# --- redaction of webhook URLs, topics and endpoint passwords ---------------
+
+
+@pytest.mark.parametrize(
+    "url, expected",
+    [
+        (
+            "https://sahale.example.edu/mattermost/hooks/m6uu7n3pctdq",
+            "https://sahale.example.edu/****",
+        ),
+        ("https://hooks.slack.com/services/T000/B000/XXXX", "https://hooks.slack.com/****"),
+        ("https://user:pw@post.example.com:8443/in?token=abc", "https://post.example.com:8443/****"),
+        ("https://post.example.com/?token=abc", "https://post.example.com/****"),
+        ("https://slack.com", "https://slack.com"),
+        ("not a url", "****"),
+    ],
+)
+def test_redact_url(url: str, expected: str) -> None:
+    assert BaseDotFiles.redact_url(url) == expected
+
+
+def test_redact_secret_and_endpoint() -> None:
+    assert BaseDotFiles.redact_secret("sg263-pilots-x7f3k") == "sg2****"
+    assert BaseDotFiles.redact_secret("short") == "****"
+    endpoint = {
+        "hook": "https://mm.example.com/hooks/SECRET",
+        "topic": "glider-alerts-SECRET",
+        "usr": "pilot",
+        "pwd": "SECRET",
+        "filters": ["gps"],
+    }
+    safe = BaseDotFiles.redact_endpoint(endpoint)
+    assert "SECRET" not in str(safe)
+    assert safe["usr"] == "pilot" and safe["filters"] == ["gps"]
+    assert endpoint["pwd"] == "SECRET"  # the caller's dict is untouched
+
+
+@pytest.mark.parametrize(
+    "post_kwargs",
+    [
+        {"return_value": MagicMock(status_code=200, text="ok")},
+        # requests' message carries the full URL - token and all
+        {
+            "side_effect": requests.exceptions.ConnectionError(
+                "HTTPSConnectionPool(host='hooks.slack.com', port=443): Max retries "
+                "exceeded with url: /services/T000/B000/SECRETTOKEN"
+            )
+        },
+    ],
+)
+def test_post_slack_never_logs_hook_token(
+    caplog: LogCaptureFixture, mock_base_opts: MagicMock, post_kwargs: dict
+) -> None:
+    save_log_level = BaseLog.BaseLogger.log_level
+    BaseLog.BaseLogger.log_level = logging.DEBUG
+    with patch("requests.post", **post_kwargs), caplog.at_level("DEBUG"):
+        BaseDotFiles.post_slack(
+            base_opts=mock_base_opts,
+            instrument_id="inst_123",
+            slack_hook_url="https://hooks.slack.com/services/T000/B000/SECRETTOKEN",
+            subject_line="Alert",
+            message_body="body",
+        )
+    BaseLog.BaseLogger.log_level = save_log_level
+    assert "hooks.slack.com" in caplog.text
+    assert "SECRETTOKEN" not in caplog.text

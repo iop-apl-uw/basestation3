@@ -90,7 +90,7 @@ def send_email(
     user = send_dict["user"]
 
     if "address" not in endpoint:
-        log_error(f"Missing email address for user:{user}, endpoint:{endpoint}")
+        log_error(f"Missing email address for user:{user}, endpoint:{BaseDotFiles.redact_endpoint(endpoint)}")
         return
 
     html_format = False
@@ -125,7 +125,7 @@ def send_slack(
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
     if "hook" not in endpoint:
-        log_error(f"Missing hook address for user:{user}, endpoint:{endpoint}")
+        log_error(f"Missing hook address for user:{user}, endpoint:{BaseDotFiles.redact_endpoint(endpoint)}")
         return
     else:
         hook_url = endpoint["hook"]
@@ -137,7 +137,7 @@ def send_slack(
         text = "%s:%s" % (subject_line, message_body)
     msg = {"text": text}
 
-    log_info(f"Sending slack {subject_line} {message_body} {hook_url} to {user}")
+    log_info(f"Sending slack {subject_line} {message_body} {BaseDotFiles.redact_url(hook_url)} to {user}")
 
     try:
         response = requests.post(
@@ -150,6 +150,12 @@ def send_slack(
                 "Request to slack returned an error %s, the response is:%s"
                 % (response.status_code, response.text)
             )
+    except requests.RequestException as exception:
+        # No traceback: the exception text includes the hook URL, token and all
+        log_error(
+            f"Error in slack post to {BaseDotFiles.redact_url(hook_url)} user:{user} "
+            f"({type(exception).__name__})"
+        )
     except Exception:
         log_error("Error in slack post", "exc")
 
@@ -165,7 +171,7 @@ def send_mattermost(
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
     if "hook" not in endpoint:
-        log_error(f"Missing hook address for user:{user}, endpoint:{endpoint}")
+        log_error(f"Missing hook address for user:{user}, endpoint:{BaseDotFiles.redact_endpoint(endpoint)}")
         return
     else:
         hook_url = endpoint["hook"]
@@ -176,7 +182,7 @@ def send_mattermost(
     else:
         msg_str = f"{subject_line}:{message_body}"
 
-    log_info(f"Sending mattermost {subject_line} {message_body} {hook_url} to {user}")
+    log_info(f"Sending mattermost {subject_line} {message_body} {BaseDotFiles.redact_url(hook_url)} to {user}")
 
     if "mention" in endpoint:
         if isinstance(endpoint["mention"], list):
@@ -193,7 +199,7 @@ def send_mattermost(
     if "channel" in endpoint:
         msg["channel"] = endpoint["channel"]
 
-    log_info(f"mattermost_hook_url:{hook_url} msg:{msg}")
+    log_info(f"mattermost_hook_url:{BaseDotFiles.redact_url(hook_url)} msg:{msg}")
 
     try:
         response = requests.post(
@@ -206,8 +212,17 @@ def send_mattermost(
                 "Request to mattermost returned an error %s, the response is:%s"
                 % (response.status_code, response.text)
             )
+    except requests.RequestException as exception:
+        # No traceback: the exception text includes the hook URL, token and all
+        log_error(
+            f"Error in mattermost post to {BaseDotFiles.redact_url(hook_url)} user:{user} "
+            f"({type(exception).__name__})"
+        )
     except Exception:
-        log_error(f"Error in mattermost post user:{user}, endpoint:{endpoint}", "exc")
+        log_error(
+            f"Error in mattermost post user:{user}, endpoint:{BaseDotFiles.redact_endpoint(endpoint)}",
+            "exc",
+        )
 
 def send_ntfy(
     base_opts: BaseOpts.BaseOptions,
@@ -232,7 +247,7 @@ def send_ntfy(
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
     if "topic" not in endpoint:
-        log_error(f"Missing topic for user:{user}, endpoint:{endpoint}")
+        log_error(f"Missing topic for user:{user}, endpoint:{BaseDotFiles.redact_endpoint(endpoint)}")
         return
 
     priorities = endpoint.get("priority", default_priorities)
@@ -280,7 +295,7 @@ def send_ntfy(
     if 'type' in send_dict and send_dict['type'] in tags:
         msg['tags'] = [ tags[send_dict['type']] ]
 
-    log_info(f"ntfy:{endpoint['topic']} msg:{subject_line}+{message_body}")
+    log_info(f"ntfy:{BaseDotFiles.redact_secret(endpoint['topic'])} msg:{subject_line}+{message_body}")
 
     try:
         response = requests.post(
@@ -293,8 +308,16 @@ def send_ntfy(
                 "Request to ntfy returned an error %s, the response is:%s"
                 % (response.status_code, response.text)
             )
+    except requests.RequestException as exception:
+        log_error(
+            f"Error in ntfy post user:{user}, topic:{BaseDotFiles.redact_secret(endpoint['topic'])} "
+            f"({type(exception).__name__})"
+        )
     except Exception:
-        log_error(f"Error in ntfy post user:{user}, endpoint:{endpoint}", "exc")
+        log_error(
+            f"Error in ntfy post user:{user}, endpoint:{BaseDotFiles.redact_endpoint(endpoint)}",
+            "exc",
+        )
 
 def send_post(
     base_opts: BaseOpts.BaseOptions,
@@ -307,14 +330,14 @@ def send_post(
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
     if "url" not in endpoint:
-        log_error(f"Missing url address for user:{user}, endpoint:{endpoint}")
+        log_error(f"Missing url address for user:{user}, endpoint:{BaseDotFiles.redact_endpoint(endpoint)}")
         return
     else:
         url = endpoint["url"]
 
     msg_str = f"{subject_line}:{message_body}"
 
-    log_info(f"post_url:{url} msg:{msg_str}")
+    log_info(f"post_url:{BaseDotFiles.redact_url(url)} msg:{msg_str}")
 
     try:
         response = requests.post(
@@ -327,8 +350,14 @@ def send_post(
                 "Post request returned an error %s, the response is:%s"
                 % (response.status_code, response.text)
             )
+    except requests.RequestException as exception:
+        # No traceback: the exception text includes the url
+        log_error(
+            f"Error in post to {BaseDotFiles.redact_url(url)} user:{user} "
+            f"({type(exception).__name__})"
+        )
     except Exception:
-        log_error(f"Error in post user:{user}, endpoint:{endpoint}", "exc")
+        log_error(f"Error in post user:{user}, endpoint:{BaseDotFiles.redact_endpoint(endpoint)}", "exc")
 
 
 
@@ -344,11 +373,11 @@ def send_inreach(
     user = send_dict["user"]
 
     if gps_fix is None or not gps_fix.isvalid or gps_fix.datetime is None or gps_fix.lat is None or gps_fix.lon is None:
-        log_info(f"No valid gps fix for inreach message user:{user}, endpoint:{endpoint}")
+        log_info(f"No valid gps fix for inreach message user:{user}, endpoint:{BaseDotFiles.redact_endpoint(endpoint)}")
         return
     for check_val in ("imei", "usr", "pwd"):
         if check_val not in endpoint:
-            log_error(f"Missing imei number for user:{user}, endpoint:{endpoint}")
+            log_error(f"Missing imei number for user:{user}, endpoint:{BaseDotFiles.redact_endpoint(endpoint)}")
             return
 
     msg = "%s:%s" % (subject_line, message_body)
@@ -522,7 +551,7 @@ def check_canonicalize_pagers_dict(pagers_dict: dict) -> dict:
 
                 if not isinstance(sf_list, list):
                     log_error(
-                        f"Endpoints must be a list or dict - user:{k}, send_func{sf}, {sf_list} - skipping endpoints"
+                        f"Endpoints must be a list or dict - user:{k}, send_func{sf}, got {type(sf_list).__name__} - skipping endpoints"
                     )
                     continue
 
@@ -530,19 +559,19 @@ def check_canonicalize_pagers_dict(pagers_dict: dict) -> dict:
                 for ep in sf_list:
                     if not isinstance(ep, dict):
                         log_error(
-                            f"Endpoint must be a dict - user:{k}, send_func{sf}, {ep} - skipping endpoint"
+                            f"Endpoint must be a dict - user:{k}, send_func{sf}, got {type(ep).__name__} - skipping endpoint"
                         )
                         continue
                     if "filters" in ep:
                         if not isinstance(ep["filters"], list):
                             log_error(
-                                f"filters specification must be a list - user:{k}, send_func{sf}, {ep} - skipping endpoint"
+                                f"filters specification must be a list - user:{k}, send_func{sf}, {BaseDotFiles.redact_endpoint(ep)} - skipping endpoint"
                             )
                             continue
                         for filter_str in ep["filters"]:
                             if filter_str not in pagers_msgs:
                                 log_error(
-                                    f"filter ({filter_str}) not in known send functions - user:{k}, send_func{sf}, {ep} - skipping endpoint"
+                                    f"filter ({filter_str}) not in known send functions - user:{k}, send_func{sf}, {BaseDotFiles.redact_endpoint(ep)} - skipping endpoint"
                                 )
                             continue
                     updated_endpoint_list.append(ep)
@@ -557,7 +586,7 @@ def check_canonicalize_pagers_dict(pagers_dict: dict) -> dict:
             # Further user valdation goes here = status and latlon
             pagers_updated_dict["users"][k] = updated_user_dict
         else:
-            log_error(f"Users must be dicts {k}:{v}")
+            log_error(f"Users must be dicts - user:{k} is a {type(v).__name__}")
 
     return pagers_updated_dict
 

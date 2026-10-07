@@ -56,7 +56,7 @@ from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
 from ftplib import FTP, FTP_TLS
 from typing import TYPE_CHECKING, Literal
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 import requests
 
@@ -116,7 +116,7 @@ def post_slack(
     """
 
     log_info(
-        f"instrument_id:{instrument_id} slack_hook_url:{slack_hook_url} "
+        f"instrument_id:{instrument_id} slack_hook_url:{redact_url(slack_hook_url)} "
         f"subject_line:{subject_line} message_body:{message_body}"
     )
 
@@ -140,6 +140,12 @@ def post_slack(
             )
             return 1
 
+    except requests.RequestException as exception:
+        # No traceback: the exception text includes the hook URL, token and all
+        log_error(
+            f"Error in post to {redact_url(slack_hook_url)} ({type(exception).__name__})"
+        )
+        return 1
     except Exception:
         log_error("Error in post", "exc")
         return 1
@@ -751,6 +757,82 @@ def redact_sftp_line(sftp_line: str) -> str:
     if len(fields) > 2 and fields[2]:
         fields[2] = REDACTED_PASSWORD
     return ",".join(fields)
+
+
+def redact_url(url: str) -> str:
+    """Masks everything after the host in a URL so it can be logged.
+
+    Webhook URLs (Slack, Mattermost) carry their secret token in the path, and
+    other POST endpoints may carry one in the query string. Any user:password
+    before the host is dropped too.
+
+    Args:
+        url: A URL, e.g. a .pagers/pagers.yml hook or post url.
+
+    Returns:
+        scheme://host[:port], plus /REDACTED_PASSWORD if there was anything
+        after the host. REDACTED_PASSWORD alone if url can't be parsed.
+
+    Raises:
+        None.
+    """
+    try:
+        parts = urlsplit(str(url))
+        host = parts.hostname or ""
+        if parts.port:
+            host = f"{host}:{parts.port}"
+    except ValueError:
+        return REDACTED_PASSWORD
+    if not parts.scheme or not host:
+        return REDACTED_PASSWORD
+    tail = parts.path.strip("/") or parts.query or parts.fragment
+    return f"{parts.scheme}://{host}" + (f"/{REDACTED_PASSWORD}" if tail else "")
+
+
+def redact_secret(secret: str) -> str:
+    """Masks a secret name, e.g. an ntfy topic, keeping a short prefix to tell them apart.
+
+    On ntfy.sh anyone who knows a topic name can read and post to it, so the
+    topic is the secret.
+
+    Args:
+        secret: The value to mask.
+
+    Returns:
+        The first three characters followed by REDACTED_PASSWORD, or just
+        REDACTED_PASSWORD for values too short to show any of.
+
+    Raises:
+        None.
+    """
+    secret = str(secret)
+    return f"{secret[:3]}{REDACTED_PASSWORD}" if len(secret) > 8 else REDACTED_PASSWORD
+
+
+def redact_endpoint(endpoint: dict) -> dict:
+    """Returns a copy of a notification endpoint that is safe to log.
+
+    Args:
+        endpoint: An endpoint from pagers.yml (hook, url, topic, ...).
+
+    Returns:
+        A shallow copy with hook and url passed through redact_url, topic
+        through redact_secret, and passwords (pwd, password) replaced by
+        REDACTED_PASSWORD. Other keys are unchanged.
+
+    Raises:
+        None.
+    """
+    safe = dict(endpoint)
+    for key in ("hook", "url"):
+        if key in safe:
+            safe[key] = redact_url(safe[key])
+    if "topic" in safe:
+        safe["topic"] = redact_secret(safe["topic"])
+    for key in ("pwd", "password"):
+        if key in safe:
+            safe[key] = REDACTED_PASSWORD
+    return safe
 
 
 def process_ftp_tags(
