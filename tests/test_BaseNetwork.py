@@ -1076,3 +1076,41 @@ def test_cdf_subparser_npro_wl_without_ct(tmp_path, caplog):
         assert np.allclose(ds["sig470nm"], [74.0])
     finally:
         ds.close()
+
+
+def test_make_netcdf_network_file_skips_malformed_lines(tmp_path, caplog):
+    """A bad field or a short line costs that line only - one error, no traceback.
+
+    sg262 p2620008.nlog (2026-09-05) had a $GPS time ending "-28": ValueError
+    in gps_cnv, logged with a traceback. A short line raised IndexError, which
+    the unknown-tag (LookupError) handler then mishandled, failing the whole file.
+    """
+    nlog = tmp_path / "p2620008.nlog"
+    nlog.write_text(
+        "start: 9 5 126 8 42 33\n"
+        "$ID,262.000000\n"
+        "$DIVE,8.000000\n"
+        "$GPS,050926,115202,7110.594,-6731.655,1.5\n"
+        "$GPS,050926-28,115202,7110.594,-6731.655,1.5\n"
+        "$GPS,050926,115202\n"
+    )
+    ct = tmp_path / "p2620008.npro_ct.dat"
+    ct.write_text(
+        "%first_bin_depth: 7.50\n%bin_width: 5.00\n%columns: temperature salinity \n"
+        "10.5 34.2 \n10.3 34.1 \n"
+    )
+
+    with caplog.at_level(logging.ERROR):
+        result = BaseNetwork.make_netcdf_network_file(nlog, ct)
+
+    assert result == tmp_path / "p2620008.ncdf"
+    assert result.exists()
+    assert f"Bad value in line 5 of {nlog} (unconverted data remains: -28)" in caplog.text
+    assert f"Bad value in line 6 of {nlog} (list index out of range)" in caplog.text
+    assert "Failed processing" not in caplog.text
+    assert "Traceback" not in caplog.text
+    ds = xr.open_dataset(result, decode_times=False)
+    try:
+        assert "temperature" in ds.variables
+    finally:
+        ds.close()

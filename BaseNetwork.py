@@ -1349,6 +1349,10 @@ def make_netcdf_network_file(
                                 else:
                                     time_string = raw_line.split(":", maxsplit=1)[1]
                                 start_time = Utils.parse_time(time_string)
+                            except (ValueError, IndexError) as e:
+                                log_error(
+                                    f"Bad start line {line_count} of {network_logfile} ({e}) - skipping: {raw_line[:120]}"
+                                )
                             except Exception:
                                 log_error(
                                     f"Could not process start line {line_count} of {network_logfile} - skipping",
@@ -1358,6 +1362,15 @@ def make_netcdf_network_file(
                             pass
                             # This is the first line in the .nlog
                             # ts = parse_timestamp(raw_line)
+                    except (ValueError, IndexError) as e:
+                        # A malformed or short line, e.g. a $GPS time of "...-28" in a
+                        # garbled .nlog (iopbase3 AMOS/BBOS) - the rest of the file is
+                        # still used. Before the LookupError clause: IndexError is a
+                        # LookupError, and that handler's e.args[1] raised on it, failing
+                        # the whole file.
+                        log_error(
+                            f"Bad value in line {line_count} of {network_logfile} ({e}) - skipping: {raw_line[:120]}"
+                        )
                     except LookupError as e:
                         log_error(
                             f"{e.args[0]} {e.args[1]} line {line_count} of {network_logfile} - skipping",
