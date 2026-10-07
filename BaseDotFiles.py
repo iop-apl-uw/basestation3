@@ -55,6 +55,7 @@ from email.mime.nonmultipart import MIMENonMultipart
 from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
 from ftplib import FTP, FTP_TLS
+from ftplib import all_errors as ftp_errors
 from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlencode, urlsplit
 
@@ -977,6 +978,12 @@ def process_ftp_line(
 
     log_info(f"user:{user},host:{host},port:{port},path:{path}")
 
+    try:
+        ftp_port = int(port) if port else 21
+    except ValueError:
+        log_error(f"Bad port ({port}) for {host} in {redact_ftp_line(ftp_line)} - skipping")
+        return 1
+
     ftp_file_names_to_send = process_ftp_tags(
         base_opts,
         processed_file_names,
@@ -1000,28 +1007,46 @@ def process_ftp_line(
             ftp = FTP_TLS(timeout=30)
         else:
             ftp = FTP(timeout=30)
-        connect_response = ftp.connect(host=host)  # port defaults to 21
+        # The parsed port used to be ignored - every connection went to 21
+        connect_response = ftp.connect(host=host, port=ftp_port)
+    except ftp_errors as exception:
+        # Timeouts, refused connections, DNS failures: the host is the useful part
+        log_error(f"Unable to connect to {host}:{ftp_port} ({type(exception).__name__}: {exception})")
+        return 1  # give up
     except Exception:
-        log_error("Unable to connect", "exc")
+        log_error(f"Unable to connect to {host}", "exc")
         return 1  # give up
     log_info(connect_response)
 
     if use_ftps:
         try:
             ftp.auth()  # upgrade control channel to TLS, on port 21
+        except ftp_errors as exception:
+            log_error(
+                f"Unable to negotiate TLS with {host} ({exception}) - aborting rather than send credentials insecurely"
+            )
+            ftp.close()
+            return 1  # give up
         except Exception:
             log_error(
                 "Unable to negotiate TLS - aborting rather than send credentials insecurely",
                 "exc",
             )
+            ftp.close()
             return 1  # give up
 
     try:
         # ftp.set_debuglevel(2) # 2 is max level - all to stdout
         ftp.set_pasv(True)
         login_response = ftp.login(user, pwd)
+    except ftp_errors as exception:
+        # The server's reply (e.g. "530 Login incorrect.") - never the password
+        log_error(f"Unable to login to {host} as {user} ({exception})")
+        ftp.close()
+        return 1  # give up
     except Exception:
-        log_error("Unable to login", "exc")
+        log_error(f"Unable to login to {host}", "exc")
+        ftp.close()
         return 1  # give up
 
     log_info(login_response)
@@ -1065,8 +1090,14 @@ def process_ftp_line(
             log_error(f"Unable to open {ftp_file_name_to_send} - skipping", "exc")
             result = 1  # we had issues
 
-    # Shutdown
-    ftp.quit()
+    # Shutdown. The files were sent, or their failures already logged, so a
+    # server error on QUIT (e.g. 451 after a failed STOR, sg263 2026-09-11) is
+    # only worth a warning.
+    try:
+        ftp.quit()
+    except ftp_errors as exception:
+        log_warning(f"Error closing the connection to {host} ({exception})")
+        ftp.close()
     return result
 
 

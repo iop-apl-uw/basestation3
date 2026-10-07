@@ -27,6 +27,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import ftplib
 import logging
 import os
 from typing import Literal
@@ -144,7 +145,7 @@ def test_process_ftp_line_plain_ftp_success(ftp_base_opts: MagicMock) -> None:
     assert result == 0
     mock_ftp_cls.assert_called_once_with(timeout=30)
     mock_ftp_tls_cls.assert_not_called()
-    mock_ftp.connect.assert_called_once_with(host="ftp.example.com")
+    mock_ftp.connect.assert_called_once_with(host="ftp.example.com", port=21)
     mock_ftp.login.assert_called_once_with("someone", "passwd")
     mock_ftp.storbinary.assert_called_once()
     assert mock_ftp.storbinary.call_args.args[0] == "STOR test.eng"
@@ -492,3 +493,79 @@ def test_post_slack_never_logs_hook_token(
     BaseLog.BaseLogger.log_level = save_log_level
     assert "hooks.slack.com" in caplog.text
     assert "SECRETTOKEN" not in caplog.text
+
+
+# --- FTP failures are one-line errors naming the host, not tracebacks -------
+
+
+def test_process_ftp_line_connect_timeout_names_host(
+    caplog: LogCaptureFixture, ftp_base_opts: MagicMock
+) -> None:
+    mock_ftp = MagicMock()
+    mock_ftp.connect.side_effect = TimeoutError("timed out")
+    with patch("BaseDotFiles.FTP", return_value=mock_ftp), caplog.at_level("ERROR"):
+        result = BaseDotFiles.process_ftp_line(ftp_base_opts, [], None, None, FTP_LINE, [])
+    assert result == 1
+    assert "Unable to connect to ftp.example.com:21 (TimeoutError: timed out)" in caplog.text
+    assert "Traceback" not in caplog.text
+
+
+def test_process_ftp_line_login_refused_closes(
+    caplog: LogCaptureFixture, ftp_base_opts: MagicMock
+) -> None:
+    mock_ftp = MagicMock()
+    mock_ftp.login.side_effect = ftplib.error_perm("530 Login incorrect.")
+    with patch("BaseDotFiles.FTP", return_value=mock_ftp), caplog.at_level("ERROR"):
+        result = BaseDotFiles.process_ftp_line(ftp_base_opts, [], None, None, FTP_LINE, [])
+    assert result == 1
+    assert "Unable to login to ftp.example.com as someone (530 Login incorrect.)" in caplog.text
+    assert "passwd" not in caplog.text
+    assert "Traceback" not in caplog.text
+    mock_ftp.close.assert_called_once()
+
+
+def test_process_ftp_line_quit_error_is_a_warning(
+    caplog: LogCaptureFixture, ftp_base_opts: MagicMock
+) -> None:
+    """451 on QUIT after the files were handled (sg263 2026-09-11): warn, keep the result."""
+    mock_ftp = MagicMock()
+    mock_ftp.quit.side_effect = ftplib.error_temp("451 Failure writing to local file.")
+    with patch("BaseDotFiles.FTP", return_value=mock_ftp), caplog.at_level("WARNING"):
+        result = BaseDotFiles.process_ftp_line(ftp_base_opts, [], None, None, FTP_LINE, [])
+    assert result == 0
+    mock_ftp.storbinary.assert_called_once()
+    assert (
+        "Error closing the connection to ftp.example.com (451 Failure writing to local file.)"
+        in caplog.text
+    )
+    assert "Traceback" not in caplog.text
+    mock_ftp.close.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "ftp_line, port",
+    [
+        ("someone:passwd@ftp.example.com:2121/remote/path,file_test.eng", 2121),
+        ("ftp.example.com:990/remote/path,file_test.eng", 990),
+        ("someone:passwd@ftp.example.com/remote/path,file_test.eng", 21),
+    ],
+)
+def test_process_ftp_line_uses_port(ftp_base_opts: MagicMock, ftp_line: str, port: int) -> None:
+    """The port in [user[:password]@]host[:port]/path was parsed but never used."""
+    mock_ftp = MagicMock()
+    with patch("BaseDotFiles.FTP", return_value=mock_ftp), patch("netrc.netrc") as mock_netrc:
+        mock_netrc.return_value.authenticators.return_value = None  # no .netrc entry
+        assert BaseDotFiles.process_ftp_line(ftp_base_opts, [], None, None, ftp_line, []) == 0
+    mock_ftp.connect.assert_called_once_with(host="ftp.example.com", port=port)
+
+
+def test_process_ftp_line_bad_port(caplog: LogCaptureFixture, ftp_base_opts: MagicMock) -> None:
+    mock_ftp = MagicMock()
+    with patch("BaseDotFiles.FTP", return_value=mock_ftp), caplog.at_level("ERROR"):
+        result = BaseDotFiles.process_ftp_line(
+            ftp_base_opts, [], None, None, "someone:passwd@ftp.example.com:ftp/remote,nc", []
+        )
+    assert result == 1
+    assert "Bad port (ftp) for ftp.example.com" in caplog.text
+    assert "passwd" not in caplog.text
+    mock_ftp.connect.assert_not_called()
