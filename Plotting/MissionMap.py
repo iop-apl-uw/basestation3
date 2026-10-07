@@ -175,7 +175,14 @@ def mission_map(
         )
         plot_limit_set = {"lat_south", "lat_north", "lon_west", "lon_east"}
         plot_limits_found = plot_limit_set & set(plot_constants)
-        if plot_limit_set == plot_limits_found:
+        if plot_limit_set == plot_limits_found and not plot_constants["lat_south"] < plot_constants["lat_north"]:
+            # Swapped limits left an empty bathymetry subset, and pcolormesh
+            # raised (sg261 BBOS_Sep26, 2026-08-31)
+            log_warning(
+                f"lat_south ({plot_constants['lat_south']}) is not south of lat_north "
+                f"({plot_constants['lat_north']}) in {sg_plot_consts_file_name} - ignoring the plot limits"
+            )
+        elif plot_limit_set == plot_limits_found:
             pc_ll_lon = plot_constants["lon_west"]
             pc_ur_lon = plot_constants["lon_east"]
             pc_ll_lat = plot_constants["lat_south"]
@@ -255,6 +262,13 @@ def mission_map(
         bathy_depth = -bathy_depth
         bathy_lats = bathy.y[lat_range_xr].to_numpy()
         bathy_lons = bathy.x[lon_range_xr].to_numpy()
+        if min(bathy_depth.shape) < 2:
+            # e.g. lon_west east of lon_east (or a box across 180) in sg_plot_constants.m
+            log_warning(
+                f"No bathymetry within the map extent (lon {extent[0]} to {extent[1]}, lat {extent[2]} to {extent[3]})"
+                " - check the lat/lon limits in sg_plot_constants.m; drawing the map without it"
+            )
+            bathy = None
 
     fig = plt.figure(dpi=200, layout='constrained') # figsize=(8,12), dpi=200)
     ax = fig.add_subplot(1, 1, 1, projection=myProj)

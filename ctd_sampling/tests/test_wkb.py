@@ -11,7 +11,15 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from ctd_sampling.wkb import GriddedDives, WkbResult, _fill_gaps, _flip_prefix, build_dive_stack, compute_wkb_schedule
+from ctd_sampling.wkb import (
+    GriddedDives,
+    WkbResult,
+    _fill_gaps,
+    _flip_prefix,
+    _wkb_stretch_direction,
+    build_dive_stack,
+    compute_wkb_schedule,
+)
 
 _FIXTURES = Path(__file__).parent / "fixtures"
 _DIVE_NUMBERS = (93, 94, 95, 96, 97)
@@ -194,3 +202,29 @@ def test_build_dive_stack_partial_dive_raises_clear_key_error() -> None:
     z = np.arange(0.0, 1000.0 + _DZ, _DZ)
     with pytest.raises(KeyError, match="latitude"):
         build_dive_stack(_FIXTURES / "partial", "283", (362,), z, _DZ)
+
+
+@pytest.mark.parametrize("n_points", [10, 11])
+def test_no_points_left_below_top_zone_raises(n_points: int) -> None:
+    """Every allowed point used up by the top zone (0 or 1 left) is a ValueError, not an IndexError.
+
+    sg684 M16SEP2026 dive 10 (2026-09-04): a short climb, so linspace(..., 0)
+    was empty and time_stretched[0] raised. DiveWkbSchedule skips the plot on
+    ValueError with a warning.
+    """
+    z = np.arange(0.0, 100.0, 10.0)
+    with pytest.raises(ValueError, match=f"Only {n_points - 10} point\\(s\\) left below the top zone"):
+        _wkb_stretch_direction(
+            n_points=n_points,  # x relative_N 1.0 -> n_new = n_points
+            time_dive=np.linspace(0.0, 500.0, z.size),
+            time_top=50.0,  # / top_sampling_rate 5.0 -> n_top = 10
+            dt_old=np.full(z.size, 5.0),
+            z=z,
+            i_max=2,
+            buckets_depths=np.array([20.0, 100.0]),
+            top_sampling_rate=5.0,
+            relative_N=np.array([1.0]),
+            mean_bf=np.full(z.size, 0.01),
+            dz_weights=np.full(z.size, 10.0),
+            n0=0.01,
+        )

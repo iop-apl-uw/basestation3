@@ -299,6 +299,15 @@ def _wkb_stretch_direction(
         n_new_points = int(target_n) - n_top
         if n_new_points < 0:
             raise ValueError("too many points in the prescribed top!")
+        if n_new_points < 2:
+            # The stretch below needs at least two points (linspace, then
+            # np.diff); with none, time_stretched[0] raised IndexError
+            # (sg684 M16SEP2026 dive 10, a short climb).
+            raise ValueError(
+                f"Only {n_new_points} point(s) left below the top zone for this cast "
+                "direction - the dives in this window may be too shallow/short to "
+                "compute a WKB-stretched schedule."
+            )
 
         z_uniform = np.linspace(z[i_max], z[-1], n_new_points)
         z_stretched = _interp1(z_uniform, z_wkb, z_wkb_domain)
