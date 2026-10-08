@@ -159,4 +159,15 @@ allowed error (see <code>GPS_position_error</code> in <code>sg000/sg_calib_const
 or lowering the <code>HPE</code> in the gliders <code>$N_GPS</code> parameter.
 </p>
 
+<p><a name="PAGERS_YML">PAGERS_YML<br>
+A <code>pagers.yml</code> file (basestation <code>etc</code>, group <code>etc</code> or the mission directory) failed
+validation.  Each problem is reported with its <code>file:line</code>; the bad entry - a subscription, a user setting
+or an endpoint - is left out and the rest of the file is used.  A file that isn't valid YAML, or that isn't a
+<code>pagers.yml</code> mapping at all (for example a <code>.pagers</code> file saved as <code>pagers.yml</code>), is
+ignored entirely.  Check a file with <code>BaseCtrlFiles.py check pagers.yml</code>, or all of a mission's files and
+their merge with <code>BaseCtrlFiles.py check_merged -m mission_dir</code>.  Convert a <code>.pagers</code> file with
+<code>BaseDotFiles.py pagers_to_yml --pagers_file .pagers --pagers_yml_out pagers.yml</code>.  See
+<code>sg000/pagers.yml</code> in the basestation3 directory for the format.
+</p>
+
 </body>

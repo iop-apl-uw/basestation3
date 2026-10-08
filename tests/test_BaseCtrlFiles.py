@@ -262,3 +262,22 @@ def test_cli_check_merged(tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[
     assert "alerts: subscriber ghost is not defined in any pagers.yml" in out
     assert "user pilot: status=True latlon=ddmm endpoints={'slack': 1}" in out
     assert SECRET not in out
+
+
+def test_validate_pagers_file_raises_alerts_for_errors_only(tmp_path: pathlib.Path) -> None:
+    """Dropped entries and ignored files reach pilots as PAGERS_YML alerts; repairs don't."""
+    BaseLog.BaseLogger.alerts_d = {}
+    bad = _pagers(tmp_path, "pilot: {email: [{address: a@b.c, filters: [latepgs]}]}\n", "bad.yml")
+    dot = _pagers(tmp_path, "pilot@example.com,gps\n", "dot.yml")
+    repaired = _pagers(tmp_path, "pilot: {email: [{address: a@b.c, format:html}]}\n", "repaired.yml")
+
+    BaseCtrlFiles.validate_pagers_file(repaired)
+    assert BaseCtrlFiles.PAGERS_YML_ALERT not in BaseLog.log_alerts()
+
+    BaseCtrlFiles.validate_pagers_file(bad)
+    BaseCtrlFiles.validate_pagers_file(dot)
+    alerts = BaseLog.log_alerts()[BaseCtrlFiles.PAGERS_YML_ALERT]
+    assert len(alerts) == 2
+    assert alerts[0].startswith(f"ERROR: {bad}:1: pilot.email.0.filters.0:")
+    assert alerts[1].startswith(f"ERROR: {dot}: not a pagers.yml mapping")
+    BaseLog.BaseLogger.alerts_d = {}

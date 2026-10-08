@@ -70,6 +70,9 @@ DEBUG_PDB = False
 
 pagers_msgs = PagersModel.PAGERS_MSGS
 
+# Alert tag for pagers.yml validation failures (see validate_pagers_file)
+PAGERS_YML_ALERT = "PAGERS_YML"
+
 
 def send_email(
     base_opts: BaseOpts.BaseOptions,
@@ -727,6 +730,9 @@ def check_pagers_file(path: pathlib.Path) -> tuple[dict | None, list[str], list[
 def validate_pagers_file(path: pathlib.Path) -> dict | None:
     """Loads and validates one pagers.yml for processing, logging each problem.
 
+    Each error is also raised as a PAGERS_YML alert, so it reaches the pilots in the
+    run's alerts notification.
+
     Args:
         path: A pagers.yml file.
 
@@ -737,8 +743,10 @@ def validate_pagers_file(path: pathlib.Path) -> dict | None:
         None.
     """
     contents, errors, warnings = check_pagers_file(path)
+    # Errors drop part (or all) of the file, so pilots get them as an alert; warnings
+    # (keys repaired, unknown keys ignored) leave the entries working
     for msg in errors:
-        log_error(msg)
+        log_error(msg, alert=PAGERS_YML_ALERT)
     for msg in warnings:
         log_warning(msg)
     return contents

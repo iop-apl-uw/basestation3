@@ -97,6 +97,9 @@
 #
 # Note: in { } (flow) mappings put a space after each colon - format: html, not format:html.
 #
+# Problems found while processing are logged with their file:line and sent as a
+# PAGERS_YML alert; the bad entry (or a file that isn't valid pagers.yml) is left out.
+#
 # Check a pagers.yml before installing it:
 #
 #   BaseCtrlFiles.py check pagers.yml          # one file - problems reported as file:line
