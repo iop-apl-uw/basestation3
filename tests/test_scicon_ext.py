@@ -35,9 +35,11 @@ to the processed-file lists), matching the sibling fix in BaseNetwork.py
 `if sts >> 8:`, an os.wait()-style check that doesn't apply to
 run_cmd_shell's plain 0-255 returncode)."""
 
+import logging
 import pathlib
 import sys
 
+import numpy as np
 import pytest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "Sensors"))
@@ -104,3 +106,63 @@ def test_process_ctx3_dat_failure_with_fake_convertor(
 
     assert ret_val == 1
     assert processed_logger_other_files == []
+
+
+# --- corrupt SUNA lines (sg283 SG283_WHIRLS_CRUISE, July 2026) -------------
+
+_SUNA_HEADER = (
+    "%instrument: suna suna\n"
+    "%columns: suna.time suna.nitrate \n"
+    "%container: sc0053a\n"
+    "%comment: SG283\n"
+    "%start: 7 8 126 19 33 45 372\n"
+)
+
+
+def test_extract_file_data_drops_ragged_rows(tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Garbled lines parse short; one ragged row used to lose every row of the file (dive 53)."""
+    eng = tmp_path / "psc2830053a_suna_suna.eng"
+    eng.write_text(
+        _SUNA_HEADER
+        + "1783539282.581 4.270 \n"
+        + "CD9CC981C3C2BCC6B4D1AC83A4129BC694018CD4,750} 4.1 \n"  # junk token skipped -> 1 column
+        + "1783539297.726 4.200 \n"
+        + "1783539312.923 4.260 \n"
+    )
+    with caplog.at_level(logging.WARNING):
+        data = scicon_ext.extract_file_data(eng)
+    assert data is not None and len(data) == 2
+    np.testing.assert_array_equal(data[0], [1783539282.581, 1783539297.726, 1783539312.923])
+    np.testing.assert_array_equal(data[1], [4.270, 4.200, 4.260])
+    assert "1 line(s) with an unexpected number of columns dropped (expected 2)" in caplog.text
+
+
+def test_extract_file_data_clean_file_unchanged(tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture) -> None:
+    eng = tmp_path / "psc2830028a_suna_suna.eng"
+    eng.write_text(_SUNA_HEADER + "1.0 2.0 \n3.0 4.0 \n")
+    with caplog.at_level(logging.WARNING):
+        data = scicon_ext.extract_file_data(eng)
+    np.testing.assert_array_equal(data[0], [1.0, 3.0])
+    np.testing.assert_array_equal(data[1], [2.0, 4.0])
+    assert "dropped" not in caplog.text
+
+
+def test_eng_file_reader_non_ascii_auxdata(tmp_path: pathlib.Path) -> None:
+    """A garbled character in a SUNA status record ('\\u02aa', dive 55) raised UnicodeEncodeError
+    building the auxdata byte strings, dropping the dive's SUNA data."""
+    eng = tmp_path / "psc2830055a_suna_suna.eng"
+    eng.write_text(
+        _SUNA_HEADER.replace("sc0053a", "sc0055a")
+        + "1783539282.581 4.270 \n"
+        + "%57209 0x1768,A,07/08/2026 19:34:09,1783539264,0.52\n"
+        + "1783539297.726 4.200 \n"
+        + "%72354 0x9B77,A,07/08/2026 19:34:29,\u02aa82,768\n"
+        + "1783539312.923 4.260 \n",
+        encoding="utf-8",
+    )
+    ret_list, _ = scicon_ext.eng_file_reader([{"file_name": eng, "cast": "a"}], {}, {})
+    aux = [v for name, v in ret_list if "auxdata_data" in name]
+    assert aux, f"no auxdata in {[name for name, _ in ret_list]}"
+    records = [bytes(x).rstrip() for x in aux[0]]
+    assert records[0].startswith(b"0x1768,A,07/08/2026")
+    assert records[1] == b"0x9B77,A,07/08/2026 19:34:29,?82,768"

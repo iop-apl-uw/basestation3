@@ -1110,6 +1110,19 @@ def extract_file_data(inp_file_name):
     if not rows:
         return None
 
+    # Garbled lines (unparseable tokens skipped above) come out short, and one
+    # ragged row made np.array raise, losing every good row of the file too
+    # (sg283 SG283_WHIRLS_CRUISE dive 53 SUNA: 88 two-column rows, 3 one-column).
+    # Keep the rows with the common column count.
+    n_cols = collections.Counter(len(r) for r in rows).most_common(1)[0][0]
+    n_dropped = sum(1 for r in rows if len(r) != n_cols)
+    if n_dropped:
+        log_warning(
+            f"{n_dropped} line(s) with an unexpected number of columns dropped "
+            f"(expected {n_cols}) from {inp_file_name}"
+        )
+        rows = [r for r in rows if len(r) == n_cols]
+
     tmp = np.array(rows, np.float64)
     data = []
     for i in range(len(rows[0])):
@@ -1492,8 +1505,12 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 item for sublist in [d[1] for d in auxdata_data] for item in sublist
             ]
             max_len = max([len(d) for d in auxdata_combined])
+            # Encode here, replacing non-ASCII: numpy's "S" dtype encodes as
+            # ASCII and raised on a garbled character ('\u02aa', sg283 dive 55),
+            # dropping all of the dive's data from this sensor. One byte per
+            # character either way, so the widths are unchanged.
             auxdata_d = np.array(
-                [x.ljust(max_len) for x in [d for d in auxdata_combined]],
+                [x.ljust(max_len).encode("ascii", "replace") for x in auxdata_combined],
                 dtype=f"S{max_len}",
             )
 
