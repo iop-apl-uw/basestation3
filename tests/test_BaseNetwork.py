@@ -1114,3 +1114,43 @@ def test_make_netcdf_network_file_skips_malformed_lines(tmp_path, caplog):
         assert "temperature" in ds.variables
     finally:
         ds.close()
+
+
+def test_make_netcdf_network_file_from_perdive_partial_climb(tmp_path):
+    """A dive file processed before its climb was all in: the later ctd_depths are NaN.
+
+    sg244 AMOS_Jul25 dive 890 (2026-09-20): interp1_extend didn't extend past the
+    NaN tail and interp1d raised "below the interpolation range's minimum".
+    """
+    src = pathlib.Path("testdata/sg272_NANOOS_Feb26_lowlevelcli/p2720002.nc")
+    full = tmp_path / "full" / "p2720002.nc"
+    partial = tmp_path / "partial" / "p2720002.nc"
+    for dst in (full, partial):
+        dst.parent.mkdir()
+        shutil.copy(src, dst)
+    # Path -> str: netCDF4.Dataset wants a string path
+    with netCDF4.Dataset(str(partial), "a") as nc:
+        depth = nc.variables["ctd_depth"][:]
+        max_i = int(np.ma.argmax(depth))
+        tail = max_i + (depth.size - max_i) // 2  # the second half of the climb not in yet
+        depth[tail:] = np.nan
+        nc.variables["ctd_depth"][:] = depth
+
+    full_ncf = BaseNetwork.make_netcdf_network_file_from_perdive(full)
+    partial_ncf = BaseNetwork.make_netcdf_network_file_from_perdive(partial)
+
+    assert partial_ncf == partial.with_suffix(".ncdf")
+    ds_full = xr.open_dataset(full_ncf, decode_times=False)
+    ds_part = xr.open_dataset(partial_ncf, decode_times=False)
+    try:
+        np.testing.assert_array_equal(ds_part["depth"].values, ds_full["depth"].values)
+        # The dive (first profile) is untouched by the missing climb
+        np.testing.assert_array_equal(ds_part["time"].values[0], ds_full["time"].values[0])
+        climb = ds_part["time"].values[1]
+        assert np.all(np.isfinite(climb))
+        # Stored deep to shallow, so time increases; bins shallower than the last depth
+        # that came in get that point's time (the flat run at the end)
+        assert np.all(np.diff(climb) >= 0)
+    finally:
+        ds_full.close()
+        ds_part.close()

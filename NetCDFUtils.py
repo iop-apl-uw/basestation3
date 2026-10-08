@@ -36,11 +36,43 @@ from scipy.stats import binned_statistic
 
 
 def interp1_extend(t1, data, t2, fill_value=np.nan):
-    """Interpolates t1/data onto t2, extending t1/data to cover the range
-    of t2
-    """
-    # add 'nearest' data item to the ends of data and t1
+    """Interpolates t1/data onto t2, extending t1/data to cover the range of t2.
 
+    The nearest data item at each end is copied out to the end of t2, decided
+    from the first and last elements of t1 and t2. Points where t1 isn't finite
+    (or is masked) are dropped first: a climb whose later depths were still NaN
+    (a dive processed before its data was all in - sg244 AMOS_Jul25 dive 890)
+    made the end tests compare against NaN, so nothing was extended and interp1d
+    raised. For finite t1 the result is exactly as before.
+
+    Args:
+        t1: Positions of the data (e.g. depth or time). Masked points
+            (netCDF4 masked arrays) are treated as missing.
+        data: Values at t1; masked values become NaN.
+        t2: Positions to interpolate onto; masked positions become NaN.
+        fill_value: Passed to scipy.interpolate.interp1d.
+
+    Returns:
+        The values at t2.
+
+    Raises:
+        ValueError: t1 has no finite points, or interp1d can't interpolate
+            (e.g. t2 outside the extended range).
+    """
+    # interp1d rejects masked arrays ("masked arrays are not supported"), which
+    # netCDF4 variables arrive as - so masked points count as missing (NaN)
+    t1 = np.ma.filled(np.ma.asarray(t1, dtype=np.float64), np.nan)
+    data = np.ma.filled(np.ma.asarray(data, dtype=np.float64), np.nan)
+    t2 = np.ma.filled(np.ma.asarray(t2, dtype=np.float64), np.nan)
+
+    finite = np.isfinite(t1)
+    if not finite.all():
+        t1 = t1[finite]
+        data = data[finite]
+    if t1.size == 0:
+        raise ValueError("interp1_extend: no finite points to interpolate from")
+
+    # add 'nearest' data item to the ends of data and t1
     if (t1[0] <= t1[-1] and t2[0] < t1[0]) or (t1[0] > t1[-1] and t2[0] > t1[0]):
         # Copy the first value below the interpolation range
         data = np.append(np.array([data[0]]), data)
@@ -57,7 +89,7 @@ def interp1_extend(t1, data, t2, fill_value=np.nan):
 def bindata(x, y, bins, sigma=False):
     """
     Bins y(x) onto bins by averaging, when bins define the right hand side of the bin
-    NaNs are ignored.  Values less then bin[0] LHS are included in bin[0],
+    NaNs (in x or y) are ignored.  Values less then bin[0] LHS are included in bin[0],
     values greater then bin[-1] RHS are included in bin[-1]
 
     Input:
@@ -74,7 +106,9 @@ def bindata(x, y, bins, sigma=False):
     Notes:
         Current implimentation only handles the 1-D case
     """
-    idx = np.logical_not(np.isnan(y))
+    # NaN x too: binned_statistic raises on it ("contains at least one NaN") -
+    # e.g. a climb whose later depths aren't in yet (sg244 AMOS_Jul25 dive 890)
+    idx = np.logical_not(np.logical_or(np.isnan(y), np.isnan(x)))
     if not idx.any():
         nan_return = np.empty(bins.size - 1)
         nan_return[:] = np.nan
