@@ -38,21 +38,26 @@ import copy
 import functools
 import json
 import os
+import pathlib
 import pdb
 import re
 import sys
 import time
 import traceback
+from collections.abc import Callable
 
 import requests
 import yaml
+from pydantic import ValidationError
 
 import BaseDotFiles
 import BaseOpts
 import BaseOptsType
 import CommLog
 import GPS
+import PagersModel
 import Utils
+import YamlValidation
 from BaseLog import (
     BaseLogger,
     log_critical,
@@ -63,19 +68,7 @@ from BaseLog import (
 
 DEBUG_PDB = False
 
-pagers_msgs = (
-    "lategps",
-    "gps",
-    "recov",
-    "critical",
-    "drift",
-    "divetar",
-    "comp",
-    "alerts",
-    "errors",
-    "upload",
-    "traceback"
-)
+pagers_msgs = PagersModel.PAGERS_MSGS
 
 
 def send_email(
@@ -250,7 +243,10 @@ def send_ntfy(
         log_error(f"Missing topic for user:{user}, endpoint:{BaseDotFiles.redact_endpoint(endpoint)}")
         return
 
-    priorities = endpoint.get("priority", default_priorities)
+    # Configured priorities over the defaults. The documented list-of-pairs form never
+    # matched before, so every message - critical too - went at priority 3.
+    configured = PagersModel.ntfy_priorities(endpoint.get("priority") or {})
+    priorities = {**default_priorities, **(configured if isinstance(configured, dict) else {})}
 
     if 'type' in send_dict and send_dict['type'] in priorities:
         priority = priorities[send_dict['type']]
@@ -459,8 +455,23 @@ def load_ctrl_yml(
     base_opts: BaseOpts.BaseOptions,
     ctrl_file_name: str,
     default_dict: dict | None = None,
+    validate: Callable[[pathlib.Path], dict | None] | None = None,
 ) -> dict | None:
-    """Load ctrl yaml files and merge into one"""
+    """Loads the basestation etc, group etc and mission copies of a ctrl yaml file and merges them.
+
+    Args:
+        base_opts: Options (basestation_etc, group_etc, mission_dir).
+        ctrl_file_name: e.g. "pagers.yml".
+        default_dict: Starting values the files are merged into.
+        validate: Loads and validates one file, returning its cleaned contents, or
+            None to leave the file out (validate_pagers_file for pagers.yml).
+
+    Returns:
+        The merged dict, or None if merging failed.
+
+    Raises:
+        None.
+    """
 
     if default_dict:
         yml_dicts = [default_dict]
@@ -478,6 +489,12 @@ def load_ctrl_yml(
             continue
         if not os.path.exists(yml_file_name):
             log_info(f"No ctrl file {yml_file_name} found - skipping")
+            continue
+        if validate is not None:
+            log_info(f"ctrl file {yml_file_name} found")
+            tmp_dict = validate(pathlib.Path(yml_file_name))
+            if tmp_dict is not None:
+                yml_dicts.append(tmp_dict)
             continue
         try:
             log_info(f"ctrl file {yml_file_name} found")
@@ -501,6 +518,230 @@ def load_ctrl_yml(
         return None
 
     return yml_dicts[0]
+
+
+_SECRET_FIELDS = ("hook", "url", "topic", "pwd", "password")
+
+
+def _redact_input(loc: tuple, value: object) -> object:
+    """Masks secrets in a validation error's input (see YamlValidation.format_validation_errors)."""
+    if isinstance(value, dict):
+        return BaseDotFiles.redact_endpoint(value)
+    if loc and loc[-1] in _SECRET_FIELDS:
+        return BaseDotFiles.redact_url(str(value)) if "://" in str(value) else BaseDotFiles.redact_secret(str(value))
+    return value
+
+
+def _repair_keys(entry: dict, fields: set[str] | tuple[str, ...]) -> tuple[dict, list[tuple[str, str]]]:
+    """Reads "name:value" keys (no space after the colon) as name: value, and sets unknown keys aside.
+
+    In a yaml flow mapping, { format:html } is a key "format:html" with no value - the
+    sg000 pagers.yml example was written that way, so many files have it. The old code
+    ignored unknown keys; validation would drop the whole endpoint for them.
+
+    Args:
+        entry: An endpoint or user mapping.
+        fields: The keys it may have.
+
+    Returns:
+        (repaired, notes): the mapping with "name:value" keys repaired and other unknown
+        keys removed, and (key, message) pairs to warn about.
+    """
+    repaired: dict = {}
+    notes: list[tuple[str, str]] = []
+    for key, value in entry.items():
+        if key in fields:
+            repaired[key] = value
+            continue
+        if isinstance(key, str) and ":" in key and value is None:
+            name, rest = (x.strip() for x in key.split(":", 1))
+            if name in fields and name not in entry:
+                try:
+                    parsed = yaml.safe_load(rest) if rest else None
+                except yaml.YAMLError:
+                    parsed = rest
+                repaired[name] = parsed
+                shown = _redact_input((name,), parsed)
+                # The original key holds the value too - mask it the same way
+                original = f"{name}:{shown}" if name in _SECRET_FIELDS else key
+                notes.append((key, f"{original!r} read as {name}: {shown!r} - add a space after the colon"))
+                continue
+        notes.append((key, f"unknown key {key!r} ignored"))
+    return repaired, notes
+
+
+def check_pagers_file(path: pathlib.Path) -> tuple[dict | None, list[str], list[str]]:
+    """Loads one pagers.yml and validates it, dropping only the entries that are wrong.
+
+    Nothing is logged here (see validate_pagers_file, and the "check" CLI action).
+    Each subscription, user setting and endpoint is checked on its own against
+    PagersModel; a bad one is logged with its file:line and left out, and the rest
+    of the file is kept. A file that can't be read as yaml, or isn't a mapping at all
+    (e.g. a .pagers file saved as pagers.yml - sg267 2026, ~70 tracebacks a day from
+    merge_dict), is logged once and left out entirely.
+
+    Args:
+        path: A pagers.yml file.
+
+    Returns:
+        (contents, errors, warnings): the validated contents as plain dicts and lists
+        (subscriptions always lists, statuses always bools) or None to leave the file
+        out, and one message per problem found.
+
+    Raises:
+        None.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    try:
+        data, locate = YamlValidation.load_yaml_with_lines(path)
+    except yaml.YAMLError as e:
+        errors.append(f"{YamlValidation.format_yaml_error(path, e)} - ignoring this pagers.yml")
+        return None, errors, warnings
+    except OSError as e:
+        errors.append(f"Could not read {path} ({e}) - ignoring it")
+        return None, errors, warnings
+
+    if data is None:
+        return {}, errors, warnings
+    if not isinstance(data, dict):
+        hint = (
+            " - it looks like .pagers format; convert it with BaseDotFiles.py pagers_to_yml"
+            if isinstance(data, str | list)
+            else ""
+        )
+        errors.append(f"{path}: not a pagers.yml mapping (got {type(data).__name__}){hint} - ignoring this file")
+        return None, errors, warnings
+
+    def where(loc: tuple) -> str:
+        line = locate(loc)
+        return f"{path}:{line}" if line is not None else f"{path}"
+
+    def report(err: ValidationError, prefix: tuple, what: str) -> None:
+        for msg in YamlValidation.format_validation_errors(path, locate, err, prefix, _redact_input):
+            errors.append(f"{msg} - dropping this {what}")
+
+    cleaned: dict = {}
+    for key, value in data.items():
+        if not isinstance(key, str):
+            errors.append(f"{where((key,))}: {key!r} is not a name (quote it) - dropping this entry")
+            continue
+
+        if key in pagers_msgs:
+            # Each subscriber on its own, so one bad name doesn't drop the others
+            names = [value] if isinstance(value, str) else value
+            if not isinstance(names, list):
+                errors.append(
+                    f"{where((key,))}: {key}: subscribers must be a user name or a list of them "
+                    f"(got {type(value).__name__}) - dropping this subscription"
+                )
+                continue
+            subscribers = []
+            for i, name in enumerate(names):
+                try:
+                    subscribers.append(PagersModel.SubscriberName.validate_python(name))
+                except ValidationError as e:
+                    report(e, (key,) if isinstance(value, str) else (key, i), "subscriber")
+            cleaned[key] = subscribers
+            continue
+
+        if not isinstance(value, dict):
+            errors.append(
+                f"{where((key,))}: user {key} must be a mapping of settings and send functions "
+                f"(got {type(value).__name__}) - dropping this user"
+            )
+            continue
+
+        # "latlon:dd" / "status:off" at the user level; send functions are checked below
+        user_keys = {k for k in value if not (isinstance(k, str) and ":" in k and value[k] is None)}
+        repaired, notes = _repair_keys(
+            value, {"status", "latlon", *PagersModel.ENDPOINT_MODELS, *(k for k in user_keys if k not in ("status", "latlon"))}
+        )
+        for bad_key, note in notes:
+            warnings.append(f"{where((key, bad_key))}: {key}: {note}")
+        value = repaired
+
+        user: dict = {}
+        for setting in ("status", "latlon"):
+            if setting not in value:
+                continue
+            try:
+                user.update(
+                    PagersModel.UserSettings(**{setting: value[setting]}).model_dump(exclude_none=True)
+                )
+            except ValidationError as e:
+                report(e, (key,), "setting")
+        if user.get("latlon") == "dddd":
+            warnings.append(
+                f"{where((key, 'latlon'))}: latlon dddd is not a position format (the raw DDMM.MMMM "
+                "value is sent) - use ddmm (DD MM.MM) or dd (DD.DDDD)"
+            )
+
+        for send_func, endpoints in value.items():
+            if send_func in ("status", "latlon"):
+                continue
+            model = PagersModel.ENDPOINT_MODELS.get(send_func)
+            if model is None:
+                errors.append(
+                    f"{where((key, send_func))}: {key}.{send_func}: unknown send function "
+                    f"(one of {', '.join(PagersModel.ENDPOINT_MODELS)}) - dropping it"
+                )
+                continue
+            single = isinstance(endpoints, dict)
+            if single:
+                endpoints = [endpoints]
+            if not isinstance(endpoints, list):
+                errors.append(
+                    f"{where((key, send_func))}: {key}.{send_func}: endpoints must be a list or a mapping "
+                    f"(got {type(endpoints).__name__}) - dropping them"
+                )
+                continue
+            good = []
+            for i, endpoint in enumerate(endpoints):
+                prefix = (key, send_func) if single else (key, send_func, i)
+                if not isinstance(endpoint, dict):
+                    errors.append(
+                        f"{where(prefix)}: {'.'.join(str(x) for x in prefix)}: an endpoint must be a mapping "
+                        f"(got {type(endpoint).__name__}) - dropping this endpoint"
+                    )
+                    continue
+                endpoint, notes = _repair_keys(endpoint, set(model.model_fields))
+                for bad_key, note in notes:
+                    warnings.append(f"{where((*prefix, bad_key))}: {'.'.join(str(x) for x in prefix)}: {note}")
+                try:
+                    good.append(model(**endpoint).model_dump(exclude_none=True))
+                except ValidationError as e:
+                    report(e, prefix, "endpoint")
+                    continue
+                if good[-1].get("latlon") == "dddd":
+                    warnings.append(
+                        f"{where((*prefix, 'latlon'))}: latlon dddd is not a position format - use ddmm or dd"
+                    )
+            if good:
+                user[send_func] = good
+        cleaned[key] = user
+
+    return cleaned, errors, warnings
+
+
+def validate_pagers_file(path: pathlib.Path) -> dict | None:
+    """Loads and validates one pagers.yml for processing, logging each problem.
+
+    Args:
+        path: A pagers.yml file.
+
+    Returns:
+        The validated contents, or None to leave the file out (see check_pagers_file).
+
+    Raises:
+        None.
+    """
+    contents, errors, warnings = check_pagers_file(path)
+    for msg in errors:
+        log_error(msg)
+    for msg in warnings:
+        log_warning(msg)
+    return contents
 
 
 def check_canonicalize_pagers_dict(pagers_dict: dict) -> dict:
@@ -666,7 +907,7 @@ def process_pagers_yml(
     #    Code below - stash in attribute when checked
 
     pagers_dict = load_ctrl_yml(
-        base_opts, "pagers.yml", copy.deepcopy(base_pagers_dict)
+        base_opts, "pagers.yml", copy.deepcopy(base_pagers_dict), validate_pagers_file
     )
     if pagers_dict is None:
         log_error("Failed to load pager(s).yml - bailing out")
@@ -905,12 +1146,68 @@ def process_pagers_yml(
                     log_warning(f"pagers msg {msg} NYI")
 
 
+def check_merged_pagers(base_opts: BaseOpts.BaseOptions) -> int:
+    """Checks the basestation etc, group etc and mission pagers.yml files, and what they merge to.
+
+    Args:
+        base_opts: Options (basestation_etc, group_etc, mission_dir).
+
+    Returns:
+        0 if every file is clean and every subscriber is defined, 1 otherwise.
+
+    Raises:
+        None.
+    """
+    n_problems = 0
+    found = 0
+    for path in (
+        base_opts.basestation_etc / "pagers.yml",
+        base_opts.group_etc / "pagers.yml" if base_opts.group_etc else None,
+        base_opts.mission_dir / "pagers.yml" if base_opts.mission_dir else None,
+    ):
+        if path is None or not path.exists():
+            continue
+        found += 1
+        _, errors, warnings = check_pagers_file(path)
+        for msg in [*errors, *warnings]:
+            print(msg)
+        n_problems += len(errors)
+        print(f"{path}: {len(errors)} error(s), {len(warnings)} warning(s)")
+    if not found:
+        print("No pagers.yml found (basestation etc, group etc or mission dir)")
+        return 1
+
+    merged = load_ctrl_yml(base_opts, "pagers.yml", copy.deepcopy(base_pagers_dict), validate_pagers_file)
+    if merged is None:
+        print("The pagers.yml files could not be merged")
+        return 1
+    for msg, users in merged.items():
+        if msg in pagers_msgs:
+            for user in users:
+                if user not in merged:
+                    print(f"{msg}: subscriber {user} is not defined in any pagers.yml")
+                    n_problems += 1
+    canonical = check_canonicalize_pagers_dict(merged)
+    for user, settings in canonical["users"].items():
+        send_funcs = {k: len(v) for k, v in settings.items() if k not in ("status", "latlon")}
+        print(f"user {user}: status={settings['status']} latlon={settings['latlon']} endpoints={send_funcs}")
+    for msg, users in canonical["subscriptions"].items():
+        print(f"subscription {msg}: {', '.join(sorted(users))}")
+    return 1 if n_problems else 0
+
+
 def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     """cli test/utility for ctrl file processing
 
+    Actions:
+        check FILE...   validate pagers.yml file(s); one line per problem as file:line
+        check_merged    validate the etc / group etc / mission pagers.yml and their merge
+        dump            the merged, canonical pagers.yml (dump_pagers_yml is an alias)
+        <subscription>  send that message now (gps, alerts, ...), from the mission's comm.log
+
     Returns:
         0 for success (although there may have been individual errors in
-            file processing).
+            file processing); for check and check_merged, 1 if problems were found.
         Non-zero for critical problems.
 
     Raises:
@@ -928,8 +1225,18 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 ("basectrlfiles_action",),
                 str,
                 {
-                    "help": "Which action to run",
-                    "choices": set(pagers_msgs +("dump_pagers_yml",))
+                    "help": "Which action to run: check FILE..., check_merged, dump, or a subscription to send",
+                    "choices": ("check", "check_merged", "dump", "dump_pagers_yml", *pagers_msgs),
+                },
+            ),
+            "pagers_files": BaseOptsType.options_t(
+                [],
+                {"BaseCtrlFiles"},
+                ("pagers_files",),
+                str,
+                {
+                    "help": "pagers.yml file(s) for the check action",
+                    "nargs": "*",
                 },
             ),
         },
@@ -940,46 +1247,55 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     global DEBUG_PDB
     DEBUG_PDB = base_opts.debug_pdb
 
-    log_info("Started processing ")
+    action = base_opts.basectrlfiles_action
 
-    if base_opts.basectrlfiles_action in pagers_msgs:
-        comm_log = CommLog.process_comm_log(
-            base_opts.mission_dir / "comm.log", base_opts, scan_back=False
-        )[0]
-
-    (comm_log, _, _, _, _) = CommLog.process_comm_log(
-        base_opts.mission_dir/ "comm.log",
-        base_opts,
-        #known_commlog_files=known_files,
-    )
-
-    if comm_log is None:
-        log_error("Could not process comm.log")
+    if action != "check" and not base_opts.mission_dir:
+        log_error(f"{action} needs --mission_dir")
         return 1
 
-    if base_opts.basectrlfiles_action == "dump_pagers_yml":
+    if action == "check":
+        if not base_opts.pagers_files:
+            log_error("check needs one or more pagers.yml files")
+            return 1
+        n_errors = 0
+        for name in base_opts.pagers_files:
+            # A str from argparse; pathlib for the loaders
+            path = pathlib.Path(name)
+            _, errors, warnings = check_pagers_file(path)
+            for msg in [*errors, *warnings]:
+                print(msg)
+            print(f"{path}: {len(errors)} error(s), {len(warnings)} warning(s)")
+            n_errors += len(errors)
+        return 1 if n_errors else 0
+
+    if action == "check_merged":
+        return check_merged_pagers(base_opts)
+
+    if action in ("dump", "dump_pagers_yml"):
         pagers_dict = load_ctrl_yml(
-            base_opts, "pagers.yml", copy.deepcopy(base_pagers_dict)
+            base_opts, "pagers.yml", copy.deepcopy(base_pagers_dict), validate_pagers_file
         )
         if pagers_dict is None:
             log_error("Failed to load pager(s).yml - bailing out")
             return 0
-
-        pagers_dict = check_canonicalize_pagers_dict(pagers_dict)
-        
-        dump_pagers_dict(pagers_dict)
+        dump_pagers_dict(check_canonicalize_pagers_dict(pagers_dict))
         return 0
 
-    if base_opts.basectrlfiles_action in pagers_msgs:
-        process_pagers_yml(
-            base_opts,
-            comm_log.last_complete_surfacing().sg_id,
-            (base_opts.basectrlfiles_action,),
-            comm_log=comm_log,
-        )
-    else:
-        log_error("Unkown action {base_opts.basectrlfiles_action}")
-
+    # A subscription: send it now, as processing would
+    log_info("Started processing ")
+    (comm_log, _, _, _, _) = CommLog.process_comm_log(
+        base_opts.mission_dir / "comm.log",
+        base_opts,
+    )
+    if comm_log is None:
+        log_error("Could not process comm.log")
+        return 1
+    process_pagers_yml(
+        base_opts,
+        comm_log.last_complete_surfacing().sg_id,
+        (action,),
+        comm_log=comm_log,
+    )
     return 0
 
 
@@ -991,7 +1307,7 @@ if __name__ == "__main__":
     time.tzset()
 
     try:
-        main()
+        retval = main()
     except SystemExit:
         pass
     except Exception:
@@ -1001,3 +1317,5 @@ if __name__ == "__main__":
             pdb.post_mortem(traceb)
 
         log_critical("Unhandled exception in main -- exiting", "exc")
+
+    sys.exit(retval)

@@ -44,8 +44,10 @@ import netrc
 import os
 import pathlib
 import pdb
+import re
 import smtplib
 import sys
+import tempfile
 import time
 import traceback
 import warnings
@@ -60,6 +62,7 @@ from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlencode, urlsplit
 
 import requests
+import yaml
 
 # paramiko is throwing a warning on import because it refernces Blowfish - which is depricated
 # Issue is here https://github.com/paramiko/paramiko/issues/2038
@@ -399,6 +402,104 @@ def send_email(
         message_body,
         html_format=html_format,
     )
+
+
+# .pagers tags (process_pagers): those that take a position-format suffix, and all known
+_PAGERS_TAGS_WITH_FMT = ("lategps", "gps", "recov", "critical", "drift")
+_PAGERS_KNOWN_TAGS = ("lategps", "gps", "recov", "critical", "drift", "divetar", "comp", "alerts", "errors")
+
+
+def _pagers_user_name(address: str, taken: dict[str, str]) -> str:
+    """A pagers.yml user name for a .pagers address, unique within the conversion."""
+    base = re.sub(r"[^a-z0-9]+", "_", address.lower()).strip("_") or "user"
+    name, n = base, 2
+    while name in taken and taken[name] != address:
+        name, n = f"{base}_{n}", n + 1
+    taken[name] = address
+    return name
+
+
+def convert_pagers_to_yml(lines: list[str]) -> tuple[dict, list[str]]:
+    """Converts .pagers lines to the equivalent pagers.yml contents.
+
+    Follows process_pagers' parsing: "address,[html|slack,]tag[,tag...]", tags optionally
+    suffixed with a position format (gpsdd, recovddmmss; default ddmm). One pagers.yml user
+    per address (repeated addresses merge); each line's tags become endpoints with those
+    filters (one endpoint per position format), and each tag's subscription lists the user.
+
+    Args:
+        lines: The .pagers file's lines.
+
+    Returns:
+        (pagers_yml, warnings): the pagers.yml contents (users, then subscriptions), and one
+        message per line or tag that couldn't be converted.
+
+    Raises:
+        None.
+    """
+    users: dict[str, dict] = {}
+    subscriptions: dict[str, list[str]] = {}
+    taken: dict[str, str] = {}
+    n_hooks = 0
+    hook_names: dict[str, str] = {}
+    warnings: list[str] = []
+
+    for line_no, raw in enumerate(lines, start=1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        elts = [e.strip() for e in line.split(",")]
+        address, rest = elts[0], elts[1:]
+        send_func, fmt_html = "email", False
+        if rest and rest[0].lower() in ("html", "slack"):
+            if rest[0].lower() == "slack":
+                send_func = "slack"
+            else:
+                fmt_html = True
+            rest = rest[1:]
+        if not address or not rest:
+            warnings.append(f"line {line_no}: no address or no tags - skipped")
+            continue
+
+        by_fmt: dict[str, list[str]] = {}
+        for tag in (t.lower() for t in rest if t):
+            fmt = ""
+            for base in _PAGERS_TAGS_WITH_FMT:
+                if tag.startswith(base):
+                    fmt, tag = tag[len(base) :], base
+                    break
+            if tag not in _PAGERS_KNOWN_TAGS:
+                warnings.append(f"line {line_no}: unknown tag {tag!r} - skipped")
+                continue
+            if fmt not in ("", "dd", "ddmm", "ddmmss"):
+                warnings.append(f"line {line_no}: unknown position format {fmt!r} on {tag} - using ddmm")
+                fmt = ""
+            by_fmt.setdefault(fmt or "ddmm", []).append(tag)
+        if not by_fmt:
+            warnings.append(f"line {line_no}: no known tags - skipped")
+            continue
+
+        if send_func == "slack":
+            if address not in hook_names:
+                n_hooks += 1
+                hook_names[address] = f"hook_{n_hooks}"
+            name = hook_names[address]
+        else:
+            name = _pagers_user_name(address, taken)
+        user = users.setdefault(name, {})
+        for fmt, tags in by_fmt.items():
+            endpoint: dict = {"hook": address} if send_func == "slack" else {"address": address}
+            if fmt_html:
+                endpoint["format"] = "html"
+            endpoint["filters"] = tags
+            if fmt != "ddmm":
+                endpoint["latlon"] = fmt
+            user.setdefault(send_func, []).append(endpoint)
+            for tag in tags:
+                if name not in subscriptions.setdefault(tag, []):
+                    subscriptions[tag].append(name)
+
+    return {**users, **subscriptions}, warnings
 
 
 def process_pagers(
@@ -1886,7 +1987,59 @@ def process_extensions(
     return ret_val
 
 
-def main():
+def pagers_to_yml(base_opts: BaseOpts.BaseOptions) -> int:
+    """The pagers_to_yml action: converts a .pagers file to pagers.yml, checked before it's written.
+
+    Args:
+        base_opts: Options (pagers_file or mission_dir, and pagers_yml_out).
+
+    Returns:
+        0 on success, 1 if there was nothing to convert, the result didn't validate, or
+        the output file already exists.
+
+    Raises:
+        None.
+    """
+    import BaseCtrlFiles  # here: BaseCtrlFiles imports this module
+
+    src = base_opts.pagers_file or (base_opts.mission_dir / ".pagers" if base_opts.mission_dir else None)
+    if src is None or not src.exists():
+        log_error(f"No .pagers file to convert ({src or 'give --pagers_file or --mission_dir'})")
+        return 1
+    out = base_opts.pagers_yml_out
+    if out is not None and out.exists():
+        log_error(f"{out} already exists - not overwriting it")
+        return 1
+
+    contents, warnings = convert_pagers_to_yml(src.read_text(errors="replace").splitlines())
+    for msg in warnings:
+        log_warning(f"{src}: {msg}")
+    if not contents:
+        log_error(f"Nothing to convert in {src}")
+        return 1
+    text = f"# pagers.yml converted from {src} by BaseDotFiles.py pagers_to_yml\n" + yaml.safe_dump(
+        contents, sort_keys=False, default_flow_style=None, width=120
+    )
+
+    # Validate exactly what would be written
+    with tempfile.TemporaryDirectory() as tmp:
+        check_file = pathlib.Path(tmp) / "pagers.yml"
+        check_file.write_text(text)
+        _, errors, _ = BaseCtrlFiles.check_pagers_file(check_file)
+    if errors:
+        for msg in errors:
+            log_error(f"converted pagers.yml doesn't validate: {msg}")
+        return 1
+
+    if out is None:
+        print(text, end="")
+    else:
+        out.write_text(text)
+        log_info(f"Wrote {out}")
+    return 0
+
+
+def main(cmdline_args: list[str] | None = None) -> int | None:
     """cli test/utility for dot file processing
 
     Returns:
@@ -1901,6 +2054,7 @@ def main():
     # pylint: disable=unused-argument
     base_opts = BaseOpts.BaseOptions(
         "cmdline entry for basestation dot file processing",
+        cmdline_args=cmdline_args,
         additional_arguments={
             "basedotfiles_action": BaseOptsType.options_t(
                 (),
@@ -1911,7 +2065,7 @@ def main():
                 str,
                 {
                     "help": "Which action to run",
-                    "choices": ("gps", "drift", "ftp", "sftp", "ftps", "urls"),
+                    "choices": ("gps", "drift", "ftp", "sftp", "ftps", "urls", "pagers_to_yml"),
                 },
             ),
             "ftp_files": BaseOptsType.options_t(
@@ -1924,6 +2078,26 @@ def main():
                 {
                     "help": "List of files to upload",
                     "nargs": "*",
+                },
+            ),
+            "pagers_file": BaseOptsType.options_t(
+                None,
+                {"BaseDotFiles"},
+                ("--pagers_file",),
+                BaseOpts.FullPathlib,
+                {
+                    "help": "pagers_to_yml: the .pagers file to convert (default: the mission dir's .pagers)",
+                    "action": BaseOpts.FullPathlibAction,
+                },
+            ),
+            "pagers_yml_out": BaseOptsType.options_t(
+                None,
+                {"BaseDotFiles"},
+                ("--pagers_yml_out",),
+                BaseOpts.FullPathlib,
+                {
+                    "help": "pagers_to_yml: write the pagers.yml here (default: print it); never overwrites",
+                    "action": BaseOpts.FullPathlibAction,
                 },
             ),
             "pass_num": BaseOptsType.options_t(
@@ -1950,6 +2124,13 @@ def main():
         "Started processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
+
+    if base_opts.basedotfiles_action == "pagers_to_yml":
+        return pagers_to_yml(base_opts)
+
+    if not base_opts.mission_dir:
+        log_error(f"{base_opts.basedotfiles_action} needs --mission_dir")
+        return 1
 
     if base_opts.basedotfiles_action in ("gps", "drift", "urls"):
         comm_log = CommLog.process_comm_log(
@@ -2012,7 +2193,7 @@ if __name__ == "__main__":
     time.tzset()
 
     try:
-        main()
+        retval = main() or 0
     except SystemExit:
         pass
     except Exception:
@@ -2022,3 +2203,5 @@ if __name__ == "__main__":
             pdb.post_mortem(traceb)
 
         log_critical("Unhandled exception in main -- exiting", "exc")
+
+    sys.exit(retval)

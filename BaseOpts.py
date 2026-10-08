@@ -563,9 +563,9 @@ global_options_dict: dict[str, options_t] = {
             "action": FullPathlibAction,
             "required": {
                 "Base",
-                "BaseCtrlFiles",
+                # Not BaseCtrlFiles / BaseDotFiles: "check FILE" and "pagers_to_yml
+                # --pagers_file F" need no mission (their mains check the rest)
                 "BaseDB",
-                "BaseDotFiles",
                 "BaseParquet",
                 "BasePlot",
                 "BaseSMS",

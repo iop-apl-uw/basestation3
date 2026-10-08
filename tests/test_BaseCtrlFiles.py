@@ -27,7 +27,9 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import json
 import logging
+import pathlib
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -123,3 +125,140 @@ def test_pagers_validation_errors_never_log_secrets(caplog: pytest.LogCaptureFix
         BaseCtrlFiles.check_canonicalize_pagers_dict(pagers)
     assert "filter (latepgs) not in known send functions" in caplog.text
     assert SECRET not in caplog.text
+
+
+# --- pagers.yml validation -------------------------------------------------
+
+
+def _pagers(tmp_path: pathlib.Path, text: str, name: str = "pagers.yml") -> pathlib.Path:
+    f = tmp_path / name
+    f.write_text(text)
+    return f
+
+
+def test_check_pagers_file_drops_only_bad_entries(tmp_path: pathlib.Path) -> None:
+    f = _pagers(
+        tmp_path,
+        "pilot:\n"
+        "  status: off\n"
+        "  email:\n"
+        "    - {address: pilot@example.com, filters: [gps, latepgs]}\n"
+        "    - {address: ok@example.com, format: html}\n"
+        "  fax: [{number: 1}]\n"
+        "team: [a, b]\n"
+        "gps: pilot\n"
+        "alerts: [pilot, 3]\n",
+    )
+    contents, errors, warnings = BaseCtrlFiles.check_pagers_file(f)
+    assert contents == {
+        "pilot": {"status": False, "email": [{"address": "ok@example.com", "format": "html"}]},
+        "gps": ["pilot"],
+        "alerts": ["pilot"],
+    }
+    assert any(e.startswith(f"{f}:4: pilot.email.0.filters.1:") and "dropping this endpoint" in e for e in errors)
+    assert any(e.startswith(f"{f}:6:") and "unknown send function" in e for e in errors)
+    assert any(e.startswith(f"{f}:7:") and "user team must be a mapping" in e for e in errors)
+    assert any(e.startswith(f"{f}:9: alerts.1:") and "dropping this subscriber" in e for e in errors)
+    assert not warnings
+
+
+def test_check_pagers_file_repairs_keys_without_a_space(tmp_path: pathlib.Path) -> None:
+    """{ format:html } is a key "format:html" in yaml - the old sg000 example had it (43 in production)."""
+    f = _pagers(
+        tmp_path,
+        "pilot:\n"
+        "  email: [ { address: a@b.c, format:html }, { address: q@r.s, colour: red } ]\n"
+        f"  ntfy: [ {{ topic:{SECRET}, priority: [ \"critical\": 5, \"gps\": 1] }} ]\n",
+    )
+    contents, errors, warnings = BaseCtrlFiles.check_pagers_file(f)
+    assert not errors
+    assert contents["pilot"]["email"] == [{"address": "a@b.c", "format": "html"}, {"address": "q@r.s"}]
+    assert contents["pilot"]["ntfy"] == [{"topic": SECRET, "priority": {"critical": 5, "gps": 1}}]
+    assert any("'format:html' read as format: 'html' - add a space after the colon" in w for w in warnings)
+    assert any("unknown key 'colour' ignored" in w for w in warnings)
+    assert not any(SECRET in m for m in warnings + errors)
+
+
+def test_check_pagers_file_dot_pagers_format(tmp_path: pathlib.Path) -> None:
+    """sg267 2026: a .pagers file saved as pagers.yml - ~70 merge_dict tracebacks a day."""
+    f = _pagers(tmp_path, "someone@example.com,gps,critical,alerts\nother@example.com, critical,alerts\n")
+    contents, errors, _ = BaseCtrlFiles.check_pagers_file(f)
+    assert contents is None
+    assert errors == [
+        f"{f}: not a pagers.yml mapping (got str) - it looks like .pagers format; convert it with "
+        "BaseDotFiles.py pagers_to_yml - ignoring this file"
+    ]
+
+
+def test_check_pagers_file_yaml_error_and_empty(tmp_path: pathlib.Path) -> None:
+    contents, errors, _ = BaseCtrlFiles.check_pagers_file(_pagers(tmp_path, "a: [1, 2\n"))
+    assert contents is None and errors and "ignoring this pagers.yml" in errors[0]
+    assert BaseCtrlFiles.check_pagers_file(_pagers(tmp_path, "# nothing\n", "empty.yml")) == ({}, [], [])
+
+
+def test_check_pagers_file_dddd_warns(tmp_path: pathlib.Path) -> None:
+    contents, errors, warnings = BaseCtrlFiles.check_pagers_file(
+        _pagers(tmp_path, "pilot: {latlon: dddd, email: {address: a@b.c}}\n")
+    )
+    assert contents["pilot"]["latlon"] == "dddd" and not errors
+    assert any("latlon dddd is not a position format" in w for w in warnings)
+
+
+def test_load_ctrl_yml_skips_bad_file_and_merges_the_rest(tmp_path: pathlib.Path) -> None:
+    etc = tmp_path / "etc"
+    mission = tmp_path / "mission"
+    etc.mkdir()
+    mission.mkdir()
+    _pagers(etc, "ops: {email: {address: ops@example.com}}\ncritical: ops\n")
+    _pagers(mission, "pilot@example.com,gps,critical\n")  # .pagers format
+    base_opts = MagicMock(basestation_etc=etc, group_etc=None, mission_dir=mission)
+    merged = BaseCtrlFiles.load_ctrl_yml(
+        base_opts, "pagers.yml", {m: [] for m in BaseCtrlFiles.pagers_msgs}, BaseCtrlFiles.validate_pagers_file
+    )
+    assert merged["critical"] == ["ops"]
+    assert merged["ops"] == {"email": [{"address": "ops@example.com"}]}
+
+
+@pytest.mark.parametrize(
+    "priority, expected",
+    [
+        (None, {"critical": 5, "gps": 3}),  # built-in default for critical
+        ('[ "critical": 4, "gps": 1 ]', {"critical": 4, "gps": 1}),  # documented list form - was ignored
+        ("{gps: 2}", {"critical": 5, "gps": 2}),  # mapping, merged over the defaults
+    ],
+)
+def test_send_ntfy_applies_priorities(priority, expected: dict) -> None:
+    """The documented list form never matched: every message (critical too) went at 3."""
+    import yaml
+
+    endpoint = {"topic": "t"}
+    if priority is not None:
+        endpoint["priority"] = yaml.safe_load(priority)
+    for msg_type, want in expected.items():
+        with patch("requests.post", return_value=MagicMock(status_code=200)) as post:
+            BaseCtrlFiles.send_ntfy(
+                MagicMock(vis_base_url=None), 263, {"endpoint": endpoint, "user": "u", "type": msg_type}, "S", "B"
+            )
+        sent = json.loads(post.call_args.kwargs["data"])
+        assert sent["priority"] == want, msg_type
+
+
+def test_cli_check_exit_codes(tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]) -> None:
+    good = _pagers(tmp_path, "pilot: {email: {address: a@b.c}}\ngps: pilot\n", "good.yml")
+    bad = _pagers(tmp_path, "pilot@example.com,gps\n", "bad.yml")
+    assert BaseCtrlFiles.main(["check", str(good)]) == 0
+    assert BaseCtrlFiles.main(["check", str(good), str(bad)]) == 1
+    out = capsys.readouterr().out
+    assert f"{good}: 0 error(s), 0 warning(s)" in out
+    assert f"{bad}: not a pagers.yml mapping" in out
+
+
+def test_cli_check_merged(tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]) -> None:
+    mission = tmp_path / "mission"
+    mission.mkdir()
+    _pagers(mission, f"pilot: {{slack: {{hook: https://h.example.com/hooks/{SECRET}}}}}\ngps: pilot\nalerts: [pilot, ghost]\n")
+    assert BaseCtrlFiles.main(["check_merged", "--mission_dir", str(mission)]) == 1  # ghost isn't defined
+    out = capsys.readouterr().out
+    assert "alerts: subscriber ghost is not defined in any pagers.yml" in out
+    assert "user pilot: status=True latlon=ddmm endpoints={'slack': 1}" in out
+    assert SECRET not in out

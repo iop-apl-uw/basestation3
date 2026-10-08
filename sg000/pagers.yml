@@ -31,10 +31,12 @@
 # status - can be "on" or "off".  Default is "on"
 #
 # latlon can be one of:
-# "ddmm"   - DD.DDDD format for positions
-# "dddd"   - DD MM.MM format for positions
+# "ddmm"   - DD MM.MMMM format for positions
+# "dd"     - DD.DDDDDD format for positions
 # "ddmmss" - DD MM SS.SS format for positions
-# Default is "ddmm"
+# "nmea"   - DDMM.MMMM,N format for positions
+# Default is "ddmm".  ("dddd", accepted by older versions, is not a position format -
+# it sends the raw DDMM.MMMM value; use "ddmm" or "dd".)
 #
 # filters - a list of any valid subscriptions to respond to.  Default is all subscriptions.
 #
@@ -52,7 +54,8 @@
 #               url: https://server.com?action=postnotify
 # ntfy        - sends a message to a ntfy.sh topic
 #               topic: myntfytopicname # required
-#               priority: [ "critical": 5, "gps": 1, "alerts": 3] # override default priorities (1-5)
+#               priority: { critical: 5, gps: 1, alerts: 3 } # override default priorities (1-5);
+#                                                            # critical is 5 unless overridden
 #
 # Valid subscriptions
 #
@@ -92,13 +95,24 @@
 #
 # upload     - network file or event received
 #
+# Note: in { } (flow) mappings put a space after each colon - format: html, not format:html.
+#
+# Check a pagers.yml before installing it:
+#
+#   BaseCtrlFiles.py check pagers.yml          # one file - problems reported as file:line
+#   BaseCtrlFiles.py check_merged -m mission   # etc, group etc and mission files, merged
+#
+# Convert a .pagers file:
+#
+#   BaseDotFiles.py pagers_to_yml --pagers_file .pagers --pagers_yml_out pagers.yml
+#
 # Example:
 #
 # username:
 #    status: on 
 #    latlon: ddmm 
 #    # send_funcs
-#    email: [ { status: off, filters: [critical], address: mymobilephone@mobile.att.net, format:html }, 
+#    email: [ { status: off, filters: [critical], address: mymobilephone@mobile.att.net, format: html }, 
 #             { filters: [gps, alerts], address: someone@mydomain.edu@email.edu, format: html } ]
 #    ntfy: [ { filters: [gps], topic: myntfytopic123 } ]
 
@@ -109,9 +123,8 @@
             
 #   mattermost: [ { filters: [gps], hook: https://xyx.edu/hooks/gps_webhook },
 #                 { filters: [alerts], hook: https://xyx.edu/hooks/alert_webhook },
-#                 { filters: [critical], hook: https://xyx.edu/hooks/alert_webhook, mention:"@username" } ]
+#                 { filters: [critical], hook: https://xyx.edu/hooks/alert_webhook, mention: "@username" } ]
 
 # gps: username
 # alerts: [username, global]
 # critical: [username, global]
-# ntfy: [ {  topic: pmel_ocg402, filters: ["warnings","gps"] } ]

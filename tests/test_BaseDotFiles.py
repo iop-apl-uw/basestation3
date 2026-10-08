@@ -569,3 +569,59 @@ def test_process_ftp_line_bad_port(caplog: LogCaptureFixture, ftp_base_opts: Mag
     assert "Bad port (ftp) for ftp.example.com" in caplog.text
     assert "passwd" not in caplog.text
     mock_ftp.connect.assert_not_called()
+
+
+# --- .pagers -> pagers.yml --------------------------------------------------
+
+_DOT_PAGERS = """# a comment
+pilot@example.com,gps,critical,alerts
+pilot@example.com,html,recovddmmss,lategpsdd,comp
+https://mm.example.com/hooks/SECRETTOKEN,slack,alerts,critical
+other@example.com, gps, bogus
+
+nobody@example.com
+"""
+
+
+def test_convert_pagers_to_yml() -> None:
+    contents, warnings = BaseDotFiles.convert_pagers_to_yml(_DOT_PAGERS.splitlines())
+    assert contents["pilot_example_com"] == {
+        "email": [
+            {"address": "pilot@example.com", "filters": ["gps", "critical", "alerts"]},
+            {"address": "pilot@example.com", "format": "html", "filters": ["recov"], "latlon": "ddmmss"},
+            {"address": "pilot@example.com", "format": "html", "filters": ["lategps"], "latlon": "dd"},
+            {"address": "pilot@example.com", "format": "html", "filters": ["comp"]},
+        ]
+    }
+    assert contents["hook_1"] == {
+        "slack": [{"hook": "https://mm.example.com/hooks/SECRETTOKEN", "filters": ["alerts", "critical"]}]
+    }
+    assert contents["gps"] == ["pilot_example_com", "other_example_com"]
+    assert contents["critical"] == ["pilot_example_com", "hook_1"]
+    assert warnings == ["line 5: unknown tag 'bogus' - skipped", "line 7: no address or no tags - skipped"]
+
+
+def test_pagers_to_yml_round_trip_validates(tmp_path) -> None:
+    import BaseCtrlFiles
+
+    src = tmp_path / ".pagers"
+    src.write_text(_DOT_PAGERS)
+    out = tmp_path / "pagers.yml"
+    assert BaseDotFiles.main(["pagers_to_yml", "--pagers_file", str(src), "--pagers_yml_out", str(out)]) == 0
+    assert out.read_text().startswith(f"# pagers.yml converted from {src}")
+    contents, errors, warnings = BaseCtrlFiles.check_pagers_file(out)
+    assert not errors and not warnings
+    assert sorted(contents) == sorted(BaseDotFiles.convert_pagers_to_yml(_DOT_PAGERS.splitlines())[0])
+
+
+def test_pagers_to_yml_never_overwrites(tmp_path) -> None:
+    src = tmp_path / ".pagers"
+    src.write_text(_DOT_PAGERS)
+    out = tmp_path / "pagers.yml"
+    out.write_text("keep me\n")
+    assert BaseDotFiles.main(["pagers_to_yml", "--pagers_file", str(src), "--pagers_yml_out", str(out)]) == 1
+    assert out.read_text() == "keep me\n"
+
+
+def test_pagers_to_yml_needs_a_source(tmp_path) -> None:
+    assert BaseDotFiles.main(["pagers_to_yml", "--pagers_file", str(tmp_path / "missing")]) == 1
