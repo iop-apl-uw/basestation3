@@ -1154,6 +1154,29 @@ def process_pagers_yml(
                     log_warning(f"pagers msg {msg} NYI")
 
 
+def _report_pagers_check(path: pathlib.Path) -> int:
+    """Checks one pagers.yml for the check/check_merged CLI actions and logs what it finds.
+
+    Logged without an alert - this is a standalone check, not processing.
+
+    Args:
+        path: A pagers.yml file.
+
+    Returns:
+        The number of errors found.
+
+    Raises:
+        None.
+    """
+    _, errors, warnings = check_pagers_file(path)
+    for msg in errors:
+        log_error(msg)
+    for msg in warnings:
+        log_warning(msg)
+    log_info(f"{path}: {len(errors)} error(s), {len(warnings)} warning(s)")
+    return len(errors)
+
+
 def check_merged_pagers(base_opts: BaseOpts.BaseOptions) -> int:
     """Checks the basestation etc, group etc and mission pagers.yml files, and what they merge to.
 
@@ -1176,31 +1199,28 @@ def check_merged_pagers(base_opts: BaseOpts.BaseOptions) -> int:
         if path is None or not path.exists():
             continue
         found += 1
-        _, errors, warnings = check_pagers_file(path)
-        for msg in [*errors, *warnings]:
-            print(msg)
-        n_problems += len(errors)
-        print(f"{path}: {len(errors)} error(s), {len(warnings)} warning(s)")
+        n_problems += _report_pagers_check(path)
     if not found:
-        print("No pagers.yml found (basestation etc, group etc or mission dir)")
+        log_error("No pagers.yml found (basestation etc, group etc or mission dir)")
         return 1
 
-    merged = load_ctrl_yml(base_opts, "pagers.yml", copy.deepcopy(base_pagers_dict), validate_pagers_file)
+    # The problems were reported above - merge without reporting (or alerting) them again
+    merged = load_ctrl_yml(
+        base_opts, "pagers.yml", copy.deepcopy(base_pagers_dict), lambda path: check_pagers_file(path)[0]
+    )
     if merged is None:
-        print("The pagers.yml files could not be merged")
+        log_error("The pagers.yml files could not be merged")
         return 1
-    for msg, users in merged.items():
-        if msg in pagers_msgs:
-            for user in users:
-                if user not in merged:
-                    print(f"{msg}: subscriber {user} is not defined in any pagers.yml")
-                    n_problems += 1
+    # Subscribers no pagers.yml defines - check_canonicalize_pagers_dict logs each one
+    n_problems += sum(
+        1 for msg, users in merged.items() if msg in pagers_msgs for user in users if user not in merged
+    )
     canonical = check_canonicalize_pagers_dict(merged)
     for user, settings in canonical["users"].items():
         send_funcs = {k: len(v) for k, v in settings.items() if k not in ("status", "latlon")}
-        print(f"user {user}: status={settings['status']} latlon={settings['latlon']} endpoints={send_funcs}")
+        log_info(f"user {user}: status={settings['status']} latlon={settings['latlon']} endpoints={send_funcs}")
     for msg, users in canonical["subscriptions"].items():
-        print(f"subscription {msg}: {', '.join(sorted(users))}")
+        log_info(f"subscription {msg}: {', '.join(sorted(users))}")
     return 1 if n_problems else 0
 
 
@@ -1268,12 +1288,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         n_errors = 0
         for name in base_opts.pagers_files:
             # A str from argparse; pathlib for the loaders
-            path = pathlib.Path(name)
-            _, errors, warnings = check_pagers_file(path)
-            for msg in [*errors, *warnings]:
-                print(msg)
-            print(f"{path}: {len(errors)} error(s), {len(warnings)} warning(s)")
-            n_errors += len(errors)
+            n_errors += _report_pagers_check(pathlib.Path(name))
         return 1 if n_errors else 0
 
     if action == "check_merged":

@@ -2032,6 +2032,8 @@ def pagers_to_yml(base_opts: BaseOpts.BaseOptions) -> int:
         return 1
 
     if out is None:
+        # The converted file itself, for redirecting - data, not a message, so
+        # stdout rather than the logger (messages above all go through the logger)
         print(text, end="")
     else:
         out.write_text(text)

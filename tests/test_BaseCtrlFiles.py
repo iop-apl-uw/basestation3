@@ -243,25 +243,38 @@ def test_send_ntfy_applies_priorities(priority, expected: dict) -> None:
         assert sent["priority"] == want, msg_type
 
 
-def test_cli_check_exit_codes(tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_check_exit_codes(tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Results go through the logger (File.py(line) prefix), not print; no alerts from a standalone check."""
+    BaseLog.BaseLogger.alerts_d = {}
     good = _pagers(tmp_path, "pilot: {email: {address: a@b.c}}\ngps: pilot\n", "good.yml")
     bad = _pagers(tmp_path, "pilot@example.com,gps\n", "bad.yml")
-    assert BaseCtrlFiles.main(["check", str(good)]) == 0
-    assert BaseCtrlFiles.main(["check", str(good), str(bad)]) == 1
-    out = capsys.readouterr().out
-    assert f"{good}: 0 error(s), 0 warning(s)" in out
-    assert f"{bad}: not a pagers.yml mapping" in out
+    with caplog.at_level(logging.INFO):
+        assert BaseCtrlFiles.main(["check", "--verbose", str(good)]) == 0
+        assert BaseCtrlFiles.main(["check", "--verbose", str(good), str(bad)]) == 1
+    assert f"{good}: 0 error(s), 0 warning(s)" in caplog.text
+    assert any(r.levelname == "ERROR" and f"{bad}: not a pagers.yml mapping" in r.getMessage() for r in caplog.records)
+    assert BaseCtrlFiles.PAGERS_YML_ALERT not in BaseLog.log_alerts()
 
 
-def test_cli_check_merged(tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_check_merged(
+    tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture, capsys: pytest.CaptureFixture[str]
+) -> None:
+    BaseLog.BaseLogger.alerts_d = {}
     mission = tmp_path / "mission"
     mission.mkdir()
-    _pagers(mission, f"pilot: {{slack: {{hook: https://h.example.com/hooks/{SECRET}}}}}\ngps: pilot\nalerts: [pilot, ghost]\n")
-    assert BaseCtrlFiles.main(["check_merged", "--mission_dir", str(mission)]) == 1  # ghost isn't defined
-    out = capsys.readouterr().out
-    assert "alerts: subscriber ghost is not defined in any pagers.yml" in out
-    assert "user pilot: status=True latlon=ddmm endpoints={'slack': 1}" in out
-    assert SECRET not in out
+    _pagers(
+        mission,
+        f"pilot: {{slack: {{hook: https://h.example.com/hooks/{SECRET}, colour: red}}}}\ngps: pilot\nalerts: [pilot, ghost]\n",
+    )
+    with caplog.at_level(logging.INFO):
+        assert BaseCtrlFiles.main(["check_merged", "--verbose", "--mission_dir", str(mission)]) == 1  # ghost isn't defined
+    text = caplog.text
+    assert text.count("unknown key 'colour' ignored") == 1  # reported once, not again by the merge
+    assert text.count("User ghost") == 1
+    assert "user pilot: status=True latlon=ddmm endpoints={'slack': 1}" in text
+    assert SECRET not in text
+    assert capsys.readouterr().out == ""  # nothing printed
+    assert BaseCtrlFiles.PAGERS_YML_ALERT not in BaseLog.log_alerts()
 
 
 def test_validate_pagers_file_raises_alerts_for_errors_only(tmp_path: pathlib.Path) -> None:
