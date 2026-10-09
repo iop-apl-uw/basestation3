@@ -56,7 +56,14 @@ import uuid
 from typing import TYPE_CHECKING, Any
 
 import Plotting
-from BaseOptsType import DeprecateAction, deprecated_options, options_t
+from BaseOptsType import (
+    DeprecateAction,
+    check_options_dict,
+    deprecated_options,
+    merge_options,
+    option_conflicts,
+    options_t,
+)
 from Globals import WhichHalf, extensions_to_skip  # basestation_version
 
 # Populate default plots with every plot registered in Plotting
@@ -266,6 +273,39 @@ def loadmodule(pathname):
     return None
 
 
+def add_extension_options(
+    options: dict[str, options_t], ext_options: dict, source: str
+) -> None:
+    """Adds an extension's options, skipping any that are invalid or conflict.
+
+    An extension is loaded from an etc or mission directory at run time, so a bad
+    option is reported (logging isn't set up yet, so on stderr) and skipped, rather
+    than stopping processing.
+
+    Args:
+        options: the options already defined - updated in place
+        ext_options: the extension's options, as it returned them
+        source: the extension, for the message
+
+    Returns:
+        Nothing.
+
+    Raises:
+        Nothing.
+    """
+    for name, opt in ext_options.items():
+        try:
+            check_options_dict({name: opt}, source)
+        except TypeError as e:
+            sys.stderr.write(f"{e} - option skipped\n")
+            continue
+        conflict = option_conflicts(options, name, opt)
+        if conflict:
+            sys.stderr.write(f"{source}: {conflict} - option skipped\n")
+            continue
+        options[name] = opt
+
+
 def find_additional_options(
     basestation_directory: pathlib.Path, cmdline_args: list[str]
 ):
@@ -311,7 +351,7 @@ def find_additional_options(
                             source=extensions_file_name,
                         )
                 except OSError, PermissionError:
-                    sys.stderror.write(
+                    sys.stderr.write(
                         f"Could not open extensions_file_name {traceback.format_exc()}"
                     )
                     continue
@@ -367,8 +407,11 @@ def find_additional_options(
                                         if isinstance(extension_ret_val[1], dict):
                                             new_option_groups |= extension_ret_val[1]
                                         if isinstance(extension_ret_val[2], dict):
-                                            # TODO - typecheck the dict members to be sure they are options_t
-                                            new_arguments |= extension_ret_val[2]
+                                            add_extension_options(
+                                                new_arguments,
+                                                extension_ret_val[2],
+                                                extension_module_name,
+                                            )
     return (add_arguments, new_option_groups, new_arguments)
 
 
@@ -1900,14 +1943,17 @@ class BaseOptions:
                 os.path.split(inspect.stack()[1].filename)[1]
             )[0]
 
+        options_dict = dict(global_options_dict)
         if additional_arguments is not None:
-            # pre python 3.9    options_dict = {**global_options_dict, **additional_arguments}
-            options_dict = global_options_dict | additional_arguments
-        else:
-            options_dict = global_options_dict
+            # The caller's own options must not redefine a core one
+            merge_options(options_dict, additional_arguments, calling_module)
 
         if add_to_arguments is not None:
             for add_arg in add_to_arguments:
+                if add_arg not in options_dict:
+                    raise ValueError(
+                        f"{calling_module}: add_to_arguments names unknown option {add_arg}"
+                    )
                 if options_dict[add_arg].group is not None:
                     options_dict[add_arg].group.add(calling_module)
 
@@ -1935,20 +1981,27 @@ class BaseOptions:
             },
         )
 
+        # Anything added from the plot functions - before the extensions, so a conflict
+        # between the two drops the extension's option, not the plot's
+        merge_options(
+            options_dict, Plotting.plotting_additional_arguments, "Plotting"
+        )
+
         # TODO - add ext_add_to_required
         ext_add_to_arguments, ext_add_option_groups, ext_add_options = (
             find_additional_options(self.basestation_directory, cmdline_args)
         )
-        options_dict |= ext_add_options
+        add_extension_options(options_dict, ext_add_options, "extensions")
         option_group_description |= ext_add_option_groups
         for module, add_arg_list in ext_add_to_arguments.items():
-            # TODO - check we have a valid option here
             for add_arg in add_arg_list:
+                if not isinstance(add_arg, str) or add_arg not in options_dict:
+                    sys.stderr.write(
+                        f"Extension {module}: add_to_arguments names unknown option {add_arg!r} - skipped\n"
+                    )
+                    continue
                 if options_dict[add_arg].group is not None:
                     options_dict[add_arg].group.add(module)
-
-        # Anything added from the plot functions
-        options_dict |= Plotting.plotting_additional_arguments
 
         if "--generate_sample_conf" in cmdline_args:
             # Generate a sample conf file and exit

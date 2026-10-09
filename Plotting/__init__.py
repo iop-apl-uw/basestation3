@@ -40,6 +40,8 @@ import pathlib
 import sys
 import typing
 
+from BaseOptsType import merge_options
+
 # Avoid circular input for type checking
 if typing.TYPE_CHECKING:
     import sqlite3
@@ -99,13 +101,29 @@ def compare_sigs(sig_a, sig_b):
 
 
 def add_arguments(_func=None, *, additional_arguments=None):
-    """Specifies any additional arguments to be added to BaseOpts"""
+    """Specifies any additional arguments to be added to BaseOpts
+
+    Args:
+        _func: the decorated function, when used without arguments
+        additional_arguments: dict of option name to options_t
+
+    Returns:
+        The decorator, or the decorated function.
+
+    Raises:
+        TypeError: additional_arguments isn't a dict of name to options_t
+        ValueError: an option conflicts with one another plot already defined
+    """
 
     def add_arguments_dec(func, additional_arguments=additional_arguments):
-        # TODO - check all dicts are options_t
-        if additional_arguments and isinstance(additional_arguments, dict):
-            global plotting_additional_arguments
-            plotting_additional_arguments |= additional_arguments
+        # A bad definition is a coding error in the plot - raise at import, so it shows in
+        # the tests, not when an option silently replaces another
+        if additional_arguments is not None:
+            merge_options(
+                plotting_additional_arguments,
+                additional_arguments,
+                f"{func.__module__}.{func.__name__}",
+            )
         # Pass the function through - without this the decorated name was bound to
         # None (only the dive_plot_funcs/mission_plot_funcs registries had it)
         return func
