@@ -1421,8 +1421,12 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
 
     out_file.write("%%timeouts: %d\n" % timeout_count)
     if timeout_count > 0:
+        # A few timeouts are normal for serial sensors - alert only above the threshold
         log_warning(
-            "%d timeout(s) seen in %s" % (timeout_count, inp_file_name), alert="TIMEOUT"
+            "%d timeout(s) seen in %s" % (timeout_count, inp_file_name),
+            alert="TIMEOUT"
+            if timeout_count > base_opts.timeout_alert_threshold
+            else None,
         )
     if legato_error_count is not None:
         out_file.write("%%errors: %d\n" % legato_error_count)

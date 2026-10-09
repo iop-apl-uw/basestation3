@@ -982,7 +982,10 @@ def process_file_group(
             elif fc.is_data():
                 shutil.copyfile(in_file_name, fc.mk_base_datfile_name())
                 sg_data_file = DataFiles.process_data_file(
-                    in_file_name, "dat", calib_consts
+                    in_file_name,
+                    "dat",
+                    calib_consts,
+                    timeout_alert_threshold=base_opts.timeout_alert_threshold,
                 )
                 if (
                     not sg_data_file

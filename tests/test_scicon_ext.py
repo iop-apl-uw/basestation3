@@ -166,3 +166,26 @@ def test_eng_file_reader_non_ascii_auxdata(tmp_path: pathlib.Path) -> None:
     records = [bytes(x).rstrip() for x in aux[0]]
     assert records[0].startswith(b"0x1768,A,07/08/2026")
     assert records[1] == b"0x9B77,A,07/08/2026 19:34:29,?82,768"
+
+
+@pytest.mark.parametrize(("timeouts", "threshold", "alert"), [(3, 5, False), (5, 5, False), (6, 5, True), (1, 0, True)])
+def test_convert_dat_to_eng_timeout_alert_threshold(
+    tmp_path: pathlib.Path, timeouts: int, threshold: int, alert: bool
+) -> None:
+    """A cast's timeouts raise a TIMEOUT alert only above --timeout_alert_threshold."""
+    from types import SimpleNamespace
+
+    from BaseLog import BaseLogger, log_alerts
+
+    BaseLogger.reset()
+    dat = tmp_path / "ct.dat"
+    dat.write_text("% columns: time t c\n" + "".join(f"% {32500 + i} T-O {{}}\n" for i in range(timeouts)))
+    eng = tmp_path / "ct.eng"
+    df_meta = SimpleNamespace(
+        instrument=SimpleNamespace(instr_class="ct"), scale_off={}, start_time=0.0, columns="time t c", sealevel=None
+    )
+    base_opts = SimpleNamespace(timeout_alert_threshold=threshold)
+    assert scicon_ext.ConvertDatToEng(dat, eng, df_meta, base_opts) == 0
+    assert f"%timeouts: {timeouts}" in eng.read_text()
+    assert ("TIMEOUT" in log_alerts()) is alert
+    BaseLogger.reset()

@@ -830,6 +830,17 @@ global_options_dict: dict[str, options_t] = {
             "action": argparse.BooleanOptionalAction,
         },
     ),
+    "timeout_alert_threshold": options_t(
+        5,
+        {"Base", "DataFiles"},
+        ("--timeout_alert_threshold",),
+        int,
+        {
+            "help": "Raise a TIMEOUT alert only when a sensor has more than this many timeouts "
+            "in a data file or scicon cast (fewer are still logged as a warning)",
+            "range": [0, 1000000],
+        },
+    ),
     "ignore_lock": options_t(
         False,
         {"Base", "BaseRunner", "GliderEarlyGPS"},

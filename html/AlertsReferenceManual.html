@@ -120,6 +120,10 @@ and what was is on board the gliders parameters.
 An instrument reported timeouts during sampling.  For a serial based device, a few timeouts per dive may be
 viewed as acceptable - more then that is a potential sign of a failing instrument.  For frequency base instruments
 any timeouts are potential sign of instrument failure.
+This alert is raised only when a sensor has more than <code>--timeout_alert_threshold</code> timeouts
+(default 5) in one data file, or in one scicon cast file.  Fewer are still logged as a warning in the
+baselog.  Set <code>--timeout_alert_threshold 0</code> (e.g. in the mission's <code>.conf</code>) to alert on
+any timeout, as before - for frequency based instruments, for example.
 </p>
 
 <p><a name="BAD_GPCTD_CLOCK">BAD_GPCTD_CLOCK<br>

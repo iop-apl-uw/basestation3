@@ -501,11 +501,32 @@ class DataFile:
         pass
 
 
-def process_data_file(in_filename, file_type, calib_consts):
+def process_data_file(
+    in_filename,
+    file_type,
+    calib_consts,
+    timeout_alert_threshold: int | None = None,
+):
     """Processes any Seaglider data file
 
-    Returns a DataFile object or None for an error
+    Args:
+        in_filename: The .dat/.asc/.eng file.
+        file_type: "dat", "asc" or "eng".
+        calib_consts: The mission's calibration constants.
+        timeout_alert_threshold: A sensor's timeouts in a .dat file raise a TIMEOUT alert only
+            when there are more than this many (fewer are logged as a warning). None for the
+            --timeout_alert_threshold default.
+
+    Returns:
+        A DataFile object, or None for an error.
+
+    Raises:
+        Nothing - errors are logged and None returned.
     """
+    if timeout_alert_threshold is None:
+        timeout_alert_threshold = BaseOpts.global_options_dict[
+            "timeout_alert_threshold"
+        ].default_val
 
     try:
         raw_data_file = open(in_filename, "r")
@@ -663,9 +684,12 @@ def process_data_file(in_filename, file_type, calib_consts):
             # Note: The warning is issued for the old class name, since that is what is in the .dat file,
             # but the time out is tracked for the renamed class name, which is what will be in the
             # .eng and .nc file
+            # A few timeouts are normal for serial sensors - alert only above the threshold
             log_warning(
                 f"{data_file.timeouts[new_cls[0]]:d} timeout(s) seen for {cls} in {in_filename}",
-                alert="TIMEOUT",
+                alert="TIMEOUT"
+                if data_file.timeouts[new_cls[0]] > timeout_alert_threshold
+                else None,
             )
 
     raw_data_file.close()
@@ -750,7 +774,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 return 1
             elif fc.is_data():
                 log_info("Processing %s from a data to asc format" % datafile_name)
-                data_file = process_data_file(datafile_name, "dat", calib_consts)
+                data_file = process_data_file(
+                    datafile_name,
+                    "dat",
+                    calib_consts,
+                    timeout_alert_threshold=base_opts.timeout_alert_threshold,
+                )
                 if not data_file:
                     return 1
 
