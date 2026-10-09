@@ -106,6 +106,9 @@ def add_arguments(_func=None, *, additional_arguments=None):
         if additional_arguments and isinstance(additional_arguments, dict):
             global plotting_additional_arguments
             plotting_additional_arguments |= additional_arguments
+        # Pass the function through - without this the decorated name was bound to
+        # None (only the dive_plot_funcs/mission_plot_funcs registries had it)
+        return func
 
     if _func is None:
         return add_arguments_dec
