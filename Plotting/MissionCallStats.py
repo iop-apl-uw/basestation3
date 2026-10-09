@@ -51,7 +51,7 @@ if typing.TYPE_CHECKING:
 
 import CommLog
 import PlotUtilsPlotly
-from BaseLog import log_debug, log_error
+from BaseLog import log_debug, log_error, log_info
 from Plotting import plotmissionsingle
 
 call_plot_map_nt = collections.namedtuple("call_plot_map_nt", ["description", "color"])
@@ -134,6 +134,11 @@ def mission_callstats(
         session_times.append(session_time)
         if session.dive_num is not None:
             dives_times_accum[session.dive_num] += session_time
+
+    if not dive_number:
+        # e.g. a new deployment whose calls so far are all selftest/pre-launch
+        log_info("No calls with a dive number in comm.log yet - skipping mission_callstats")
+        return ([], [])
 
     # Build up a list of the totals secs per dive
     dive_times = []
