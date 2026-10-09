@@ -99,8 +99,11 @@ class CTDVars:
     is_seabird: bool = False
     sigma_t_dive: npt.NDArray[np.float64] | None = None
     sigma_t_climb: npt.NDArray[np.float64] | None = None
-    buoy_freq_dive: npt.NDArray[np.float64] | None = None
-    buoy_freqclimb: npt.NDArray[np.float64] | None = None
+    # Set from Nsquared below; None (not missing) when it couldn't be computed - these
+    # were declared buoy_freq_dive/buoy_freqclimb, so reading them raised AttributeError
+    # whenever Nsquared failed (sg263 NANOOS_Aug26 dive 176)
+    buoy_f_dive: npt.NDArray[np.float64] | None = None
+    buoy_f_climb: npt.NDArray[np.float64] | None = None
     max_depth_sampled_i: np.int64 | None = None
     max_depth_sampled: float | None = None
     f_depth: typing.Any | None = None

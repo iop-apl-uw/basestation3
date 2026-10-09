@@ -38,6 +38,7 @@ whole Legato plot down with it.
 import logging
 import types
 
+import netCDF4
 import numpy as np
 import plotly.graph_objects as go
 import pytest
@@ -129,3 +130,53 @@ def test_zero_max_depth_is_plotted(caplog, tmp_path) -> None:
     )
     assert _names(fig) == ["Dive samples stats", "Climb samples stats"]
     assert not _depth_warnings(caplog)
+
+
+# --- Nsquared on a dive cut short (sg263 NANOOS_Aug26 dive 176) ---------------
+
+
+def _ctd_dive_file(tmp_path, n_good: int, n: int = 200) -> netCDF4.Dataset:
+    """A dive file with a down/up CT profile, only the first n_good points valid."""
+    f = tmp_path / "p2630176.nc"
+    depth = np.concatenate((np.linspace(1.0, 800.0, n // 2), np.linspace(800.0, 1.0, n - n // 2)))
+    ct = 15.0 - depth / 100.0
+    sa = 34.0 + depth / 1000.0
+    ct[n_good:] = np.nan
+    sa[n_good:] = np.nan
+    with netCDF4.Dataset(str(f), "w") as nc:  # str: netCDF4 wants a path string
+        nc.dive_number = 176
+        nc.createDimension("ctd_data_point", n)
+        for name, values in (("ctd_depth", depth), ("conservative_temperature", ct), ("absolute_salinity", sa)):
+            nc.createVariable(name, "f8", ("ctd_data_point",))[:] = values
+        nc.createVariable("avg_latitude", "f8", ())[:] = 47.24
+    return netCDF4.Dataset(str(f), "r")
+
+
+def test_nsquared_too_few_good_points(tmp_path, caplog) -> None:
+    """2 good CT points of 670 (a humidity-leak abort): one warning and None, not a traceback."""
+    ds = _ctd_dive_file(tmp_path, n_good=2)
+    try:
+        with caplog.at_level(logging.WARNING):
+            assert PlotUtils.Nsquared(ds) is None
+    finally:
+        ds.close()
+    assert "Dive 176: too few good CT points for buoyancy frequency (2 of 200) - not computed" in caplog.text
+    assert "Traceback" not in caplog.text and "Failed to compute Nsquared" not in caplog.text
+
+
+def test_nsquared_full_profile(tmp_path) -> None:
+    ds = _ctd_dive_file(tmp_path, n_good=200)
+    try:
+        n2 = PlotUtils.Nsquared(ds)
+    finally:
+        ds.close()
+    assert n2 is not None and n2.shape == (200,)
+
+
+def test_ctdvars_buoyancy_frequency_defaults_to_none() -> None:
+    """plot_CTD reads buoy_f_dive/buoy_f_climb even when Nsquared failed - they were
+    declared under other names, so the read raised AttributeError."""
+    import Plotting.DiveCTD
+
+    ctd_vars = Plotting.DiveCTD.CTDVars()
+    assert ctd_vars.buoy_f_dive is None and ctd_vars.buoy_f_climb is None

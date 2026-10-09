@@ -1067,6 +1067,16 @@ def Nsquared(ds: netCDF4.Dataset) -> NDArray[np.float64] | None:
 
         # Get back on original grid
 
+        # A cast that's almost all NaN (e.g. a dive cut short - sg263 NANOOS_Aug26 dive
+        # 176, ended by a humidity-leak abort: 2 good CT points of 670) leaves too few
+        # bins to interpolate - PchipInterpolator raised "x must contain at least 2 elements"
+        if np.size(N2_down_binned_p) < 2 or np.size(N2_up_binned_p) < 2:
+            log_warning(
+                f"Dive {getattr(ds, 'dive_number', '?')}: too few good CT points for buoyancy "
+                f"frequency ({np.count_nonzero(good_pts_b)} of {np.size(ctd_depth)}) - not computed"
+            )
+            return None
+
         # Needed for interpolator
         N2_down_binned[np.isnan(N2_down_binned)] = 0.0
         N2_up_binned[np.isnan(N2_up_binned)] = 0.0
