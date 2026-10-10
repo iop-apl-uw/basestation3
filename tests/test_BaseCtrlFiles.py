@@ -196,6 +196,19 @@ def test_check_pagers_file_yaml_error_and_empty(tmp_path: pathlib.Path) -> None:
     assert BaseCtrlFiles.check_pagers_file(_pagers(tmp_path, "# nothing\n", "empty.yml")) == ({}, [], [])
 
 
+def test_check_pagers_file_empty_subscription_is_no_subscribers(tmp_path: pathlib.Path) -> None:
+    """An empty key ("drift:") is "drift: []" - no error (sg261/sg263 2026-10-10)."""
+    contents, errors, warnings = BaseCtrlFiles.check_pagers_file(
+        _pagers(tmp_path, "critical: [pilot]\ngps: []\ndrift:\npilot: {email: [{address: a@b.c}]}\n")
+    )
+    assert errors == [] and warnings == []
+    assert contents is not None
+    assert (contents["gps"], contents["drift"], contents["critical"]) == ([], [], ["pilot"])
+    # A non-list value is still an error
+    contents, errors, _ = BaseCtrlFiles.check_pagers_file(_pagers(tmp_path, "drift: {a: 1}\n", "bad.yml"))
+    assert len(errors) == 1 and "subscribers must be a user name or a list of them (got dict)" in errors[0]
+
+
 def test_check_pagers_file_dddd_warns(tmp_path: pathlib.Path) -> None:
     contents, errors, warnings = BaseCtrlFiles.check_pagers_file(
         _pagers(tmp_path, "pilot: {latlon: dddd, email: {address: a@b.c}}\n")

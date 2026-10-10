@@ -631,8 +631,9 @@ def check_pagers_file(path: pathlib.Path) -> tuple[dict | None, list[str], list[
             continue
 
         if key in pagers_msgs:
-            # Each subscriber on its own, so one bad name doesn't drop the others
-            names = [value] if isinstance(value, str) else value
+            # Each subscriber on its own, so one bad name doesn't drop the others.
+            # An empty key ("drift:") means no subscribers, like "drift: []"
+            names = [] if value is None else [value] if isinstance(value, str) else value
             if not isinstance(names, list):
                 errors.append(
                     f"{where((key,))}: {key}: subscribers must be a user name or a list of them "
