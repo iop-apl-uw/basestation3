@@ -1390,11 +1390,17 @@ def make_netcdf_network_file(
             # end of the upcast.
             time_v[0, 0] = start_time
 
-        # Regular logfile values
+        # Regular logfile values - a garbled value (non-ASCII text, an unexpected
+        # number of values) costs that variable only, not the whole file
         for name, data in lp.global_table.items():
-            create_ds_var(
-                dso, var_template, "log_" + name[1:], data if len(data) > 1 else data[0]
-            )
+            value = data if len(data) > 1 else data[0]
+            try:
+                create_ds_var(dso, var_template, "log_" + name[1:], value)
+            except ValueError as e:
+                log_error(
+                    f"Bad value for {name} in {network_logfile} ({type(e).__name__}: {e}) - "
+                    f"skipping log_{name[1:]}: {str(value)[:120]!r}"
+                )
 
         # Merged GC/State table
         gc_time = []
