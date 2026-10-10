@@ -344,12 +344,141 @@ def parse_value(parm_name: str, str_value: str, log_file: LogFile) -> None:
     log_file.data[parm_name] = value
 
 
-def parse_log_file(in_filename, issue_warn=False):
+# $WARN kinds that are normal in small numbers: counted per dive, one warning per kind (and name)
+# carrying the count, with an alert only above the kind's --<kind>_alert_threshold.
+# kind -> (alert tag, pattern, what to call them in the warning)
+WARN_COUNTED: dict[str, tuple[str, re.Pattern[str], str]] = {
+    "glider_timeout": (
+        "GLIDER_TIMEOUT",
+        re.compile(r"^(?P<name>.+?) timeout$"),
+        "{name} timeout(s)",
+    ),
+    "fuel_gauge": (
+        "FUEL_GAUGE_MISSED",
+        re.compile(r"^H?(?P<name>\w+) missed fuel gauge read$"),
+        "{name} missed fuel gauge read(s)",
+    ),
+    "ct_parse_errors": (
+        "CT_PARSE_ERRORS",
+        re.compile(r"^(?P<n>\d+) ct parse errors$"),
+        "ct parse error(s)",
+    ),
+    "tcm2mat_error": (
+        "TCM2MAT_ERROR",
+        re.compile(r"^tcm2mat error\b"),
+        "tcm2mat error(s)",
+    ),
+}
+# Logger state notices - logged, never alerted
+_WARN_NOTICE_RE = re.compile(r"^H?\w+ (\w+ )?logging already (started|stopped)$")
+
+
+def _warn_thresholds(alert_thresholds: dict[str, int] | None) -> dict[str, int]:
+    """The alert threshold for each counted $WARN kind.
+
+    Args:
+        alert_thresholds: kind -> threshold, from the options; missing kinds (or None) get
+            the option's default.
+
+    Returns:
+        kind -> threshold, for every kind in WARN_COUNTED.
+
+    Raises:
+        Nothing.
+    """
+    out = {}
+    for kind in WARN_COUNTED:
+        default = BaseOpts.global_options_dict[f"{kind}_alert_threshold"].default_val
+        out[kind] = (alert_thresholds or {}).get(kind, default)
+    return out
+
+
+def warn_alert_thresholds(base_opts: BaseOpts.BaseOptions) -> dict[str, int]:
+    """The counted $WARN kinds' alert thresholds from the options.
+
+    Args:
+        base_opts: The options (Base or DataFiles).
+
+    Returns:
+        kind -> threshold, for parse_log_file's alert_thresholds.
+
+    Raises:
+        Nothing.
+    """
+    return {kind: getattr(base_opts, f"{kind}_alert_threshold") for kind in WARN_COUNTED}
+
+
+def _classify_warn(value: str) -> tuple[str, str, int] | None:
+    """Matches a $WARN value against the counted kinds.
+
+    Args:
+        value: The $WARN value (after "$WARN,").
+
+    Returns:
+        (kind, name, count) for a counted kind - count is N for "N ct parse errors", else 1 -
+        or None.
+
+    Raises:
+        Nothing.
+    """
+    text = value.strip()
+    for kind, (_, pattern, _) in WARN_COUNTED.items():
+        m = pattern.match(text)
+        if m:
+            groups = m.groupdict()
+            return kind, groups.get("name") or "", int(groups["n"]) if groups.get("n") else 1
+    return None
+
+
+def _log_warn_counts(
+    counts: dict[tuple[str, str], list[int]], in_filename: object, thresholds: dict[str, int]
+) -> None:
+    """Logs one warning per counted $WARN kind (and name), alerting above its threshold.
+
+    Args:
+        counts: (kind, name) -> [count, line of the first one].
+        in_filename: The log file, for the message.
+        thresholds: kind -> alert threshold.
+
+    Returns:
+        None
+
+    Raises:
+        Nothing.
+    """
+    for (kind, name), (count, first_line) in counts.items():
+        tag, _, what = WARN_COUNTED[kind]
+        log_warning(
+            f"WARN:({count} {what.format(name=name)}) in {in_filename} (first at line {first_line})",
+            alert=tag if count > thresholds[kind] else None,
+        )
+
+
+def parse_log_file(
+    in_filename,
+    issue_warn=False,
+    alert_thresholds: dict[str, int] | None = None,
+):
     """Parses a Seaglider log file
 
-    Returns a logile object or None for an error
     TODO: bubble up exceptions
+
+    Args:
+        in_filename: The .log file.
+        issue_warn: Log the glider's $WARN lines. Counted kinds (see WARN_COUNTED) are logged
+            once per kind with their count, and alert only above their threshold; logger
+            state notices are logged without an alert; anything else alerts (LOGFILE_WARN)
+            on every line.
+        alert_thresholds: Counted $WARN kind -> alert threshold (see
+            warn_alert_thresholds); None for the option defaults.
+
+    Returns:
+        A LogFile object, or None for an error.
+
+    Raises:
+        Nothing expected - errors are logged and None returned.
     """
+    warn_counts: dict[tuple[str, str], list[int]] = {}
 
     # Check filetype before processing
     fc = FileMgr.FileCode(
@@ -540,9 +669,18 @@ def parse_log_file(in_filename, issue_warn=False):
             elif parm_name == "$WARN":  # various warnings (PPS, flight parms, etc.)
                 if issue_warn:
                     log_file.warn.append(value)
-                    log_warning(
-                        "WARN:(%s) in %s" % (value, in_filename), alert="LOGFILE_WARN"
-                    )
+                    counted = _classify_warn(value)
+                    if counted is not None:
+                        # Normal in small numbers - counted, reported once after parsing
+                        kind, name, n = counted
+                        warn_counts.setdefault((kind, name), [0, line_count])[0] += n
+                    elif _WARN_NOTICE_RE.match(value.strip()):
+                        log_warning("WARN:(%s) in %s" % (value, in_filename))
+                    else:
+                        log_warning(
+                            "WARN:(%s) in %s" % (value, in_filename),
+                            alert="LOGFILE_WARN",
+                        )
             # Message GC entries
             elif parm_name.lstrip("$") in ("NEWHEAD",):
                 try:
@@ -999,6 +1137,9 @@ def parse_log_file(in_filename, issue_warn=False):
                     )
         if len(log_file.tables[param_name]) == 0:
             log_file.tables.pop(param_name)
+
+    if issue_warn:
+        _log_warn_counts(warn_counts, in_filename, _warn_thresholds(alert_thresholds))
 
     return log_file
 

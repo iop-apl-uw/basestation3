@@ -830,6 +830,50 @@ global_options_dict: dict[str, options_t] = {
             "action": argparse.BooleanOptionalAction,
         },
     ),
+    "glider_timeout_alert_threshold": options_t(
+        3,
+        {"Base", "DataFiles"},
+        ("--glider_timeout_alert_threshold",),
+        int,
+        {
+            "help": "Raise an alert only when a dive's log has more than this many "
+            "of one kind of glider timeout ($WARN,<name> timeout - e.g. pressure, PPS) (fewer are still logged as a warning)",
+            "range": [0, 1000000],
+        },
+    ),
+    "fuel_gauge_alert_threshold": options_t(
+        3,
+        {"Base", "DataFiles"},
+        ("--fuel_gauge_alert_threshold",),
+        int,
+        {
+            "help": "Raise an alert only when a dive's log has more than this many "
+            "missed fuel gauge reads from one logger ($WARN,H<logger> missed fuel gauge read) (fewer are still logged as a warning)",
+            "range": [0, 1000000],
+        },
+    ),
+    "ct_parse_errors_alert_threshold": options_t(
+        3,
+        {"Base", "DataFiles"},
+        ("--ct_parse_errors_alert_threshold",),
+        int,
+        {
+            "help": "Raise an alert only when a dive's log has more than this many "
+            "CT parse errors ($WARN,N ct parse errors, summed) (fewer are still logged as a warning)",
+            "range": [0, 1000000],
+        },
+    ),
+    "tcm2mat_error_alert_threshold": options_t(
+        3,
+        {"Base", "DataFiles"},
+        ("--tcm2mat_error_alert_threshold",),
+        int,
+        {
+            "help": "Raise an alert only when a dive's log has more than this many "
+            "compass calibration errors ($WARN,tcm2mat error) (fewer are still logged as a warning)",
+            "range": [0, 1000000],
+        },
+    ),
     "timeout_alert_threshold": options_t(
         5,
         {"Base", "DataFiles"},

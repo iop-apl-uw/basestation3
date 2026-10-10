@@ -790,6 +790,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 log_file = LogFile.parse_log_file(
                     logfile_name,
                     issue_warn=True,
+                    alert_thresholds=LogFile.warn_alert_thresholds(base_opts),
                 )
                 if not log_file:
                     continue

@@ -1007,6 +1007,7 @@ def process_file_group(
                     sg_log_file = LogFile.parse_log_file(
                         fc.mk_base_logfile_name(),
                         issue_warn=True,
+                        alert_thresholds=LogFile.warn_alert_thresholds(base_opts),
                     )
                     if not sg_log_file:
                         log_error(

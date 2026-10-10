@@ -85,7 +85,36 @@ RBR Legato CTD data was found, but the <code>sg_ct_type</code> varible in <code>
 
 <p><a name="LOGFILE_WARN">LOGFILE_WARN<br>
 One or more <code>$WARN</code> lines were found in the Seaglider logfile.  These messages are important warning conditions the pilot
-may need to take action on - consult the text for further details.
+may need to take action on - consult the text for further details.  Every such line is alerted on.
+<code>$WARN</code> kinds that are normal in small numbers are counted per dive and have their own alerts instead
+(GLIDER_TIMEOUT, FUEL_GAUGE_MISSED, CT_PARSE_ERRORS, TCM2MAT_ERROR), and logger state notices
+(e.g. <code>HTMICL TMICL logging already stopped</code>) are logged in the baselog without an alert.
+</p>
+
+<p><a name="GLIDER_TIMEOUT">GLIDER_TIMEOUT<br>
+The glider logged more than <code>--glider_timeout_alert_threshold</code> (default 3) <code>$WARN,&lt;name&gt; timeout</code>
+lines of one kind (e.g. <code>pressure timeout</code>, <code>PPS timeout</code>) in a dive.  One per dive is common and only
+logged.  Repeated pressure timeouts point at the pressure sensor or its wiring; repeated PPS timeouts at the GPS
+(its PPS signal, antenna or time sync).
+</p>
+
+<p><a name="FUEL_GAUGE_MISSED">FUEL_GAUGE_MISSED<br>
+A logger (SCICON, TMICL, PMAR) logged more than <code>--fuel_gauge_alert_threshold</code> (default 3)
+<code>$WARN,H&lt;logger&gt; missed fuel gauge read</code> lines in a dive.  An occasional miss is common and only logged;
+many suggest the logger is busy or failing to answer the main board - check the logger's own logs and its power use.
+</p>
+
+<p><a name="CT_PARSE_ERRORS">CT_PARSE_ERRORS<br>
+The glider reported more than <code>--ct_parse_errors_alert_threshold</code> (default 3) CT parse errors in a dive (the sum of
+its <code>$WARN,N ct parse errors</code> lines).  A few are common and only logged.  Hundreds or thousands mean the CT's
+output is unreadable - a failing or flooded sensor, or a wiring or configuration problem - and its data for the dive is
+suspect.
+</p>
+
+<p><a name="TCM2MAT_ERROR">TCM2MAT_ERROR<br>
+The glider logged more than <code>--tcm2mat_error_alert_threshold</code> (default 3) <code>$WARN,tcm2mat error</code> lines in a
+dive - errors applying the compass calibration (<code>tcm2mat.cal</code>).  Check the calibration file sent to the glider and
+the compass; headings from the dive may be wrong.
 </p>
 
 <p><a name="MAGCAL">MAGCAL<br>

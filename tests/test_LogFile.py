@@ -72,3 +72,103 @@ def test_split_multi_value_parm(parm_name, value, expected):
 def test_split_multi_value_parm_unknown_parm():
     with pytest.raises(KeyError):
         LogFile.split_multi_value_parm("$D_TGT", "90")
+
+
+# --- $WARN lines: counted kinds, state notices, everything else ---
+
+_LOG_HEADER = "version: 67.01\nglider: 283\nmission: 4\ndive: 624\nstart: 10 9 126 18 27 58\ndata:\n$ID,283\n$DIVE,624\n"
+
+
+@pytest.fixture
+def _fresh_baselog():
+    from BaseLog import BaseLogger
+
+    BaseLogger.reset()
+    yield
+    BaseLogger.reset()
+
+
+def _parse_warns(tmp_path, warns, monkeypatch, **kwargs):
+    """Parses a log with these $WARN values.
+
+    Returns:
+        (log_file, alert tags raised, [(warning text, alert)] for the WARN:( warnings).
+    """
+    import BaseLog
+
+    warnings = []
+
+    def grab(s, *args, alert=None, **kw):
+        if str(s).startswith("WARN:("):
+            warnings.append((s, alert))
+        BaseLog.log_warning(s, alert=alert)
+
+    monkeypatch.setattr(LogFile, "log_warning", grab)
+    log = tmp_path / "p2830624.log"
+    log.write_text(_LOG_HEADER + "".join(f"$WARN,{w}\n" for w in warns))
+    log_file = LogFile.parse_log_file(str(log), issue_warn=True, **kwargs)
+    return log_file, sorted(BaseLog.log_alerts()), warnings
+
+
+@pytest.mark.usefixtures("_fresh_baselog")
+def test_warn_counted_kinds_alert_above_threshold(tmp_path, monkeypatch):
+    warns = (
+        ["pressure timeout"]  # 1: logged, no alert
+        + ["PPS timeout"] * 4  # 4 > 3: GLIDER_TIMEOUT
+        + ["2 ct parse errors", "3 ct parse errors"]  # sum 5 > 3
+        + ["HSCICON missed fuel gauge read"]  # 1
+        + ["tcm2mat error"] * 4  # 4 > 3
+        + ["HTMICL TMICL logging already stopped"]  # state notice: no alert
+        + ["spurious depths detected D_ABORT=990, D_TGT=1000"]  # one-off: always alerts
+    )
+    log_file, alerts, warnings = _parse_warns(tmp_path, warns, monkeypatch)
+    assert log_file is not None
+    assert log_file.warn == warns  # every raw value kept
+    by_text = dict(warnings)
+    log = tmp_path / "p2830624.log"
+    assert by_text[f"WARN:(1 pressure timeout(s)) in {log} (first at line 9)"] is None
+    assert by_text[f"WARN:(4 PPS timeout(s)) in {log} (first at line 10)"] == "GLIDER_TIMEOUT"
+    assert by_text[f"WARN:(5 ct parse error(s)) in {log} (first at line 14)"] == "CT_PARSE_ERRORS"
+    assert by_text[f"WARN:(1 SCICON missed fuel gauge read(s)) in {log} (first at line 16)"] is None
+    assert by_text[f"WARN:(4 tcm2mat error(s)) in {log} (first at line 17)"] == "TCM2MAT_ERROR"
+    assert by_text[f"WARN:(HTMICL TMICL logging already stopped) in {log}"] is None
+    assert by_text[f"WARN:(spurious depths detected D_ABORT=990, D_TGT=1000) in {log}"] == "LOGFILE_WARN"
+    # One warning per counted kind and name, not one per $WARN line
+    assert len(warnings) == 7
+    assert alerts == ["CT_PARSE_ERRORS", "GLIDER_TIMEOUT", "LOGFILE_WARN", "TCM2MAT_ERROR"]
+
+
+@pytest.mark.usefixtures("_fresh_baselog")
+def test_warn_thresholds_from_caller(tmp_path, monkeypatch):
+    # Threshold 0 alerts on any; a high one silences
+    _, alerts, _ = _parse_warns(tmp_path, ["pressure timeout"], monkeypatch, alert_thresholds={"glider_timeout": 0})
+    assert alerts == ["GLIDER_TIMEOUT"]
+    _, alerts, _ = _parse_warns(tmp_path, ["5 ct parse errors"], monkeypatch, alert_thresholds={"ct_parse_errors": 10})
+    assert "CT_PARSE_ERRORS" not in alerts
+
+
+@pytest.mark.usefixtures("_fresh_baselog")
+def test_warn_not_issued(tmp_path):
+    from BaseLog import log_alerts
+
+    log = tmp_path / "p2830624.log"
+    log.write_text(_LOG_HEADER + "$WARN,pressure timeout\n$WARN,spurious depths detected\n")
+    log_file = LogFile.parse_log_file(str(log))
+    assert log_file is not None and log_file.warn == [] and log_alerts() == {}
+
+
+def test_warn_alert_thresholds_from_options(tmp_path):
+    import BaseOpts
+
+    base_opts = BaseOpts.BaseOptions(
+        "test",
+        # argparse takes str
+        cmdline_args=["--mission_dir", str(tmp_path), "--glider_timeout_alert_threshold", "7"],
+        calling_module="Base",
+    )
+    assert LogFile.warn_alert_thresholds(base_opts) == {
+        "glider_timeout": 7,
+        "fuel_gauge": 3,
+        "ct_parse_errors": 3,
+        "tcm2mat_error": 3,
+    }
