@@ -32,12 +32,15 @@
 Processes network files
 """
 
+import calendar
 import collections
+import dataclasses
 import glob
 import io
 import os
 import pathlib
 import pdb
+import re
 import sys
 import time
 import traceback
@@ -758,6 +761,25 @@ def convert_network_logfile(
         log_error(f"Failed to process {out_file_name}")
         return None
 
+    # A garbled decode - most likely the wrong decoder build for the glider's firmware.
+    # The .nlog is left for inspection but not passed on.
+    if re.fullmatch(r"p\d{7}\.nlog", out_file_name.name):
+        problem = check_nlog(out_file_name, expected_sgid=int(out_file_name.name[1:4]))
+        if problem is not None:
+            what = (
+                "does not look like a good decode"
+                if problem.kind == "decoder_mismatch"
+                else "is for another glider"
+            )
+            log_error(
+                f"{out_file_name} (from {in_file_name}, decoded by {cmdline}) {what} "
+                f"({problem.reason}) - not processing it",
+                alert="NLOG_DECODER_MISMATCH"
+                if problem.kind == "decoder_mismatch"
+                else "NLOG_WRONG_GLIDER",
+            )
+            return None
+
     return out_file_name
 
 
@@ -1190,6 +1212,10 @@ WL_RAW_TO_CANONICAL = {
 }
 
 
+# Unknown logfile params named in the one-per-file summary
+_UNKNOWN_PARAMS_LISTED = 20
+
+
 def make_netcdf_network_file(
     network_logfile: pathlib.Path,
     network_profile_ct: pathlib.Path,
@@ -1317,6 +1343,7 @@ def make_netcdf_network_file(
     if not network_logfile.is_file():
         log_warning(f"{network_logfile} not found - skipping")
     else:
+        unknown_params: collections.Counter[str] = collections.Counter()
         try:
             with network_logfile.open("rb") as raw_network_logfile:
                 lp = log_parser()
@@ -1372,9 +1399,14 @@ def make_netcdf_network_file(
                             f"Bad value in line {line_count} of {network_logfile} ({e}) - skipping: {raw_line[:120]}"
                         )
                     except LookupError as e:
-                        log_error(
-                            f"{e.args[0]} {e.args[1]} line {line_count} of {network_logfile} - skipping",
-                        )
+                        if e.args[:1] == ("Unknown logfile param",):
+                            # One summary per file below - after a good decode these are
+                            # parameters newer than basestation's list
+                            unknown_params[e.args[1]] += 1
+                        else:
+                            log_error(
+                                f"{e.args[0]} {e.args[1]} line {line_count} of {network_logfile} - skipping",
+                            )
                     except Exception:
                         log_error(
                             f"Could not process {line_count} of {network_logfile} - skipping",
@@ -1382,6 +1414,16 @@ def make_netcdf_network_file(
                         )
         except Exception:
             log_error(f"Failed processing {network_logfile}", "exc")
+        if unknown_params:
+            listed = ", ".join(
+                f"{tag} (x{n})" if n > 1 else tag
+                for tag, n in unknown_params.most_common(_UNKNOWN_PARAMS_LISTED)
+            )
+            more = len(unknown_params) - _UNKNOWN_PARAMS_LISTED
+            log_error(
+                f"{sum(unknown_params.values())} unknown logfile param(s) in {network_logfile} - "
+                f"skipped: {listed}" + (f" and {more} more" if more > 0 else "")
+            )
 
         create_ds_var(dso, var_template, "start_time", start_time)
 
@@ -1501,15 +1543,125 @@ def make_netcdf_network_file(
     return ncf_filename
 
 
-# Real .nlog files always carry a "start:" line with a plausible calendar
-# date. Some builds emit a line or two of debug output before it, so this
-# is a window scan, not an anchor to a fixed line number.
+# A good decode of a network logfile starts with a timestamp line - "start: M D Y h m s",
+# or (log.F/log.2022/log.2023) the debug line "<epoch> <n> 0 0 0" followed by "start:" -
+# optionally after a "<nparams> <first tag byte>" header line (e.g. "185 210"). Anything
+# else at the head means the decoder didn't match the glider's firmware (every one of the
+# 4,698 .nlog files on the mirrors, 2026-10-10: 4,633 good, 64 bad, no overlap).
 _NLOG_SANITY_SCAN_LINES = 20
-# Rejects a "start:" line decades in the past/future - seen in the wild
-# from a broken en.r -> nlog conversion (e.g. year fields that decode to
-# 1960 or 1970) without hardcoding a mission-specific date.
-_NLOG_MIN_PLAUSIBLE_EPOCH = time.mktime((1995, 1, 1, 0, 0, 0, 0, 0, 0))
+# Rejects a "start:" line decades in the past/future - seen in the wild from a broken
+# en.r -> nlog conversion (e.g. year fields that decode to 1960 or 1970).
+_NLOG_MIN_PLAUSIBLE_EPOCH = calendar.timegm((1995, 1, 1, 0, 0, 0, 0, 0, 0))
 _NLOG_MAX_FUTURE_SLOP_SECS = 3 * 365 * 86400
+_NLOG_HEADER_RE = re.compile(r"\d+ \d+")
+_NLOG_DEBUG_EPOCH_RE = re.compile(r"(\d+) \d+ 0 0 0")
+
+
+@dataclasses.dataclass
+class NlogProblem:
+    """Why a .nlog can't be used.
+
+    Attributes:
+        kind: "decoder_mismatch" (the decode is garbage - most likely the wrong decoder
+            build for the glider's firmware) or "wrong_glider" (the file names another glider).
+        reason: What was found, for the message.
+    """
+
+    kind: str
+    reason: str
+
+
+def _nlog_start_epoch(line: str) -> float:
+    """Parses a "start:" line's time as UTC epoch seconds.
+
+    Args:
+        line: "start: M D Y h m s" (Y years since 1900, or 2-digit), optionally
+            "start: <epoch>, M D Y h m s".
+
+    Returns:
+        The time.
+
+    Raises:
+        ValueError: The line can't be parsed.
+    """
+    fields = line.split(":", maxsplit=1)[1].split(",")[-1].split()
+    if len(fields) < 6:
+        raise ValueError(f"expected 6 fields, got {len(fields)}")
+    mon, mday, year, hour, minute = (int(x) for x in fields[:5])
+    sec = float(fields[5])
+    # Years since 1900 (126); a 2-digit year (26) as Utils.parse_time's %y reads it
+    if year >= 100:
+        year += 1900
+    else:
+        year += 2000 if year < 69 else 1900
+    return calendar.timegm((year, mon, mday, hour, minute, 0, 0, 0, 0)) + sec
+
+
+def check_nlog(
+    network_logfile: pathlib.Path,
+    expected_sgid: int | None = None,
+    max_scan_lines: int = _NLOG_SANITY_SCAN_LINES,
+) -> NlogProblem | None:
+    """Checks that a network logfile is a good decode of the glider's telemetry.
+
+    The head of the file (after an optional "<nparams> <tag byte>" line) must be a timestamp:
+    a plausible "start:" line, or the debug line "<epoch> <n> 0 0 0" followed by a "start:"
+    line with the same time. A first "$ID," line, if there is one, must be a glider number;
+    and the expected one, when expected_sgid is given. Old firmware wrote no $ID - that's fine.
+
+    Args:
+        network_logfile: Path to the network logfile to check.
+        expected_sgid: Glider number the file should belong to (e.g. from its name), or None to
+            skip that comparison.
+        max_scan_lines: How many leading lines to scan for $ID.
+
+    Returns:
+        None if the file looks good, otherwise the problem.
+
+    Raises:
+        Nothing - an unreadable file is a problem.
+    """
+    try:
+        with network_logfile.open("rb") as f:
+            lines = [f.readline().decode(errors="replace").strip() for _ in range(max_scan_lines)]
+    except OSError as e:
+        return NlogProblem("decoder_mismatch", f"could not read file ({e})")
+
+    head = 1 if _NLOG_HEADER_RE.fullmatch(lines[0]) else 0
+    first = lines[head]
+    if not first:
+        return NlogProblem("decoder_mismatch", "no timestamp line - the file is empty")
+    debug = _NLOG_DEBUG_EPOCH_RE.fullmatch(first)
+    start_line = lines[head + 1] if debug else first
+    if not start_line.startswith("start:"):
+        shown = first if not debug else start_line
+        return NlogProblem("decoder_mismatch", f"first line is not a timestamp: {shown[:80]!r}")
+    try:
+        start_epoch = _nlog_start_epoch(start_line)
+    except (ValueError, IndexError, OverflowError) as e:
+        return NlogProblem("decoder_mismatch", f"unparseable start: line {start_line[:80]!r} ({e})")
+    if not _NLOG_MIN_PLAUSIBLE_EPOCH <= start_epoch <= time.time() + _NLOG_MAX_FUTURE_SLOP_SECS:
+        return NlogProblem("decoder_mismatch", f"implausible start: line {start_line[:80]!r}")
+    if debug and int(debug.group(1)) != int(start_epoch):
+        return NlogProblem(
+            "decoder_mismatch",
+            f"debug epoch {debug.group(1)} doesn't match the start: time {int(start_epoch)}",
+        )
+
+    if expected_sgid is None:
+        return None
+    id_value = next((ln[len("$ID,") :] for ln in lines if ln.startswith("$ID,")), None)
+    if id_value is None:
+        return None
+    try:
+        sgid = float(id_value)
+    except ValueError:
+        sgid = None
+    if sgid is None or sgid != int(sgid) or not 1 <= sgid <= 999:
+        return NlogProblem("decoder_mismatch", f"$ID,{id_value[:40]} is not a glider number")
+    if int(sgid) != expected_sgid:
+        return NlogProblem("wrong_glider", f"$ID names sg{int(sgid):03d}, expected sg{expected_sgid:03d}")
+    return None
 
 
 def check_nlog_sanity(
@@ -1517,72 +1669,23 @@ def check_nlog_sanity(
     expected_sgid: int | None = None,
     max_scan_lines: int = _NLOG_SANITY_SCAN_LINES,
 ) -> str | None:
-    """Checks whether a network logfile looks like real glider telemetry
-    rather than the product of a broken en.r -> nlog conversion.
+    """Checks whether a network logfile looks like real glider telemetry.
 
-    A garbled conversion (seen in the wild - e.g. a decompressor crash
-    whose output got written out as if it were the log) typically has no
-    "start:" line at all, or one with an implausible date, and/or lacks an
-    "$ID,<glider>" line naming the glider that produced the dive.
+    See check_nlog.
 
     Args:
         network_logfile: Path to the network logfile to check.
-        expected_sgid: Glider number the file is supposed to belong to
-            (e.g. parsed from the filename), checked against any early
-            "$ID,..." line found. Pass None to skip that check.
+        expected_sgid: Glider number the file should belong to, or None to skip that check.
         max_scan_lines: How many leading lines to scan.
 
     Returns:
         None if the file looks sane, otherwise a short reason it doesn't.
+
+    Raises:
+        Nothing.
     """
-    try:
-        with network_logfile.open("rb") as f:
-            lines = [
-                f.readline().decode(errors="replace").rstrip()
-                for _ in range(max_scan_lines)
-            ]
-    except Exception as e:
-        return f"could not read file ({e})"
-
-    start_reason = f"no start: line in the first {max_scan_lines} lines"
-    for raw_line in lines:
-        if not raw_line.startswith("start:"):
-            continue
-        try:
-            time_string = (
-                raw_line.split(",", maxsplit=1)[1]
-                if "," in raw_line
-                else raw_line.split(":", maxsplit=1)[1]
-            )
-            start_epoch = Utils.parse_time(time_string)
-        except Exception as e:
-            start_reason = f"unparseable start: line {raw_line!r} ({e})"
-            continue
-        if (
-            start_epoch < _NLOG_MIN_PLAUSIBLE_EPOCH
-            or start_epoch > time.time() + _NLOG_MAX_FUTURE_SLOP_SECS
-        ):
-            start_reason = f"implausible start: line {raw_line!r} (epoch {start_epoch:.0f})"
-            continue
-        start_reason = None
-        break
-    if start_reason is not None:
-        return start_reason
-
-    if expected_sgid is None:
-        return None
-
-    for raw_line in lines:
-        if not raw_line.startswith("$ID,"):
-            continue
-        try:
-            sgid = float(raw_line[len("$ID,") :])
-        except ValueError:
-            continue
-        if abs(sgid - expected_sgid) < 0.5:
-            return None
-
-    return f"no $ID,{expected_sgid} line in the first {max_scan_lines} lines"
+    problem = check_nlog(network_logfile, expected_sgid, max_scan_lines)
+    return None if problem is None else problem.reason
 
 
 def make_netcdf_network_files(

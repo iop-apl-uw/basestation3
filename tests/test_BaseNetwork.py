@@ -233,11 +233,11 @@ def test_check_nlog_sanity_accepts_well_formed_file(tmp_path):
 
 
 def test_check_nlog_sanity_tolerates_leading_debug_output(tmp_path):
-    """Some builds emit a line of debug output before the start: line -
-    the check must scan for start:/$ID rather than anchor to line 0/1."""
+    """Some builds emit a "<nparams> <tag byte>" header and the debug epoch line
+    before the start: line (e.g. sg252 AMOS_Aug23)."""
     nlog_path = tmp_path / "p2720002.nlog"
     nlog_path.write_text(
-        "DEBUG: modem sync ok\nstart: 9 6 126 8 39 27\n$ID,272.000000\n"
+        "185 210\n1788683967 191 0 0 0\nstart: 9 6 126 8 39 27\n$ID,272.000000\n"
     )
     assert BaseNetwork.check_nlog_sanity(nlog_path, expected_sgid=272) is None
 
@@ -248,8 +248,7 @@ def test_check_nlog_sanity_rejects_missing_start_line(tmp_path):
     nlog_path = tmp_path / "p2610040.nlog"
     nlog_path.write_text("$NAV_MODE,0.000000\n$NAV_MODE,0.000000\n$ID,-378.516602\n")
     reason = BaseNetwork.check_nlog_sanity(nlog_path, expected_sgid=261)
-    assert reason is not None
-    assert "start:" in reason
+    assert reason == "first line is not a timestamp: '$NAV_MODE,0.000000'"
 
 
 def test_check_nlog_sanity_rejects_implausible_start_date(tmp_path):
@@ -266,8 +265,7 @@ def test_check_nlog_sanity_rejects_wrong_glider_id(tmp_path):
     nlog_path = tmp_path / "p2610014.nlog"
     nlog_path.write_text("start: 9 6 126 8 39 27\n$ID,406426222592.000000\n")
     reason = BaseNetwork.check_nlog_sanity(nlog_path, expected_sgid=261)
-    assert reason is not None
-    assert "$ID,261" in reason
+    assert reason == "$ID,406426222592.000000 is not a glider number"
 
 
 def test_check_nlog_sanity_skips_id_check_when_no_expected_sgid(tmp_path):
@@ -387,17 +385,89 @@ def test_convert_network_profile_missing_input(tmp_path, caplog):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.parametrize(
+    ("text", "kind", "reason"),
+    [
+        # Good decodes - the shapes found in all 4,698 .nlog files on the mirrors (2026-10-10)
+        ("start: 9 6 126 8 39 27\n$ID,244.000000\n", None, None),
+        ("1788683967 191 0 0 0\nstart: 9 6 126 8 39 27\n$ID,244.000000\n", None, None),
+        ("185 210\n1788683967 191 0 0 0\nstart: 9 6 126 8 39 27\n$ID,244.000000\n", None, None),
+        ("start: 1648748617, 3 31 122 17 43 37\n$TGT_NAME,SE\n", None, None),  # no $ID: 2022 firmware
+        # Bad decodes
+        ("$STATE,1754603463,begin dive\n", "decoder_mismatch", "first line is not a timestamp: '$STATE,1754603463,begin dive'"),
+        ("185 210\n$STATE,1754603463,begin dive\n", "decoder_mismatch", "first line is not a timestamp: '$STATE,1754603463,begin dive'"),
+        ("", "decoder_mismatch", "no timestamp line - the file is empty"),
+        ("1788683967 191 0 0 0\n$ID,244\n", "decoder_mismatch", "first line is not a timestamp: '$ID,244'"),
+        ("1788683968 191 0 0 0\nstart: 9 6 126 8 39 27\n", "decoder_mismatch", "debug epoch 1788683968 doesn't match the start: time 1788683967"),
+        ("start: 9 6 126 8 39\n", "decoder_mismatch", "unparseable start: line 'start: 9 6 126 8 39' (expected 6 fields, got 5)"),
+        ("start: 9 6 126 8 39 27\n$ID,-378.516602\n", "decoder_mismatch", "$ID,-378.516602 is not a glider number"),
+        # Misplaced file: sg244 AMOS_Nov23 p2440009 named sg245
+        ("185 210\n1699615878 134 0 0 0\nstart: 11 10 123 11 31 18\n$ID,245.000000\n", "wrong_glider", "$ID names sg245, expected sg244"),
+    ],
+)
+def test_check_nlog(tmp_path, text, kind, reason):
+    nlog = tmp_path / "p2440009.nlog"
+    nlog.write_text(text)
+    problem = BaseNetwork.check_nlog(nlog, expected_sgid=244)
+    assert (problem.kind, problem.reason) == (kind, reason) if kind else problem is None
+
+
+@pytest.mark.parametrize(
+    ("output", "alert", "what"),
+    [
+        ("$NAV_MODE,0.000000\\n$ID,-378.516602\\n", "NLOG_DECODER_MISMATCH", "does not look like a good decode"),
+        ("start: 9 6 126 8 39 27\\n$ID,245.000000\\n", "NLOG_WRONG_GLIDER", "is for another glider"),
+    ],
+)
+def test_convert_network_logfile_alerts_on_bad_decode(tmp_path, output, alert, what):
+    """A bad decode is alerted naming the decoder, left on disk, and not passed on."""
+    import BaseLog
+
+    BaseLog.BaseLogger.alerts_d = {}
+    convertor = tmp_path / "fake_log"
+    # Single quotes: the shell would expand "$ID" as a variable
+    convertor.write_text(f"#!/bin/sh\nprintf '{output}'\n")
+    convertor.chmod(0o755)
+    base_opts = _make_base_opts(network_log_decompressor=str(convertor))
+    in_file = tmp_path / "sg0009en.x"
+    in_file.write_bytes(b"data")
+    out_file = tmp_path / "p2440009.nlog"
+    assert BaseNetwork.convert_network_logfile(base_opts, in_file, out_file) is None
+    assert out_file.exists()
+    (msg,) = BaseLog.log_alerts()[alert]
+    assert f"{out_file} (from {in_file}, decoded by {convertor} {in_file}) {what}" in msg
+    BaseLog.BaseLogger.alerts_d = {}
+
+
+def test_make_netcdf_network_file_summarizes_unknown_params(tmp_path, caplog):
+    """Unknown parameters are one error per file, not one per line."""
+    nlog = tmp_path / "p2620008.nlog"
+    nlog.write_text(
+        "start: 9 5 126 8 42 33\n$ID,262.000000\n$DIVE,8.000000\n"
+        "$NEW_PARAM_A,1\n$NEW_PARAM_B,2\n$NEW_PARAM_A,3\n$NEW_PARAM_C,4\n"
+    )
+    ct = tmp_path / "p2620008.npro_ct.dat"
+    ct.write_text("%first_bin_depth: 7.50\n%bin_width: 5.00\n%columns: temperature salinity \n10.5 34.2 \n")
+    with caplog.at_level(logging.ERROR):
+        assert BaseNetwork.make_netcdf_network_file(nlog, ct) == tmp_path / "p2620008.ncdf"
+    errors = [r.getMessage() for r in caplog.records if r.levelno >= logging.ERROR]
+    assert errors == [
+        f"BaseNetwork.py({errors[0].split('(')[1].split(')')[0]}): 4 unknown logfile param(s) in {nlog} - "
+        "skipped: $NEW_PARAM_A (x2), $NEW_PARAM_B, $NEW_PARAM_C"
+    ]
+
+
 def test_convert_network_logfile_success_with_fake_decompressor(tmp_path):
     convertor = tmp_path / "fake_log"
     convertor.write_text('#!/bin/sh\ncat "$1"\n')
     convertor.chmod(0o755)
     base_opts = _make_base_opts(network_log_decompressor=str(convertor))
     in_file = tmp_path / "p2720002.x"
-    in_file.write_bytes(b"$ID,272\n$DIVE,2\n")
+    in_file.write_bytes(b"start: 9 6 126 8 39 27\n$ID,272\n$DIVE,2\n")
     out_file = tmp_path / "p2720002.nlog"
     result = BaseNetwork.convert_network_logfile(base_opts, in_file, out_file)
     assert result == out_file
-    assert out_file.read_bytes() == b"$ID,272\n$DIVE,2\n"
+    assert out_file.read_bytes() == b"start: 9 6 126 8 39 27\n$ID,272\n$DIVE,2\n"
 
 
 def test_convert_network_logfile_auto_names_dive_zero(tmp_path):
@@ -409,10 +479,10 @@ def test_convert_network_logfile_auto_names_dive_zero(tmp_path):
     convertor.chmod(0o755)
     base_opts = _make_base_opts(network_log_decompressor=str(convertor))
     in_file = tmp_path / "sg0000en.x"
-    in_file.write_bytes(b"$ID,261.000000\n$DIVE,0.000000\n")
+    in_file.write_bytes(b"start: 9 6 126 8 39 27\n$ID,261.000000\n$DIVE,0.000000\n")
     result = BaseNetwork.convert_network_logfile(base_opts, in_file, None)
     assert result == tmp_path / "p2610000.nlog"
-    assert result.read_bytes() == b"$ID,261.000000\n$DIVE,0.000000\n"
+    assert result.read_bytes() == b"start: 9 6 126 8 39 27\n$ID,261.000000\n$DIVE,0.000000\n"
 
 
 def _write_fake_sglog(sglog_pkg: pathlib.Path, cli_body: str) -> None:
@@ -441,12 +511,12 @@ def test_convert_network_logfile_uses_sglog_when_available(tmp_path, monkeypatch
     monkeypatch.setattr(base_opts, "basestation_directory", fake_bsd)
 
     in_file = tmp_path / "p2720002.x"
-    in_file.write_bytes(b"$ID,272\n$DIVE,2\n")
+    in_file.write_bytes(b"start: 9 6 126 8 39 27\n$ID,272\n$DIVE,2\n")
     out_file = tmp_path / "p2720002.nlog"
 
     result = BaseNetwork.convert_network_logfile(base_opts, in_file, out_file)
     assert result == out_file
-    assert out_file.read_bytes() == b"$ID,272\n$DIVE,2\n"
+    assert out_file.read_bytes() == b"start: 9 6 126 8 39 27\n$ID,272\n$DIVE,2\n"
 
 
 def test_convert_network_logfile_explicit_decompressor_overrides_sglog(
@@ -457,12 +527,12 @@ def test_convert_network_logfile_explicit_decompressor_overrides_sglog(
         fake_bsd / "log" / "src" / "sglog",
         "import sys\n"
         "def main(argv=None):\n"
-        "    sys.stdout.write('SGLOG_OUTPUT\\n')\n"
+        "    sys.stdout.write('start: 9 6 126 8 39 27\\nSGLOG_OUTPUT\\n')\n"
         "    return 0\n",
     )
 
     explicit_convertor = tmp_path / "fake_log"
-    explicit_convertor.write_text('#!/bin/sh\necho "EXPLICIT_OUTPUT"\n')
+    explicit_convertor.write_text('#!/bin/sh\nprintf "start: 9 6 126 8 39 27\\nEXPLICIT_OUTPUT\\n"\n')
     explicit_convertor.chmod(0o755)
 
     base_opts = _make_base_opts(network_log_decompressor=str(explicit_convertor))
@@ -474,7 +544,7 @@ def test_convert_network_logfile_explicit_decompressor_overrides_sglog(
 
     result = BaseNetwork.convert_network_logfile(base_opts, in_file, out_file)
     assert result == out_file
-    assert out_file.read_bytes() == b"EXPLICIT_OUTPUT\n"
+    assert out_file.read_bytes() == b"start: 9 6 126 8 39 27\nEXPLICIT_OUTPUT\n"
 
 
 @pytest.mark.skipif(
@@ -612,7 +682,7 @@ def test_new_style_network_profile_reaches_ncdf_with_ct_and_wl(tmp_path):
     convertor.chmod(0o755)
     base_opts = _make_base_opts(network_profile_decompressor=str(convertor))
     nlog = tmp_path / "p2560004.nlog"
-    nlog.write_text("$ID,256\n$DIVE,4\nstart:01 01 26 00 00 00\n")
+    nlog.write_text("start:01 01 26 00 00 00\n$ID,256\n$DIVE,4\n")
     in_file = tmp_path / "sg0004rn.r"
     in_file.write_bytes(b"#7.50 5.00#SG256#sc0004b#ct#...\n")
 
@@ -763,7 +833,7 @@ def test_cdf_subparser_reproduces_and_fixes_crash(tmp_path, caplog):
     data_dir = tmp_path / "data"
     data_dir.mkdir()
     nlog_path = data_dir / "p2720002.nlog"
-    nlog_path.write_text("$ID,272\n$DIVE,2\nstart:01 01 26 00 00 00\n")
+    nlog_path.write_text("start:01 01 26 00 00 00\n$ID,272\n$DIVE,2\n")
     mission_dir = tmp_path / "mission_dir"
 
     testutils.run_mission(
@@ -805,9 +875,9 @@ def test_cdf_subparser_state_only_dive_no_gc_table(tmp_path, caplog):
     data_dir.mkdir()
     nlog_path = data_dir / "p2720002.nlog"
     nlog_path.write_text(
+        "start:01 01 26 00 00 00\n"
         "$ID,272\n"
         "$DIVE,2\n"
-        "start:01 01 26 00 00 00\n"
         "$STATE,10.0,begin dive,CONTROL_FINISHED_OK\n"
         "$STATE,20.0,end dive,CONTROL_FINISHED_OK\n"
     )
@@ -858,9 +928,9 @@ def test_cdf_subparser_state_and_gc_table_merge(tmp_path, caplog):
     data_dir.mkdir()
     nlog_path = data_dir / "p2720002.nlog"
     nlog_path.write_text(
+        "start:01 01 26 00 00 00\n"
         "$ID,272\n"
         "$DIVE,2\n"
-        "start:01 01 26 00 00 00\n"
         "$GC,5.0,1,2,3,4,5,6,7,8,9\n"
         "$STATE,10.0,begin dive,CONTROL_FINISHED_OK\n"
         "$STATE,20.0,end dive,CONTROL_FINISHED_OK\n"
@@ -912,7 +982,7 @@ def test_cdf_subparser_with_nlog_and_npro(tmp_path, caplog):
     data_dir = tmp_path / "data"
     data_dir.mkdir()
     nlog_path = data_dir / "p2720002.nlog"
-    nlog_path.write_text("$ID,272\n$DIVE,2\nstart:01 01 26 00 00 00\n")
+    nlog_path.write_text("start:01 01 26 00 00 00\n$ID,272\n$DIVE,2\n")
     npro_path = data_dir / "p2720002.npro"
     npro_path.write_text(
         "%first_bin_depth:7.5\n%bin_width:5.0\n10.5 34.2\n10.3 34.1\n"
@@ -950,7 +1020,7 @@ def test_cdf_subparser_with_npro_ct_dat(tmp_path, caplog):
     data_dir = tmp_path / "data"
     data_dir.mkdir()
     nlog_path = data_dir / "p2560005.nlog"
-    nlog_path.write_text("$ID,256\n$DIVE,5\nstart:01 01 26 00 00 00\n")
+    nlog_path.write_text("start:01 01 26 00 00 00\n$ID,256\n$DIVE,5\n")
     ct_path = data_dir / "p2560005.npro_ct.dat"
     ct_path.write_text(
         "%first_bin_depth: 7.50\n%bin_width: 5.00\n%container: SG256\n"
@@ -993,7 +1063,7 @@ def test_cdf_subparser_with_npro_ct_and_wl(tmp_path, caplog):
     data_dir = tmp_path / "data"
     data_dir.mkdir()
     nlog_path = data_dir / "p2560005.nlog"
-    nlog_path.write_text("$ID,256\n$DIVE,5\nstart:01 01 26 00 00 00\n")
+    nlog_path.write_text("start:01 01 26 00 00 00\n$ID,256\n$DIVE,5\n")
     ct_path = data_dir / "p2560005.npro_ct.dat"
     ct_path.write_text(
         "%first_bin_depth: 7.50\n%bin_width: 5.00\n%columns: temperature salinity \n"
@@ -1045,7 +1115,7 @@ def test_cdf_subparser_npro_wl_without_ct(tmp_path, caplog):
     data_dir = tmp_path / "data"
     data_dir.mkdir()
     nlog_path = data_dir / "p2560006.nlog"
-    nlog_path.write_text("$ID,256\n$DIVE,6\nstart:01 01 26 00 00 00\n")
+    nlog_path.write_text("start:01 01 26 00 00 00\n$ID,256\n$DIVE,6\n")
     wl_path = data_dir / "p2560006.npro_wl.dat"
     wl_path.write_text(
         "%first_bin_depth: 2.50\n%bin_width: 5.00\n"

@@ -83,6 +83,21 @@ The GPS in the Seaglider has not been upgraded to handle the latest GPS rollover
 RBR Legato CTD data was found, but the <code>sg_ct_type</code> varible in <code>sg_calib_contants.m</code> was not set to <code>4</code>.
 </p>
 
+<p><a name="NLOG_DECODER_MISMATCH">NLOG_DECODER_MISMATCH<br>
+A network logfile (<code>sgNNNNen.r</code>) decoded to a <code>.nlog</code> that doesn't start with a timestamp
+(<code>start:</code>, or the decoder's debug epoch line followed by <code>start:</code>), has an implausible start date,
+or an <code>$ID</code> that isn't a glider number.  This almost always means the decoder doesn't match the glider's
+firmware - the wrong <code>log</code> build, sglog table, or <code>--network_log_decompressor</code>.  The message names
+the input file, the decoder command and the first line.  The <code>.nlog</code> is left in the mission directory for
+inspection but no network netCDF file is made from it.  Check which decoder the basestation uses for this glider's
+motherboard and firmware; the "Unknown logfile param" errors such a file would cause are a symptom, not the problem.
+</p>
+
+<p><a name="NLOG_WRONG_GLIDER">NLOG_WRONG_GLIDER<br>
+A decoded network logfile's <code>$ID</code> names a different glider than its file name - usually a file copied
+or uploaded into the wrong mission directory.  The <code>.nlog</code> is left for inspection but not processed.
+</p>
+
 <p><a name="LOGFILE_WARN">LOGFILE_WARN<br>
 One or more <code>$WARN</code> lines were found in the Seaglider logfile.  These messages are important warning conditions the pilot
 may need to take action on - consult the text for further details.  Every such line is alerted on.
