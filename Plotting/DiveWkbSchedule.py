@@ -390,14 +390,27 @@ def _add_config_annotations(
                 "option_group": "plotting",
             },
         ),
+        "enable_wkb_schedule": BaseOptsType.options_t(
+            False,
+            {"Base", "BasePlot", "Reprocess"},
+            ("--enable_wkb_schedule",),
+            bool,
+            {
+                "help": "Generate the WKB-stretched CTD sampling schedule plot (off by default; "
+                "it stacks the trailing --wkb_dives_back dives on every run)",
+                "section": "plotting",
+                "option_group": "plotting",
+                "action": "store_true",
+            },
+        ),
         "wkb_buoyfreq": BaseOptsType.options_t(
-            True,
+            False,
             {"Base", "BasePlot", "Reprocess"},
             ("--wkb_buoyfreq",),
             bool,
             {
-                "help": "Also generate the companion WKB buoyancy frequency plot "
-                "(--no-wkb_buoyfreq to skip it and only generate the schedule plot)",
+                "help": "Also generate the companion WKB buoyancy frequency plot, when "
+                "--enable_wkb_schedule is set (off by default)",
                 "section": "plotting",
                 "option_group": "plotting",
                 "action": argparse.BooleanOptionalAction,
@@ -413,7 +426,7 @@ def plot_wkb_schedule(
     dbcon: sqlite3.Connection | None = None,
 ) -> tuple[list[plotly.graph_objects.Figure], list[pathlib.Path]]:
     """Plots a WKB-stretched CTD sampling schedule from the trailing dive window"""
-    if not generate_plots:
+    if not generate_plots or not base_opts.enable_wkb_schedule:
         return ([], [])
 
     latest = dive_nc_file.dive_number

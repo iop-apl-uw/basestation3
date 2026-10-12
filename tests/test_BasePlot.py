@@ -34,6 +34,7 @@ import pytest
 import testutils
 
 import Base
+import BaseOpts
 import BasePlot
 import CalibConst
 
@@ -186,7 +187,7 @@ test_dive_plot_coverage_inputs = (
         "plot_wkb_schedule",
         "sg171_EKAMSAT_Apr24_with_adcp",
         "p1710108.nc",
-        "",
+        "--enable_wkb_schedule --wkb_buoyfreq",
         "171",
         False,
     ),
@@ -338,6 +339,7 @@ def test_plot_wkb_schedule_partial_dive_does_not_crash(tmp_path, caplog):
         "dives",
         "--dive_plots",
         "plot_wkb_schedule",
+        "--enable_wkb_schedule",
         "--instrument_id",
         "283",
     ]
@@ -451,3 +453,28 @@ def test_get_mission_str_missing_mission_title(tmp_path: pathlib.Path) -> None:
 
     base_opts = types.SimpleNamespace(instrument_id=194)
     assert BasePlot.get_mission_str(base_opts, calib_consts) == "SG194 UNKNOWN"
+
+
+def test_wkb_schedule_off_by_default(tmp_path):
+    """The WKB schedule plot and its buoyancy-frequency companion are opt-in.
+
+    Disabled, plot_wkb_schedule returns before touching the dive file or stacking dives.
+    """
+    from Plotting import DiveWkbSchedule
+
+    base_opts = BaseOpts.BaseOptions(
+        "test",
+        # argparse takes str
+        cmdline_args=["--mission_dir", str(tmp_path)],
+        calling_module="BasePlot",
+    )
+    assert base_opts.enable_wkb_schedule is False
+    assert base_opts.wkb_buoyfreq is False
+    assert DiveWkbSchedule.plot_wkb_schedule(base_opts, types.SimpleNamespace()) == ([], [])
+
+    enabled = BaseOpts.BaseOptions(
+        "test",
+        cmdline_args=["--mission_dir", str(tmp_path), "--enable_wkb_schedule", "--wkb_buoyfreq"],
+        calling_module="BasePlot",
+    )
+    assert enabled.enable_wkb_schedule is True and enabled.wkb_buoyfreq is True
