@@ -172,6 +172,20 @@ def load_additional_arguments() -> tuple[list[str], dict, dict]:
     )
 
 
+# Variables main() reads from each dive netCDF file
+_KKYY_NEEDED_VARS = (
+    "ctd_depth",
+    "temperature",
+    "salinity",
+    "temperature_qc",
+    "salinity_qc",
+    "log_ID",
+    "log_gps_time",
+    "log_gps_lat",
+    "log_gps_lon",
+)
+
+
 def main(
     cmdline_args: list[str] = sys.argv[1:],
     instrument_id: int | None = None,
@@ -235,6 +249,16 @@ def main(
         log_info(f"Processing {dive_nc_file_name}")
 
         nci = Utils.open_netcdf_file(dive_nc_file_name, "r")
+
+        # A dive file can be read before all its data is in (e.g. no CT yet) - a later run
+        # makes the KKYY files, so say what's missing rather than log a traceback
+        missing = [v for v in _KKYY_NEEDED_VARS if v not in nci.variables]
+        if missing:
+            log_warning(
+                f"{dive_nc_file_name} lacks {', '.join(missing)} - no KKYY files for this dive (yet)"
+            )
+            nci.close()
+            continue
 
         try:
             ctd_depth = nci.variables["ctd_depth"][:]
