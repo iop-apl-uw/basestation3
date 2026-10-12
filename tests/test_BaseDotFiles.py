@@ -625,3 +625,50 @@ def test_pagers_to_yml_never_overwrites(tmp_path) -> None:
 
 def test_pagers_to_yml_needs_a_source(tmp_path) -> None:
     assert BaseDotFiles.main(["pagers_to_yml", "--pagers_file", str(tmp_path / "missing")]) == 1
+
+
+def _urls_opts(tmp_path, lines: str) -> MagicMock:
+    """base_opts whose mission .urls holds `lines` (no etc/group .urls)."""
+    mission = tmp_path / "mission"
+    mission.mkdir()
+    (mission / ".urls").write_text(lines)
+    opts = MagicMock()
+    opts.basestation_etc = tmp_path / "etc"
+    opts.group_etc = None
+    opts.mission_dir = mission
+    return opts
+
+
+@pytest.mark.parametrize(
+    "exception",
+    [
+        requests.exceptions.ConnectTimeout("HTTPSConnectionPool(host='vis.example.org', port=443): Max retries exceeded with url: /sg/notify?secret=abc"),
+        requests.exceptions.ReadTimeout("read timed out"),
+        requests.exceptions.ConnectionError("connection refused"),
+    ],
+)
+def test_process_urls_post_error_is_one_line(tmp_path, caplog: LogCaptureFixture, exception) -> None:
+    """A .urls POST that times out or can't connect is one error line, URL redacted, no traceback."""
+    opts = _urls_opts(tmp_path, "5 https://vis.example.org/sg/notify?secret=abc\n")
+    with patch.object(BaseDotFiles.requests, "post", side_effect=exception), caplog.at_level(logging.INFO):
+        BaseDotFiles.process_urls(opts, 1, 283, 42)
+    errors = [r.getMessage() for r in caplog.records if r.levelno >= logging.ERROR]
+    assert len(errors) == 1
+    assert errors[0].endswith(
+        f"Error posting .urls pass(1) to https://vis.example.org/{BaseDotFiles.REDACTED_PASSWORD} "
+        f"({type(exception).__name__}) - continuing"
+    )
+    assert "Traceback" not in caplog.text
+
+
+@pytest.mark.parametrize("line", ["https://vis.example.org/sg/notify", "five https://vis.example.org/sg/notify"])
+def test_process_urls_bad_line_skipped(tmp_path, caplog: LogCaptureFixture, line: str) -> None:
+    """A malformed .urls line is reported and skipped; the next line is still posted."""
+    opts = _urls_opts(tmp_path, f"{line}\n5 https://vis.example.org/ok\n")
+    post = MagicMock(return_value=MagicMock(text="ok"))
+    with patch.object(BaseDotFiles.requests, "post", post), caplog.at_level(logging.INFO):
+        BaseDotFiles.process_urls(opts, 2, 283, 42)
+    assert f"({line}) - expected '<timeout secs> <url> [cert file]', skipping it" in caplog.text
+    post.assert_called_once()
+    assert post.call_args.args[0] == "https://vis.example.org/ok?instrument_name=SG283&dive=42&files=all"
+    assert "Traceback" not in caplog.text

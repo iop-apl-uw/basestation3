@@ -298,10 +298,19 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num, payload=No
                     urls_elts = urls_line.split()
                     if len(urls_elts) > 3:
                         log_error(f"Too many entries on line ({urls_line})")
+                    try:
+                        get_timeout = int(urls_elts[0])
+                        if len(urls_elts) < 2:
+                            raise IndexError
+                    except (ValueError, IndexError):
+                        log_error(
+                            f"Bad line in {getattr(urls_file, 'name', '.urls')} ({urls_line}) - "
+                            "expected '<timeout secs> <url> [cert file]', skipping it"
+                        )
+                        continue
                     cert_file = True
                     if len(urls_elts) > 2:
                         cert_file = os.path.expanduser(urls_elts[2])
-                    get_timeout = int(urls_elts[0])
                     if isinstance(pass_num_or_gps, int) and pass_num_or_gps == 1:
                         url_line = "%s?instrument_name=SG%03d&dive=%d&files=perdive" % (
                             urls_elts[1],
@@ -343,6 +352,13 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num, payload=No
                             verify=cert_file,
                             timeout=get_timeout,
                             json=payload,
+                        )
+                    except requests.RequestException as exception:
+                        # One line, no traceback: an unreachable or slow server isn't
+                        # exceptional, and the exception text repeats the full URL
+                        log_error(
+                            f"Error posting .urls pass({pass_num_or_gps}) to {redact_url(urls_elts[1])} "
+                            f"({type(exception).__name__}) - continuing"
                         )
                     except Exception:
                         log_error(f"Error opening {url_line}", "exc")
