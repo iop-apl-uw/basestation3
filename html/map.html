@@ -2505,18 +2505,20 @@ imestamp
 
             // SSH
         
-            ssh = L.tileLayer("https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.png",
+            // Copernicus Marine DUACS NRT sea level anomaly. The dataset id carries a
+            // version suffix (_202506); CMEMS freezes old versions when it releases a new
+            // one, so if this goes stale check GetCapabilities on the WMTS for the current id.
+            ssh = L.tileLayer("https://wmts.marine.copernicus.eu/teroWmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER={layer}&STYLE={style}&TILEMATRIXSET=EPSG:3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png",
                                     {
-                                        layer: 'JPL_MEaSUREs_L4_Sea_Surface_Height_Anomalies',
-                                        format: "image/png",
-                                        tileMatrixSet: 'GoogleMapsCompatible_Level6',
-                                        time: 'default',
-                                        maxNativeZoom: 5,
+                                        layer: 'SEALEVEL_GLO_PHY_L4_NRT_008_046/cmems_obs-sl_glo_phy-ssh_nrt_allsat-l4-duacs-0.125deg_P1D_202506/sla',
+                                        style: 'cmap:balance',
+                                        maxNativeZoom: 7,
                                         maxZoom: 9,
                                         opacity: 0.5,
+                                        attribution: 'E.U. Copernicus Marine Service',
                                     });
 
-            if (checkLayerState("SSH", "on")) 
+            if (checkLayerState("SSH anomaly (DUACS daily)", "on")) 
                 map.addLayer(ssh);
 
             // SST
@@ -2689,7 +2691,7 @@ imestamp
                     "GEBCO contours": contours,
                 },
                 "satellite": {
-                    "SSH": ssh,
+                    "SSH anomaly (DUACS daily)": ssh,
                     "SST (MUR daily)": sst,
                     "sea ice (AMSR2)": seaIce,
                     "Chlorophyll-A (Aqua MODIS L2)": chlA,
