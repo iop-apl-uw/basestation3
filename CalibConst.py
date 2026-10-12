@@ -180,15 +180,17 @@ def getSGCalibrationConstants(
                             value = float(
                                 eval(value, {"__builtins__": None}, eval_locals)
                             )
-                        except SyntaxError as e:
-                            # Only issue warnings if we know what the type supposed to be - that is
-                            # some stripe of float
+                        except Exception as e:
                             if nc_data_type is not None:
-                                log_warning(
-                                    f"Count not process {value} ({e}) (file:{calib_filename}, line:{line_count} - Assuming {key} is a string",
+                                # A declared-numeric constant that isn't a number would only
+                                # fail later, far from here (e.g. mass in the flight model) -
+                                # report it where it is and leave it unset
+                                log_error(
+                                    f"{calib_filename}:{line_count}: {key} = {value!r} is not a number "
+                                    f"({type(e).__name__}: {e}) - ignoring it",
                                     alert="CALIB_COMM_SYNTAX",
                                 )
-                        except Exception:
+                                continue
                             # Non-numeric value of an unknown variable
                             log_debug("Assuming %s is a string" % key)
                         # Sometimes simple variables are defined that are used in later expressions in the M file...handle them

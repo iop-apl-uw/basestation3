@@ -150,6 +150,33 @@ sb_ct_type_map = {
 # sg_ct_geometry = None
 
 
+def calib_mass_ok(calib_consts: dict, what: object) -> bool:
+    """Checks that sg_calib_constants.m gave the vehicle mass as a number.
+
+    The flight model can't start without it, and a missing or non-numeric mass used to
+    surface as a TypeError deep in FlightModel.estimate_volmax.
+
+    Args:
+        calib_consts: The calibration constants.
+        what: The dive or file being processed, for the message.
+
+    Returns:
+        True if mass is a positive number, else False (after logging an error).
+
+    Raises:
+        Nothing.
+    """
+    mass = calib_consts.get("mass")
+    if isinstance(mass, (int, float)) and not isinstance(mass, bool) and mass > 0:
+        return True
+    log_error(
+        f"mass in sg_calib_constants.m is missing or not a number ({mass!r}) - can't process {what}; "
+        "fix sg_calib_constants.m and reprocess",
+        alert="CALIB_COMM_SYNTAX",
+    )
+    return False
+
+
 def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=False):
     """Update, by side effect, critical calibration and control constants
     with default values if not supplied
@@ -2431,6 +2458,8 @@ def load_dive_profile_data(
 
         # NOTE: MDP does this step later on a copy of the explicit variables used for saving
         if apply_sg_config_constants:
+            if not calib_mass_ok(calib_consts, nc_dive_file_name or eng_file_name):
+                return (0, None, None, None, None, None, None, None, None)
             sg_config_constants(
                 base_opts,
                 calib_consts,
@@ -3115,6 +3144,8 @@ def make_dive_profile(
                 log_f.data.get("$VBD_MIN", 500) - log_f.data.get("$C_VBD", 3000)
             ) * log_f.data.get("$VBD_CNV", -0.245)
 
+    if not calib_mass_ok(calib_consts, f"dive {dive_num}"):
+        return (1, None)
     sg_config_constants(
         base_opts,
         calib_consts,

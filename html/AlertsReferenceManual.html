@@ -187,7 +187,10 @@ sub-directory was not moved/cleaned.
 e</p>
 
 <p><a name="CALIB_COMM_SYNTAX">CALIB_COMM_SYNTAX<br>
-A line in the sg_calib_constants.m file contained a syntax error.
+A value in the sg_calib_constants.m file that should be a number isn't one (e.g. <code>t_g = 4.404-03</code> with the
+<code>e</code> missing, or <code>mass = 72.7 kg</code>).  The message gives the file, line and value.  The constant is
+ignored, so its default (if any) is used instead.  If it is <code>mass</code>, the dive can't be processed at all - fix
+sg_calib_constants.m and reprocess.
 </p>
 
 <p><a name="MISSION_MAP_BOX">MISSION_MAP_BOX<br>

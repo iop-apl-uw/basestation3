@@ -232,3 +232,33 @@ def test_gps_surface_drift_no_time_advance(caplog: pytest.LogCaptureFixture, dt:
     assert np.isnan(drift["surface_curr_east"]) and np.isnan(drift["surface_curr_north"])
     assert "surface_curr_error" not in drift
     assert "Unable to determine surface drift" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("mass_line", "required"),
+    [
+        # sg256 AMOS_Aug24 (2024): a non-numeric mass reached FlightModel.estimate_volmax
+        ("mass = '72.7 kg'; % (kg) scale weight", "mass = '72.7 kg' is not a number"),
+        ("% mass removed", "mass in sg_calib_constants.m is missing or not a number (None)"),
+    ],
+)
+def test_bad_calib_mass_fails_cleanly(tmp_path, caplog, mass_line: str, required: str) -> None:
+    """A missing or non-numeric mass fails the dive with a clear error, not a traceback."""
+    mission_dir = tmp_path / "mission_dir"
+    shutil.copytree("testdata/sg272_NANOOS_Feb26_makediveprofiles", mission_dir)
+    calib = mission_dir / "sg_calib_constants.m"
+    calib.write_text(calib.read_text().replace("mass = 73.956; % (kg) scale weight", mass_line))
+
+    # Fresh module state, as testutils.run_mission does (it requires a 0 exit, so isn't used)
+    Sensors.set_globals()
+    BaseNetCDF.set_globals()
+    FlightModel.set_globals()
+    Base.set_globals()
+    BaseLog.BaseLogger.reset()
+    with caplog.at_level(logging.INFO):
+        rc = MakeDiveProfiles.main(f"--verbose --mission_dir {mission_dir} --force".split())
+    assert rc != 0  # the dive failed
+    assert required in caplog.text
+    assert "fix sg_calib_constants.m and reprocess" in caplog.text
+    assert "Traceback" not in caplog.text
+    assert "estimate_volmax" not in caplog.text
