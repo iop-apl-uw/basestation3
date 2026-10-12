@@ -626,7 +626,7 @@ def process_tar_members(
                 ef, _ = extract_file_metadata(tmicl_file, splits[1])
 
                 # 2021/12/30 Bug - motor files have no column header
-                if class_name == "motors" and "columns" not in ef:
+                if ef is not None and class_name == "motors" and "columns" not in ef:
                     ef["columns"] = "onoff sample"
 
                 log_debug("Output file %s" % output_file)
@@ -797,14 +797,14 @@ def extract_file_metadata(inp_file_name, channel):
     """
     Extracts the meta data from a dat file
     Returns:
-    None - failure
+    (None, None) - failure
     Dictionary of meta data
     """
     try:
         inp_file = open(inp_file_name, "rb")
     except Exception:
         log_error("Unable to open %s" % inp_file_name)
-        return None
+        return None, None
 
     eng_file_meta = collections.OrderedDict()
 
@@ -848,7 +848,8 @@ def extract_file_metadata(inp_file_name, channel):
                     log_warning(
                         f"Problems parsing %start in {inp_file_name} ({exception}) - skipping file"
                     )
-                    raise
+                    inp_file.close()
+                    return None, None
 
             elif raw_strs[0] == "%stop":
                 try:
@@ -857,7 +858,8 @@ def extract_file_metadata(inp_file_name, channel):
                     log_warning(
                         f"Problems parsing %stop in {inp_file_name} ({exception}) - skipping file"
                     )
-                    raise
+                    inp_file.close()
+                    return None, None
 
                 continue
             elif raw_strs[0] == "%comment":

@@ -678,14 +678,14 @@ def extract_file_metadata(inp_file_name, cast, channel):
     """
     Extracts the meta data from a dat file
     Returns:
-    None - failure
+    (None, None) - failure
     Dictionary of meta data
     """
     try:
         inp_file = open(inp_file_name, "r")
     except Exception:
         log_error("Unable to open %s" % inp_file_name)
-        return None
+        return None, None
 
     eng_file_meta = collections.OrderedDict()
 
@@ -713,7 +713,8 @@ def extract_file_metadata(inp_file_name, cast, channel):
                     log_warning(
                         f"Problems parsing %start in {inp_file_name} ({exception}) - skipping file"
                     )
-                    raise
+                    inp_file.close()
+                    return None, None
                 ##ret_list.append(('pmar_start' % i, eng_file_meta[i]))
                 continue
             elif raw_strs[0] == "%stop":
@@ -723,7 +724,8 @@ def extract_file_metadata(inp_file_name, cast, channel):
                     log_warning(
                         f"Problems parsing %stop in {inp_file_name} ({exception}) - skipping file"
                     )
-                    raise
+                    inp_file.close()
+                    return None, None
                 continue
             else:
                 # string values

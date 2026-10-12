@@ -185,16 +185,31 @@ def process_camfb_dat(
     fi = open(scicon_file, "r")
     fo = open(nemafile, "w")
     line_num = 0
+    start_time = None
     for ll in fi.readlines():
         line_num += 1
         if len(ll) < 2:
             continue
         if ll.startswith("% start:"):
-            start_time = Utils.parse_time(ll.split(":", 1)[1], f_gps_rollover=True)
+            try:
+                start_time = Utils.parse_time(ll.split(":", 1)[1], f_gps_rollover=True)
+            except (ValueError, IndexError) as exception:
+                # A header garbled in transmission
+                log_error(
+                    f"Problems parsing % start in {scicon_file} line {line_num} ({exception}) - skipping file"
+                )
+                fi.close()
+                fo.close()
+                return 1
             continue
         elif ll.startswith("%"):
             continue
         else:
+            if start_time is None:
+                log_error(f"No % start: line before the data in {scicon_file} - skipping file")
+                fi.close()
+                fo.close()
+                return 1
             splits = ll.split(" ", 1)
             try:
                 tt = start_time + float(splits[0].rstrip().lstrip()) / 1000.0
