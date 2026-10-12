@@ -52,6 +52,38 @@ import Utils
 from BaseLog import log_error, log_info, log_warning
 from Plotting import plotmissionsingle
 
+# Where the plot area starts when the depth axis is showing, leaving room for
+# it to the left of the internal pressure axis.
+DEPTH_AXIS_X_DOMAIN_START = 0.16
+
+# Shows the depth axis (and makes room for it) only while the Max Depth trace
+# is visible - plotly has no layout setting that ties an axis to a trace.
+# Legend clicks fire plotly_restyle; the relayout fires plotly_relayout, so
+# this can't loop.
+DEPTH_AXIS_TOGGLE_POST_SCRIPT = (
+    """
+(function() {
+  // plotly.py replaces the literal "{plot_id}" token below with this
+  // plot's own div id
+  var gd = document.getElementById('{plot_id}');
+  if (!gd) return;
+  function syncDepthAxis() {
+    var trace = gd.data.find(function(t) { return t.name === 'Max Depth'; });
+    if (!trace) return;
+    var shown = trace.visible === true || trace.visible === undefined;
+    if (shown === Boolean(gd.layout.yaxis4.visible)) return;
+    Plotly.relayout(gd, {
+      'yaxis4.visible': shown,
+      'xaxis.domain': [shown ? __X_DOMAIN_START__ : 0.0, 0.9],
+      'yaxis.anchor': shown ? 'free' : 'x',
+      'yaxis.position': shown ? __X_DOMAIN_START__ : 0.0,
+    });
+  }
+  gd.on('plotly_restyle', syncDepthAxis);
+})();
+"""
+).replace("__X_DOMAIN_START__", str(DEPTH_AXIS_X_DOMAIN_START))
+
 additional_plot = collections.namedtuple(
     "additional_plot",
     ["df", "trace_name", "col_name", "color", "yaxis", "hovertemplate"],
@@ -144,6 +176,16 @@ def mission_int_sensors(
             log_warning(f"Failed slope calculation for {v} {exception} - skipping")
 
     cols = [x[1] for x in conn.cursor().execute("PRAGMA table_info(dives)").fetchall()]
+
+    df_max_depth = None
+    if "max_depth" in cols:
+        df_max_depth = pd.read_sql_query(
+            f"SELECT dive,max_depth from dives {clause} ORDER BY dive ASC",
+            conn,
+        ).sort_values("dive")
+        if df_max_depth["max_depth"].isnull().all():
+            df_max_depth = None
+
     add_plots: list[additional_plot] = []
     for col_name, plot_name, color, yaxis, hovertemplate in (
         (
@@ -285,6 +327,24 @@ def mission_int_sensors(
             }
         )
 
+    if df_max_depth is not None:
+        fig.add_trace(
+            {
+                "name": "Max Depth",
+                "x": df_max_depth["dive"],
+                "y": df_max_depth["max_depth"],
+                "yaxis": "y4",
+                "mode": "lines",
+                "line": {
+                    "dash": "solid",
+                    "color": "SaddleBrown",
+                    "width": 1,
+                },
+                "visible": "legendonly",
+                "hovertemplate": "Max Depth<br>Dive %{x:.0f}<br>depth %{y:.1f} m<extra></extra>",
+            }
+        )
+
     title_text = f"{mission_str}<br>Internal Sensors"
 
     fig.update_layout(
@@ -316,6 +376,24 @@ def mission_int_sensors(
                 "position": 1,
                 "showgrid": False,
             },
+            # Starts hidden along with its trace - DEPTH_AXIS_TOGGLE_POST_SCRIPT
+            # shows it when the trace is turned on. The explicit range puts 0 m
+            # at the top, deepest dive at the bottom.
+            "yaxis4": {
+                "title": "Max Depth (m)",
+                "overlaying": "y1",
+                "anchor": "free",
+                "side": "left",
+                "position": 0.0,
+                "showgrid": False,
+                "range": [
+                    df_max_depth["max_depth"].max() * 1.05
+                    if df_max_depth is not None
+                    else 1.0,
+                    0.0,
+                ],
+                "visible": False,
+            },
             "legend": {
                 "x": 1.05,
                 "y": 1,
@@ -340,5 +418,8 @@ def mission_int_sensors(
             base_opts,
             "eng_mission_int_sensors",
             fig,
+            post_script=DEPTH_AXIS_TOGGLE_POST_SCRIPT
+            if df_max_depth is not None
+            else None,
         ),
     )
