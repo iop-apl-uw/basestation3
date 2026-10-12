@@ -1272,7 +1272,7 @@ def check_legato_sealevel(
             f"{capture_file.name if capture_file else '?'}; update to {reported:g}"
         )
         log_warning(message, alert="LEGATO_SEALEVEL")
-        status = "warn"
+        status = "crit"
     else:
         message = ""
         status = "ok"

@@ -190,3 +190,28 @@ def test_detect_ctd_type_logdev_config_only_unchanged() -> None:
     )
     finding = CalibConstCheck.detect_ctd_type(calib_consts, evidence)
     assert "legato_config set - configured for logdev use" in str(finding["expected"])
+
+
+_LEGATO_SEALEVEL_CAPTURE = pathlib.Path("testdata/sg261_Shilshole_17Jul26_legatoPoll/pt2610003.cap")
+
+
+def test_check_legato_sealevel_mismatch_is_crit() -> None:
+    """A legato_sealevel that differs from the glider-reported HLEGATO
+    pressure (10152 in this capture) is flagged crit (red in the selftest
+    view), not just a warning."""
+    findings = CalibConstCheck.check_legato_sealevel(
+        {"legato_sealevel": 10082.0}, _LEGATO_SEALEVEL_CAPTURE
+    )
+    assert len(findings) == 1
+    assert findings[0]["status"] == "crit"
+    assert "update to 10152" in findings[0]["message"]
+
+
+def test_check_legato_sealevel_match_is_ok() -> None:
+    """A legato_sealevel within tolerance of the glider-reported pressure is ok."""
+    findings = CalibConstCheck.check_legato_sealevel(
+        {"legato_sealevel": 10152.0}, _LEGATO_SEALEVEL_CAPTURE
+    )
+    assert len(findings) == 1
+    assert findings[0]["status"] == "ok"
+    assert findings[0]["message"] == ""
