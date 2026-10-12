@@ -2523,16 +2523,16 @@ imestamp
         
             sst = L.tileLayer("https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.png",
                                     {
-                                        layer: 'MODIS_Aqua_L3_SST_Thermal_4km_Day_8Day',
+                                        layer: 'GHRSST_L4_MUR_Sea_Surface_Temperature',
                                         format: "image/png",
-                                        tileMatrixSet: 'GoogleMapsCompatible_Level6',
+                                        tileMatrixSet: 'GoogleMapsCompatible_Level7',
                                         time: 'default',
-                                        maxNativeZoom: 5,
+                                        maxNativeZoom: 7,
                                         maxZoom: 10,
                                         opacity: 1.0
                                     });
 
-            if (checkLayerState("SST (MODIS 8-day day)", "on")) 
+            if (checkLayerState("SST (MUR daily)", "on")) 
                 map.addLayer(sst);
 
             // sea ice
@@ -2690,7 +2690,7 @@ imestamp
                 },
                 "satellite": {
                     "SSH": ssh,
-                    "SST (MODIS 8-day day)": sst,
+                    "SST (MUR daily)": sst,
                     "sea ice (AMSR2)": seaIce,
                     "Chlorophyll-A (Aqua MODIS L2)": chlA,
                 },
