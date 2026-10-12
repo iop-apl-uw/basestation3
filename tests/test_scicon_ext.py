@@ -189,3 +189,83 @@ def test_convert_dat_to_eng_timeout_alert_threshold(
     assert f"%timeouts: {timeouts}" in eng.read_text()
     assert ("TIMEOUT" in log_alerts()) is alert
     BaseLogger.reset()
+
+
+def _cast(tmp_path: pathlib.Path, data_lines: list[str]) -> tuple[pathlib.Path, pathlib.Path, object, object]:
+    """A minimal ct cast: time and two delta-encoded columns, scale 1, offset 0."""
+    from types import SimpleNamespace
+
+    dat = tmp_path / "ct.dat"
+    dat.write_text("% columns: time t c\n" + "".join(f"{line}\n" for line in data_lines))
+    df_meta = SimpleNamespace(
+        instrument=SimpleNamespace(instr_class="ct"),
+        scale_off=[scicon_ext.scale_off_type(1.0, 0.0)] * 3,
+        start_time=1000.0,
+        columns="time t c",
+        sealevel=None,
+    )
+    return dat, tmp_path / "ct.eng", df_meta, SimpleNamespace(timeout_alert_threshold=5)
+
+
+def _rows(eng: pathlib.Path) -> list[list[float]]:
+    return [[float(v) for v in line.split()] for line in eng.read_text().splitlines() if not line.startswith("%")]
+
+
+@pytest.mark.parametrize(
+    ("bad", "reason"),
+    [
+        ("1000 -4-354 2", "invalid literal for int() with base 10: '-4-354'"),  # sg271 sc0095b: fused values
+        ("1000 3", "2 values, expected 3"),  # short line
+    ],
+)
+def test_convert_dat_to_eng_stops_at_a_bad_line(
+    tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture, bad: str, reason: str
+) -> None:
+    """A damaged data line keeps the rows before it - values are deltas, so nothing after it is used."""
+    dat, eng, df_meta, base_opts = _cast(tmp_path, ["0 10 20", "1000 1 2", "1000 1 2", bad, "1000 1 2"])
+    with caplog.at_level(logging.ERROR):
+        assert scicon_ext.ConvertDatToEng(dat, eng, df_meta, base_opts) == 0
+    assert _rows(eng) == [[1000.0, 10.0, 20.0], [1001.0, 11.0, 22.0], [1002.0, 12.0, 24.0]]
+    assert f"Bad data line 5 of {dat} ({reason}) - keeping the 3 row(s) before it" in caplog.text
+    assert "%timeouts: 0" in eng.read_text()
+
+
+def test_convert_dat_to_eng_bad_first_line(tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture) -> None:
+    dat, eng, df_meta, base_opts = _cast(tmp_path, ["0 1x0 20", "1000 1 2"])
+    with caplog.at_level(logging.ERROR):
+        assert scicon_ext.ConvertDatToEng(dat, eng, df_meta, base_opts) == 1
+    assert f"Bad data line 2 of {dat}" in caplog.text
+
+
+def test_convert_dat_to_eng_clean_cast(tmp_path: pathlib.Path) -> None:
+    dat, eng, df_meta, base_opts = _cast(tmp_path, ["0 10 20", "1000 1 2", "1000 -1 -2"])
+    assert scicon_ext.ConvertDatToEng(dat, eng, df_meta, base_opts) == 0
+    assert _rows(eng) == [[1000.0, 10.0, 20.0], [1001.0, 11.0, 22.0], [1002.0, 10.0, 20.0]]
+
+
+_HEADER = (
+    "%instrument: 0 ct\n%columns: time(1000,0) t(1,0) c(1,0)\n%container: sc0849b\n"
+    "%start: 9 28 125 5 40 10\n%samples: 3\n%sealevel: 10082\n%data:\n"
+)
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "message"),
+    [
+        ("%sealevel: 10082\n", "%sealevel:  \n", "Bad %sealevel value '' in"),  # sg240 sc0849b: truncated header
+        ("%samples: 3\n", "%samples: 3x\n", "Bad %samples value '3x' in"),
+        ("%start: 9 28 125 5 40 10\n", "%start: 9 28\n", "Problems parsing %start in"),
+    ],
+)
+def test_extract_file_metadata_bad_header_field(
+    tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture, old: str, new: str, message: str
+) -> None:
+    """A garbled header field skips the file with a warning - no exception."""
+    good = tmp_path / "good.dat"
+    good.write_text(_HEADER)
+    meta, _ = scicon_ext.extract_file_metadata(good)
+    assert (meta.samples, meta.sealevel, meta.instrument.instr_class) == (3, 10082, "ct")
+    bad = tmp_path / "ct.dat"
+    bad.write_text(_HEADER.replace(old, new))
+    assert scicon_ext.extract_file_metadata(bad) == (None, None)
+    assert message in caplog.text and "skipping file" in caplog.text

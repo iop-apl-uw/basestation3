@@ -903,10 +903,20 @@ def extract_file_metadata(inp_file_name):
                 container = raw_strs[1].rstrip().lstrip()
             if raw_strs[0] == "%comment":
                 comment = raw_strs[1].rstrip().lstrip()
-            if raw_strs[0] == "%samples":
-                samples = int(raw_strs[1])
-            if raw_strs[0] == "%sealevel":
-                sealevel = int(raw_strs[1])
+            if raw_strs[0] in ("%samples", "%sealevel"):
+                # A header cut short in transmission leaves these blank or garbled
+                try:
+                    value = int(raw_strs[1])
+                except ValueError:
+                    log_warning(
+                        f"Bad {raw_strs[0]} value {raw_strs[1].strip()[:40]!r} in {inp_file_name} - skipping file"
+                    )
+                    inp_file.close()
+                    return None, None
+                if raw_strs[0] == "%samples":
+                    samples = value
+                else:
+                    sealevel = value
             if (
                 raw_strs[0] == "%xform"
                 or raw_strs[0] == "%tcm2mat"
@@ -923,7 +933,8 @@ def extract_file_metadata(inp_file_name):
                         log_warning(
                             f"Problems parsing %start in {inp_file_name} ({exception}) - skipping file"
                         )
-                        raise
+                        inp_file.close()
+                        return None, None
                     time_val = start_time
 
                 else:
@@ -934,7 +945,8 @@ def extract_file_metadata(inp_file_name):
                         log_warning(
                             f"Problems parsing %stop in {inp_file_name} ({exception}) - skipping file"
                         )
-                        raise
+                        inp_file.close()
+                        return None, None
                     time_val = stop_time
                 if container is not None and (container[-1] in ("a", "b", "c", "d")):
                     instrument_name = [instrument.instr_class]
@@ -1149,6 +1161,9 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
 
     first_line = True
     timeout_count = 0
+    rows_written = 0
+    num_cols = 0
+    cols: list[int] = []
     if "legato" in df_meta.instrument.instr_class.lower():
         # log_info("match")
         legato_error_count = 0
@@ -1335,18 +1350,31 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
         else:
             # Data line
             parts = raw_line.split()
+            # A line damaged in transmission - fused or missing values. The values are
+            # deltas from the previous row, so nothing after it can be trusted: keep the
+            # rows so far and drop the rest of the cast.
+            try:
+                vals = [int(p) for p in parts]
+                if not first_line and len(vals) < num_cols:
+                    raise ValueError(f"{len(vals)} values, expected {num_cols}")
+            except ValueError as exception:
+                log_error(
+                    f"Bad data line {line_count} of {inp_file_name} ({exception}) - keeping the "
+                    f"{rows_written} row(s) before it, skipping the rest of the cast: {raw_line.strip()[:80]!r}"
+                )
+                if first_line:
+                    return 1
+                break
             if first_line:
-                cols = []
-                num_cols = len(parts)
+                num_cols = len(vals)
                 if not df_meta.start_time:
                     log_error("Start time not seen before data -  bailing out")
                     return 1
-                for p in range(num_cols):
-                    cols.append(int(parts[p]))
+                cols = vals[:num_cols]
                 first_line = False
             else:
                 for i in range(num_cols):
-                    cols[i] = cols[i] + int(parts[i])
+                    cols[i] = cols[i] + vals[i]
 
             # Time is special in that we are accumulating milli seconds, but report
             # in epoch time
@@ -1418,6 +1446,7 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
             for ii in range(len(out_cols)):
                 out_file.write(fmts[ii] % out_cols[ii])
             out_file.write("\n")
+            rows_written += 1
 
     out_file.write("%%timeouts: %d\n" % timeout_count)
     if timeout_count > 0:
