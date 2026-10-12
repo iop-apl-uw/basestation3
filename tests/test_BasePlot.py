@@ -478,3 +478,36 @@ def test_wkb_schedule_off_by_default(tmp_path):
         calling_module="BasePlot",
     )
     assert enabled.enable_wkb_schedule is True and enabled.wkb_buoyfreq is True
+
+
+def test_mission_profiles_without_timeseries_file(tmp_path, caplog):
+    """With plotting_use_parquet off and no mission timeseries file (not made by default
+    since 68f7eba), mission_profiles says what to turn on instead of logging a traceback.
+
+    sg255 AMOS_Jul25 (2025-08, release 3.0.2): FileNotFoundError @ Utils.open_netcdf_file.
+    """
+    data_dir_path = pathlib.Path("testdata/sg686_Shilshole_25Oct25_multidive")
+    mission_dir = tmp_path / "mission_dir"
+    cmd_line = [
+        "--verbose",
+        "--mission_dir",
+        str(mission_dir),
+        "--force",
+        "--plot_types",
+        "mission",
+        "--mission_plots",
+        "mission_profiles",
+        "--no-plotting_use_parquet",
+        "--no-notify_vis",
+    ]
+    testutils.run_mission(
+        data_dir_path,
+        mission_dir,
+        Base.main,
+        cmd_line,
+        caplog,
+        [""],
+        required_msgs=["doesn't exist - mission_profiles reads it when plotting_use_parquet is off"],
+    )
+    assert "Traceback" not in caplog.text
+    assert "FileNotFoundError" not in caplog.text

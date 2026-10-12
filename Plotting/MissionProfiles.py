@@ -182,6 +182,13 @@ def mission_profiles(
         nci=None
     else:
         ncname = Utils2.get_mission_timeseries_name(base_opts)
+        if not pathlib.Path(ncname).exists():
+            # Since 68f7eba (2025-12) the whole-mission timeseries file isn't made by default
+            log_error(
+                f"{ncname} doesn't exist - mission_profiles reads it when plotting_use_parquet is off; "
+                "turn on --make_mission_timeseries or --plotting_use_parquet - skipping mission_profiles"
+            )
+            return ([], [])
 
         try:
             nci = Utils.open_netcdf_file(ncname, "r")
