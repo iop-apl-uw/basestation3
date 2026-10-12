@@ -27,6 +27,8 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
+
 import numpy as np
 import pandas as pd
 
@@ -69,3 +71,28 @@ def test_complete_track_points_none_when_no_complete_row() -> None:
         }
     )
     assert MakeKML.complete_track_points(dive_track, TRACK_VARS) is None
+
+
+def test_print_targets_skips_bad_target_line(tmp_path, caplog) -> None:
+    """A target with blank coordinates is warned about and skipped, the rest are written.
+
+    sg676 ARIA2026_backup (2026-02-02, release 3.0.6) had `ESCAPE lat= lon= ...`, which raised
+    a ValueError in printTargets before d110515 added the input checks.
+    """
+    import io
+
+    import Base  # noqa: F401 - normal import order
+
+    targets = tmp_path / "targets"
+    targets.write_text(
+        "T1 lat=-6805.787 lon=-6956.447 radius=500 goto=T1 escape=T2\n"
+        "ESCAPE lat= lon= radius=1000 goto=ESCAPE escape=ESCAPE\n"
+    )
+    fo = io.StringIO()
+    with caplog.at_level(logging.WARNING):
+        MakeKML.printTargets("T1", False, targets, 676, True, fo)
+    kml = fo.getvalue()
+    assert "<name>T1</name>" in kml
+    assert "<name>ESCAPE</name>" not in kml
+    assert f"Failed to convert lat= (could not convert string to float: '') (file:{targets}, lineno:2" in caplog.text
+    assert "Traceback" not in caplog.text
