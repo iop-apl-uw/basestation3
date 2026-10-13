@@ -31,12 +31,12 @@ This is the base glider configuration for all seagliders.  In this example, some
 ### [project.yml](project.yml) (--option gliderdac_project_config)
 
 Intended as the location for config that applies to a set of gliders operating in a single
-project/experiment.  Settings here, override those in seaglider.yml.
+project/experiment.  Settings here add to, or override, those in seaglider.yml.
 
 ### [sgXXX.yml](sgXXX.yml) (--option gliderdac_deployment_config)
 
 Intended as config related to specific glider on a specific deployment. Settings here 
-override the other two config files.
+add to, or override, the other two config files.
 
 ### [sg000/.ftp](../../sg000/.ftp)
 
@@ -46,6 +46,27 @@ you user account)
 ### [sg000/.extensions](../../sg000/.extensions)
 
 The sample .extension file shows how to enable the GliderDAC.py extension
+
+## Checking the configuration
+
+The three yml files are merged base, then project, then deployment - from the most general to the most
+specific. A later file adds to the earlier ones, key by key, and overrides any value they set (a list,
+e.g. `dimensions`, is replaced whole). To remove something an earlier file set - an attribute, a whole
+variable, a `timeseries_vars` entry - set it to `null` in the later file. Check them with
+`GliderDACModel.py` (every problem is reported as `file:line`; with `--verbose`, `check_merged` also
+lists each override and removal and where it came from):
+
+```
+GliderDACModel.py check sgXXX.yml                                  # one file on its own
+GliderDACModel.py dump sgXXX.yml > loaded.yml                      # one file, as loaded
+GliderDACModel.py --verbose check_merged --config sgXXX.conf       # the files the .conf names, merged
+GliderDACModel.py dump_merged --config sgXXX.conf > merged.yml     # the merged template
+```
+
+A misspelled key, a bad `type` or `qc_data`, a YAML syntax error, or a `platform`/`instrument_*`
+variable without a `_FillValue` stops GliderDAC output until fixed. A variable
+left without `type`, `dimensions` or `attributes` after the merge - often a mis-indented block - is
+dropped and the rest is still written. Both raise the `GLIDERDAC_CONFIG` alert.
 
 ## Processing
 

@@ -57,17 +57,16 @@ import sys
 import time
 import traceback
 import typing
-from functools import reduce
 
 import gsw
 import netCDF4
 import numpy as np
 import plotly.graph_objects
 import xarray as xr
-import yaml
 
 import BaseOpts
 import BaseOptsType
+import GliderDACModel
 import MakeDiveProfiles
 import NetCDFUtils
 import PlotUtils
@@ -335,46 +334,26 @@ def load_templates(base_opts: BaseOpts.BaseOptions) -> dict[str, typing.Any] | N
         is missing or a template file couldn't be loaded/merged.
     """
 
-    # Check for all variables being set
-    if not base_opts.gliderdac_base_config:
-        log_error("gliderdac_base_config file not specified")
+    template_files = GliderDACModel.templates_from_opts(base_opts)
+    if template_files is None:
         return None
 
-    if not base_opts.gliderdac_project_config:
-        log_error("gliderdac_project_config file not specified")
-        return None
-
-    if not base_opts.gliderdac_deployment_config:
-        log_error("gliderdac_deployment_config file not specified")
-        return None
-
-    templates = [{}]
-    for file_name, option_name in (
-        (base_opts.gliderdac_base_config, "gliderdac_base_config"),
-        (base_opts.gliderdac_project_config, "gliderdac_project_config"),
-        (base_opts.gliderdac_deployment_config, "gliderdac_deployment_config"),
-    ):
-        if not file_name:
-            log_warning(f"GliderDAC option --{option_name} not specified")
-            continue
-        if not file_name.exists():
-            log_info(f"{file_name} does not exist - skipping")
-            continue
-        try:
-            with open(file_name, "r") as fi:
-                templates.append(yaml.safe_load(fi.read()))
-        except Exception:
-            log_error(f"Could not procss {file_name}", "exc")
-            return None
-
-    # Merge templates together
-    try:
-        reduce(NetCDFUtils.merge_dict, templates)
-    except Exception as e:
-        log_error(f"Error merging config templates - {e.args}")
-        return None
-
-    return templates[0]
+    # Validated and merged, most general first - later templates override earlier
+    # ones. Each problem is reported at file:line (check with GliderDACModel.py
+    # check_merged). Problems fail the load; an incomplete variable is dropped and
+    # the rest used.
+    result = GliderDACModel.load_merged(template_files)
+    for change in result.changes:
+        log_debug(change)
+    for problem in result.problems + result.dropped:
+        log_error(problem, alert="GLIDERDAC_CONFIG")
+    merged = result.template
+    if merged is None:
+        log_error(
+            "GliderDAC templates have problems (listed above) - no GliderDAC output",
+            alert="GLIDERDAC_CONFIG",
+        )
+    return merged
 
 
 def find_deepest_bin_i(
@@ -429,57 +408,10 @@ def load_additional_arguments() -> (
             "save_svg",
         ],
         # Description for any option_group tags used below
-        {"gliderdac": "NetCDF file generation for submission to the Glider DAC"},
+        {"gliderdac": GliderDACModel.OPTION_GROUP_HELP},
         # Add these options that are local to this extension
         {
-            "gliderdac_base_config": BaseOptsType.options_t(
-                None,
-                {
-                    "Base",
-                    "Reprocess",
-                    "GliderDAC",
-                },
-                ("--gliderdac_base_config",),
-                BaseOpts.FullPathlib,
-                {
-                    "help": "GliderDAC base configuration YAML file - common for all Seagliders",
-                    "section": "gliderdac",
-                    "option_group": "gliderdac",
-                    "action": BaseOpts.FullPathlibAction,
-                },
-            ),
-            "gliderdac_project_config": BaseOptsType.options_t(
-                None,
-                {
-                    "Base",
-                    "Reprocess",
-                    "GliderDAC",
-                },
-                ("--gliderdac_project_config",),
-                BaseOpts.FullPathlib,
-                {
-                    "help": "GliderDAC project configuration YAML file - common for single study area",
-                    "section": "gliderdac",
-                    "option_group": "gliderdac",
-                    "action": BaseOpts.FullPathlibAction,
-                },
-            ),
-            "gliderdac_deployment_config": BaseOptsType.options_t(
-                None,
-                {
-                    "Base",
-                    "Reprocess",
-                    "GliderDAC",
-                },
-                ("--gliderdac_deployment_config",),
-                BaseOpts.FullPathlib,
-                {
-                    "help": "GliderDAC deployoment configuration YAML file - specific to the current glider deoployment",
-                    "section": "gliderdac",
-                    "option_group": "gliderdac",
-                    "action": BaseOpts.FullPathlibAction,
-                },
-            ),
+            **GliderDACModel.template_options({"Base", "Reprocess", "GliderDAC"}),
             "gliderdac_directory": BaseOptsType.options_t(
                 None,
                 {

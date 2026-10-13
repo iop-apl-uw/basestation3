@@ -106,6 +106,17 @@ may need to take action on - consult the text for further details.  Every such l
 (e.g. <code>HTMICL TMICL logging already stopped</code>) are logged in the baselog without an alert.
 </p>
 
+<p><a name="GLIDERDAC_CONFIG">GLIDERDAC_CONFIG<br>
+A GliderDAC configuration template (<code>--gliderdac_base_config</code>, <code>--gliderdac_project_config</code>,
+<code>--gliderdac_deployment_config</code>) has a problem; each message gives the file and line.  A problem with a
+file's form (a misspelled key, a bad <code>type</code> or <code>qc_data</code>, YAML syntax), or a
+<code>platform</code>/<code>instrument_*</code> variable without a
+<code>_FillValue</code> stops GliderDAC output entirely until it is fixed.  A variable that ends up without a
+<code>type</code>, <code>dimensions</code> or <code>attributes</code> (often a mis-indented block) is dropped, and the
+rest of the output is still made.  Check the templates with
+<code>GliderDACModel.py check_merged --conf sgNNN.conf</code>.
+</p>
+
 <p><a name="GLIDER_TIMEOUT">GLIDER_TIMEOUT<br>
 The glider logged more than <code>--glider_timeout_alert_threshold</code> (default 3) <code>$WARN,&lt;name&gt; timeout</code>
 lines of one kind (e.g. <code>pressure timeout</code>, <code>PPS timeout</code>) in a dive.  One per dive is common and only
