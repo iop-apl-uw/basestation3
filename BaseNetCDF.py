@@ -32,23 +32,20 @@
 
 # import configparser
 import contextlib
-import os
 import sys
 import time
 import uuid
 import warnings
-from functools import reduce
 from typing import TYPE_CHECKING, Literal
 
 import netCDF4
 import numpy as np
-import yaml
 
 import Globals
-import NetCDFUtils
+import NODCModel
 import QC
 import Utils
-from BaseLog import log_critical, log_debug, log_error, log_info, log_warning
+from BaseLog import log_critical, log_debug, log_error, log_warning
 
 if TYPE_CHECKING:
     nc_var_metadata: dict[str, bool, Literal["i", "d", True, False], dict, tuple]
@@ -342,80 +339,23 @@ def merge_instruments(master_instruments_d, slave_instruments_d):
 
 
 def update_globals_from_nodc(base_opts, globals_d):
-    """Parse global and local NODC.yml files, if any and update globals_d"""
+    """Updates globals_d from the site, group (--group_etc) and mission NODC.yml files, if any.
 
-    nodc_cnf_file = "NODC.yml"
-    # Important NOTE:
-    # all the names (but NOT the values) in the name,value pairs are coerced to lowercase!
-
-    # build from globals_d and declarations
-    nodc_dicts = [{}]
-    for name, merge_fns in list(nc_global_variables.items()):
-        cnf_override, _, _ = merge_fns
-        if cnf_override and name in globals_d:
-            nodc_dicts[0][name] = globals_d[name]
-
-    for yaml_filename in (
-        base_opts.basestation_etc / nodc_cnf_file,
-        base_opts.mission_dir / nodc_cnf_file,
-    ):
-        if os.path.exists(yaml_filename):
-            try:
-                with open(yaml_filename, "r") as fi:
-                    nodc_dicts.append(yaml.safe_load(fi.read()))
-            except Exception:
-                log_error(f"Could not process {yaml_filename} - skipping", "exc")
-
-        else:
-            log_info(f"{yaml_filename} does not exist - skipping")
-
-    try:
-        reduce(
-            lambda x, y: NetCDFUtils.merge_dict(x, y, allow_override=True), nodc_dicts
-        )
-    except Exception:
-        log_error("Error merging config templates", "exc")
-    else:
-        for k, v in nodc_dicts[0].items():
-            log_debug(f"Updating {k} to {v}")
-            globals_d[k] = v  # these should always strings
-
-    # Prevoius .cnf based code
-
-    # cp = configparser.RawConfigParser(nodc_defaults)
-    # try:
-    #     files = cp.read(
-    #         [
-    #             global_nodc_file,
-    #             mission_nodc_file,
-    #         ]
-    #     )
-    # except:
-    #     # One way to get here is to have continuation lines on an entry like references: or acknowledgment:
-    #     # that are not indented by a single space AND have a colon somewhere in the line
-    #     # In this case you'll get a complaint about an unknown global variable with that phrase in lower case
-    #     # NOTE: if there is a continuation but no space and no colon the parser skips it without complaint
-    #     log_warning(f"Problems reading information from {nodc_cnf_file}")  # problems...
-
-    # if cp.has_section("NODC"):
-    #     for pair in cp.items("NODC"):
-    #         name, value = pair
-    #         globals_d[name] = value  # these are always strings
-    # else:
-    #     log_warning(
-    #         f"No [NODC] section found in {global_nodc_file} or {mission_nodc_file}"
-    #     )
-
-    # if cp.has_section("NODC_controls"):
-    #     for pair in cp.items("NODC_controls"):
-    #         name, value = pair
-    #         controls_d[name] = value  # these are always strings
-    # else:
-    #     log_error(
-    #         f"No [NODC_controls] section found in {global_nodc_file} or {mission_nodc_file}"
-    #     )
-
-    return
+    Checked and merged by NODCModel (site, then group, then mission, each overriding
+    the earlier ones; a null leaves the earlier or default value). A bad key is dropped and an unusable
+    file skipped, each logged at file:line with the NODC_CONFIG alert; the rest
+    still applies. Check a mission's files with NODCModel.py check_merged.
+    """
+    result = NODCModel.load_merged(NODCModel.config_files(base_opts))
+    for change in result.changes:
+        log_debug(change)
+    for warning in result.warnings:
+        log_warning(warning)
+    for problem in result.problems:
+        log_error(problem, alert="NODC_CONFIG")
+    for k, v in result.values.items():
+        log_debug(f"Updating {k} to {v}")
+        globals_d[k] = v
 
 
 def form_NODC_title(instruments, nodc_globals_d, nc_globals_d, mission_title):

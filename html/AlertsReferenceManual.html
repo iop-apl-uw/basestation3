@@ -127,6 +127,16 @@ plot names, is skipped.  Check a mission's files with
 <code>DiveScienceModel.py --verbose check_merged -m &lt;mission_dir&gt;</code>.
 </p>
 
+<p><a name="NODC_CONFIG">NODC_CONFIG<br>
+A <code>NODC.yml</code> (in the basestation <code>etc</code> directory, the <code>--group_etc</code> directory
+or the mission directory), which sets
+the netCDF global attributes, has a problem; each message gives the file and line.  A key whose value isn't a
+string or a number, or that names an attribute basestation sets itself (<code>featureType</code>,
+<code>nodc_template_version</code>, ...), is ignored; the rest of the file still applies.  A file that isn't
+valid YAML, or isn't a mapping of attribute names, is skipped.  Check a mission's files with
+<code>NODCModel.py --verbose check_merged -m &lt;mission_dir&gt;</code>.
+</p>
+
 <p><a name="GLIDER_TIMEOUT">GLIDER_TIMEOUT<br>
 The glider logged more than <code>--glider_timeout_alert_threshold</code> (default 3) <code>$WARN,&lt;name&gt; timeout</code>
 lines of one kind (e.g. <code>pressure timeout</code>, <code>PPS timeout</code>) in a dive.  One per dive is common and only
