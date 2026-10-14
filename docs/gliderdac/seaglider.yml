@@ -448,11 +448,6 @@ variables:
     dimensions: [ time ]
     num_digits: 3
     type: f8
-  temperature_n:
-    attributes:
-      _FillValue: -999
-    dimensions: [ time ]
-    type: i2
   temperature_qc:
     attributes:
       _FillValue: -127

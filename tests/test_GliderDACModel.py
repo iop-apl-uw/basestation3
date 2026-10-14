@@ -235,6 +235,68 @@ def test_cli_merged(tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture, ca
     assert "gliderdac_deployment_config file not specified" in caplog.text
 
 
+MISINDENTED = (
+    "variables:\n"
+    "  platform:\n"
+    "    attributes:\n"
+    "      _FillValue: -999\n"
+    "      type: platform\n"
+    "    dimensions: []\n"
+    "    type: i4\n"
+    "  dissolved_oxygen_n:\n"
+    "    attributes:\n"
+    "      _FillValue: -999\n"
+    "      dimensions: [time]\n"
+    "      type: i2\n"
+)
+
+
+@pytest.mark.parametrize("path", DOCS_TRIPLE)
+def test_cli_check_docs_examples(path: pathlib.Path, caplog: pytest.LogCaptureFixture) -> None:
+    """GliderDACModel.py check passes each docs/gliderdac example on its own, with no warnings."""
+    with caplog.at_level(logging.WARNING):
+        assert GliderDACModel.main(["check", str(path)]) == 0
+    assert caplog.records == []
+
+
+def test_cli_check_merged_docs_examples(tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture) -> None:
+    """GliderDACModel.py check_merged passes the three docs/gliderdac examples merged, with no warnings."""
+    conf = _conf(tmp_path, "sgXXX.conf", list(DOCS_TRIPLE))
+    with caplog.at_level(logging.WARNING):
+        assert GliderDACModel.main(["check_merged", "--config", str(conf)]) == 0
+    assert caplog.records == []
+
+
+def test_suspect_attributes(tmp_path: pathlib.Path) -> None:
+    """A variable field indented under attributes is flagged; platform's real type attribute isn't (OSU sg686)."""
+    path = _write(tmp_path, "seaglider.yml", MISINDENTED)
+    loaded, problems = GliderDACModel.check_file(path)
+    assert loaded is not None and problems == []
+    assert GliderDACModel.suspect_attributes(loaded) == [
+        f"{path}:11: variables.dissolved_oxygen_n.attributes.dimensions: looks like a variable field indented under attributes",
+        f"{path}:12: variables.dissolved_oxygen_n.attributes.type: looks like a variable field indented under attributes",
+    ]
+
+
+def test_cli_suspect_and_missing(tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture) -> None:
+    """check warns (exit 0); check_merged warns, names missing templates, and fails if none exist."""
+    path = _write(tmp_path, "seaglider.yml", MISINDENTED)
+    with caplog.at_level(logging.WARNING):
+        assert GliderDACModel.main(["check", str(path)]) == 0
+    assert "dissolved_oxygen_n.attributes.type: looks like a variable field" in caplog.text
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        assert GliderDACModel.main(["check_merged", "--config", str(_conf(tmp_path, "a.conf", [path, *DOCS_TRIPLE[1:]]))]) == 1
+    assert "dissolved_oxygen_n.attributes.dimensions: looks like a variable field" in caplog.text
+    assert "(type, dimensions found under attributes - mis-indented?)" in caplog.text
+    caplog.clear()
+    gone = [tmp_path / "x.yml", tmp_path / "y.yml", tmp_path / "z.yml"]
+    with caplog.at_level(logging.WARNING):
+        assert GliderDACModel.main(["check_merged", "--config", str(_conf(tmp_path, "b.conf", gone))]) == 1
+    assert f"gliderdac_base_config {gone[0].resolve()} does not exist - not checked" in caplog.text
+    assert "names exist - nothing to check" in caplog.text
+
+
 def test_cli_merged_missing_dropped_overrides(tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture) -> None:
     """check_merged skips a missing template (as GliderDAC.py does), fails on a dropped variable, logs overrides."""
     missing = tmp_path / "missing.yml"

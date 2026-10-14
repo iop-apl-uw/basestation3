@@ -67,6 +67,10 @@ A misspelled key, a bad `type` or `qc_data`, a YAML syntax error, or a `platform
 variable without a `_FillValue` stops GliderDAC output until fixed. A variable
 left without `type`, `dimensions` or `attributes` after the merge - often a mis-indented block - is
 dropped and the rest is still written. Both raise the `GLIDERDAC_CONFIG` alert.
+`check` and `check_merged` also warn about an attribute named like a variable field with a value that
+would fit it (e.g. `type: i2` or `dimensions: [time]` under `attributes`) - valid on its own, but almost
+always a field indented one level too far. `platform`'s and `instrument_*`'s own `type` attribute
+(`type: platform`) isn't flagged.
 
 ## Processing
 

@@ -78,7 +78,7 @@ import BaseOpts
 import BaseOptsType
 import QC
 import YamlValidation
-from BaseLog import BaseLogger, log_error, log_info
+from BaseLog import BaseLogger, log_error, log_info, log_warning
 
 Scalar = StrictStr | int | float | bool
 AttrValue = Scalar | list[Scalar]
@@ -263,6 +263,42 @@ def check_file(path: pathlib.Path) -> tuple[LoadedTemplate | None, list[str]]:
     return LoadedTemplate(path, data, locate), []
 
 
+def suspect_attributes(template: LoadedTemplate) -> list[str]:
+    """Attributes named like a variable field - most likely the field indented under attributes.
+
+    Only an attribute whose value is also valid for the field it's named after counts
+    (type: i2, not platform's type: platform). netCDF allows such names, so this is a
+    warning, not a problem: valid in one file, but usually a mis-indented block (OSU sg686's
+    dissolved_oxygen_n, 2026-10). If no later template supplies the real field the
+    merge drops the variable; if one does, the stray attribute is written to the file.
+
+    Args:
+        template: A template that loaded.
+
+    Returns:
+        One warning per suspect attribute, "file:line: where: message".
+
+    Raises:
+        Nothing.
+    """
+    fields = set(VariableSpec.model_fields) - {"attributes"}
+    warnings = []
+    for name, spec in (template.data.get("variables") or {}).items():
+        attributes = (spec or {}).get("attributes") or {}
+        for key, value in attributes.items():
+            if key not in fields:
+                continue
+            # platform/instrument_* carry a real "type" attribute (type: platform) - only
+            # warn when the value would also be valid for the field it's named after
+            try:
+                VariableSpec.model_validate({key: value})
+            except ValidationError:
+                continue
+            loc = ("variables", name, "attributes", key)
+            warnings.append(f"{template.where(loc)}: {'.'.join(loc)}: looks like a variable field indented under attributes")
+    return warnings
+
+
 def _without_nulls(value: Any) -> Any:
     """A copy of a template value with null entries left out (null only means "remove").
 
@@ -401,6 +437,7 @@ class MergeResult:
         problems: Problems that fail the load.
         dropped: Incomplete variables left out of template (errors, but the rest is used).
         changes: Overrides and removals by the more specific templates (not problems).
+        warnings: Suspect attributes (see suspect_attributes) - not problems.
     """
 
     def __init__(self) -> None:
@@ -414,6 +451,7 @@ class MergeResult:
         self.problems: list[str] = []
         self.dropped: list[str] = []
         self.changes: list[str] = []
+        self.warnings: list[str] = []
 
 
 def load_merged(paths: list[pathlib.Path]) -> MergeResult:
@@ -436,6 +474,7 @@ def load_merged(paths: list[pathlib.Path]) -> MergeResult:
         result.problems += file_problems
         if template is not None:
             loaded.append(template)
+            result.warnings += suspect_attributes(template)
     if result.problems:
         return result
     merged, result.changes = merge_templates(loaded)
@@ -565,6 +604,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             log_error(problem)
         if problems or loaded is None:
             return 1
+        for warning in suspect_attributes(loaded):
+            log_warning(warning)
         if base_opts.action == "dump":
             _dump(loaded.data)
         else:
@@ -584,9 +625,19 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     templates = templates_from_opts(base_opts)
     if templates is None:
         return 1
+    # GliderDAC.py skips a missing template quietly; here it is what's being checked
+    for name in TEMPLATE_OPTIONS:
+        path = pathlib.Path(getattr(base_opts, name))
+        if path not in templates:
+            log_warning(f"{name} {path} does not exist - not checked")
+    if not templates:
+        log_error(f"None of the templates {base_opts.config_file_name} names exist - nothing to check")
+        return 1
     result = load_merged(templates)
     for change in result.changes:
         log_info(change)
+    for warning in result.warnings:
+        log_warning(warning)
     for problem in result.problems + result.dropped:
         log_error(problem)
     merged = result.template
