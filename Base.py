@@ -1621,17 +1621,6 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             log_error("Setting nice to %d failed" % base_opts.nice)
 
     # Check for required "options"
-    if not base_opts.mission_dir:
-        print(main.__doc__)
-        log_critical("Dive directory must be supplied. See Base.py -h")
-        return 1
-
-    if not base_opts.mission_dir.exists():
-        log_critical(
-            f"Dive directory {base_opts.mission_dir} does not exist - bailing out"
-        )
-        return 1
-
     if PlotUtils.setup_plot_directory(base_opts):
         log_error("Failed to setup plot directory - no plots being generated")
 

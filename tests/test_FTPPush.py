@@ -27,6 +27,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import sys
 from unittest.mock import MagicMock
 
 import pytest
@@ -129,16 +130,17 @@ def test_ftppush_aggregates_failures(monkeypatch: pytest.MonkeyPatch, tmp_path) 
 
 
 def test_ftppush_missing_mission_dir_is_an_error(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    base_opts = _make_base_opts(None, "all")
-    base_opts.mission_dir = None
-    _patch_common(monkeypatch, base_opts)
-
+    """--mission_dir is required for FTPPush, so BaseOpts' parse stops a run without one
+    (FTPPush.main's own check was dead and is gone)."""
     process_ftp = MagicMock(return_value=0)
     monkeypatch.setattr(FTPPush.BaseDotFiles, "process_ftp", process_ftp)
+    monkeypatch.setattr(sys, "argv", ["FTPPush.py", "*.nc"])
 
-    result = FTPPush.main()
+    with pytest.raises(SystemExit) as exc:
+        FTPPush.main()
 
-    assert result == 1
+    assert exc.value.code == 2
+    assert "the following arguments are required: -m/--mission_dir" in capsys.readouterr().err
     process_ftp.assert_not_called()

@@ -39,7 +39,7 @@ import BaseDotFiles
 import BaseOpts
 import BaseOptsType
 import Globals
-from BaseLog import BaseLogger, log_error, log_info
+from BaseLog import BaseLogger, log_info
 
 
 def main():
@@ -78,10 +78,6 @@ def main():
         },
     )
     BaseLogger(base_opts)  # initializes BaseLog
-
-    if not base_opts.mission_dir:
-        log_error("mission_dir not defined")
-        return 1
 
     log_info(
         "Started processing "

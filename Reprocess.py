@@ -120,42 +120,34 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
-    if not base_opts.mission_dir:
-        log_error('You must specify --mission_dir"')
-        return 1
-
     full_dive_list: list[
         pathlib.Path
     ] = []  # all available dives we have data files for
     all_dive_nc_file_names: list[pathlib.Path] = []  # all available nc files
     dive_nc_file_names: list[pathlib.Path] = []  # those we actually MDPd
 
-    if base_opts.mission_dir.is_dir():
-        # Include only valid dive files
-        glob_expr = (
-            "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].log",
-            "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].eng",
-            "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc",
-            # "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc.gz"
-        )
-        for g in glob_expr:
-            nc_match = g.find(".nc") > 0
-            for match in base_opts.mission_dir.glob(g):
-                log_debug(f"Found dive file {match}")
-                if nc_match:
-                    all_dive_nc_file_names.append(match)
-                full_dive_list.append(pathlib.Path(match.parent) / match.stem)
-            full_dive_list = sorted(Utils.unique(full_dive_list))
+    # Include only valid dive files
+    glob_expr = (
+        "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].log",
+        "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].eng",
+        "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc",
+        # "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc.gz"
+    )
+    for g in glob_expr:
+        nc_match = g.find(".nc") > 0
+        for match in base_opts.mission_dir.glob(g):
+            log_debug(f"Found dive file {match}")
+            if nc_match:
+                all_dive_nc_file_names.append(match)
+            full_dive_list.append(pathlib.Path(match.parent) / match.stem)
+        full_dive_list = sorted(Utils.unique(full_dive_list))
 
-        dive_list, _ = Utils.expand_dive_spec(base_opts)
-        if dive_list:
-            log_info(f"Reprocessing dives {' '.join([dd.name for dd in dive_list])}")
-        else:
-            log_info(f"Making profiles for all dives in {base_opts.mission_dir}")
-            dive_list = full_dive_list
+    dive_list, _ = Utils.expand_dive_spec(base_opts)
+    if dive_list:
+        log_info(f"Reprocessing dives {' '.join([dd.name for dd in dive_list])}")
     else:
-        log_error(f"Directory {base_opts.mission_dir} does not exist -- exiting")
-        return 1
+        log_info(f"Making profiles for all dives in {base_opts.mission_dir}")
+        dive_list = full_dive_list
 
     sg_calib_file_name = base_opts.mission_dir / "sg_calib_constants.m"
     calib_consts = getSGCalibrationConstants(

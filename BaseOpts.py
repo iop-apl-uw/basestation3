@@ -156,6 +156,31 @@ def FullPathlib(x):
         return pathlib.Path(x).expanduser().resolve()
 
 
+def mission_dir_problem(mission_dir: pathlib.Path) -> str | None:
+    """Says what's wrong with a --mission_dir, if anything.
+
+    It must be a directory the user can read and search (r and x). Write access isn't
+    required - checkers and plots legitimately run on read-only directories. On NFS,
+    os.access asks the server, so the answer matches what the reads will get.
+
+    Args:
+        mission_dir: The --mission_dir value.
+
+    Returns:
+        A message for the parser's error, or None if it's usable.
+
+    Raises:
+        Nothing.
+    """
+    if not mission_dir.exists():
+        return f"--mission_dir {mission_dir} does not exist"
+    if not mission_dir.is_dir():
+        return f"--mission_dir {mission_dir} is not a directory"
+    if not os.access(mission_dir, os.R_OK | os.X_OK):
+        return f"--mission_dir {mission_dir} is not readable (needs r and x permission)"
+    return None
+
+
 class FullPathlibAction(argparse.Action):
     """Expand user- and relative-paths"""
 
@@ -2294,6 +2319,13 @@ class BaseOptions:
             and self.ignore_flight_model
         ):
             self.skip_flight_model = True
+
+        # One check for every module, whether --mission_dir came from the command line or the
+        # config file (exits with usage, status 2, like any bad argument)
+        if getattr(self, "mission_dir", None):
+            problem = mission_dir_problem(pathlib.Path(self.mission_dir))
+            if problem:
+                ap.error(problem)
 
         # Previous version anything set on the command line or via default value trumps config file
         # for opt in dir(self._opts):
