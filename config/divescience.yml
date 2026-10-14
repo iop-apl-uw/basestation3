@@ -32,7 +32,12 @@
 #   <basestation_dir>/etc
 #   <--group_etc dir>
 #   <gliders mission dir>
-# New plots or updates to any of the plots listed below need to be the complete plot definition.
+# The files are merged in that order, from the most general to the most specific.  A later file adds
+# to the earlier ones and overrides any value they set, key by key - so it can change one variable's
+# color, or add a variable, without repeating the whole plot.  A null removes a key: a variable, or a
+# whole plot (e.g. "suna: null").  A plot with a problem (a misspelled key, a color plotly doesn't
+# know, ...) is not drawn, and raises the DIVESCIENCE_CONFIG alert.  Check a mission's files with
+#   DiveScienceModel.py --verbose check_merged -m <gliders mission dir>
 ##
 ---
 fet:

@@ -37,6 +37,7 @@ module maps that path back to the line in the yaml source so an operator can fin
 
 import pathlib
 from collections.abc import Callable
+from typing import Any
 
 import yaml
 from pydantic import ValidationError
@@ -156,3 +157,153 @@ def format_validation_errors(
         shown = redact(loc, error["input"]) if redact else error["input"]
         messages.append(f"{where}: {dotted}: {error['msg']} (input: {shown!r})")
     return messages
+
+
+class LoadedYaml:
+    """A yaml file that loaded and validated, with its line locator.
+
+    Attributes:
+        path: The file.
+        data: Its contents (plain dicts/lists, as yaml.safe_load gives them).
+        locate: Maps a key path to its source line (load_yaml_with_lines).
+    """
+
+    def __init__(self, path: pathlib.Path, data: dict, locate: Locator) -> None:
+        """Args:
+            path: The file.
+            data: Its contents.
+            locate: Its line locator.
+
+        Returns:
+            None
+
+        Raises:
+            Nothing.
+        """
+        self.path = path
+        self.data = data
+        self.locate = locate
+
+    def where(self, loc: tuple) -> str:
+        """file:line for a key path in this file.
+
+        Args:
+            loc: The key path.
+
+        Returns:
+            "file:line", or "file" if no line is known.
+
+        Raises:
+            Nothing.
+        """
+        line = self.locate(loc)
+        return f"{self.path}:{line}" if line is not None else f"{self.path}"
+
+
+def _without_nulls(value: Any) -> Any:
+    """A copy of a value with null entries left out (null only means "remove").
+
+    Args:
+        value: A loaded yaml value.
+
+    Returns:
+        The value, with any null mapping entries dropped, at every level.
+
+    Raises:
+        Nothing.
+    """
+    if isinstance(value, dict):
+        return {k: _without_nulls(v) for k, v in value.items() if v is not None}
+    return value
+
+
+def merge_loaded(loaded: list[LoadedYaml]) -> tuple[dict, list[str]]:
+    """Merges loaded yaml files in order, from the most general to the most specific.
+
+    Mappings merge key by key. Where a later file sets a value an earlier one set,
+    the later value wins (a list counts as one value). A null removes the key.
+
+    Args:
+        loaded: The validated files, most general first.
+
+    Returns:
+        (merged, changes): changes describes each override and removal,
+        "file:line: where: overrides file:line (old -> new)".
+
+    Raises:
+        Nothing.
+    """
+    merged: dict = {}
+    origin: dict[tuple, LoadedYaml] = {}
+    changes: list[str] = []
+
+    def note_origin(value: Any, path: tuple, src: LoadedYaml) -> None:
+        # Everything under a newly added key comes from src
+        origin[path] = src
+        if isinstance(value, dict):
+            for key, sub in value.items():
+                note_origin(sub, (*path, key), src)
+
+    def merge(a: dict, b: dict, path: tuple, src: LoadedYaml) -> None:
+        for key, value in b.items():
+            key_path = (*path, key)
+            dotted = ".".join(str(k) for k in key_path)
+            earlier = origin.get(key_path)
+            was = f" {earlier.where(key_path)}" if earlier else ""
+            if value is None:
+                if key in a:
+                    changes.append(f"{src.where(key_path)}: {dotted}: removes it (set at{was})")
+                    del a[key]
+                continue
+            if key not in a:
+                a[key] = _without_nulls(value)
+                note_origin(a[key], key_path, src)
+            elif isinstance(a[key], dict) and isinstance(value, dict):
+                merge(a[key], value, key_path, src)
+            elif a[key] != value:
+                changes.append(f"{src.where(key_path)}: {dotted}: overrides{was} ({a[key]!r} -> {value!r})")
+                a[key] = _without_nulls(value)
+                note_origin(a[key], key_path, src)
+
+    for template in loaded:
+        merge(merged, template.data, (), template)
+    return merged, changes
+
+
+class _BlockDumper(yaml.SafeDumper):
+    """Block style, as the yaml inputs are written, but a list of scalars on one line (flag_values: [0, 1, 2])."""
+
+
+def _represent_list(dumper: yaml.SafeDumper, data: list) -> yaml.Node:
+    """Represents a list in flow style if it holds only scalars, else in block style.
+
+    Args:
+        dumper: The dumper.
+        data: The list.
+
+    Returns:
+        The YAML node.
+
+    Raises:
+        Nothing.
+    """
+    flow = all(not isinstance(item, (dict, list)) for item in data)
+    return dumper.represent_sequence("tag:yaml.org,2002:seq", data, flow_style=flow)
+
+
+_BlockDumper.add_representer(list, _represent_list)
+
+
+def dump_text(data: dict) -> str:
+    """A loaded/merged yaml input as block-style text, lists of scalars on one line.
+
+    Args:
+        data: The data.
+
+    Returns:
+        The YAML text.
+
+    Raises:
+        Nothing.
+    """
+    return yaml.dump(data, Dumper=_BlockDumper, sort_keys=False, default_flow_style=False, width=float("inf"))

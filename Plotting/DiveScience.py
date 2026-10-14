@@ -35,84 +35,21 @@ from __future__ import annotations
 
 import pathlib
 import typing
-from typing import Literal
 
 import numpy as np
 import plotly.graph_objects
 import scipy
-import yaml
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    StrictStr,
-    ValidationError,
-)
 
 if typing.TYPE_CHECKING:
     import sqlite3
 
     import BaseOpts
 
+import DiveScienceModel
 import PlotUtils
 import PlotUtilsPlotly
-from BaseLog import log_error, log_info, log_warning
+from BaseLog import log_debug, log_error, log_warning
 from Plotting import plotdivesingle
-
-
-class PlotVar(BaseModel):
-    xaxis: Literal["x1", "x2"] = "x1"
-    color_down: StrictStr = "Red"
-    color_up: StrictStr = "Magenta"
-    units: StrictStr = ""
-    hoverfmt: StrictStr = ""
-    visible: Literal["legendonly", True, False] = True
-    model_config = ConfigDict(extra="forbid")
-
-
-class PlotLayout(BaseModel):
-    xaxis_title: StrictStr = ""
-    xaxis2_title: StrictStr = ""
-    xaxis_type: Literal["linear", "log"] = "linear"
-    xaxis2_type: Literal["linear", "log"] = "linear"
-
-
-class Plot(BaseModel):
-    instrument: StrictStr = ""
-    layout: PlotLayout
-    vars: dict[StrictStr, PlotVar]
-
-
-def validate_dict(filenames: list[pathlib.Path]) -> dict[str, dict]:
-    accum: dict[str, dict] = {}
-    for filename in filenames:
-        if filename is None:
-            continue
-        try:
-            log_info(f"Reading {filename}")
-            with open(filename, "r") as fi:
-                plots_dict = yaml.safe_load(fi)
-
-            if not isinstance(plots_dict, dict):
-                return {}
-            for k, v in plots_dict.items():
-                try:
-                    if isinstance(v, dict):
-                        m = Plot(**v)
-                    else:
-                        log_error(f"{k} is not a dictionary")
-                        continue
-                except ValidationError as e:
-                    for error in e.errors():
-                        location = f"{k}:{':'.join([str(x) for x in error['loc']])}"
-                        log_error(
-                            f"In {filename} - {location}, {error['msg']}, input:{error['input']}"
-                        )
-                    log_error(f"Skipping {k}")
-                else:
-                    accum[k] = m.model_dump()
-        except Exception as exception:
-            log_error(f"Failed to process {filename} ({exception})")
-    return accum
 
 
 @plotdivesingle
@@ -127,24 +64,14 @@ def plot_science(
     if not generate_plots:
         return ([], [])
 
-    plot_config_filenames = []
-    search_dirs = [
-        pathlib.Path(sd)
-        for sd in (
-            base_opts.basestation_directory / "config",
-            base_opts.basestation_directory / "etc",
-            base_opts.group_etc,
-            base_opts.mission_dir,
-        )
-        if sd
-    ]
-
-    for search_dir in search_dirs:
-        base_config = search_dir / "divescience.yml"
-        if base_config.exists():
-            plot_config_filenames.append(base_config)
-
-    plot_meta = validate_dict(plot_config_filenames)
+    # Validated and merged, most general first - see DiveScienceModel.py (check_merged
+    # checks a mission's files by hand). A plot with a problem is dropped, the rest drawn.
+    result = DiveScienceModel.load_merged(DiveScienceModel.config_files(base_opts))
+    for change in result.changes:
+        log_debug(change)
+    for problem in result.problems:
+        log_error(problem, alert="DIVESCIENCE_CONFIG")
+    plot_meta = result.plots
 
     ret_plots = []
     ret_figs = []
@@ -152,8 +79,6 @@ def plot_science(
     varlist = "".join(filter(lambda x: "sg_cal" not in x, dive_nc_file.variables))
 
     for base_plot_name, meta in plot_meta.items():
-        if "instrument" not in meta:
-            continue
         plots = []
         for inst in ("", "1", "2", "3"):
             typ = f"{meta['instrument']}{inst}"

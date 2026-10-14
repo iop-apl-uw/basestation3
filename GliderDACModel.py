@@ -192,45 +192,9 @@ class TemplateFile(BaseModel):
     config: TemplateConfig | None = None
 
 
-class LoadedTemplate:
-    """A template file that loaded and validated.
-
-    Attributes:
-        path: The file.
-        data: Its contents (plain dicts/lists, as yaml.safe_load gives them).
-        locate: Maps a key path to its source line (YamlValidation.load_yaml_with_lines).
-    """
-
-    def __init__(self, path: pathlib.Path, data: dict, locate: YamlValidation.Locator) -> None:
-        """Args:
-            path: The file.
-            data: Its contents.
-            locate: Its line locator.
-
-        Returns:
-            None
-
-        Raises:
-            Nothing.
-        """
-        self.path = path
-        self.data = data
-        self.locate = locate
-
-    def where(self, loc: tuple) -> str:
-        """file:line for a key path in this file.
-
-        Args:
-            loc: The key path.
-
-        Returns:
-            "file:line", or "file" if no line is known.
-
-        Raises:
-            Nothing.
-        """
-        line = self.locate(loc)
-        return f"{self.path}:{line}" if line is not None else f"{self.path}"
+# Shared with the other yaml validators (YamlValidation)
+LoadedTemplate = YamlValidation.LoadedYaml
+merge_templates = YamlValidation.merge_loaded
 
 
 def check_file(path: pathlib.Path) -> tuple[LoadedTemplate | None, list[str]]:
@@ -297,77 +261,6 @@ def suspect_attributes(template: LoadedTemplate) -> list[str]:
             loc = ("variables", name, "attributes", key)
             warnings.append(f"{template.where(loc)}: {'.'.join(loc)}: looks like a variable field indented under attributes")
     return warnings
-
-
-def _without_nulls(value: Any) -> Any:
-    """A copy of a template value with null entries left out (null only means "remove").
-
-    Args:
-        value: A template value.
-
-    Returns:
-        The value, with any null mapping entries dropped, at every level.
-
-    Raises:
-        Nothing.
-    """
-    if isinstance(value, dict):
-        return {k: _without_nulls(v) for k, v in value.items() if v is not None}
-    return value
-
-
-def merge_templates(loaded: list[LoadedTemplate]) -> tuple[dict, list[str]]:
-    """Merges templates in order, from the most general to the most specific.
-
-    Mappings merge key by key. Where a later file sets a value an earlier one set,
-    the later value wins (a list counts as one value). A null removes the key - an
-    attribute, a variable, a timeseries_vars entry.
-
-    Args:
-        loaded: The validated templates, base first.
-
-    Returns:
-        (merged, changes): changes describes each override and removal,
-        "file:line: where: overrides file:line (old -> new)".
-
-    Raises:
-        Nothing.
-    """
-    merged: dict = {}
-    origin: dict[tuple, LoadedTemplate] = {}
-    changes: list[str] = []
-
-    def note_origin(value: Any, path: tuple, src: LoadedTemplate) -> None:
-        # Everything under a newly added key comes from src
-        origin[path] = src
-        if isinstance(value, dict):
-            for key, sub in value.items():
-                note_origin(sub, (*path, key), src)
-
-    def merge(a: dict, b: dict, path: tuple, src: LoadedTemplate) -> None:
-        for key, value in b.items():
-            key_path = (*path, key)
-            dotted = ".".join(str(k) for k in key_path)
-            earlier = origin.get(key_path)
-            was = f" {earlier.where(key_path)}" if earlier else ""
-            if value is None:
-                if key in a:
-                    changes.append(f"{src.where(key_path)}: {dotted}: removes it (set at{was})")
-                    del a[key]
-                continue
-            if key not in a:
-                a[key] = _without_nulls(value)
-                note_origin(a[key], key_path, src)
-            elif isinstance(a[key], dict) and isinstance(value, dict):
-                merge(a[key], value, key_path, src)
-            elif a[key] != value:
-                changes.append(f"{src.where(key_path)}: {dotted}: overrides{was} ({a[key]!r} -> {value!r})")
-                a[key] = _without_nulls(value)
-                note_origin(a[key], key_path, src)
-
-    for template in loaded:
-        merge(merged, template.data, (), template)
-    return merged, changes
 
 
 def check_merged_template(merged: dict, loaded: list[LoadedTemplate]) -> tuple[list[str], list[str]]:
@@ -514,30 +407,6 @@ def templates_from_opts(base_opts: Any) -> list[pathlib.Path] | None:
     return files
 
 
-class _TemplateDumper(yaml.SafeDumper):
-    """Block style, as the templates are written, but a list of scalars on one line (flag_values: [0, 1, 2])."""
-
-
-def _represent_list(dumper: yaml.SafeDumper, data: list) -> yaml.Node:
-    """Represents a list in flow style if it holds only scalars, else in block style.
-
-    Args:
-        dumper: The dumper.
-        data: The list.
-
-    Returns:
-        The YAML node.
-
-    Raises:
-        Nothing.
-    """
-    flow = all(not isinstance(item, (dict, list)) for item in data)
-    return dumper.represent_sequence("tag:yaml.org,2002:seq", data, flow_style=flow)
-
-
-_TemplateDumper.add_representer(list, _represent_list)
-
-
 def _dump(data: dict) -> None:
     """Writes a template as YAML to stdout - the output of the dump actions, for redirecting.
 
@@ -550,8 +419,7 @@ def _dump(data: dict) -> None:
     Raises:
         Nothing.
     """
-    text = yaml.dump(data, Dumper=_TemplateDumper, sort_keys=False, default_flow_style=False, width=float("inf"))
-    print(text, end="")
+    print(YamlValidation.dump_text(data), end="")
 
 
 def main(cmdline_args: list[str] = sys.argv[1:]) -> int:

@@ -114,7 +114,17 @@ file's form (a misspelled key, a bad <code>type</code> or <code>qc_data</code>, 
 <code>_FillValue</code> stops GliderDAC output entirely until it is fixed.  A variable that ends up without a
 <code>type</code>, <code>dimensions</code> or <code>attributes</code> (often a mis-indented block) is dropped, and the
 rest of the output is still made.  Check the templates with
-<code>GliderDACModel.py check_merged --conf sgNNN.conf</code>.
+<code>GliderDACModel.py check_merged --config sgNNN.conf</code>.
+</p>
+
+<p><a name="DIVESCIENCE_CONFIG">DIVESCIENCE_CONFIG<br>
+A <code>divescience.yml</code> (in the basestation <code>config</code> or <code>etc</code> directory, the
+<code>--group_etc</code> directory or the mission directory) has a problem; each message gives the file and line.
+A plot with a problem in any of the files - a misspelled key, a color plotly doesn't know, an <code>xaxis</code>
+other than <code>x1</code>/<code>x2</code>, or no <code>instrument</code> or <code>vars</code> once the files are
+merged - is not drawn; the other science plots still are.  A file that isn't valid YAML, or isn't a mapping of
+plot names, is skipped.  Check a mission's files with
+<code>DiveScienceModel.py --verbose check_merged -m &lt;mission_dir&gt;</code>.
 </p>
 
 <p><a name="GLIDER_TIMEOUT">GLIDER_TIMEOUT<br>

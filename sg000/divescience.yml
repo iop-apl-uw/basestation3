@@ -4,6 +4,13 @@
 # for scicon instruments or
 #    eng_instrumentname_variablename
 # for truck attached instruments
+#
+# This file (in the mission directory) is merged over <basestation_dir>/config/divescience.yml,
+# <basestation_dir>/etc/divescience.yml and <--group_etc dir>/divescience.yml: a plot here adds to
+# a plot of the same name there, overriding any value it sets, and a null removes a variable or a
+# whole plot.  Check with
+#   DiveScienceModel.py check divescience.yml                   this file on its own
+#   DiveScienceModel.py --verbose check_merged -m <mission dir>  everything the plot reads, merged
 
 ---
 # The filename of the plot - keep this small and no whitespace.  It is used as
