@@ -119,8 +119,12 @@ def test_makeplottsprofile_ncdf_with_wl_variables(tmp_path, caplog):
     )
     assert ncdf_path is not None
 
+    # Pass add_to_arguments as main() does, so this doesn't depend on an
+    # earlier test having registered MakePlotTSProfile for --mission_dir.
+    add_to_arguments, _, _ = MakePlotTSProfile.load_additional_arguments()
     base_opts = BaseOpts.BaseOptions(
         "",
+        add_to_arguments=add_to_arguments,
         cmdline_args=["--mission_dir", str(mission_dir)],
         calling_module="MakePlotTSProfile",
     )
@@ -137,8 +141,11 @@ def test_makeplottsprofile_skips_missing_profile_files(tmp_path, caplog):
     """A profile name that was never created (production case: a bare
     .npro passed on by Base.py after x3decode_ts r7560, iopbase3 sg262
     dive 102) is skipped with a warning, not a FileNotFoundError traceback."""
+    # As above: register MakePlotTSProfile for --mission_dir as main() does
+    add_to_arguments, _, _ = MakePlotTSProfile.load_additional_arguments()
     base_opts = BaseOpts.BaseOptions(
         "test",
+        add_to_arguments=add_to_arguments,
         cmdline_args=["--verbose", "--mission_dir", str(tmp_path)],
         calling_module="MakePlotTSProfile",
     )
