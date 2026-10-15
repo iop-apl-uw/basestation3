@@ -97,24 +97,10 @@ def test_dive_plot(tmp_path, caplog, baseplot_options, data_dir, expected_output
 # permanently: a one-off plot for one specific mission, not worth a
 # tracked fixture gap.
 #
-# mission_oceanvelocityprofile (adcp/MissionOcean.py) is deliberately
-# excluded: needs a mission_dir/sections.yml with an adcp_variables key
-# plus a generated ADCP profile-timeseries .nc
-# (adcp/BaseADCPMission.py's output). Confirmed empirically (2026-08-20)
-# that the .nc itself IS buildable from testdata/sg171_EKAMSAT_Apr24_with_adcp's
-# existing per-dive .nc files (ran adcp/BaseADCPMission.py directly
-# against them - built a valid file with every variable the plot needs in
-# under a second, no raw reprocessing required). The real blocker is
-# narrower than "no data exists": actually rendering the plot needs the
-# mission DB's `dives` table populated, which needs Base.main's full
-# pipeline, which unconditionally requires a real, parseable comm.log -
-# and this fixture (built from pre-processed .nc files only) has none. A
-# real comm.log does exist in the source production directory
-# (~/work/seagliders/sg171_EKAMSAT_Apr24), but only alongside raw uploads
-# for dives 1-9, while this fixture's dives are numbered 100-109 (a later
-# stretch of the same mission) - closing this gap needs either the raw
-# dive-100+ uploads (wherever that part of the mission is archived) or
-# confirming dives 1-9 also carry usable ADCP data. Left as a follow-on.
+# mission_oceanvelocityprofile (adcp/MissionOcean.py) isn't here: it needs the
+# ADCP profile timeseries and the mission DB's dives table, so it has its own
+# tests in tests/test_MissionOcean.py (Reprocess of testdata/sg171_EKAMSAT_Apr24
+# builds both; skipped when the adcp extension isn't installed).
 
 # (plot_name, data_dir, dive_nc_filename, extra_cmd_line_args, instrument_id,
 #  use_base_pipeline)

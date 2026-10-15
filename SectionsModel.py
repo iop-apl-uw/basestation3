@@ -268,17 +268,31 @@ def check_ranges(loaded: YamlValidation.LoadedYaml, cleaned: dict, variables_key
     return warnings
 
 
-def check_file(path: pathlib.Path) -> tuple[dict | None, list[str], list[str]]:
+def check_file(
+    path: pathlib.Path,
+    variables_key: str = "variables",
+    report_levels: set[str] | None = None,
+    require_variables: bool = True,
+) -> tuple[dict | None, list[str], list[str]]:
     """Loads and checks a sections.yml.
 
     Args:
         path: The file.
+        variables_key: The variables the caller plots ("adcp_variables" for the adcp
+            extension) - it and sections must be there, and its entries are checked.
+        report_levels: Return only the warnings for these top-level keys (e.g.
+            {"adcp_variables"}), so a problem in the shared defaults/sections is
+            reported once, by mission_profiles; None returns them all (and the
+            warnings about unknown top-level keys).
+        require_variables: If False, a file without variables_key isn't unusable -
+            cleaned[variables_key] is just empty (the adcp plot is optional).
 
     Returns:
         (cleaned, warnings, problems): cleaned is the file as the plots should use
-        it - defaults/variables/sections with the bad keys and values left out
-        (defaults always present), extension keys as written - or None if the file
-        can't be used (then problems says why). Each message is "file:line: where: message".
+        it - defaults, variables, sections and variables_key with the bad keys and
+        values left out (defaults always present), other extension keys as written -
+        or None if the file can't be used (then problems says why). Each message is
+        "file:line: where: message".
 
     Raises:
         Nothing.
@@ -290,29 +304,28 @@ def check_file(path: pathlib.Path) -> tuple[dict | None, list[str], list[str]]:
     except OSError as e:
         return None, [], [f"{path}: could not read ({e})"]
     if not isinstance(data, dict):
-        return None, [], [f"{path}: {CONFIG_NAME} must be a mapping with variables and sections (got {type(data).__name__})"]
+        return None, [], [f"{path}: {CONFIG_NAME} must be a mapping with {variables_key} and sections (got {type(data).__name__})"]
     loaded = YamlValidation.LoadedYaml(path, data, locate)
-    warnings: list[str] = []
+    tagged: list[tuple[str, str]] = []  # (top-level key, warning)
     for key in data:
         if key not in LEVEL_KEYS and key not in EXTENSION_KEYS:
             known = ", ".join((*LEVEL_KEYS, *EXTENSION_KEYS))
-            warnings.append(f"{loaded.where((str(key),))}: {key}: not a {CONFIG_NAME} key ({known}) - ignored")
+            tagged.append(("", f"{loaded.where((str(key),))}: {key}: not a {CONFIG_NAME} key ({known}) - ignored"))
     defaults, defaults_warnings = _check_entry(loaded, ("defaults",), data.get("defaults"))
-    warnings += defaults_warnings
+    tagged += [("defaults", w) for w in defaults_warnings]
     cleaned: dict = {"defaults": defaults or {}}
-    for level in ("variables", "sections"):
+    for level in dict.fromkeys(("variables", "sections", variables_key)):
         cleaned[level], level_warnings = check_entries(loaded, level)
-        warnings += level_warnings
+        tagged += [(level, w) for w in level_warnings]
     for key in EXTENSION_KEYS:
-        if key in data:
+        if key in data and key not in cleaned:
             cleaned[key] = data[key]
-    problems = [
-        f"{path}: no {level} - nothing to plot" for level in ("variables", "sections") if not cleaned[level]
-    ]
-    if problems:
-        return None, warnings, problems
-    warnings += check_ranges(loaded, cleaned)
-    return cleaned, warnings, []
+    required = ("sections",) if not require_variables else (variables_key, "sections")
+    problems = [f"{path}: no {level} - nothing to plot" for level in required if not cleaned[level]]
+    if not problems:
+        tagged += [(variables_key, w) for w in check_ranges(loaded, cleaned, variables_key)]
+    warnings = [w for level, w in tagged if report_levels is None or level in report_levels]
+    return (None if problems else cleaned), warnings, problems
 
 
 def main(cmdline_args: list[str] = sys.argv[1:]) -> int:

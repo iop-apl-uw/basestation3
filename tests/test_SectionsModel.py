@@ -231,3 +231,32 @@ def test_mission_profiles_draws_with_warnings(tmp_path: pathlib.Path, caplog: py
         required_msgs=["variables.salinity.max 34.5: Extra inputs are not permitted", "did you mean 'max: 34.5'?"],
     )
     assert list(mission_dir.joinpath("plots").glob("*salinity*.webp")), "the salinity section plot wasn't drawn"
+
+
+def test_check_file_for_an_extension(tmp_path: pathlib.Path) -> None:
+    """adcp: its own variables key is required/checked and its warnings alone returned; ADCP-only files work."""
+    text = (
+        "defaults: {colormap: dense_r}\n"
+        "variables:\n  temperature: {bogus: 1}\n"
+        "adcp_variables:\n  vocn: {colormap: balance, step: 0, min: 1, max: 0}\n"
+        "sections:\n  \"000\": {start: 1}\n"
+    )
+    path = _write(tmp_path, text)
+    cleaned, warnings, problems = SectionsModel.check_file(path, "adcp_variables", report_levels={"adcp_variables"})
+    assert problems == [] and cleaned is not None
+    assert cleaned["adcp_variables"] == {"vocn": {"colormap": "balance", "min": 1, "max": 0}}
+    assert len(warnings) == 2 and all("adcp_variables.vocn" in w for w in warnings)
+    assert any("step" in w for w in warnings) and any("min (1) is above max (0)" in w for w in warnings)
+    # mission_profiles' view of the same file reports the shared and variables problems (and not adcp's)
+    _, warnings, _ = SectionsModel.check_file(path)
+    assert {w.split(": ")[1].split(".")[0] for w in warnings} == {"defaults", "variables"}
+    # An ADCP-only file: fine for adcp, unusable for mission_profiles
+    adcp_only = _write(tmp_path, "adcp_variables:\n  vocn: {}\nsections:\n  \"000\": {}\n", "adcp.yml")
+    assert SectionsModel.check_file(adcp_only, "adcp_variables")[0] is not None
+    assert "no variables - nothing to plot" in SectionsModel.check_file(adcp_only)[2][0]
+    # No adcp_variables: unusable for adcp unless it's optional
+    assert SectionsModel.check_file(path.with_name("x.yml"), "adcp_variables")[0] is None
+    no_adcp = _write(tmp_path, GOOD, "no_adcp.yml")
+    assert SectionsModel.check_file(no_adcp, "adcp_variables")[2] == [f"{no_adcp}: no adcp_variables - nothing to plot"]
+    cleaned, _, problems = SectionsModel.check_file(no_adcp, "adcp_variables", require_variables=False)
+    assert problems == [] and cleaned is not None and cleaned["adcp_variables"] == {}
