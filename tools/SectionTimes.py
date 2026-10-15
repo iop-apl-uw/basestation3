@@ -29,24 +29,24 @@
 
 import datetime
 import os
+import pathlib
 import pdb
 import sys
 import traceback
-
-import yaml
 
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 
 import BaseOpts
 import CommLog
 import MakeDiveProfiles
+import SectionsModel
 import Utils
 from BaseLog import (
     BaseLogger,
     log_critical,
     log_error,
-    #log_warning,
     log_info,
+    log_warning,
 )
 
 # Options
@@ -76,15 +76,13 @@ def main():
     if not os.path.exists(section_file_name):
         return 1
 
-    with open(section_file_name, "r") as f:
-        x = yaml.safe_load(f.read())
-
-    if "variables" not in x or len(x["variables"]) == 0:
-        log_error(f"No 'variables' key found in {section_file_name} - not plotting")
-        return 1
-
-    if "sections" not in x or len(x["sections"]) == 0:
-        log_error(f"No 'sections' key found in {section_file_name} - not plotting")
+    # Checked as the section plots check it (SectionsModel)
+    x, warnings, problems = SectionsModel.check_file(pathlib.Path(section_file_name))
+    for warning in warnings:
+        log_warning(warning)
+    for problem in problems:
+        log_error(problem)
+    if x is None:
         return 1
 
     try:

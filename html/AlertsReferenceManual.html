@@ -127,6 +127,15 @@ plot names, is skipped.  Check a mission's files with
 <code>DiveScienceModel.py --verbose check_merged -m &lt;mission_dir&gt;</code>.
 </p>
 
+<p><a name="SECTIONS_CONFIG">SECTIONS_CONFIG<br>
+The mission's <code>sections.yml</code> (the mission profile section plots) has a problem; each message gives
+the file and line.  A key or value that isn't valid - a misspelled key (often a missing colon, e.g.
+<code>max 27.5</code> for <code>max: 27.5</code>), a value of the wrong type or out of range, a colormap that
+isn't known - is ignored and the next level (section, then variable, then defaults) or the plot's own default
+is used; the plots are still made.  A file that isn't valid YAML, or has no <code>variables</code> or no
+<code>sections</code>, makes no section plots.  Check it with <code>SectionsModel.py check sections.yml</code>.
+</p>
+
 <p><a name="NODC_CONFIG">NODC_CONFIG<br>
 A <code>NODC.yml</code> (in the basestation <code>etc</code> directory, the <code>--group_etc</code> directory
 or the mission directory), which sets

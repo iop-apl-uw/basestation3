@@ -33,6 +33,7 @@ import pwd
 
 import pytest
 
+import BaseLog
 import SiteConfig
 
 GOOD_YAML = """
@@ -45,6 +46,14 @@ ioptest:
   runner_user: runner-ioptest
   archive: true
 """
+
+
+@pytest.fixture(autouse=True)
+def _fresh_baselog():
+    """SiteConfig.main sets up BaseLogger; start each test without one left by another test."""
+    BaseLog.BaseLogger.reset()
+    yield
+    BaseLog.BaseLogger.reset()
 
 
 def _fake_pwent(uid: int, gid: int) -> pwd.struct_passwd:

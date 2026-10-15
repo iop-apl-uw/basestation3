@@ -43,7 +43,6 @@ import typing
 import cmocean
 import numpy
 import plotly.graph_objects
-import yaml
 
 import ExtractTimeseries
 
@@ -54,6 +53,7 @@ if typing.TYPE_CHECKING:
     import BaseOpts
 
 import PlotUtilsPlotly
+import SectionsModel
 import Utils
 import Utils2
 from BaseLog import log_error, log_info, log_warning
@@ -61,24 +61,12 @@ from Plotting import plotmissionsingle
 
 
 def getValue(x, v, sk, vk, fallback):
-    if v in x['sections'][sk]:
-        y = x['sections'][sk][v]
-    elif v in x['variables'][vk]:
-        y = x['variables'][vk][v]
-    elif v in x['defaults']:
-        y = x['defaults'][v]
-    else:
-        y = fallback
+    """The value of key v for variable vk and section sk (see SectionsModel.get_value)."""
+    return SectionsModel.get_value(x, v, sk, vk, fallback)
 
-    return y
 
 def cmocean_to_plotly(cmapname, pl_entries):
-    maps = { "thermal": cmocean.cm.thermal, "haline": cmocean.cm.haline, "solar": cmocean.cm.solar,
-             "ice": cmocean.cm.ice, "gray": cmocean.cm.gray, "oxy": cmocean.cm.oxy, "deep": cmocean.cm.deep,
-             "dense": cmocean.cm.dense, "algae": cmocean.cm.algae, "matter": cmocean.cm.matter,
-             "turbid": cmocean.cm.turbid, "speed": cmocean.cm.speed, "amp": cmocean.cm.amp,
-             "tempo": cmocean.cm.tempo, "phase": cmocean.cm.phase, "balance": cmocean.cm.balance, 
-             "delta": cmocean.cm.delta, "curl": cmocean.cm.curl }
+    maps = {name: getattr(cmocean.cm, name) for name in SectionsModel.COLORMAPS}
 
     if cmapname in maps:     # noqa: SIM401
         cmap = maps[cmapname]
@@ -116,15 +104,14 @@ def mission_profiles(
     t0 = time.time()
     log_info("Starting mission_profiles")
     
-    with open(section_file_name, "r") as f:
-        x = yaml.safe_load(f.read())
-
-    if "variables" not in x or len(x["variables"]) == 0:
-        log_error(f"No 'variables' key found in {section_file_name} - not plotting")
-        return ([], [])
-
-    if "sections" not in x or len(x["sections"]) == 0:
-        log_error(f"No 'sections' key found in {section_file_name} - not plotting")
+    # Checked (SectionsModel): a bad key or value is reported and left out, so the next
+    # level or the fallback applies; only a file that can't be used stops the plots
+    x, warnings, problems = SectionsModel.check_file(pathlib.Path(section_file_name))
+    for warning in warnings:
+        log_warning(warning, alert="SECTIONS_CONFIG")
+    for problem in problems:
+        log_error(f"{problem} - not plotting", alert="SECTIONS_CONFIG")
+    if x is None:
         return ([], [])
 
     if dbcon is None:

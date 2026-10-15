@@ -3,6 +3,28 @@
 # inheritance priority order (highest to lowest) is 
 # sections, variables, defaults
 #
+# keys - any of these can be set at any of the three levels
+# (the list is SectionsModel.ENTRY_KEYS):
+#   start    - first dive of the section
+#   stop     - last dive of the section (-1: the latest)
+#   step     - every Nth dive
+#   top      - shallowest depth plotted (m)
+#   bottom   - deepest depth plotted (m)
+#   bin      - depth bin size (m)
+#   flip     - plot dives right to left
+#   which    - 1 dive only, 2 climb only, 3 both as separate profiles, 4 dive and climb averaged
+#   colormap - cmocean colormap name (see COLORMAPS)
+#   min      - colorbar minimum
+#   max      - colorbar maximum
+#   units    - units shown in the hover text
+#   fill     - connect gaps (interpolate)
+#   decimals - round values to this many decimal places
+#   title    - plot title (default: the variable name)
+#
+# a key or value that isn't valid is reported (SECTIONS_CONFIG alert) and ignored - the
+# next level, or the plot's own default, is used instead.  Check this file with
+#   SectionsModel.py check sections.yml
+#
 # available colormaps (from cmocean): 
 #   thermal, haline, solar, ice, gray, oxy, deep, dense, algae, 
 #   matter, turbid, speed, amp, tempo, phase, balance, delta, curl
