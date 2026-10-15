@@ -34,6 +34,10 @@ BaseRunnerPrivExec.
 Both processes load their own SiteConfig table independently, from the same
 sites.yaml, at their own startup - this module is what guarantees they can
 never observe different data for the same site name.
+
+Check a sites.yaml before (re)starting the services:
+    python SiteConfig.py check sites.yaml [--no-resolve_users]
+    python SiteConfig.py dump sites.yaml        the resolved sites, defaults filled in
 """
 
 from __future__ import annotations
@@ -41,10 +45,23 @@ from __future__ import annotations
 import dataclasses
 import pathlib
 import pwd
+import sys
+from typing import Annotated, Any
 
 import yaml
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictInt,
+    StrictStr,
+    ValidationError,
+    model_validator,
+)
 
-from BaseLog import log_error
+import YamlValidation
+from BaseLog import log_error, log_info
 
 
 @dataclasses.dataclass(frozen=True)
@@ -236,6 +253,53 @@ def is_contained(path: pathlib.Path, root: pathlib.Path) -> bool:
     return resolved_path == resolved_root or resolved_path.is_relative_to(resolved_root)
 
 
+NonEmptyStr = Annotated[StrictStr, Field(min_length=1)]
+PositiveInt = Annotated[StrictInt, Field(ge=1)]
+
+
+class SiteEntry(BaseModel):
+    """One site's sites.yaml entry, as written (see SiteConfig for what each key means).
+
+    Strict: an unknown key (a typo such as cpu_quota) is an error, a boolean must be
+    true/false (not "false", which bool() would make True), and an int must be an int.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    watch_dir: NonEmptyStr
+    runner_user: NonEmptyStr
+    jail_root: StrictStr | None = None
+    jailed: StrictBool | None = None
+    archive: StrictBool = False
+    ignore_lock: StrictBool = False
+    python_version: NonEmptyStr = "/opt/basestation/bin/python"
+    queue_scripts: StrictBool = True
+    docker_image: StrictStr = ""
+    docker_uid: Annotated[StrictInt, Field(ge=-1)] = -1
+    docker_gid: Annotated[StrictInt, Field(ge=-1)] = -1
+    use_docker_basestation: StrictBool = False
+    cpu_quota_pct: PositiveInt | None = None
+    cpu_weight: Annotated[StrictInt, Field(ge=1, le=10000)] | None = None  # systemd CPUWeight range
+    memory_high_mb: PositiveInt | None = None
+    memory_max_mb: PositiveInt | None = None
+
+    @model_validator(mode="after")
+    def _consistent(self) -> SiteEntry:
+        """Cross-key rules.
+
+        Returns:
+            The entry.
+
+        Raises:
+            ValueError: jailed is true with no jail_root, or memory_high_mb exceeds memory_max_mb.
+        """
+        if self.jailed and not self.jail_root:
+            raise ValueError("jailed is true but jail_root is not set")
+        if self.memory_high_mb is not None and self.memory_max_mb is not None and self.memory_high_mb > self.memory_max_mb:
+            raise ValueError(f"memory_high_mb ({self.memory_high_mb}) is above memory_max_mb ({self.memory_max_mb})")
+        return self
+
+
 def _resolve_path(entry: dict, key: str) -> pathlib.Path | None:
     """Resolves an optional path-valued key from a sites.yaml entry.
 
@@ -283,15 +347,12 @@ def _build_site(name: str, entry: dict) -> SiteConfig:
         The constructed SiteConfig (runner_uid/runner_gid still unresolved).
 
     Raises:
-        KeyError: If a required key (watch_dir, runner_user) is missing.
-        TypeError: If a value has the wrong shape for its field.
-        ValueError: If a value can't be converted to its field's type, or
-            jailed is true with no jail_root set.
+        Nothing for an entry SiteEntry has validated (check_sites only calls it
+        for those).
     """
     jail_root = _resolve_path(entry, "jail_root")
+    # SiteEntry has already checked the entry (incl. jailed needing jail_root)
     jailed = bool(entry.get("jailed", jail_root is not None))
-    if jailed and jail_root is None:
-        raise ValueError(f"site {name!r}: jailed is true but jail_root is not set")
 
     return SiteConfig(
         name=name,
@@ -314,13 +375,67 @@ def _build_site(name: str, entry: dict) -> SiteConfig:
     )
 
 
+def check_sites(sites_config_path: pathlib.Path, resolve_users: bool = True) -> tuple[dict[str, SiteConfig] | None, list[str]]:
+    """Loads and checks every site in a sites.yaml file, reporting every problem.
+
+    Args:
+        sites_config_path: The sites.yaml file.
+        resolve_users: Look up each runner_user (off the server, where the
+            accounts don't exist, pass False to check only the file's form).
+
+    Returns:
+        (sites, problems): sites maps each name to its SiteConfig, or is None if
+        there was any problem (fail closed). Each problem is "file:line: where: message".
+
+    Raises:
+        No exceptions are raised.
+    """
+    path = sites_config_path
+    try:
+        raw, locate = YamlValidation.load_yaml_with_lines(path)
+    except yaml.YAMLError as e:
+        return None, [YamlValidation.format_yaml_error(path, e)]
+    except OSError as e:
+        return None, [f"{path}: could not read ({e})"]
+    if not isinstance(raw, dict) or not raw:
+        return None, [f"{path}: is empty or not a mapping of site names to entries"]
+    loaded = YamlValidation.LoadedYaml(path, raw, locate)
+
+    problems: list[str] = []
+    sites: dict[str, SiteConfig] = {}
+    for name, entry in raw.items():
+        if not isinstance(name, str):
+            problems.append(f"{loaded.where((str(name),))}: site name {name!r} must be a string")
+            continue
+        try:
+            SiteEntry.model_validate(entry)
+        except ValidationError as e:
+            problems += YamlValidation.format_validation_errors(path, locate, e, prefix=(name,))
+            continue
+        site = _build_site(name, entry)
+        if resolve_users:
+            try:
+                pw = lookup_user(site.runner_user)
+            except KeyError:
+                problems.append(
+                    f"{loaded.where((name, 'runner_user'))}: {name}.runner_user: unknown account {site.runner_user!r}"
+                )
+                continue
+            object.__setattr__(site, "runner_uid", pw.pw_uid)
+            object.__setattr__(site, "runner_gid", pw.pw_gid)
+        sites[name] = site
+    return (None if problems else sites), problems
+
+
 def load_sites_config(sites_config_path: pathlib.Path) -> dict[str, SiteConfig] | None:
     """Loads, validates, and resolves every site in a sites.yaml file.
 
     Fails closed: any single malformed or unresolvable entry aborts loading
     the entire file rather than silently dropping just that one site, so a
     typo is loud (the caller should refuse to start) instead of quietly
-    leaving one site unwatched.
+    leaving one site unwatched. Every problem in the file is logged first, at
+    file:line, so they can all be fixed at once (check_sites, or
+    "SiteConfig.py check").
 
     Args:
         sites_config_path: Path to the sites.yaml file to load.
@@ -333,28 +448,98 @@ def load_sites_config(sites_config_path: pathlib.Path) -> dict[str, SiteConfig] 
     Raises:
         No exceptions are raised.
     """
-    try:
-        raw = yaml.safe_load(sites_config_path.read_text())
-    except Exception:
-        log_error(f"Could not process {sites_config_path}", "exc")
-        return None
-
-    if not isinstance(raw, dict) or not raw:
-        log_error(f"{sites_config_path} is empty or not a mapping")
-        return None
-
-    sites: dict[str, SiteConfig] = {}
-    for name, entry in raw.items():
-        if not isinstance(entry, dict):
-            log_error(f"Malformed sites.yaml entry for site {name!r}")
-            return None
-        try:
-            site = _build_site(name, entry)
-        except (KeyError, TypeError, ValueError):
-            log_error(f"Malformed sites.yaml entry for site {name!r}", "exc")
-            return None
-        if not resolve_ids(site):
-            return None
-        sites[name] = site
-
+    sites, problems = check_sites(sites_config_path)
+    for problem in problems:
+        log_error(problem)
+    if sites is None:
+        log_error(f"{sites_config_path}: {len(problems)} problem(s) - not loading any site")
     return sites
+
+
+def _site_as_dict(site: SiteConfig) -> dict[str, Any]:
+    """A resolved site as plain values, for dump.
+
+    Args:
+        site: The site.
+
+    Returns:
+        Its fields (paths as strings), without the name.
+
+    Raises:
+        Nothing.
+    """
+    out = {}
+    for field in dataclasses.fields(site):
+        if field.name == "name":
+            continue
+        value = getattr(site, field.name)
+        out[field.name] = str(value) if isinstance(value, pathlib.Path) else value
+    return out
+
+
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
+    """Checks or dumps a sites.yaml file.
+
+    Args:
+        cmdline_args: Command line arguments.
+
+    Returns:
+        0 if the file is valid, 1 if not.
+
+    Raises:
+        Nothing expected.
+    """
+    import argparse  # noqa: PLC0415 - only the CLI needs these (the services import this module)
+
+    import BaseOpts  # noqa: PLC0415
+    import BaseOptsType  # noqa: PLC0415
+    from BaseLog import BaseLogger  # noqa: PLC0415
+
+    base_opts = BaseOpts.BaseOptions(
+        "Check a sites.yaml (BaseRunnerMulti / BaseRunnerPrivExec site registry)",
+        cmdline_args=cmdline_args,
+        calling_module="SiteConfig",
+        additional_arguments={
+            "action": BaseOptsType.options_t(
+                None,
+                {"SiteConfig"},
+                ("action",),
+                str,
+                {"help": "check FILE | dump FILE", "choices": ("check", "dump")},
+            ),
+            "sites_file": BaseOptsType.options_t(
+                None,
+                {"SiteConfig"},
+                ("sites_file",),
+                pathlib.Path,
+                {"help": "The sites.yaml file"},
+            ),
+            "resolve_users": BaseOptsType.options_t(
+                True,
+                {"SiteConfig"},
+                ("--resolve_users",),
+                bool,
+                {
+                    "help": "Look up each runner_user (--no-resolve_users off the server)",
+                    "action": argparse.BooleanOptionalAction,
+                },
+            ),
+        },
+    )
+    BaseLogger(base_opts)
+    path = pathlib.Path(base_opts.sites_file).expanduser()
+    sites, problems = check_sites(path, resolve_users=base_opts.resolve_users)
+    for problem in problems:
+        log_error(problem)
+    if sites is None:
+        return 1
+    if base_opts.action == "dump":
+        # The resolved sites are the output - for redirecting
+        print(YamlValidation.dump_text({name: _site_as_dict(site) for name, site in sites.items()}), end="")
+    else:
+        log_info(f"{path}: OK - {len(sites)} site(s): {', '.join(sites)}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

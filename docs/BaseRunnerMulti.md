@@ -125,7 +125,7 @@ sample. Top-level mapping keyed by site name; each entry:
 | `docker_uid` / `docker_gid` | no | `-1` | uid/gid to run the docker container as. |
 | `use_docker_basestation` | no | `false` | Use the basestation install baked into the docker image instead of mounting this checkout. |
 | `cpu_quota_pct` | no | `null` | Hard CPU cap for this site's jobs, as a percentage of one core (e.g. `60` -> 60%). See "Per-site CPU throttling" below. |
-| `cpu_weight` | no | `null` | Relative cgroup `CPUWeight` for this site's jobs (systemd default is 100 when unset). |
+| `cpu_weight` | no | `null` | Relative cgroup `CPUWeight` for this site's jobs, 1 to 10000 (systemd default is 100 when unset). |
 | `memory_high_mb` | no | `null` | Soft memory cap (systemd `MemoryHigh`-equivalent) for this site's jobs, in MiB, written to each job's own `memory.high`. See "Per-site memory limits" below. |
 | `memory_max_mb` | no | `null` | Hard memory cap (systemd `MemoryMax`-equivalent) for this site's jobs, in MiB; crossing it triggers the kernel OOM killer scoped to that one job's own cgroup. See "Per-site memory limits" below. |
 
@@ -133,6 +133,19 @@ Loading is **fail-closed**: any single malformed or unresolvable entry
 (e.g. an unknown `runner_user`) aborts loading the whole file rather than
 silently dropping just that one site - a typo should be loud (the process
 refuses to start) rather than a silent per-site regression.
+
+The file is checked strictly (`SiteConfig.SiteEntry`): an unknown key (a typo
+such as `cpu_quota`) is an error, booleans must be `true`/`false` (not
+`"false"`), the CPU and memory limits must be whole numbers of 1 or more
+(`cpu_weight` 1 to 10000), and `memory_high_mb` can't be above `memory_max_mb`.
+Every problem in the file is logged at `file:line` before the load fails, so
+they can all be fixed at once. Check a file before restarting the services:
+
+```
+python SiteConfig.py check /path/to/sites.yaml                     # as the services will, users resolved
+python SiteConfig.py check --no-resolve_users /path/to/sites.yaml  # the form only (off the server)
+python SiteConfig.py dump /path/to/sites.yaml                      # the resolved sites, defaults filled in
+```
 
 A missing `watch_dir` for an otherwise-valid site is different: that site
 is logged and left pending rather than failing the whole process, and

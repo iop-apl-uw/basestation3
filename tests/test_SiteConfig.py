@@ -409,3 +409,101 @@ def test_resolve_ids_unknown_user(monkeypatch, caplog):
     assert site.runner_uid == -1
     assert site.runner_gid == -1
     assert any(r.levelname == "ERROR" for r in caplog.records)
+
+
+# --- strict validation (check_sites), the fail-closed report and the CLI -------------------------------------
+
+ENTRY = "s:\n  watch_dir: /srv/s\n  runner_user: ioprunner\n"
+
+
+@pytest.mark.parametrize(
+    ("extra", "line", "message"),
+    [
+        ("  cpu_quota: 60\n", 4, "s.cpu_quota: Extra inputs are not permitted"),
+        ('  jailed: "false"\n', 4, "s.jailed: Input should be a valid boolean"),
+        ("  cpu_weight: 0\n", 4, "s.cpu_weight: Input should be greater than or equal to 1"),
+        ("  cpu_weight: 20000\n", 4, "s.cpu_weight: Input should be less than or equal to 10000"),
+        ('  cpu_quota_pct: "60"\n', 4, "s.cpu_quota_pct: Input should be a valid integer"),
+        ("  cpu_quota_pct: 60.5\n", 4, "s.cpu_quota_pct: Input should be a valid integer"),
+        ("  jailed: true\n", 1, "s: Value error, jailed is true but jail_root is not set"),
+        ("  memory_high_mb: 128\n  memory_max_mb: 64\n", 1, "memory_high_mb (128) is above memory_max_mb (64)"),
+        ("  python_version: ''\n", 4, "s.python_version: String should have at least 1 character"),
+    ],
+)
+def test_check_sites_problem_at_line(tmp_path, patch_lookup_user, extra, line, message):
+    path = tmp_path / "sites.yaml"
+    path.write_text(ENTRY + extra)
+    sites, problems = SiteConfig.check_sites(path)
+    assert sites is None and len(problems) == 1
+    assert problems[0].startswith(f"{path}:{line}: ") and message in problems[0]
+
+
+def test_check_sites_reports_every_problem(tmp_path, patch_lookup_user):
+    """Two bad sites and an unknown user are all reported in one load, and nothing loads (fail closed)."""
+    path = tmp_path / "sites.yaml"
+    path.write_text(
+        "a:\n  watch_dir: /srv/a\n  runner_user: ioprunner\n  cpu_quota: 60\n"
+        "b:\n  watch_dir: /srv/b\n"
+        "c:\n  watch_dir: /srv/c\n  runner_user: nobody-here\n"
+        "d: just text\n"
+        "5:\n  watch_dir: /srv/5\n  runner_user: ioprunner\n"
+    )
+    sites, problems = SiteConfig.check_sites(path)
+    assert sites is None
+    text = "\n".join(problems)
+    assert f"{path}:4: a.cpu_quota: Extra inputs are not permitted" in text
+    assert f"{path}:5: b.runner_user: Field required" in text
+    assert f"{path}:9: c.runner_user: unknown account 'nobody-here'" in text
+    assert f"{path}:10: d: Input should be a valid dictionary" in text
+    assert f"{path}:11: site name 5 must be a string" in text
+    # Off the server: the form only
+    _, problems = SiteConfig.check_sites(path, resolve_users=False)
+    assert not any("unknown account" in p for p in problems)
+
+
+def test_check_sites_unusable_file(tmp_path):
+    syntax = tmp_path / "a.yaml"
+    syntax.write_text("s: [x\n")
+    assert SiteConfig.check_sites(syntax)[1][0].startswith(f"{syntax}:")
+    assert SiteConfig.check_sites(tmp_path / "missing.yaml")[1][0].startswith(f"{tmp_path / 'missing.yaml'}: could not read")
+
+
+@pytest.mark.parametrize("path", ["docs/sites.example.yaml", "testlong/fixtures/sites.yaml"])
+def test_repo_samples_check_clean(path):
+    sites, problems = SiteConfig.check_sites(pathlib.Path(path), resolve_users=False)
+    assert problems == [] and sites
+
+
+def test_load_sites_config_logs_each_problem_without_traceback(tmp_path, caplog, patch_lookup_user):
+    path = tmp_path / "sites.yaml"
+    path.write_text(ENTRY + "  cpu_quota: 60\n  archive: maybe\n")
+    assert SiteConfig.load_sites_config(path) is None
+    messages = [r.getMessage() for r in caplog.records if r.levelname == "ERROR"]
+    assert any("s.cpu_quota: Extra inputs" in m for m in messages)
+    assert any("s.archive: Input should be a valid boolean" in m for m in messages)
+    assert messages[-1].endswith(f"{path}: 2 problem(s) - not loading any site")
+    assert "Traceback" not in caplog.text
+
+
+def test_cli(tmp_path, caplog, capsys, patch_lookup_user):
+    import logging
+
+    import yaml
+
+    good = tmp_path / "good.yaml"
+    good.write_text(ENTRY + "  cpu_quota_pct: 200\n")
+    with caplog.at_level(logging.INFO):
+        assert SiteConfig.main(["--verbose", "check", str(good)]) == 0
+    assert f"{good}: OK - 1 site(s): s" in caplog.text
+    capsys.readouterr()
+    assert SiteConfig.main(["dump", str(good)]) == 0
+    dumped = yaml.safe_load(capsys.readouterr().out)
+    assert dumped["s"]["watch_dir"] == str(pathlib.Path("/srv/s").resolve())
+    assert dumped["s"]["cpu_quota_pct"] == 200 and dumped["s"]["queue_scripts"] is True
+    assert dumped["s"]["runner_uid"] == 5001
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("s:\n  watch_dir: /srv/s\n  runner_user: someone-else\n")
+    with caplog.at_level(logging.ERROR):
+        assert SiteConfig.main(["check", str(bad)]) == 1
+    assert "s.runner_user: unknown account" in caplog.text
+    assert SiteConfig.main(["check", "--no-resolve_users", str(bad)]) == 0

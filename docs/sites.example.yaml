@@ -11,6 +11,10 @@
 # Everything else has a sane default and only needs to be set when it
 # differs from that default for this one site.
 #
+# Check a sites.yaml before restarting the services (an unknown key or a
+# "false" string where true/false is meant is an error - see the doc):
+#   python SiteConfig.py check sites.yaml
+#
 # The two entries below (seaglider, train) mirror a real two-jail
 # deployment's baserunner@.service/baserunnertrain@.service units -
 # both jails share the same runner_user (ioprunner) here, which is a
