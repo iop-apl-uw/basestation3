@@ -64,7 +64,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import orjson
-import yaml
 
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 import MakeKMLSSH
@@ -72,6 +71,7 @@ import MakeKMLSSH
 import BaseOpts
 import BaseOptsType
 import Capabilities
+import MissionsModel
 import SiteConfig
 import Utils
 from BaseLog import BaseLogger, log_critical, log_error, log_info, log_warning
@@ -161,14 +161,14 @@ def load_active_missions(
         return []
     _visited.add(missions_yml)
 
-    try:
-        data = yaml.safe_load(missions_yml.read_text())
-    except (OSError, yaml.YAMLError):
-        log_error(f"Could not read {missions_yml}", "exc")
-        return None
-
-    if not isinstance(data, dict):
-        log_error(f"{missions_yml}: expected a top-level mapping")
+    # MissionsModel reports what's wrong (at file:line) without changing what's loaded;
+    # each included file is checked as it's loaded below (follow=False)
+    data, warnings, problems = MissionsModel.check_file(missions_yml, follow=False)
+    for warning in warnings:
+        log_warning(warning)
+    if data is None:
+        for problem in problems:
+            log_error(f"Could not read {missions_yml}: {problem}")
         return None
 
     missions = data.get("missions")

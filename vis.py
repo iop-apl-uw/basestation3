@@ -3057,6 +3057,19 @@ async def buildMissionTable(app, config=None):
             sanic.log.logger.info(f"{config['MISSIONS_FILE']} does not exist")
             x = {}
 
+    # Not turned on (2026-10-15): missions.yml's format is evolved here, in vis.py, and a
+    # checker shouldn't get in its way. MissionsModel.py only reports - it never changes x -
+    # so turning it on would just log each problem it finds (file:line), e.g.:
+    #
+    #     if 'MISSIONS_FILE' in config and not config.get('SINGLE_MISSION'):
+    #         import MissionsModel
+    #         _, warnings, problems = MissionsModel.check_file(pathlib.Path(config['MISSIONS_FILE']), follow=False)
+    #         for msg in warnings + problems:
+    #             sanic.log.logger.warning(msg)
+    #
+    # (follow=False: each domains:/includes: file is checked as buildMissionTable loads it.)
+    # When a new key is read below, add it to the matching table in MissionsModel.py.
+    # Check a file by hand with: MissionsModel.py check missions.yml
     if 'organization' not in x:
         x['organization'] = {}
     if 'missions' not in x:

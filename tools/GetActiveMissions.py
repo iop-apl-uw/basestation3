@@ -31,9 +31,13 @@
 
 import argparse
 import os
+import pathlib
 import sys
 
 import yaml
+
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
+import MissionsModel  # noqa: E402 - after the path setup
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
@@ -44,6 +48,10 @@ args = vars(ap.parse_args())
 missions_yml = os.path.abspath(os.path.expanduser(args["missions_yml"]))
 
 results_list = []
+# Report what's wrong with the file (MissionsModel) - the results below don't change
+_, warnings, _ = MissionsModel.check_file(pathlib.Path(missions_yml), follow=False)
+for warning in warnings:
+    sys.stderr.write(f"WARNING: {warning}\n")
 try:
     with open(missions_yml, "r") as fi:
         mission_config = yaml.safe_load(fi.read())

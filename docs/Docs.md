@@ -9,6 +9,12 @@ Documentation on the basestation extension for generating netCDF files suitable 
 Documentation on the basestation visualization server - vis - is in [vis.txt](vis.txt)
 A sample mission.yml file for vis - with detailed docs in the comments - is in [missions.yml](missions.yml)
 
+`MissionsModel.py check missions.yml` reports problems in a missions.yml (and the domains:/includes: files it
+names) at file:line - unknown keys (often a missing space after a colon, or a comma inside a `{ }` value that splits
+it), missions vis would skip, two active missions for one glider, colors that aren't colors. It only reports: it
+changes nothing, and vis.py doesn't run it. On a mirror, `--path_map /home/jails=/local/mirror` maps the server
+paths the file names.
+
 ## Whole Mission Timeseries/Profile and parquet file contents
 
 The whole mission time series netcdf files (`--make_mission_timeseries`) and whole mission profile (`--make_mission_profiles`) and parquet files (`--generate_parquet`) contents can be extended using a `--whole_mission_config` file [whole_mission.yml](whole_mission.yml).
