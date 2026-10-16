@@ -103,3 +103,23 @@ def test_sys_path_does_not_grow(monkeypatch: pytest.MonkeyPatch) -> None:
     for _ in range(3):
         BaseOpts.BaseOptions("t", cmdline_args=[], calling_module="LeakTestW")
     assert len(sys.path) == n
+
+
+def test_loadmodule_imports_once(tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """loadmodule caches a module under its own name (it used the key "module.name", so every BaseOptions call
+    re-ran every extension); a module whose import fails isn't left behind."""
+    good = tmp_path / "loadmodule_once_ext.py"
+    good.write_text("import sys\nsys.loadmodule_once_count = getattr(sys, 'loadmodule_once_count', 0) + 1\n")
+    try:
+        first = BaseOpts.loadmodule(str(good))
+        assert first is not None and BaseOpts.loadmodule(str(good)) is first
+        assert sys.loadmodule_once_count == 1  # ty: ignore[unresolved-attribute]
+        assert sys.modules["loadmodule_once_ext"] is first and "module.name" not in sys.modules
+    finally:
+        sys.modules.pop("loadmodule_once_ext", None)
+        if hasattr(sys, "loadmodule_once_count"):
+            del sys.loadmodule_once_count  # ty: ignore[unresolved-attribute]
+    bad = tmp_path / "loadmodule_bad_ext.py"
+    bad.write_text("raise RuntimeError('broken extension')\n")
+    assert BaseOpts.loadmodule(str(bad)) is None
+    assert "loadmodule_bad_ext" not in sys.modules and "broken extension" in capsys.readouterr().err

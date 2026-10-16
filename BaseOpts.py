@@ -288,10 +288,12 @@ def loadmodule(pathname):
         if mod is None:
             sys.stderr.write(f"Failed generating mod from spec {pathname}")
             return None
-        sys.modules["module.name"] = mod
+        sys.modules[name] = mod  # so the fast path above finds it next time (and Utils.loadmodule reuses it)
         spec.loader.exec_module(mod)  # ty: ignore[possibly-missing-attribute]
         return mod
     except Exception:
+        # Don't leave a half-imported module for the fast path to return next time
+        sys.modules.pop(name, None)
         # log_error(f"Error loading {pathname}", "exc")
         sys.stderr.write(f"Error loading {pathname} {traceback.format_exc()}")
         # log_info("No module loaded")
