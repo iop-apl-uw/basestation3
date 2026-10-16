@@ -47,7 +47,7 @@ import numpy as np
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 import BaseOpts
 import BaseOptsType
-from BaseLog import BaseLogger, log_critical, log_error, log_info
+from BaseLog import BaseLogger, log_critical, log_error, log_info, log_warning
 
 DEBUG_PDB = False
 
@@ -211,6 +211,10 @@ def fetch_aviso_nrt(stime, target_dir) -> pathlib.Path | None:
         except Exception:
             log_error(f"Failed to remove {local_file}")
             return None
+    if not os.path.exists(local_file):
+        # get() returns quietly when nothing matches - today's product isn't published yet
+        log_warning(f"{file_name} isn't available yet - the next run will try again")
+        return None
     return pathlib.Path(local_file)
 
 
