@@ -688,7 +688,16 @@ class Dispatcher:
             self._enqueue(site, script_name, glider_id, seaglider_mission_dir, argv, log_file)
             return
 
-        self._dispatch_blocking(site, argv, log_file)
+        # Every known_scripts entry is also in queued_scripts, and every
+        # SiteConfig defaults queue_scripts=True - this branch should be
+        # unreachable under any real sites.yaml. Fail loudly instead of
+        # running the job inline, which would block the shared multi-site
+        # event loop.
+        log_critical(
+            f"[{site.name}] {script_name} is queue_scripts=False but not "
+            "blocking-dispatch capable - refusing to run it inline and "
+            "block the shared event loop; check sites.yaml"
+        )
 
     def _enqueue(
         self,
@@ -733,38 +742,6 @@ class Dispatcher:
             if que in self.running_jobs:
                 uuids.append(self.running_jobs[que].job_id)
             self._notify_vis(que, glider_id, uuids, "queued", job_id, returncode=None)
-
-    def _dispatch_blocking(
-        self, site: SiteConfig.SiteConfig, argv: list[str], log_file: str
-    ) -> None:
-        """Runs a non-queued script synchronously, blocking this event loop.
-
-        Not reachable under any current sites.yaml - every SiteConfig
-        defaults queue_scripts=True and every known_scripts entry is also
-        in queued_scripts. Kept only for structural parity with
-        BaseRunner.py, which has the same always-taken queued branch.
-        Unlike BaseRunner.py, this blocks the SHARED multi-site loop, not
-        just one site's - do not set queue_scripts=False in production.
-
-        Args:
-            site: The owning site.
-            argv: The job's argv.
-            log_file: Path the job's stdout/stderr should be appended to.
-
-        Returns:
-            None.
-        """
-        log_info(f"[{site.name}] Running {argv}")
-        pid = self._priv_client.dispatch(
-            site.name, argv, pathlib.Path(log_file), str(uuid.uuid4())
-        )
-        while True:
-            done, returncode = self._priv_client.status(pid)
-            if done:
-                break
-            time.sleep(0.1)
-        if returncode:
-            log_warning(f"[{site.name}] {argv} returned {returncode}")
 
     def _cleanup_run_file(self, site: SiteConfig.SiteConfig, run_file: pathlib.Path) -> None:
         """Archives or removes a consumed `.run` file.

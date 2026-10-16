@@ -773,49 +773,14 @@ def test_dispatch_queued_drops_job_on_rejection(tmp_path, caplog):
     assert len(caplog.records) == 0
 
 
-# --- Dispatcher._dispatch_blocking (dead-code parity path) ---
+# --- Dispatcher: queue_scripts=False is refused, not run blocking ---
 
 
-def test_dispatch_blocking_immediate_success(tmp_path):
-    site = _site(tmp_path / "seaglider")
-    client = FakePrivExecClient()
-    dispatcher = BaseRunnerMulti.Dispatcher(client)
-
-    def fake_dispatch(site_name, argv, log_file, job_id):
-        pid = 4242
-        client._statuses[pid] = (True, 0)
-        return pid
-
-    client.dispatch_override = fake_dispatch
-    dispatcher._dispatch_blocking(site, ["/bin/true"], str(site.watch_dir / "log"))
-
-
-def test_dispatch_blocking_logs_warning_on_nonzero_returncode(tmp_path, caplog):
-    site = _site(tmp_path / "seaglider")
-    client = FakePrivExecClient()
-
-    def fake_dispatch(site_name, argv, log_file, job_id):
-        pid = 4242
-        client._statuses[pid] = (True, 3)
-        return pid
-
-    client.dispatch_override = fake_dispatch
-    dispatcher = BaseRunnerMulti.Dispatcher(client)
-    dispatcher._dispatch_blocking(site, ["/bin/false"], str(site.watch_dir / "log"))
-    assert any(r.levelname == "WARNING" for r in caplog.records)
-
-
-def test_process_run_file_uses_blocking_dispatch_when_queue_scripts_false(tmp_path):
+def test_process_run_file_refuses_when_queue_scripts_false(tmp_path, caplog):
+    """queue_scripts=False is refused loudly - nothing queued or dispatched inline."""
     site = _site(tmp_path / "seaglider")
     object.__setattr__(site, "queue_scripts", False)
     client = FakePrivExecClient()
-
-    def fake_dispatch(site_name, argv, log_file, job_id):
-        pid = 4242
-        client._statuses[pid] = (True, 0)
-        return pid
-
-    client.dispatch_override = fake_dispatch
     dispatcher = BaseRunnerMulti.Dispatcher(client)
     run_file = _write_run_file(
         site.watch_dir, "sg272.run", "/home/sg272", "/home/sg272/current",
@@ -824,7 +789,9 @@ def test_process_run_file_uses_blocking_dispatch_when_queue_scripts_false(tmp_pa
 
     dispatcher.handle_run_file_event(site, run_file)
 
-    assert not dispatcher.job_queues  # never queued - dispatched inline instead
+    assert not dispatcher.job_queues  # never queued
+    assert not client.dispatched  # never dispatched inline either
+    assert any(r.levelname == "CRITICAL" for r in caplog.records)
 
 
 # --- UnixSocketPrivExecClient ---
@@ -996,29 +963,6 @@ def test_enqueue_strips_daemon_flag(tmp_path):
     que = ("seaglider", "/home/sg272/current", "GliderEarlyGPS.py", 272)
     job = dispatcher.job_queues[que][0]
     assert "--daemon" not in job.argv
-
-
-def test_dispatch_blocking_polls_until_done(tmp_path):
-    site = _site(tmp_path / "seaglider")
-    client = FakePrivExecClient()
-    calls = {"n": 0}
-
-    def fake_dispatch(site_name, argv, log_file, job_id):
-        return 4242
-
-    def fake_status(pid):
-        calls["n"] += 1
-        if calls["n"] < 2:
-            return (False, None)
-        return (True, 0)
-
-    client.dispatch_override = fake_dispatch
-    client.status_override = fake_status
-    dispatcher = BaseRunnerMulti.Dispatcher(client)
-
-    dispatcher._dispatch_blocking(site, ["/bin/true"], str(site.watch_dir / "log"))
-
-    assert calls["n"] == 2
 
 
 def test_cleanup_run_file_missing_file_is_noop(tmp_path):

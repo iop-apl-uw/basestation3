@@ -470,7 +470,7 @@ def main():
 
                         msg = {
                             "glider": glider_id,
-                            "queue_id": f"{seaglider_mission_dir}||{script_name}",
+                            "queue_id": f"{sg_mission_dir}||{script_name}",
                             "time": time.time(),
                             "uuids": uuids,
                             "action": "complete",
