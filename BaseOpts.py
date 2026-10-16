@@ -1973,6 +1973,37 @@ class CustomFormatter(
     """Allow for multiple formatters for help"""
 
 
+def _own(options_dict: dict[str, options_t], name: str, owned: set[str]) -> options_t:
+    """This call's own copy of an option, made the first time the call changes it.
+
+    options_dict is a shallow copy of global_options_dict (and of Plotting's and the
+    extensions' options), so changing an option's group or required set in place would
+    change it for every later BaseOptions in the process. The copy has its own group set
+    and kwargs (with its own required set).
+
+    Args:
+        options_dict: This call's options (updated in place with the copy).
+        name: The option to change.
+        owned: Names already copied by this call (updated).
+
+    Returns:
+        The call's copy of the option.
+
+    Raises:
+        Nothing.
+    """
+    if name not in owned:
+        opt = options_dict[name]
+        kwargs = dict(opt.kwargs)
+        if isinstance(kwargs.get("required"), set):
+            kwargs["required"] = set(kwargs["required"])
+        options_dict[name] = dataclasses.replace(
+            opt, group=set(opt.group) if opt.group is not None else None, kwargs=kwargs
+        )
+        owned.add(name)
+    return options_dict[name]
+
+
 class BaseOptions:
     """
     BaseOptions: for use by all basestation code and utilities.
@@ -2007,7 +2038,8 @@ class BaseOptions:
             calling_module - name if calling module if supplied
             add_to_required - adds the calling_module as requiring the named arguments (arguments must also be in add_to_argument list)
         """
-        global option_group_description
+        # This call's own copy - added groups mustn't outlive the call
+        option_group_description = dict(globals()["option_group_description"])
 
         if cmdline_args is None:
             cmdline_args = sys.argv[1:]
@@ -2024,6 +2056,7 @@ class BaseOptions:
             )[0]
 
         options_dict = dict(global_options_dict)
+        owned: set[str] = set()  # options this call has its own copy of (see _own)
         if additional_arguments is not None:
             # The caller's own options must not redefine a core one
             merge_options(options_dict, additional_arguments, calling_module)
@@ -2035,14 +2068,15 @@ class BaseOptions:
                         f"{calling_module}: add_to_arguments names unknown option {add_arg}"
                     )
                 if options_dict[add_arg].group is not None:
-                    options_dict[add_arg].group.add(calling_module)
+                    _own(options_dict, add_arg, owned).group.add(calling_module)
 
         if add_to_required is not None:
             for add_arg in add_to_required:
-                if "required" in options_dict[add_arg].kwargs:
-                    options_dict[add_arg].kwargs["required"].add(calling_module)
+                opt = _own(options_dict, add_arg, owned)
+                if isinstance(opt.kwargs.get("required"), set):
+                    opt.kwargs["required"].add(calling_module)
                 else:
-                    options_dict[add_arg].kwargs["required"] = {calling_module}
+                    opt.kwargs["required"] = {calling_module}
 
         if add_option_groups is not None:
             option_group_description |= add_option_groups
@@ -2051,7 +2085,8 @@ class BaseOptions:
 
         self.basestation_directory = basestation_directory  # make avaiable
         # add path to load common basestation modules from subdirectories
-        sys.path.append(str(basestation_directory))
+        if str(basestation_directory) not in sys.path:
+            sys.path.append(str(basestation_directory))
 
         # Update default config location
         options_dict["basestation_etc"] = dataclasses.replace(
@@ -2081,7 +2116,7 @@ class BaseOptions:
                     )
                     continue
                 if options_dict[add_arg].group is not None:
-                    options_dict[add_arg].group.add(module)
+                    _own(options_dict, add_arg, owned).group.add(module)
 
         if "--generate_sample_conf" in cmdline_args:
             # Generate a sample conf file and exit
