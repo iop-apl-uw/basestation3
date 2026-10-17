@@ -476,7 +476,8 @@ class GliderEarlyGPSClient:
         """
         ret_val = None
         if session.gps_fix is None:
-            ret_val = "No GPS fix in most recent counter line - skipping"
+            # The glider's state (indoors, on deck, a self test), not a failure
+            log_warning("No GPS fix in most recent counter line - skipping")
         elif session.dive_num is None:
             ret_val = "No dive number in most recent counter line - skipping"
         elif session.logout_seen is True and not force:

@@ -494,3 +494,26 @@ def test_replay_last_session_main_fires_notifications(
     )
 
     process_extensions_mock.assert_called_once()
+
+
+def test_process_counter_line_no_gps_fix_is_a_warning(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A call without a GPS fix is the glider's state (indoors, on deck, a self test) - a warning, not an
+    error, and nothing is sent or written (sg195 self test, 2026-10-16)."""
+    base_opts = _make_base_opts(tmp_path)
+    client = GliderEarlyGPS.GliderEarlyGPSClient(tmp_path / "comm.log", base_opts, [], first_time=False)
+    warnings = MagicMock()
+    errors = MagicMock()
+    process_urls = MagicMock()
+    monkeypatch.setattr(GliderEarlyGPS, "log_warning", warnings)
+    monkeypatch.setattr(GliderEarlyGPS, "log_error", errors)
+    monkeypatch.setattr(GliderEarlyGPS.BaseDotFiles, "process_urls", process_urls)
+
+    session = MagicMock()
+    session.gps_fix = None
+    client.process_counter_line(session)
+
+    warnings.assert_called_once_with("No GPS fix in most recent counter line - skipping")
+    errors.assert_not_called()
+    process_urls.assert_not_called()
