@@ -367,13 +367,10 @@ def test_plot_wkb_schedule_partial_dive_does_not_crash(tmp_path, caplog):
 # harmless no-op without a sections.yml present, so it doesn't affect the
 # other fixtures.
 #
-# mission_commlog is deliberately excluded: its "calls" DB table
-# (BaseDB.addSession) is only ever populated by the live glider-login code
-# path (GliderEarlyGPS.py/CommLog.addSession), never by batch
-# reprocessing of a static comm.log via Base.main - confirmed by tracing
-# every addSession call site. No fixture, however constructed, can make
-# this plot produce output through this pipeline; it would need a
-# dedicated test that seeds the calls table directly. Left as a follow-on.
+# mission_commlog isn't here: its "calls" DB table is filled by the glider-login
+# path (GliderEarlyGPS.py -> BaseDB.addSession) or CommLog.py's command line, never
+# by Base.main reprocessing a static comm.log - test_mission_commlog_thumbnail seeds
+# it from the fixture's comm.log first.
 test_mission_plot_coverage_inputs = (
     ("mission_callstats", "sg686_Shilshole_28Oct25", "p6860005.nc"),
     ("mission_depthangle", "sg686_Shilshole_28Oct25", "p6860005.nc"),
@@ -422,6 +419,43 @@ def test_mission_plot_coverage(tmp_path, caplog, plot_name, data_dir, dive_nc):
     webp_files = list(mission_dir.joinpath("plots").glob("*.webp"))
     assert webp_files, f"{plot_name} produced no .webp thumbnail"
 
+
+
+def test_mission_commlog_thumbnail(tmp_path, caplog):
+    """mission_commlog draws its thumbnail from the calls table.
+
+    The calls table is seeded from the fixture's comm.log the way CommLog.py's
+    command line does it (BaseDB.addSession for every session), before Base.main
+    runs the plot.
+    """
+    import BaseDB
+    import CommLog
+
+    def seed_calls(mission_dir: pathlib.Path) -> None:
+        opts = BaseOpts.BaseOptions(
+            "seed calls",
+            cmdline_args=["--mission_dir", str(mission_dir), "--instrument_id", "686"],
+            calling_module="CommLog",
+        )
+        comm_log = CommLog.process_comm_log(mission_dir / "comm.log", opts)[0]
+        assert comm_log is not None and comm_log.sessions
+        assert all(BaseDB.addSession(opts, session) for session in comm_log.sessions)
+
+    mission_dir = tmp_path / "mission_dir"
+    testutils.run_mission(
+        pathlib.Path("testdata/sg686_Shilshole_28Oct25"),
+        mission_dir,
+        Base.main,
+        [
+            "--verbose", "--mission_dir", str(mission_dir), "p6860005.nc", "--plot_types", "mission",
+            "--mission_plots", "mission_commlog", "--no-notify_vis",
+        ],  # fmt: skip
+        caplog,
+        [""],
+        pre_test_hook=seed_calls,
+    )
+    assert "No call data found in database" not in caplog.text
+    assert list(mission_dir.joinpath("plots").glob("*commlog*.webp")), "mission_commlog produced no .webp thumbnail"
 
 def test_get_mission_str_missing_mission_title(tmp_path: pathlib.Path) -> None:
     """Every mission_title line commented out must not raise (sg194, 2026-08-28).
