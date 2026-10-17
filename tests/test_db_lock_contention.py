@@ -59,9 +59,10 @@ NC_FILE = pathlib.Path("testdata/sg686_Shilshole_28Oct25/p6860005.nc")
 class FakeSession:
     """Minimal stand-in for CommLog.ConnectSession as used by addSession()."""
 
-    def __init__(self, dive: int = 5, call: int = 1) -> None:
+    def __init__(self, dive: int = 5, call: int = 1, gps_fix: object | None = True) -> None:
         self.dive_num = dive
         self.calls_made = call
+        self.gps_fix = gps_fix  # a ConnectSession has one unless the call got no fix
 
     def to_message_dict(self) -> dict:
         fields = [
@@ -99,6 +100,37 @@ def _calls_rows(base_opts: types.SimpleNamespace) -> list:
         return con.execute("SELECT dive, call FROM calls").fetchall()
     finally:
         con.close()
+
+
+def test_add_session_without_gps_fix(base_opts, caplog) -> None:
+    """A call with no GPS fix isn't added (vis reads lat/lon/epoch from every calls row) and counts as
+    handled, so GliderEarlyGPS doesn't retry it (sg195 self test, 2026-10-16: 162 errors in 14 minutes)."""
+    caplog.set_level(logging.WARNING)
+    assert BaseDB.addSession(base_opts, FakeSession(call=3, gps_fix=None)) is True
+    assert _calls_rows(base_opts) == []
+    assert "Call 3 (dive 5) has no GPS fix - not added to the calls table" in caplog.text
+    assert "inserting comm.log session" not in caplog.text
+    assert BaseDB.addSession(base_opts, FakeSession(call=4)) is True
+    assert _calls_rows(base_opts) == [(5, 4)]
+
+
+def test_session_dicts_without_gps_fix(tmp_path) -> None:
+    """A real ConnectSession with no GPS fix still makes its dicts (GliderEarlyGPS sends the message dict
+    to .urls) - no position or fix time, everything else as usual."""
+    import BaseOpts
+    import CommLog
+
+    opts = BaseOpts.BaseOptions("t", cmdline_args=["--mission_dir", str(tmp_path)], calling_module="CommLog")
+    comm_log = CommLog.process_comm_log(NC_FILE.parent / "comm.log", opts)[0]
+    assert comm_log is not None
+    session = comm_log.sessions[-1]
+    with_fix = session.to_message_dict()
+    assert with_fix["lat"] is not None
+    session.gps_fix = None
+    d = session.to_message_dict()
+    assert (d["lat"], d["lon"], d["epoch"]) == (None, None, None)
+    assert d["dive"] == with_fix["dive"] and d["call"] == with_fix["call"]
+    assert session.to_dict()["gps_fix"] is None
 
 
 def test_uncommitted_plot_write_blocks_add_session(base_opts, caplog) -> None:

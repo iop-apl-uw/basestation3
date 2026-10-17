@@ -743,7 +743,7 @@ class ConnectSession:
     def to_dict(self):
         """Converts session object to a dict"""
         x = copy.deepcopy(self)
-        x.gps_fix = vars(x.gps_fix)
+        x.gps_fix = vars(x.gps_fix) if x.gps_fix is not None else None
         return vars(x)
 
     def to_message_dict(self):
@@ -754,9 +754,10 @@ class ConnectSession:
             "dive": self.dive_num,
             "cycle": self.call_cycle,
             "call": self.calls_made,
-            "lat": Utils.ddmm2dd(self.gps_fix.lat),
-            "lon": Utils.ddmm2dd(self.gps_fix.lon),
-            "epoch": time.mktime(self.gps_fix.datetime),
+            # No GPS fix on this call (e.g. a self test indoors): no position or fix time
+            "lat": Utils.ddmm2dd(self.gps_fix.lat) if self.gps_fix else None,
+            "lon": Utils.ddmm2dd(self.gps_fix.lon) if self.gps_fix else None,
+            "epoch": time.mktime(self.gps_fix.datetime) if self.gps_fix else None,
             "RH": self.rh,
             "intP": self.int_press,
             "temp": self.temperature,

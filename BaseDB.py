@@ -1549,11 +1549,19 @@ def addSession(base_opts, session, con=None, sms=0, retry_on_lock=False) -> bool
             "database is locked" failure at INFO rather than ERROR.
 
     Returns:
-        True if the session was written (or there was nothing to write),
-        False otherwise. The insert is INSERT OR REPLACE keyed on
+        True if the session was written (or there was nothing to write - no
+        session, or a call without a GPS fix), False otherwise. The insert is INSERT OR REPLACE keyed on
         (dive, cycle, call), so retrying a failed write is safe.
     """
     if session is None:
+        return True
+
+    if getattr(session, "gps_fix", None) is None:
+        # A call without a GPS fix has no position: vis reads lat/lon/epoch from every
+        # calls row, so it isn't added - and it's handled (True), so it isn't retried
+        log_warning(
+            f"Call {session.calls_made} (dive {session.dive_num}) has no GPS fix - not added to the calls table"
+        )
         return True
 
     if con is None:
