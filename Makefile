@@ -79,3 +79,6 @@ actlinux:
 
 doc:
 	uv run mkdocs build
+
+doc-serve:
+	uv run mkdocs serve

@@ -1,15 +1,58 @@
 site_name: Seaglider Basestation
+repo_url: https://github.com/iop-apl-uw/basestation3
+repo_name: iop-apl-uw/basestation3
+edit_uri: ""
+
+# The site is generated at build time (mkdocs/gen_pages.py): the Readme as the front page, every
+# file under docs/ as the guide (docs/ itself is left as plain markdown for GitHub and on-disk
+# reading), and an API reference page per module.
+docs_dir: mkdocs
+exclude_docs: |
+  gen_pages.py
+
 theme:
-  name: "material"
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - search.highlight
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
 
 plugins:
-  - mkdocstrings
+  - search
+  - gen-files:
+      scripts:
+        - mkdocs/gen_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - mkdocstrings:
+      handlers:
+        python:
+          # Plotting/ is a package; Sensors/ and ssh/ modules are imported by bare name
+          paths: [., Sensors, ssh]
+          options:
+            docstring_style: google
+            show_if_no_docstring: true
+            members_order: source
+            show_source: true
+            show_root_heading: true
+            heading_level: 1
 
 markdown_extensions:
-  - markdown_include.include:
-      base_path: mkdocs
-      
-nav:
-  - index.md
-  - reference.md
-  
+  - toc:
+      permalink: true
+  - tables
+  - fenced_code

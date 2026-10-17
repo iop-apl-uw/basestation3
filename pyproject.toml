@@ -103,7 +103,6 @@ ci = [
 dev = [
     ## Documentation (fill in)
     "mkdocs",
-    "markdown-include",
     "mkdocstrings[python]",
     "mkdocs-material",
     ## Development
@@ -111,7 +110,9 @@ dev = [
     "flynt",
     "notebook==7.4.4",
     "jupyterlab==4.4.5",
-    "flameprof==0.4"
+    "flameprof==0.4",
+    "mkdocs-gen-files>=0.6.1",
+    "mkdocs-literate-nav>=0.6.3",
 ]
 
 

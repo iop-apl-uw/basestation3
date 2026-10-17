@@ -1,4 +1,0 @@
-## Entry Points
-
-::: Base
-
