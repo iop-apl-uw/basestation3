@@ -21,7 +21,7 @@ The whole mission time series netcdf files (`--make_mission_timeseries`) and who
 
 ## FlightModel
 
-The Flight Model System (FMS) is documented in [FlightModel.pdf](FlightModel.pdf?raw=true)
+The Flight Model System (FMS) is documented in [FlightModel.pdf](FlightModel.pdf)
 
 ## Basestation QC system
 

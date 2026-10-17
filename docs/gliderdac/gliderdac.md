@@ -1,4 +1,4 @@
-# GliderDAC extension.
+# GliderDAC extension
 
 The basestation extension - GliderDAC.py - can assist you in preparing data for 
 submission to the GliderDAC.  Setting up GliderDAC access, WMO ids, and internal workings

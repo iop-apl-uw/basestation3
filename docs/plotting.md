@@ -1,4 +1,4 @@
-# Basestation Plotting.
+# Basestation Plotting
 
 This document covers the basics of basestation3 plots and ways to add additional plots such that they are visible through the vis.py website.
 
