@@ -31,12 +31,15 @@
 """Basestation implimentation of gzip and gunzip"""
 
 import cProfile
+import gzip
 import io
 import os
 import pathlib
 import pstats
+import shutil
 import sys
 import time
+import typing
 import zlib
 
 import BaseOpts
@@ -45,17 +48,6 @@ import Utils
 from BaseLog import BaseLogger, log_critical, log_debug, log_error, log_info
 
 FTEXT, FHCRC, FEXTRA, FNAME, FCOMMENT = 1, 2, 4, 8, 16
-
-
-def write32(output, value):
-    """Output a 32 bit value as a char"""
-    output.write(chr(value & 255))
-    value = value // 256
-    output.write(chr(value & 255))
-    value = value // 256
-    output.write(chr(value & 255))
-    value = value // 256
-    output.write(chr(value & 255))
 
 
 def read32(input_file):
@@ -67,55 +59,42 @@ def read32(input_file):
     return v
 
 
-def compress(input_file_name, output_file_or_file_name):
-    """Compress one file into another
-    Input:
-        input_file_name - file name
-        output_file_or_file_name - file name or object with write method
+def _gzip_to(input_file: typing.BinaryIO, output_file: typing.BinaryIO, name: str, mtime: float) -> None:
+    """Writes input_file to output_file gzipped, with name and mtime in the header."""
+    with gzip.GzipFile(filename=name, mode="wb", compresslevel=9, fileobj=output_file, mtime=int(mtime)) as gz:
+        shutil.copyfileobj(input_file, gz)
+
+
+def compress(
+    input_file_name: str | pathlib.Path, output_file_or_file_name: str | pathlib.Path | typing.BinaryIO
+) -> int:
+    """Gzips one file into another.
+
+    The header records the input file's name and modification time.
+
+    Args:
+        input_file_name: The file to compress.
+        output_file_or_file_name: Where the compressed data goes - a file name, or an open (binary) file.
+
+    Returns:
+        0 for success, 1 for failure (logged).
     """
+    input_path = pathlib.Path(input_file_name)
     try:
-        input_file = open(input_file_name, "rb")
+        mtime = input_path.stat().st_mtime
+        with input_path.open("rb") as input_file:
+            if isinstance(output_file_or_file_name, (str, pathlib.Path)):
+                with pathlib.Path(output_file_or_file_name).open("wb") as output_file:
+                    _gzip_to(input_file, output_file, input_path.name, mtime)
+            elif hasattr(output_file_or_file_name, "write"):
+                _gzip_to(input_file, output_file_or_file_name, input_path.name, mtime)
+            else:
+                log_error("Unknown type %s for output argument" % type(output_file_or_file_name))
+                return 1
     except OSError as exception:
-        log_error("Could not open %s (%s)" % (input_file_name, exception.args))
+        log_error("Could not compress %s to %s (%s)" % (input_file_name, output_file_or_file_name, exception.args))
         return 1
-
-    if isinstance(output_file_or_file_name, str):
-        try:
-            output_file = open(output_file_or_file_name, "wb")
-        except OSError as exception:
-            log_error(
-                "Could not open %s (%s)" % (output_file_or_file_name, exception.args)
-            )
-            return 1
-    elif hasattr(output_file_or_file_name, "write"):
-        output_file = output_file_or_file_name
-    else:
-        log_error(
-            "Unknown type %s for output argument" % type(output_file_or_file_name)
-        )
-        return 1
-
-    output_file.write("\037\213\010")  # Write the header, ...
-    output_file.write(chr(FNAME))  # ... flag byte ...
-
-    statval = os.stat(input_file_name)  # ... modification time ...
-    mtime = statval[8]
-    write32(output_file, mtime)
-    output_file.write("\002")  # ... slowest compression alg. ...
-    output_file.write("\377")  # ... OS (=unknown) ...
-    output_file.write(input_file_name + "\000")  # ... original filename ...
-
-    crcval = zlib.crc32("")
-    compobj = zlib.compressobj(9, zlib.DEFLATED, -zlib.MAX_WBITS, zlib.DEF_MEM_LEVEL, 0)
-    while True:
-        data = input_file.read(1024)
-        if data == "":
-            break
-        crcval = zlib.crc32(data, crcval)
-        output_file.write(compobj.compress(data))
-    output_file.write(compobj.flush())
-    write32(output_file, crcval)  # ... the CRC ...
-    write32(output_file, statval[6])  # and the file size.
+    return 0
 
 
 # def unsigned(n):

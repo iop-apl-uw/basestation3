@@ -667,7 +667,7 @@ class FileCode:
     def is_processed_seaglider_selftest_log(self):
         _, ext = os.path.splitext(self._filename)
 
-        return self._filename[0:1] == "pt" and ext == ".log"
+        return self._filename[0:2] == "pt" and ext == ".log"
 
     # Marker names
     def is_dive_marker(self):
@@ -786,7 +786,9 @@ class FileCode:
                 + ".dat"
             )
         elif self.is_logger():
-            if self.is_up_data() or self.is_down_data:
+            # A cast file (a dive, b climb, c loiter, d surface loiter) carries its cast; a file for the whole
+            # dive wouldn't - but a whole-dive data file's type is d too, so it gets the d
+            if self.up_down_data():
                 tail = "p%s%03d%04d%c.dat" % (
                     self.logger_prefix(),
                     self._instrument_id,
