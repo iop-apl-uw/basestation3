@@ -294,3 +294,35 @@ def test_log_version_banner(
 )
 def test_mission_title_basename(calib_consts: dict | None, expected: str) -> None:
     assert Utils.mission_title_basename(calib_consts) == expected
+
+
+def test_copy_interp_previous_value_and_fill() -> None:
+    """Each point gets the last sample at or before it; outside the samples, the fill values."""
+    f = Utils.CopyInterp(np.array([0.0, 1.0, 2.0]), np.array([10.0, 11.0, 12.0]), fill_value=(-1.0, 99.0))
+    np.testing.assert_array_equal(f(np.array([-0.5, 0.0, 0.5, 1.0, 1.5, 2.5])), [-1, 10, 10, 11, 11, 99])
+
+
+def test_copy_interp_last_sample() -> None:
+    """A point exactly on the last sample gets its value (it used to get none - the result came up short)."""
+    f = Utils.CopyInterp(np.array([0.0, 1.0, 2.0]), np.array([10.0, 11.0, 12.0]), fill_value=(-1.0, 99.0))
+    new_x = np.array([0.5, 2.0, 2.5])
+    result = f(new_x)
+    assert len(result) == len(new_x)
+    np.testing.assert_array_equal(result, [10, 12, 99])
+
+
+def test_copy_interp_one_value_per_point() -> None:
+    """A point that matches no sample (a NaN) gets NaN, so the result still lines up with the points."""
+    f = Utils.CopyInterp(np.array([0.0, 1.0]), np.array([10.0, 11.0]), fill_value=(-1.0, 99.0))
+    result = f(np.array([0.5, np.nan, 0.5]))
+    assert len(result) == 3 and np.isnan(result[1]) and result[0] == result[2] == 10
+
+
+def test_copy_interp_no_fill_value() -> None:
+    """With no fill_value, in-range points work and an out-of-range one raises (it used to be AttributeError)."""
+    f = Utils.CopyInterp(np.array([0.0, 1.0]), np.array([10.0, 11.0]))
+    np.testing.assert_array_equal(f(np.array([0.0, 1.0])), [10, 11])
+    with pytest.raises(ValueError, match="outside the interpolation range"):
+        f(np.array([5.0]))
+    with pytest.raises(ValueError, match="fill_value must be"):
+        Utils.CopyInterp(np.array([0.0, 1.0]), np.array([10.0, 11.0]), fill_value=(1.0,))  # ty: ignore[invalid-argument-type]

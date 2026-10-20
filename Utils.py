@@ -2439,8 +2439,9 @@ class CopyInterp:
     ) -> None:
         self._y = y
         self._x = x
+        self._fill_value: tuple[float, float] | None = None  # None: raise on points outside x
         if fill_value is None:
-            self._bounds_error = (None, None)
+            pass
         elif (
             isinstance(fill_value, collections.abc.Collection) and len(fill_value) == 2
         ):
@@ -2451,14 +2452,19 @@ class CopyInterp:
     def __call__(self, new_x: NDArray) -> NDArray:
         new_y = []
         for val in new_x:
-            if val < self._x[0]:
-                new_y.append(self._fill_value[0])
-            elif val > self._x[-1]:
-                new_y.append(self._fill_value[1])
+            if val < self._x[0] or val > self._x[-1]:
+                if self._fill_value is None:
+                    raise ValueError(f"{val} is outside the interpolation range and there's no fill_value")
+                new_y.append(self._fill_value[0] if val < self._x[0] else self._fill_value[1])
+            elif val == self._x[-1]:
+                new_y.append(self._y[-1])  # the last sample (the loop below stops short of it)
             else:
                 for jj in range(len(self._x) - 1):
                     if self._x[jj] <= val < self._x[jj + 1]:
                         new_y.append(self._y[jj])
+                        break
+                else:
+                    new_y.append(np.nan)  # one value per point, whatever happens
         return np.array(new_y)
 
 
