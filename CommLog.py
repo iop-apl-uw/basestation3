@@ -295,15 +295,18 @@ class CommLog:
         sessions, looking for one that has a dive number set
 
         Returns:
-            dive number if found as an int and the call cycle (if exists) or calls made (ver 65)
+            dive number if found as an int and the call cycle (if exists) or calls made (ver 65) - 0 if the
+            session has a dive number but neither counter (callers build file names from it)
             None if no dive number found
         """
         for i in reversed(range(len(self.sessions))):
             if latest or self.sessions[i].dive_num is not None:
-                if self.sessions[i].call_cycle is not None:
-                    return (self.sessions[i].dive_num, self.sessions[i].call_cycle)
-                else:
-                    return (self.sessions[i].dive_num, self.sessions[i].calls_made)
+                session = self.sessions[i]
+                counter = session.call_cycle if session.call_cycle is not None else session.calls_made
+                if counter is None and session.dive_num is not None:
+                    log_warning(f"No call counter for dive {session.dive_num} in the comm.log - using 0")
+                    counter = 0
+                return (session.dive_num, counter)
         return (None, None)
 
     def last_surfacing(self):

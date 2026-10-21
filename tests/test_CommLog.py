@@ -29,6 +29,7 @@
 
 """CommLog.process_comm_log."""
 
+import time
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -49,3 +50,15 @@ def test_scan_back_prints_nothing(tmp_path: Path, capsys: pytest.CaptureFixture[
     _, start_pos, _, _, status = CommLog.process_comm_log(comm_log, base_opts, scan_back=True)
     assert status == 0 and start_pos is not None
     assert capsys.readouterr().out == ""
+
+
+def test_dive_num_without_call_counter() -> None:
+    """A session with a dive number but no call counter gives 0, not None (names are built from it)."""
+    session = CommLog.ConnectSession(time.gmtime(0), "UTC")
+    session.dive_num = 42
+    comm_log = CommLog.CommLog([session], [], {}, {})
+    assert comm_log.get_last_dive_num_and_call_counter() == (42, 0)
+    session.calls_made = 3
+    assert comm_log.get_last_dive_num_and_call_counter() == (42, 3)
+    session.call_cycle = 5
+    assert comm_log.get_last_dive_num_and_call_counter() == (42, 5)

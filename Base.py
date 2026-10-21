@@ -36,7 +36,6 @@ with dive.
 
 import cProfile
 import functools
-import math
 import os
 import pathlib
 import pdb
@@ -52,7 +51,6 @@ import tarfile
 import threading
 import time
 import traceback
-from urllib.request import HTTPPasswordMgr
 
 import orjson
 
@@ -161,31 +159,6 @@ def set_globals() -> None:
 
 
 set_globals()
-
-
-def my_prompt_user_passwd(
-    self: HTTPPasswordMgr, host: str, realm: str
-) -> tuple[None, None]:
-    """Stub function to prevent interactive username and password prompting.
-
-    This function overrides the default terminal authentication prompting
-    mechanism to ensure that network requests do not block standard input (stdin)
-    when encountering endpoints requiring authentication.
-
-    Args:
-        self: The HTTPPasswordMgr instance context invoking the prompt.
-        host: The network hostname or URL of the server requesting authentication.
-        realm: The specific security realm defined by the target server.
-
-    Returns:
-        A tuple of (None, None) to indicate no credentials will be provided
-        interactively via the terminal.
-    """
-    return None, None
-
-
-# Apply the stub function
-HTTPPasswordMgr.prompt_user_passwd = my_prompt_user_passwd
 
 
 def load_files_to_skip(base_opts: BaseOpts.BaseOptions) -> list[str]:
@@ -404,7 +377,6 @@ def process_dive_selftest(
                         base_opts,
                         file_group,
                         fragment_size_dict,
-                        0,
                         calib_consts,
                         instrument_id,
                         comm_log,
@@ -444,7 +416,6 @@ def process_dive_selftest(
                     base_opts,
                     file_group,
                     fragment_size_dict,
-                    0,
                     calib_consts,
                     instrument_id,
                     comm_log,
@@ -589,7 +560,6 @@ def process_file_group(
     base_opts,
     file_group,
     fragment_size_dict,
-    total_size,
     calib_consts,
     instrument_id,
     comm_log,
@@ -600,7 +570,6 @@ def process_file_group(
     Input:
         file_group - list of fragments
         fragment_size_dict - mapping of all fragments and expected sizes
-        total_size - total size of the resulting file - 0 if not known
 
     Returns:
        0 success
@@ -739,7 +708,6 @@ def process_file_group(
         defrag_file_name,
         fragments_1a,
         fragment_size_dict,
-        total_size,
         instrument_id,
     )
 
@@ -1101,9 +1069,7 @@ def process_file_group(
     return ret_val
 
 
-def check_file_fragments(
-    defrag_file_name, fragment_list, fragment_size_dict, total_size, instrument_id
-):
+def check_file_fragments(defrag_file_name, fragment_list, fragment_size_dict, instrument_id):
     """Checks that the file fragments are of a reasonable size
 
     Note: this function will issue incorrect diagnostics if the size of fragment is
@@ -1124,41 +1090,7 @@ def check_file_fragments(
     # Assume sorted
     # fragment_list.sort()  #In case this hasn't already been done
 
-    size_from_fragments = 0
     number_of_fragments = len(fragment_list)
-    last_frag_expected_size = 0
-
-    # This math assumes a constant fragment size, so we just use the first
-    # fragments expectedsize
-    if total_size != 0:
-        fragment_size = fragment_size_dict[
-            FileMgr.get_non_1a_filename(
-                os.path.basename(fragment_list[-1])
-            ).expectedsize
-        ]
-        number_expected_fragments = math.ceil(total_size / fragment_size)
-        if total_size % fragment_size > 0:
-            number_expected_fragments = number_expected_fragments + 1
-            last_frag_expected_size = total_size % fragment_size
-        else:
-            last_frag_expected_size = fragment_size
-
-        if number_of_fragments == number_expected_fragments:
-            log_debug(
-                "Got %d fragments, expected %d."
-                % (number_of_fragments, number_expected_fragments)
-            )
-        elif number_of_fragments < number_expected_fragments:
-            log_info(
-                "Missing fragments: total size logged was %d, got %d, expected %d."
-                % (total_size, number_of_fragments, number_expected_fragments)
-            )
-        else:
-            log_info(
-                "Too many fragments: total size logged was %d; got %d, expected %d."
-                % (total_size, number_of_fragments, number_expected_fragments)
-            )
-        del fragment_size
 
     # check fragment sizes:
     fragment_cntr = 0
@@ -1209,8 +1141,7 @@ def check_file_fragments(
         else:
             # First check if we have a known mismatch between the expected vs received size - this really
             # is just applies to raw for the last fragment in the chain.  If that isn't the case,
-            # and the total_size is known, last frag size should be expected
-            # OR <= frag_size if total_size is unknown
+            # the last frag size should be <= frag_size
             expectedsize, receivedsize = fragment_size_dict[
                 FileMgr.get_non_1a_filename(os.path.basename(fragment))
             ]
@@ -1228,21 +1159,7 @@ def check_file_fragments(
                 )
                 ret_val = False
 
-            elif total_size != 0:
-                if current_fragment_size != last_frag_expected_size:
-                    msg = (
-                        "Final fragment %s size (%d) is not expected (should be %d)."
-                        % (fragment, current_fragment_size, last_frag_expected_size)
-                    )
-                    log_warning(msg)
-                    log_conversion_alert(
-                        defrag_file_name,
-                        msg,
-                        generate_resend(fragment, instrument_id),
-                    )
-
             elif current_fragment_size > expectedsize:
-                size_from_fragments += current_fragment_size
                 fc = FileMgr.FileCode(fragment, instrument_id)
                 if fc.get_fragment_counter() >= 0 and not (
                     fc.is_seaglider_selftest() and fc.is_capture()
@@ -1258,13 +1175,6 @@ def check_file_fragments(
                         msg,
                         generate_resend(fragment, instrument_id),
                     )
-
-    if total_size != 0 and size_from_fragments != total_size:
-        log_warning(
-            "Size from frags (%d) does not match logged value (%d)"
-            % (size_from_fragments, total_size)
-        )
-        ret_val = False
 
     return ret_val
 
@@ -1383,12 +1293,12 @@ def expunge_secrets(logfile_name):
         try:
             pvt = open(base + ".pvt", "w")
         except OSError:
-            log_error("could not open " + base + ".pvt" + " for writing")
+            log_error(f"could not open {base}.pvt for writing")
             return 1
         try:
             pub = open(logfile_name, "w")
         except OSError:
-            log_error("could not open " + logfile_name + " for writing")
+            log_error(f"could not open {logfile_name} for writing")
             return 1
 
         pub.write(public_lines)
@@ -1451,12 +1361,12 @@ def expunge_secrets_st(selftest_name):
         try:
             pvt = open(pvt_name, "wb")
         except OSError:
-            log_error("could not open " + pvt_name + " for writing")
+            log_error(f"could not open {pvt_name} for writing")
             return 1
         try:
             pub = open(selftest_name, "wb")
         except OSError:
-            log_error("could not open " + selftest_name + " for writing")
+            log_error(f"could not open {selftest_name} for writing")
             return 1
 
         pub.write(public_lines)
@@ -1537,7 +1447,7 @@ class ProcessProgress:
         """Notifiy vis of progress through main() and calcuate runtime stats"""
 
         if section not in self.section_times:
-            log_warning("Uknown section name {section}")
+            log_warning(f"Unknown section name {section}")
             return
 
         t0 = time.time()
@@ -1827,6 +1737,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 "exc",
             )
         else:
+            if command_list_with_ts is None:
+                # Couldn't be read (logged) - nothing to merge
+                command_list_with_ts = []
             new_list_with_ts = CommLog.merge_lists_with_ts(
                 comm_log.raw_lines_with_ts, command_list_with_ts
             )
@@ -2327,6 +2240,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 session = comm_log.last_surfacing()
                 if (
                     known_files[ii] in session.file_stats
+                    # A session still open (no disconnect yet) isn't a completed upload
+                    and session.disconnect_ts is not None
                     and time.mktime(session.disconnect_ts)
                     > os.stat(known_file).st_mtime
                 ):

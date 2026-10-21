@@ -27,8 +27,10 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
 import os
 import pathlib
+import types
 from datetime import datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
@@ -290,7 +292,6 @@ def test_process_file_group_network_logfile_casts_str_to_path(
         base_opts,
         [str(fragment)],
         fragment_size_dict,
-        0,
         {},
         179,
         comm_log,
@@ -332,7 +333,6 @@ def test_process_file_group_network_profile_casts_str_to_path(
         base_opts,
         [str(fragment)],
         fragment_size_dict,
-        0,
         {},
         179,
         comm_log,
@@ -376,7 +376,6 @@ def test_process_file_group_network_profile_appends_on_success(
         base_opts,
         [str(fragment)],
         fragment_size_dict,
-        0,
         {},
         179,
         comm_log,
@@ -385,3 +384,60 @@ def test_process_file_group_network_profile_appends_on_success(
 
     assert ret_val == 0
     assert Base.processed_other_files == converted_paths
+
+
+def test_unreadable_history_log(tmp_path, caplog):
+    """history.log there but unreadable: logged, no merge (merge_lists_with_ts used to get None and raise)."""
+    data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_magcal")
+    mission_dir = tmp_path / "mission_dir"
+
+    def unreadable_history(mission_dir: pathlib.Path) -> None:
+        (mission_dir / "files_to_skip.txt").write_text("sg0002dz\nsg0002lz\nsc0002ag\nsc0002bg\n")
+        history = mission_dir / "history.log"
+        history.write_text("")
+        history.chmod(0)
+
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        Base.main,
+        f"--verbose  --local --no-notify_vis --skip_flight_model --plot_types none --ignore_flight_model --mission_dir {mission_dir}".split(),
+        caplog,
+        ["Could not open", "No dives to process"],
+        pre_test_hook=unreadable_history,
+        required_msgs=["history.log for reading"],
+    )
+
+
+def test_check_file_fragments(tmp_path):
+    """Full fragments then a shorter last one are fine; a short fragment before the last isn't."""
+    import CommLog
+
+    def fragments(sizes):
+        names = []
+        for n, size in enumerate(sizes):
+            f = tmp_path / f"sg0042dz.x0{n}"
+            f.write_bytes(b"\0" * size)
+            names.append(str(f))
+        return names, {pathlib.Path(f).name: CommLog.file_expected_actual_nt(8192, -1) for f in names}
+
+    good, sizes = fragments((8192, 8192, 100))
+    assert Base.check_file_fragments(str(tmp_path / "sg0042dz.r"), good, sizes, 686)
+    short, sizes = fragments((8192, 4000, 100))
+    assert not Base.check_file_fragments(str(tmp_path / "sg0042dz.r"), short, sizes, 686)
+
+
+def test_expunge_secrets_unwritable(tmp_path):
+    """A log with secrets that can't be rewritten: 1 and an error (its Path name used to raise TypeError)."""
+    log = tmp_path / "p6860042.log"
+    log.write_text("version: 67.01\ndata:\n$ID,686\n$PASSWD,secret\n")
+    log.chmod(0o444)  # readable, not writable
+    assert Base.expunge_secrets(log) == 1
+
+
+def test_process_progress_unknown_section(tmp_path, caplog):
+    opts = types.SimpleNamespace(instrument_id=686, job_id=None, mission_dir=tmp_path)
+    progress = Base.ProcessProgress(opts)
+    with caplog.at_level(logging.WARNING):
+        progress.process_progress("no_such_section", "start")
+    assert "Unknown section name no_such_section" in caplog.text
