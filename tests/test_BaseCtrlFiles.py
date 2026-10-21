@@ -315,3 +315,12 @@ def test_subscription_with_no_complete_call(tmp_path: pathlib.Path) -> None:
     BaseLog.BaseLogger.reset()
     assert BaseCtrlFiles.main(["--mission_dir", str(tmp_path), "gps"]) == 1
     assert "No complete call in comm.log" in BaseLog.log_warn_errors().getvalue()
+
+
+def test_merge_dict_nested_conflict_honors_allow_override() -> None:
+    """allow_override=False reaches nested dicts (it was dropped, so they overrode)."""
+    with pytest.raises(Exception, match=r"Conflict at a\.b"):
+        BaseCtrlFiles.merge_dict({"a": {"b": 1}}, {"a": {"b": 2}}, allow_override=False)
+    # the default still overrides, and lists still concatenate, at any depth
+    merged = BaseCtrlFiles.merge_dict({"a": {"b": 1, "l": [1]}}, {"a": {"b": 2, "l": [2]}})
+    assert merged == {"a": {"b": 2, "l": [1, 2]}}

@@ -5011,7 +5011,7 @@ def main(
 
         if old_basestation:
             MakeDiveProfiles.sg_config_constants(
-                base_opts, sg_calib_constants_d, None, {}
+                base_opts, sg_calib_constants_d, 0, False
             )
             glider_type = get_FM_defaults(sg_calib_constants_d)
         else:

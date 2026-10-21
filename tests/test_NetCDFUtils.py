@@ -252,3 +252,15 @@ def test_bindata_ignores_nan_x() -> None:
     avgs, counts = NetCDFUtils.bindata(x, y, bins)
     np.testing.assert_array_equal(avgs, [15.0, 40.0])
     np.testing.assert_array_equal(counts, [2, 1])
+
+
+def test_merge_dict_nested_conflict_honors_allow_override() -> None:
+    """allow_override reaches nested dicts, not just the top level."""
+    a = {"x": {"y": 1, "z": 2}, "k": 0}
+    assert NetCDFUtils.merge_dict(a, {"x": {"y": 9}, "k": 0, "n": 3}, allow_override=True) == {
+        "x": {"y": 9, "z": 2},
+        "k": 0,
+        "n": 3,
+    }
+    with pytest.raises(Exception, match=r"Conflict at x\.y"):
+        NetCDFUtils.merge_dict({"x": {"y": 1}}, {"x": {"y": 2}})

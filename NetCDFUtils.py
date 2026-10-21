@@ -148,7 +148,7 @@ def merge_dict(a, b, path=None, allow_override=False):
     for key in b:
         if key in a:
             if isinstance(a[key], dict) and isinstance(b[key], dict):
-                merge_dict(a[key], b[key], path + [str(key)])
+                merge_dict(a[key], b[key], path + [str(key)], allow_override)
             elif a[key] == b[key]:
                 pass  # same leaf value
             elif allow_override:
