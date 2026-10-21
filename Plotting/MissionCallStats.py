@@ -72,6 +72,77 @@ call_plot_map = {
 }
 
 
+def file_type_tag(file_name: str) -> str | None:
+    """A transferred file's plot category: its prefix and type letter, with a/b casts counted as data (d).
+
+    Args:
+        file_name: The file, e.g. sg0042dz.x01.
+
+    Returns:
+        The tag, e.g. "sgd", or None for a name that isn't <prefix><dive><type><packing>.
+    """
+    head, _ = os.path.splitext(file_name)
+    if len(head) != 8:
+        return None
+    file_type = "d" if head[6:7] in ("a", "b") else head[6:7]
+    return f"{head[0:2]}{file_type}"
+
+
+def tally_transfers(
+    files_transfered: list[dict], files_stats: list[dict]
+) -> tuple[
+    collections.OrderedDict[str, np.ndarray],
+    collections.OrderedDict[str, np.ndarray],
+    collections.OrderedDict[str, np.ndarray],
+    np.ndarray,
+    np.ndarray,
+]:
+    """Totals each session's transfers by file type: bytes, file count and seconds.
+
+    The protocol is decided per file, not per session: a session's files usually all go raw or all
+    X/YMODEM, but pdoscmds transfers in the same session almost always go X/YMODEM, so a session can mix
+    them. A raw file's record is its byte count; an X/YMODEM file's is its list of blocks.
+
+    Args:
+        files_transfered: Per session, file name -> its byte count (raw) or its blocks (X/YMODEM).
+        files_stats: Per session, file name -> its CommLog.file_stats_nt (receivedsize, bps).
+
+    Returns:
+        (bytes by type, files by type, seconds by type, bytes per session, seconds per session) - each by type
+        an array over the sessions.
+    """
+    n_sessions = len(files_transfered)
+    file_types = sorted({tag for fs in files_transfered for f in fs if (tag := file_type_tag(f)) is not None})
+    log_debug("File types found %s" % file_types)
+    file_type_tots = collections.OrderedDict((ft, np.zeros(n_sessions)) for ft in file_types)
+    file_type_count = collections.OrderedDict((ft, np.zeros(n_sessions)) for ft in file_types)
+    file_type_secs = collections.OrderedDict((ft, np.zeros(n_sessions)) for ft in file_types)
+    files_transfered_bytes = np.zeros(n_sessions)
+    files_transfered_secs = np.zeros(n_sessions)
+
+    for ii, session_files in enumerate(files_transfered):
+        for f, transfer in session_files.items():
+            ty = file_type_tag(f)
+            if ty is None:
+                continue
+            bps = files_stats[ii][f].bps
+            if isinstance(transfer, int):
+                # Raw - the file's byte count; its time from what was received
+                n_bytes = transfer
+                secs = files_stats[ii][f].receivedsize / bps if bps > 0 else 0.0
+            else:
+                # X/YMODEM - the file's blocks; its time from its own bytes (not the type's running total)
+                n_bytes = sum(block.block_len for block in transfer)
+                secs = n_bytes / bps if bps > 0 else 0.0
+            file_type_tots[ty][ii] += n_bytes
+            files_transfered_bytes[ii] += n_bytes
+            file_type_count[ty][ii] += 1
+            file_type_secs[ty][ii] += secs
+            files_transfered_secs[ii] += secs
+
+    return file_type_tots, file_type_count, file_type_secs, files_transfered_bytes, files_transfered_secs
+
+
 @plotmissionsingle
 def mission_callstats(
     base_opts: BaseOpts.BaseOptions,
@@ -157,69 +228,13 @@ def mission_callstats(
         endpoint=False,
     )
 
-    # Find all unique types
-    file_types = set()
-    for fs in files_transfered:
-        for f in fs:
-            head, _ = os.path.splitext(f)
-            if len(head) == 8:
-                if head[6:7] == "a" or head[6:7] == "b":
-                    tmp = "d"
-                else:
-                    tmp = head[6:7]
-                tag = "%s%s" % (head[0:2], tmp)
-                file_types.add(tag)
-
-    log_debug("File types found %s" % file_types)
-
-    file_type_tots = collections.OrderedDict()
-    file_type_count = collections.OrderedDict()
-    file_type_secs = collections.OrderedDict()
-
-    for ft in file_types:
-        file_type_tots[ft] = np.zeros(len(files_transfered_num))
-        file_type_count[ft] = np.zeros(len(files_transfered_num))
-        file_type_secs[ft] = np.zeros(len(files_transfered_num))
-
-    files_transfered_bytes = np.zeros(len(files_transfered_num))
-    files_transfered_secs = np.zeros(len(files_transfered_num))
-
-    # Walk the list
-    for ii in range(len(files_transfered)):
-        for f in files_transfered[ii]:
-            head, _ = os.path.splitext(f)
-            if len(head) == 8:
-                if head[6:7] == "a" or head[6:7] == "b":
-                    tmp = "d"
-                else:
-                    tmp = head[6:7]
-                for ty in list(file_type_tots.keys()):
-                    if head[0:2] == ty[0:2] and tmp == ty[2:3]:
-                        # log_info(files_transfered[ii])
-                        # log_info(files_transfered[ii][f])
-                        if isinstance(files_transfered[ii][f], int):
-                            # Raw
-                            file_type_tots[ty][ii] += files_transfered[ii][f]
-                            files_transfered_bytes[ii] += files_transfered[ii][f]
-                            file_type_count[ty][ii] += 1
-                            if files_stats[ii][f].bps > 0:
-                                tmp = (
-                                    files_stats[ii][f].receivedsize
-                                    / files_stats[ii][f].bps
-                                )
-                                file_type_secs[ty][ii] += tmp
-                                files_transfered_secs[ii] += tmp
-                        else:
-                            # XModem
-                            for ft in files_transfered[ii][f]:
-                                file_type_tots[ty][ii] += ft.block_len
-                                files_transfered_bytes[ii] += ft.block_len
-
-                            file_type_count[ty][ii] += 1
-                            if files_stats[ii][f].bps > 0:
-                                tmp = file_type_tots[ty][ii] / files_stats[ii][f].bps
-                                file_type_secs[ty][ii] += tmp
-                                files_transfered_secs[ii] += tmp
+    (
+        file_type_tots,
+        file_type_count,
+        file_type_secs,
+        files_transfered_bytes,
+        files_transfered_secs,
+    ) = tally_transfers(files_transfered, files_stats)
 
     # Build up a list of the total bytes per dive
     dives_bytes_accum = collections.defaultdict(float)

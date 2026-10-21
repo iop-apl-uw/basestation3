@@ -50,3 +50,38 @@ def test_no_dive_numbers_skips_plot(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     base_opts = SimpleNamespace(mission_dir=tmp_path)
     assert MissionCallStats.mission_callstats(base_opts, ["sg627"]) == ([], [])
     assert messages == ["No calls with a dive number in comm.log yet - skipping mission_callstats"]
+
+
+def test_tally_transfers_mixed_protocols() -> None:
+    """Each file's seconds come from its own bytes - raw and X/YMODEM files can share a session.
+
+    X/YMODEM seconds used to be the type's running total over bps, so each later fragment of a type counted
+    the earlier ones again.
+    """
+    block = CommLog.file_transfered_nt
+    stats = CommLog.file_stats_nt
+    session = {
+        "sg0042dz.x00": 8192,  # raw
+        "sg0042dz.x01": [block(1, 4096), block(2, 4096)],  # X/YMODEM
+        "sg0042dz.x02": [block(1, 1024)],  # X/YMODEM
+        "sg0042pz.x00": [block(1, 2048)],  # a pdoscmds transfer, X/YMODEM
+    }
+    session_stats = {
+        "sg0042dz.x00": stats(8192, 8192, 8192, 1024),
+        "sg0042dz.x01": stats(8192, 8192, 8192, 512),
+        "sg0042dz.x02": stats(1024, 1024, 1024, 512),
+        "sg0042pz.x00": stats(2048, 2048, 2048, 256),
+    }
+    tots, counts, secs, bytes_v, secs_v = MissionCallStats.tally_transfers([session], [session_stats])
+    assert list(tots) == ["sgd", "sgp"]
+    assert tots["sgd"][0] == 8192 + 8192 + 1024 and counts["sgd"][0] == 3
+    assert secs["sgd"][0] == 8192 / 1024 + 8192 / 512 + 1024 / 512  # 8 + 16 + 2 (was 8 + 16 + 34)
+    assert secs["sgp"][0] == 2048 / 256
+    assert bytes_v[0] == 8192 + 8192 + 1024 + 2048 and secs_v[0] == 8 + 16 + 2 + 8
+
+
+def test_file_type_tag() -> None:
+    assert MissionCallStats.file_type_tag("sg0042dz.x01") == "sgd"
+    assert MissionCallStats.file_type_tag("sc0042az.x00") == "scd"  # a/b casts count as data
+    assert MissionCallStats.file_type_tag("sg0042lz.x00") == "sgl"
+    assert MissionCallStats.file_type_tag("cmdfile") is None
