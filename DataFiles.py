@@ -120,9 +120,6 @@ class DataFile:
         else:
             return col_name
 
-    def row_time(self, raw_strs):
-        time.mktime(self.start_ts) + raw_strs[self.columns.index("")]
-
     def dat_to_asc(self):
         """Converts a data file to a an ASC file"""
         if self.file_type == "asc":

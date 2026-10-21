@@ -517,3 +517,17 @@ def test_process_counter_line_no_gps_fix_is_a_warning(
     warnings.assert_called_once_with("No GPS fix in most recent counter line - skipping")
     errors.assert_not_called()
     process_urls.assert_not_called()
+
+
+def test_process_comm_log_wrapper_keeps_its_place_after_an_error(tmp_path: Path) -> None:
+    """An error return has no position; the client keeps its last one (it used to pass None back next call)."""
+    base_opts = _make_base_opts(tmp_path)
+    client = _make_client(tmp_path, base_opts)
+    client._first_time = False
+    client._start_pos = 123
+    session = object()
+    client._commlog_session = session  # ty: ignore[invalid-assignment]
+    client._commlog_linecount = 7
+    # No comm.log: process_comm_log returns (None, None, None, None, 1)
+    assert client.process_comm_log_wrapper() == 1
+    assert (client._start_pos, client._commlog_session, client._commlog_linecount) == (123, session, 7)

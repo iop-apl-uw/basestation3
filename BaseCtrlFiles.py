@@ -1314,9 +1314,13 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     if comm_log is None:
         log_error("Could not process comm.log")
         return 1
+    session = comm_log.last_complete_surfacing()
+    if session is None:
+        log_error("No complete call in comm.log - nothing to send")
+        return 1
     process_pagers_yml(
         base_opts,
-        comm_log.last_complete_surfacing().sg_id,
+        session.sg_id,
         (action,),
         comm_log=comm_log,
     )

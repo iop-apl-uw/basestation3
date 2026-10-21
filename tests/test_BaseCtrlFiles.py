@@ -307,3 +307,11 @@ def test_validate_pagers_file_raises_alerts_for_errors_only(tmp_path: pathlib.Pa
     assert alerts[0].startswith(f"ERROR: {bad}:1: pilot.email.0.filters.0:")
     assert alerts[1].startswith(f"ERROR: {dot}: not a pagers.yml mapping")
     BaseLog.BaseLogger.alerts_d = {}
+
+
+def test_subscription_with_no_complete_call(tmp_path: pathlib.Path) -> None:
+    """A comm.log with no complete call: an error and 1, not an AttributeError."""
+    (tmp_path / "comm.log").write_text("Connected at 2026-08-08T11:21:07Z (sg180)\nlogged in\n")
+    BaseLog.BaseLogger.reset()
+    assert BaseCtrlFiles.main(["--mission_dir", str(tmp_path), "gps"]) == 1
+    assert "No complete call in comm.log" in BaseLog.log_warn_errors().getvalue()

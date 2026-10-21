@@ -27,6 +27,9 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import io
+import time
+
 import pytest
 
 import LogFile
@@ -172,3 +175,36 @@ def test_warn_alert_thresholds_from_options(tmp_path):
         "ct_parse_errors": 3,
         "tcm2mat_error": 3,
     }
+
+
+# --- $GC lines ---
+
+_GC_HEAD = "$GCHEAD,st_secs,pitch_ctl,vbd_ctl,depth,ob_vertv,data_pts,end_secs,pitch_secs,roll_secs,vbd_secs,vbd_i,gcphase\n"
+
+
+@pytest.mark.usefixtures("_fresh_baselog")
+def test_gc_value_without_metadata_is_none(tmp_path, monkeypatch):
+    """A $GC value that can't be converted is None - st_secs/end_secs too (they used to raise TypeError)."""
+    import BaseNetCDF
+
+    metadata = dict(BaseNetCDF.nc_var_metadata)
+    del metadata["gc_st_secs"]
+    del metadata["gc_data_pts"]
+    monkeypatch.setattr(BaseNetCDF, "nc_var_metadata", metadata)
+    log = tmp_path / "p2830624.log"
+    log.write_text(_LOG_HEADER + _GC_HEAD + "$GC,10,1.0,2.0,3.0,4.0,50,20,0.5,0.6,0.7,8,9\n")
+    log_file = LogFile.parse_log_file(str(log))
+    assert log_file is not None
+    assert log_file.gc_data["st_secs"] == [None]
+    assert log_file.gc_data["data_pts"] == [None]
+    assert log_file.gc_data["end_secs"][0] == 20 + time.mktime(log_file.start_ts)
+
+
+def test_dump_writes_the_mission(tmp_path):
+    log = tmp_path / "p2830624.log"
+    log.write_text(_LOG_HEADER)
+    log_file = LogFile.parse_log_file(str(log))
+    assert log_file is not None
+    out = io.StringIO()
+    log_file.dump(out)
+    assert "mission: 4\n" in out.getvalue() and "dive: 624\n" in out.getvalue()  # mission used to print the dive

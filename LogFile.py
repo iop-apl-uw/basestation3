@@ -228,7 +228,7 @@ class LogFile:
         """Dumps out the logfile"""
         print("version: %2.2f" % (self.version), file=fo)
         print("glider: %d" % (self.glider), file=fo)
-        print("mission: %d" % (self.dive), file=fo)
+        print("mission: %d" % (self.mission), file=fo)
         print("dive: %d" % (self.dive), file=fo)
         time_string = time.strftime("%m %d %y %H %M %S", self.start_ts)
         time_parts = time_string.split()
@@ -861,7 +861,9 @@ def parse_log_file(
                     _,
                     _,
                 ) = md
-                if nc_data_type == "d":
+                if value is None:
+                    pass  # missing from the line - logged above
+                elif nc_data_type == "d":
                     try:
                         value = float(value)
                     except ValueError:
@@ -886,7 +888,7 @@ def parse_log_file(
                             % (column_name, value)
                         )
                         value = None
-            if column_name in ["st_secs", "end_secs"]:
+            if column_name in ["st_secs", "end_secs"] and value is not None:
                 value += (
                     log_file_start_time  # adjust st_secs and end_secs to be epoch times
                 )

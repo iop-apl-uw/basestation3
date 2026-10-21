@@ -1239,7 +1239,6 @@ def process_comm_log(
 
                     curr_pos = comm_log_file.tell()
                     curr_line = comm_log_file.readline().decode()
-                    print((curr_line, curr_pos))
                     if curr_line.startswith("Connected"):
                         log_info(
                             f"Scan back found connected line pos:{curr_pos} {curr_line}"

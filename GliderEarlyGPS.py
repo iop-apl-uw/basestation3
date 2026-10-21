@@ -217,10 +217,10 @@ class GliderEarlyGPSClient:
         # pylint: disable=C0301
         try:
             (
-                self.__comm_log,
-                self._start_pos,
-                self._commlog_session,
-                self._commlog_linecount,
+                comm_log,
+                start_pos,
+                commlog_session,
+                commlog_linecount,
                 err_code,
             ) = CommLog.process_comm_log(
                 self.__comm_log_file_name,
@@ -235,6 +235,13 @@ class GliderEarlyGPSClient:
             log_error("comm_log processing failed", "exc")
             return 1
         else:
+            # An error gives no position - keep the last one, so the next call carries on from it (rather
+            # than passing None back, which failed every later call)
+            if start_pos is not None:
+                self.__comm_log = comm_log
+                self._start_pos = start_pos
+                self._commlog_session = commlog_session
+                self._commlog_linecount = commlog_linecount
             return err_code
         # log_info(f"start_pos out:{self._start_pos}")
 
