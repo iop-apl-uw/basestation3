@@ -326,3 +326,16 @@ def test_copy_interp_no_fill_value() -> None:
         f(np.array([5.0]))
     with pytest.raises(ValueError, match="fill_value must be"):
         Utils.CopyInterp(np.array([0.0, 1.0]), np.array([10.0, 11.0]), fill_value=(1.0,))  # ty: ignore[invalid-argument-type]
+
+
+def test_unique_is_sorted() -> None:
+    """Without duplicates and sorted - the same order every run (it was a set's order, which isn't)."""
+    assert Utils.unique(["tridente", "legato", "coda", "legato", "magnetometer"]) == [
+        "coda",
+        "legato",
+        "magnetometer",
+        "tridente",
+    ]
+    assert Utils.unique([3, 1, 2, 3, 1]) == [1, 2, 3]
+    assert Utils.unique([Path("b"), Path("a"), Path("b")]) == [Path("a"), Path("b")]
+    assert Utils.unique([]) == []

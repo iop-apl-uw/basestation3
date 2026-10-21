@@ -3131,7 +3131,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             try:
                 fi = open(p, "rb")
             except Exception:
-                log_error("Unable to open %s (%s) - skipping" % p, "exc")
+                log_error(f"Unable to open {p} - skipping", "exc")
             else:
                 cap_text = fi.read()
                 fi.close()

@@ -148,8 +148,12 @@ def open_netcdf_file(
 
 
 def unique(s: list[Any]) -> list[Any]:
-    """Return a list of the elements in s, but without duplicates."""
-    return list(set(s))
+    """Return a sorted list of the elements in s, without duplicates.
+
+    Sorted, so the order is the same from run to run (a set's order changes with str hash randomization).
+    The elements must be hashable and comparable with each other.
+    """
+    return sorted(set(s))
 
 
 # def unique(s):
