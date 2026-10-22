@@ -265,13 +265,20 @@ while done_editing == 0:
 
     done_editing = 1
     if interactive:
-        if err > 0:
-            answer = input("Errors detected, keep changes anyway (yes/no/edit)? ")
-        else:
-            answer = input("New file check ok, accept it (yes/no/edit)? ")
+        good_answer = 0
+        while good_answer == 0:
+            if err > 0:
+                answer = input("Errors detected, keep changes anyway (yes/no/edit)? ")
+            else:
+                answer = input("New file check ok, accept it (yes/no/edit)? ")
 
-        if answer in ["edit", "E", "e"]:
-            done_editing = 0
+            if answer not in ["edit", "E", "e", "YES", "yes", "Y", "y", "no", "NO", "n", "N"]:
+                continue
+
+            good_answer = 1
+
+            if answer in ["edit", "E", "e"]:
+                done_editing = 0
                 
     else:
         if err > 0 and not ignore_errors:
@@ -281,7 +288,7 @@ while done_editing == 0:
             print("New file check ok")
 
 if not validateOnly:
-    if answer in ["yes", "Y", "y"]:
+    if answer in ["yes", "Y", "y", "Yes", "YES"]:
         shutil.copyfile(newfile, ctrlfile)
         print(f"Changes accepted, {filename} has been modified")
     else:
