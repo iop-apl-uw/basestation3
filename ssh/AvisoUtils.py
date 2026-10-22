@@ -84,7 +84,7 @@ def read_aviso(
 
     """
     if source_mean != 1:
-        log_error("source_mean %d not yet implimented")
+        log_error("source_mean %d not yet implemented" % source_mean)
         return None
 
     # NYI mean_dynamic_topo_file_name = os.path.abspath(os.path.join(__location__, "MeanDynamicTopography.mat"))
