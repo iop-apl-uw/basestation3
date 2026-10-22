@@ -87,7 +87,7 @@ def pmar_create_stats_lines(dive_nc_file, ch_tag, plot_type):
     elif plot_type == "base":
         stats_tuple = ("writeerrors", "bufferfull", "datafiles", "datafailedfiles")
     else:
-        log_warning("Unknown plot_type %s - no stats line being created")
+        log_warning(f"Unknown plot_type {plot_type} - no stats line being created")
         return ("", "", "")
 
     for statistic in stats_tuple:

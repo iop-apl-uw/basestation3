@@ -54,7 +54,7 @@ from Plotting import plotmissionsingle
 @plotmissionsingle
 def mission_depthangle(
     base_opts: BaseOpts.BaseOptions,
-    mission_str: list,
+    mission_str: str,
     dive: int | None = None,
     generate_plots: bool = True,
     dbcon: sqlite3.Connection | None = None,

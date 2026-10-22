@@ -94,7 +94,7 @@ def est_remaining(df, y_val, tag_val: str) -> str:
 @plotmissionsingle
 def mission_disk(
     base_opts: BaseOpts.BaseOptions,
-    mission_str: list,
+    mission_str: str,
     dive: int | None = None,
     generate_plots: bool = True,
     dbcon: sqlite3.Connection | None = None,
@@ -296,7 +296,7 @@ pmar_free_color_map = (
 @plotmissionsingle
 def mission_pmar_disk(
     base_opts: BaseOpts.BaseOptions,
-    mission_str: list,
+    mission_str: str,
     dive: int | None = None,
     generate_plots: bool = True,
     dbcon: sqlite3.Connection | None = None,

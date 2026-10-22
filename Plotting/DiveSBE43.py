@@ -158,7 +158,8 @@ def plot_sbe43(
                 else:
                     sat_O2_depth = f(sat_O2_time)
     except Exception:
-        log_warning("Could not load oxygen data", "exc")
+        log_warning("Could not load oxygen data - skipping plot", "exc")
+        return ([], [])
 
     if sbe43_correctedO2 is not None:
         if "sbe43_dissolved_oxygen_qc" in dive_nc_file.variables:

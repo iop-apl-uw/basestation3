@@ -40,6 +40,7 @@ import pathlib
 import sys
 import typing
 
+from BaseLog import log_error
 from BaseOptsType import merge_options
 
 # Avoid circular input for type checking
@@ -70,7 +71,7 @@ def plot_dive_single(
 # pylint: disable=unused-argument
 def plot_mission_single(
     base_opts: BaseOpts.BaseOptions,
-    mission_str: list,
+    mission_str: str,
     dive: int | None = None,
     generate_plots: bool = True,
     dbcon: sqlite3.Connection | None = None,
@@ -84,20 +85,29 @@ plot_mission_sig = inspect.signature(plot_mission_single)
 
 
 def compare_sigs(sig_a, sig_b):
-    """Compares two signatures for type equivalence
+    """Compares a plotting routine's signature with the one BasePlot calls
+
+    The parameters must match in number, kind and default. Those with a default are
+    passed by keyword (BasePlot), so their names must match too; the others are
+    positional and can be named anything. Annotations aren't compared - they
+    document the parameters, and comparing their text unregistered a plot
+    whenever one was corrected (mission_str: list -> str).
+
     Returns:
         True for equivalent
         False if not equivilent
     """
-    if len(sig_a.parameters) != len(sig_b.parameters):
+    params_a = list(sig_a.parameters.values())
+    params_b = list(sig_b.parameters.values())
+    if len(params_a) != len(params_b):
         return False
 
-    for t1, t2 in zip(sig_a.parameters.items(), sig_b.parameters.items(), strict=True):
-        if not t1 or not t2:
+    for p_a, p_b in zip(params_a, params_b, strict=True):
+        if p_a.kind != p_b.kind or p_a.default != p_b.default:
             return False
-        if t1[1].annotation != t2[1].annotation:
+        if p_a.default is not inspect.Parameter.empty and p_a.name != p_b.name:
             return False
-    return sig_a.return_annotation == sig_b.return_annotation
+    return True
 
 
 def add_arguments(_func=None, *, additional_arguments=None):
@@ -141,7 +151,7 @@ def plotdivesingle(func):
         # print(f"Addiing {func.__name__}")
         dive_plot_funcs[func.__name__] = func
     else:
-        print(f"ERROR: {func.__name__} does not match signature")
+        log_error(f"{func.__module__}.{func.__name__} does not match the plotting signature - not registered")
     return func
 
 
@@ -152,7 +162,7 @@ def plotmissionsingle(func):
         # print(f"Addiing {func.__name__}")
         mission_plot_funcs[func.__name__] = func
     else:
-        print(f"ERROR: {func.__name__} does not match signature")
+        log_error(f"{func.__module__}.{func.__name__} does not match the plotting signature - not registered")
     return func
 
 
@@ -204,13 +214,11 @@ if l_dir.exists() and l_dir.is_dir():
             if l_file.stem not in sys.modules:
                 spec = importlib.util.spec_from_file_location(l_file.stem, l_file)
                 if spec is None or spec.loader is None:
-                    sys.error.write(
-                        f"Unable to generate spec from location {l_file.stem}, {l_file}"
-                    )
+                    log_error(f"Unable to generate spec from location {l_file.stem}, {l_file}")
                     continue
                 mod = importlib.util.module_from_spec(spec)
                 if mod is None:
-                    sys.error.write(f"Unable to generate mod from spec {spec}")
+                    log_error(f"Unable to generate mod from spec {spec}")
                     continue
                 sys.modules[l_file.stem] = mod
                 spec.loader.exec_module(mod)

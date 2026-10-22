@@ -93,7 +93,7 @@ line_lookup = {
 @plotmissionsingle
 def mission_energy(
         base_opts: BaseOpts.BaseOptions,
-        mission_str: list,
+        mission_str: str,
         dive: int | None = None,
         generate_plots: bool = True,
         dbcon: sqlite3.Connection | None = None,

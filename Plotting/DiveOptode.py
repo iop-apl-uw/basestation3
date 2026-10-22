@@ -170,7 +170,8 @@ def plot_optode(
                     f"eng_aa{optode_type}_temp"
                 ][:]
     except Exception:
-        log_warning("Could not load oxygen data", "exc")
+        log_warning("Could not load oxygen data - skipping plot", "exc")
+        return ([], [])
 
     if optode_instrument_temp is not None:
         min_temp = np.nanmin(optode_instrument_temp) - (
