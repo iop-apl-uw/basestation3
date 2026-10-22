@@ -382,20 +382,16 @@ def eng_decimal_pts(
      0 - success (data found and processed)
      1 - no data found to process
     """
-    import pdb
-
     if eng_col_names is None:
         log_error(
             "No eng_col_names list supplied for eng_decimal_pts conversion - version mismatch?"
         )
-        pdb.set_trace()
         return -1
 
     if eng_decimal_pts is None:
         log_error(
             "No eng_decimal_pts dict supplied for eng_decimal_pts conversion - version mismatch?"
         )
-        pdb.set_trace()
         return -1
 
     # TODO - this needs to be expanded to get the full name space - instance digit

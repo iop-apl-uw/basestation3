@@ -250,7 +250,7 @@ def remap_engfile_columns_netcdf(base_opts, module, calib_constants, column_name
         "legatoFast_time": "legato_time",
         "legatoFast_conduc": "legato_conduc",
         "legatoFast_temp": "legato_temp",
-        "legatoFast_salinity": "legato_salnity",
+        "legatoFast_salinity": "legato_salinity",
         "legatoFast_pressure": "legato_pressure",
         "legatoFast_depth": "legato_depth",
         "legatoFast_conducTemp": "legato_conducTemp",

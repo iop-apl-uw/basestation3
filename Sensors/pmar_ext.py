@@ -836,8 +836,10 @@ def extract_file_data(inp_file_name):
     None - error
     List of data vectors - success
     """
+    # Binary: upload.eng's (and %binaryoutput files') data block isn't text - read as text it
+    # raised UnicodeDecodeError, and array.frombytes() was then handed a str
     try:
-        inp_file = open(inp_file_name, "r")
+        inp_file = open(inp_file_name, "rb")
     except Exception:
         log_error("Unable to open %s" % inp_file_name)
         return None
@@ -854,9 +856,15 @@ def extract_file_data(inp_file_name):
     # log_info("binaryoutput: %d" % binaryoutput)
     line_count = -1
     # Process the data
-    for inp_line in buffer.splitlines():
-        inp_line = inp_line.rstrip().rstrip()
+    for raw_line in buffer.splitlines():
         line_count += 1
+        try:
+            inp_line = raw_line.decode("utf-8")
+        except UnicodeDecodeError:
+            # The binary data block (handled below)
+            log_debug(f"Could not decode {inp_file_name} line {line_count} - skipping")
+            continue
+        inp_line = inp_line.rstrip().rstrip()
         if inp_line == "":
             continue
         elif inp_line[0] == "%":
@@ -888,9 +896,9 @@ def extract_file_data(inp_file_name):
 
     # Handle the binary case
     if binaryoutput:
-        data_start = buffer.find("%start")
-        data_start = buffer.find("\n", data_start) + 1
-        data_end = buffer.find("\n%stop")
+        data_start = buffer.find(b"%start")
+        data_start = buffer.find(b"\n", data_start) + 1
+        data_end = buffer.find(b"\n%stop")
 
         data = arr.array("H")
         data.frombytes(buffer[data_start:data_end])
