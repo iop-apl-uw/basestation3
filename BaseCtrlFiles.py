@@ -93,8 +93,8 @@ def send_email(
     if "format" in endpoint:
         if endpoint["format"] == "html":
             html_format = True
-        else:
-            log_error("Unknown email format:{endpoint['format']} - defaulting to text")
+        elif endpoint["format"] != "text":
+            log_error(f"Unknown email format:{endpoint['format']} - defaulting to text")
 
     log_info(
         f"Sending email subject:{subject_line} message_body:({message_body}) endpoint:{endpoint['address']} to user:{user}"

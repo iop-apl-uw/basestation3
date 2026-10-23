@@ -324,3 +324,17 @@ def test_merge_dict_nested_conflict_honors_allow_override() -> None:
     # the default still overrides, and lists still concatenate, at any depth
     merged = BaseCtrlFiles.merge_dict({"a": {"b": 1, "l": [1]}}, {"a": {"b": 2, "l": [2]}})
     assert merged == {"a": {"b": 2, "l": [1, 2]}}
+
+
+@pytest.mark.parametrize(("fmt", "html"), [("text", False), ("html", True), ("rtf", False)])
+def test_send_email_format(caplog: pytest.LogCaptureFixture, fmt: str, html: bool) -> None:
+    """format: text is valid (no error); an unknown one is named in the error."""
+    send_dict = {"endpoint": {"address": "pilot@example.com", "format": fmt}, "user": "pilot"}
+    with patch.object(BaseCtrlFiles.BaseDotFiles, "send_email") as send, caplog.at_level("INFO"):
+        BaseCtrlFiles.send_email(MagicMock(), 263, send_dict, "Subject", "Body")
+    assert send.call_args.kwargs["html_format"] is html
+    errors = [r.getMessage() for r in caplog.records if r.levelno >= logging.ERROR]
+    if fmt == "rtf":
+        assert len(errors) == 1 and errors[0].endswith("Unknown email format:rtf - defaulting to text")
+    else:
+        assert errors == []

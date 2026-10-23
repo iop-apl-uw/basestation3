@@ -672,3 +672,21 @@ def test_process_urls_bad_line_skipped(tmp_path, caplog: LogCaptureFixture, line
     post.assert_called_once()
     assert post.call_args.args[0] == "https://vis.example.org/ok?instrument_name=SG283&dive=42&files=all"
     assert "Traceback" not in caplog.text
+
+
+def test_process_mailer_fnmatch_matches_paths(
+    tmp_path, caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A .mailer fnmatch_ tag matches the processed files, which are Paths (was Path.lower() - AttributeError)."""
+    monkeypatch.setattr(BaseLog.BaseLogger, "log_level", logging.INFO)
+    mission = tmp_path / "mission"
+    mission.mkdir()
+    (mission / ".mailer").write_text("pilot@example.com,fnmatch_*.eng\n")
+    eng = mission / "p2830042.eng"
+    eng.write_text("eng\n")
+    opts = MagicMock(basestation_etc=tmp_path / "etc", group_etc=None, mission_dir=mission, domain_name=None, reply_addr=None)
+    with patch.object(BaseDotFiles.smtplib, "SMTP") as smtp, caplog.at_level(logging.INFO):
+        BaseDotFiles.process_mailer(opts, 283, ["eng"], [eng, mission / "p2830042.log"], None, None)
+    assert f"Matched {eng}" in caplog.text
+    assert "Could not process" not in caplog.text
+    smtp.return_value.sendmail.assert_called()

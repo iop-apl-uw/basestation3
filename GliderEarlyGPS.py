@@ -291,7 +291,7 @@ class GliderEarlyGPSClient:
                 with open(comm_log_filename, "a") as fo:
                     fo.write(f"Disconnected at {ts} (shell_disappeared)\n\n\n")
             except Exception:
-                log_error("Could not update {commlog}")
+                log_error(f"Could not update {comm_log_filename}", "exc")
 
     def _log_session(self, session) -> None:
         """Adds a session to the mission db calls table without blocking.
