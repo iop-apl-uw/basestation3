@@ -280,7 +280,7 @@ def main():
             pass
         except Exception:
             log_error(f"Could not open {jail_pwd}", "exc")
-            return 0
+            return 1
         leading_newline = ""
         try:
             with open(jail_pwd, "r") as fi:
