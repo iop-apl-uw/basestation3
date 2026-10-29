@@ -161,9 +161,10 @@ many suggest the logger is busy or failing to answer the main board - check the 
 
 <p><a name="CT_PARSE_ERRORS">CT_PARSE_ERRORS<br>
 The glider reported more than <code>--ct_parse_errors_alert_threshold</code> (default 3) CT parse errors in a dive (the sum of
-its <code>$WARN,N ct parse errors</code> lines).  A few are common and only logged.  Hundreds or thousands mean the CT's
-output is unreadable - a failing or flooded sensor, or a wiring or configuration problem - and its data for the dive is
-suspect.
+its <code>$WARN,N ct parse errors</code> lines). These errors arise from the science controller not responding in the expected time
+(default 60 seconds, but can vary by firmware rev) to a query from the glider for CT data, or the response not being in the expected format/incomplete.
+A few are common and only logged. Hundreds or thousands may point to an issue with the communications between the glider and science controller (wiring for example) or
+the science controller more regularly being too busy to respond.
 </p>
 
 <p><a name="TCM2MAT_ERROR">TCM2MAT_ERROR<br>
