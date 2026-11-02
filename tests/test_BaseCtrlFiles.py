@@ -146,8 +146,24 @@ def test_pagers_validation_errors_never_log_secrets(caplog: pytest.LogCaptureFix
     }
     with caplog.at_level("DEBUG"):
         BaseCtrlFiles.check_canonicalize_pagers_dict(pagers)
-    assert "filter (latepgs) not in known send functions" in caplog.text
+    assert "filter(s) ['latepgs'] not known message types" in caplog.text
     assert SECRET not in caplog.text
+
+
+def test_pagers_unknown_filter_drops_endpoint(caplog: pytest.LogCaptureFixture) -> None:
+    """An endpoint with an unknown filter is dropped, as logged (the continue only left the filter loop)."""
+    pagers = {
+        "pilot": {
+            "email": [
+                {"address": "bad@example.com", "filters": ["gps", "latepgs"]},
+                {"address": "ok@example.com", "filters": ["gps"]},
+            ]
+        }
+    }
+    with caplog.at_level("ERROR"):
+        canonical = BaseCtrlFiles.check_canonicalize_pagers_dict(pagers)
+    assert canonical["users"]["pilot"]["email"] == [{"address": "ok@example.com", "filters": ["gps"]}]
+    assert "user:pilot, send_func:email," in caplog.text and "skipping endpoint" in caplog.text
 
 
 # --- pagers.yml validation -------------------------------------------------

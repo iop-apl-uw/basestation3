@@ -806,7 +806,7 @@ def check_canonicalize_pagers_dict(pagers_dict: dict) -> dict:
 
                 if sf not in pagers_sendfuncs:
                     log_error(
-                        f"Unknown send_func type {sf} for user {k} - skipping user"
+                        f"Unknown send_func type {sf} for user {k} - skipping it"
                     )
                     continue
 
@@ -816,7 +816,7 @@ def check_canonicalize_pagers_dict(pagers_dict: dict) -> dict:
 
                 if not isinstance(sf_list, list):
                     log_error(
-                        f"Endpoints must be a list or dict - user:{k}, send_func{sf}, got {type(sf_list).__name__} - skipping endpoints"
+                        f"Endpoints must be a list or dict - user:{k}, send_func:{sf}, got {type(sf_list).__name__} - skipping endpoints"
                     )
                     continue
 
@@ -824,20 +824,20 @@ def check_canonicalize_pagers_dict(pagers_dict: dict) -> dict:
                 for ep in sf_list:
                     if not isinstance(ep, dict):
                         log_error(
-                            f"Endpoint must be a dict - user:{k}, send_func{sf}, got {type(ep).__name__} - skipping endpoint"
+                            f"Endpoint must be a dict - user:{k}, send_func:{sf}, got {type(ep).__name__} - skipping endpoint"
                         )
                         continue
                     if "filters" in ep:
                         if not isinstance(ep["filters"], list):
                             log_error(
-                                f"filters specification must be a list - user:{k}, send_func{sf}, {BaseDotFiles.redact_endpoint(ep)} - skipping endpoint"
+                                f"filters specification must be a list - user:{k}, send_func:{sf}, {BaseDotFiles.redact_endpoint(ep)} - skipping endpoint"
                             )
                             continue
-                        for filter_str in ep["filters"]:
-                            if filter_str not in pagers_msgs:
-                                log_error(
-                                    f"filter ({filter_str}) not in known send functions - user:{k}, send_func{sf}, {BaseDotFiles.redact_endpoint(ep)} - skipping endpoint"
-                                )
+                        unknown_filters = [f for f in ep["filters"] if f not in pagers_msgs]
+                        if unknown_filters:
+                            log_error(
+                                f"filter(s) {unknown_filters} not known message types - user:{k}, send_func:{sf}, {BaseDotFiles.redact_endpoint(ep)} - skipping endpoint"
+                            )
                             continue
                     updated_endpoint_list.append(ep)
                 updated_user_dict[sf] = updated_endpoint_list

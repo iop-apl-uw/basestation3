@@ -692,6 +692,29 @@ def test_process_mailer_fnmatch_matches_paths(
     smtp.return_value.sendmail.assert_called()
 
 
+@pytest.mark.parametrize(
+    "tag, name, attached",
+    [("eng", "p2830042.eng", "p2830042.eng.gz"), ("fnmatch_*.gz", "p2830042.tar.gz", "p2830042.tar.gz")],
+    ids=["compressed-here", "already-gz"],
+)
+def test_process_mailer_gzip_attaches(
+    tmp_path, caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch, tag: str, name: str, attached: str
+) -> None:
+    """A gzip .mailer line attaches the .gz (was Path + ".gz" - TypeError, attachment dropped; an
+    already-.gz file never set the name to send)."""
+    monkeypatch.setattr(BaseLog.BaseLogger, "log_level", logging.INFO)
+    mission = tmp_path / "mission"
+    mission.mkdir()
+    (mission / ".mailer").write_text(f"pilot@example.com,{tag},gzip\n")
+    f = mission / name
+    f.write_bytes(b"data\n")
+    opts = MagicMock(basestation_etc=tmp_path / "etc", group_etc=None, mission_dir=mission, domain_name=None, reply_addr=None)
+    with patch.object(BaseDotFiles.smtplib, "SMTP") as smtp, caplog.at_level(logging.INFO):
+        BaseDotFiles.process_mailer(opts, 283, ["eng"], [f], None, None)
+    assert "Error processing" not in caplog.text
+    assert f'attachment; filename="{attached}"' in smtp.return_value.sendmail.call_args.args[2]
+
+
 # --- control characters in notifications (sg238 2026-10-30: NULs from a tar header) ---------
 
 TAR_HEADER_BODY = "first line did not contain a version string ustar" + "\x00" * 1812 + "\nnext line"

@@ -1636,8 +1636,9 @@ def process_mailer(
                             _, tail = os.path.splitext(mailer_file_name_to_send)
                             if mailer_gzip_file:
                                 if tail.lstrip(".").lower() != "gz":
+                                    # The name may be a Path (processed files) or a str
                                     mailer_gzip_file_name_to_send = (
-                                        mailer_file_name_to_send + ".gz"
+                                        f"{mailer_file_name_to_send}.gz"
                                     )
                                     gzip_ret_val = BaseGZip.compress(
                                         mailer_file_name_to_send,
@@ -1649,6 +1650,8 @@ def process_mailer(
                                             % mailer_file_name_to_send
                                         )
                                 else:
+                                    # Already compressed - send it as it is
+                                    mailer_gzip_file_name_to_send = mailer_file_name_to_send
                                     gzip_ret_val = 0
 
                                 if gzip_ret_val <= 0:
@@ -2224,7 +2227,7 @@ def main(cmdline_args: list[str] | None = None) -> int | None:
             comm_log.last_complete_surfacing().dive_num,
         )
     else:
-        log_error("Unkown action {base_opts.basedotfiles_action}")
+        log_error(f"Unknown action {base_opts.basedotfiles_action}")
 
 
 if __name__ == "__main__":
