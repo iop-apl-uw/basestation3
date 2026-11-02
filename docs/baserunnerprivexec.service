@@ -47,7 +47,13 @@ Slice=baserunner.slice
 # enabling controllers per-site (only once a site is actually dispatched
 # to), this unconditional bootstrap must happen before ANY dispatch, since
 # ExecStart itself needs baserunner.slice to already be write-accessible.
-ExecStartPre=+/bin/sh -c 'mkdir -p /sys/fs/cgroup/baserunner.slice && chown -R baserunner:baserunner /sys/fs/cgroup/baserunner.slice && echo "+cpu +memory" > /sys/fs/cgroup/baserunner.slice/cgroup.subtree_control'
+# chown targets the user only (no ":baserunner" group) - the process only
+# needs owner-level write access since it runs as User=baserunner above;
+# hardcoding a group name here broke on seaglider.pub, where the
+# baserunner account's actual group is "iop", not "baserunner" (see
+# Group= override note - whatever this host's Group= is, this chown no
+# longer needs to know it).
+ExecStartPre=+/bin/sh -c 'mkdir -p /sys/fs/cgroup/baserunner.slice && chown -R baserunner /sys/fs/cgroup/baserunner.slice && echo "+cpu +memory" > /sys/fs/cgroup/baserunner.slice/cgroup.subtree_control'
 ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunnerPrivExec.py \
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \

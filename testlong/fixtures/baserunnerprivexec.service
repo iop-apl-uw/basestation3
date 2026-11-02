@@ -14,7 +14,7 @@ AmbientCapabilities=CAP_SETUID CAP_SETGID
 CapabilityBoundingSet=CAP_SETUID CAP_SETGID
 Delegate=yes
 Slice=baserunner.slice
-ExecStartPre=+/bin/sh -c 'mkdir -p /sys/fs/cgroup/baserunner.slice && chown -R baserunner:baserunner /sys/fs/cgroup/baserunner.slice && echo "+cpu +memory" > /sys/fs/cgroup/baserunner.slice/cgroup.subtree_control'
+ExecStartPre=+/bin/sh -c 'mkdir -p /sys/fs/cgroup/baserunner.slice && chown -R baserunner /sys/fs/cgroup/baserunner.slice && echo "+cpu +memory" > /sys/fs/cgroup/baserunner.slice/cgroup.subtree_control'
 ExecStart=/usr/local/basestation3/.venv/bin/python /usr/local/basestation3/BaseRunnerPrivExec.py \
     --sites_config /usr/local/basestation3/etc/sites.yaml \
     --priv_exec_socket /run/baserunner/priv_exec.sock \
