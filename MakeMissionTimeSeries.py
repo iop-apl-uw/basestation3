@@ -792,7 +792,7 @@ def make_mission_timeseries(
     mission_timeseries_file.sync()
     mission_timeseries_file.close()
 
-    mission_timeseries_name_gz = mission_timeseries_name.with_suffix(".gz")
+    mission_timeseries_name_gz = mission_timeseries_name.with_name(mission_timeseries_name.name + ".gz")
     if base_opts.gzip_netcdf:
         log_info(
             "Compressing %s to %s"

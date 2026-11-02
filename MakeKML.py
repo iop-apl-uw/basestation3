@@ -945,7 +945,7 @@ def printDive(
                 nd = ed = None
             except Exception:
                 log_error(
-                    "Could not find any displacements in parquet output for dive {dive_num} - skipping",
+                    f"Could not find any displacements in parquet output for dive {dive_num} - skipping",
                     "exc",
                 )
                 nd = ed = None

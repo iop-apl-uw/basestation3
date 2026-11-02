@@ -73,3 +73,20 @@ def test_mission_config(tmp_path, caplog):
         assert dsi.variables[v].dtype == t
 
     assert "wlbb2fl_sig470nm" not in dsi.variables
+
+
+def test_gzip_netcdf_writes_nc_gz(tmp_path, caplog):
+    """--gzip_netcdf writes <name>.nc.gz beside the .nc (with_suffix made it <name>.gz)."""
+    mission_dir = tmp_path / "mission_dir"
+    testutils.run_mission(
+        pathlib.Path("testdata/sg249_NANOOS_Apr24"),
+        mission_dir,
+        MakeMissionTimeSeries.main,
+        ["--mission_dir", str(mission_dir), "--gzip_netcdf"],
+        caplog,
+        [""],
+    )
+    nc = mission_dir / "sg249_NANOOS_Apr-2024_timeseries.nc"
+    assert nc.exists()
+    assert nc.with_name(nc.name + ".gz").exists()
+    assert not nc.with_suffix(".gz").exists()

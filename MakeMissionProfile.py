@@ -1348,7 +1348,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
     mission_profile_file.sync()
     mission_profile_file.close()
 
-    mission_profile_name_gz = mission_profile_name.with_suffix(".gz")
+    mission_profile_name_gz = mission_profile_name.with_name(mission_profile_name.name + ".gz")
     if base_opts.gzip_netcdf:
         log_info(
             "Compressing %s to %s" % (mission_profile_name, mission_profile_name_gz)
