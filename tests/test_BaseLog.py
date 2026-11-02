@@ -151,3 +151,24 @@ def test_string_capture_stop_detaches_handler() -> None:
     assert BaseLogger.log is not None and handler not in BaseLogger.log.handlers
     assert handler not in logging.getLogger("py.warnings").handlers
     assert BaseLogger._handlers == before
+
+
+def test_exc_outside_handler_logs_caller(caplog: pytest.LogCaptureFixture) -> None:
+    """loc="exc" outside an except (19 call sites, e.g. Base.py's zero-size gzip arm) appended
+    format_exc()'s "NoneType: None" and no location - now it logs the caller."""
+    caplog.set_level(logging.WARNING)
+    log_error("Missing variables - bailing out", "exc")
+    (message,) = _messages(caplog)
+    assert message.startswith("test_BaseLog.py(") and message.endswith("): Missing variables - bailing out")
+    assert "NoneType" not in caplog.text
+
+
+def test_exc_inside_handler_appends_traceback(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.WARNING)
+    try:
+        raise ValueError("boom")
+    except ValueError:
+        log_error("Failed", "exc")
+    (message,) = _messages(caplog)
+    assert message.startswith("Failed:\nTraceback (most recent call last)")
+    assert "ValueError: boom" in message

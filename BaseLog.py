@@ -36,6 +36,7 @@ import collections
 import inspect
 import logging
 import os
+import sys
 import traceback
 from io import StringIO
 from typing import TYPE_CHECKING
@@ -319,6 +320,10 @@ def __log_caller_info(s: object, loc: str | None) -> str:
     string with possible location information added
     """
     s = str(s)
+    if loc == "exc" and sys.exc_info()[1] is None:
+        # Not called while handling an exception: format_exc() would only add "NoneType: None"
+        # (and "exc" adds no location), so log where it was called from instead
+        loc = "caller"
     if loc:
         try:
             # skip our local callers

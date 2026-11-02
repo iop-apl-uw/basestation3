@@ -898,7 +898,6 @@ def process_file_group(
                 log_error(
                     f"File {uc_file_name} is zero sized - skipping further processing"
                 )
-                log_error("Could not get file size", "exc")
             else:
                 file_list.append(uc_file_name)
     elif fc.is_bzip():
