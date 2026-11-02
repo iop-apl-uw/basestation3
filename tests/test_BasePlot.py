@@ -475,7 +475,7 @@ def test_mission_commlog_thumbnail(tmp_path, caplog):
         )
         comm_log = CommLog.process_comm_log(mission_dir / "comm.log", opts)[0]
         assert comm_log is not None and comm_log.sessions
-        assert all(BaseDB.addSession(opts, session) for session in comm_log.sessions)
+        assert all(BaseDB.addSession(opts, session) is BaseDB.SessionWrite.WRITTEN for session in comm_log.sessions)
 
     mission_dir = tmp_path / "mission_dir"
     testutils.run_mission(

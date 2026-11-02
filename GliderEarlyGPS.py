@@ -298,7 +298,9 @@ class GliderEarlyGPSClient:
 
         If the db is locked, the session is queued and retried on the next
         pass of the main loop (see _retry_pending_sessions), so the rest of
-        the comm.log callbacks (url/vis notifications) aren't delayed.
+        the comm.log callbacks (url/vis notifications) aren't delayed. Any other
+        failure (e.g. a read-only db) won't clear by retrying: addSession logged
+        it once and the session is dropped.
 
         Args:
             session: The comm.log session to record.
@@ -306,7 +308,7 @@ class GliderEarlyGPSClient:
         Returns:
             None.
         """
-        if not BaseDB.addSession(self.__base_opts, session, retry_on_lock=True):
+        if BaseDB.addSession(self.__base_opts, session, retry_on_lock=True) is BaseDB.SessionWrite.LOCKED:
             self._pending_sessions.append(session)
 
     def _retry_pending_sessions(self, final: bool = False) -> None:
@@ -322,12 +324,14 @@ class GliderEarlyGPSClient:
             return
         still_pending = []
         for session in self._pending_sessions:
-            if BaseDB.addSession(self.__base_opts, session, retry_on_lock=True):
+            result = BaseDB.addSession(self.__base_opts, session, retry_on_lock=True)
+            if result is BaseDB.SessionWrite.WRITTEN:
                 log_info(
                     f"Logged queued session dive:{session.dive_num} call:{session.calls_made} to the mission db"
                 )
-            else:
+            elif result is BaseDB.SessionWrite.LOCKED:
                 still_pending.append(session)
+            # FAILED: addSession logged it; retrying won't help
         self._pending_sessions = still_pending
         if final and still_pending:
             log_warning(

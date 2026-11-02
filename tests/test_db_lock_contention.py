@@ -106,11 +106,11 @@ def test_add_session_without_gps_fix(base_opts, caplog) -> None:
     """A call with no GPS fix isn't added (vis reads lat/lon/epoch from every calls row) and counts as
     handled, so GliderEarlyGPS doesn't retry it (sg195 self test, 2026-10-16: 162 errors in 14 minutes)."""
     caplog.set_level(logging.WARNING)
-    assert BaseDB.addSession(base_opts, FakeSession(call=3, gps_fix=None)) is True
+    assert BaseDB.addSession(base_opts, FakeSession(call=3, gps_fix=None)) is BaseDB.SessionWrite.WRITTEN
     assert _calls_rows(base_opts) == []
     assert "Call 3 (dive 5) has no GPS fix - not added to the calls table" in caplog.text
     assert "inserting comm.log session" not in caplog.text
-    assert BaseDB.addSession(base_opts, FakeSession(call=4)) is True
+    assert BaseDB.addSession(base_opts, FakeSession(call=4)) is BaseDB.SessionWrite.WRITTEN
     assert _calls_rows(base_opts) == [(5, 4)]
 
 
@@ -137,22 +137,22 @@ def test_uncommitted_plot_write_blocks_add_session(base_opts, caplog) -> None:
     caplog.set_level(logging.INFO)
     holder = _hold_uncommitted_plot_write(base_opts)
     try:
-        assert BaseDB.addSession(base_opts, FakeSession()) is False
+        assert BaseDB.addSession(base_opts, FakeSession()) is BaseDB.SessionWrite.LOCKED
         assert any(
             r.levelname == "ERROR" and "database is locked inserting comm.log session" in r.getMessage()
             for r in caplog.records
         )
         caplog.clear()
         # A caller that will retry gets INFO, not ERROR
-        assert BaseDB.addSession(base_opts, FakeSession(), retry_on_lock=True) is False
+        assert BaseDB.addSession(base_opts, FakeSession(), retry_on_lock=True) is BaseDB.SessionWrite.LOCKED
         assert not [r for r in caplog.records if r.levelname == "ERROR"]
         assert any("will retry" in r.getMessage() for r in caplog.records)
     finally:
         holder.commit()
         holder.close()
     # Once the writer commits, the same insert succeeds (and is idempotent)
-    assert BaseDB.addSession(base_opts, FakeSession(), retry_on_lock=True) is True
-    assert BaseDB.addSession(base_opts, FakeSession(), retry_on_lock=True) is True
+    assert BaseDB.addSession(base_opts, FakeSession(), retry_on_lock=True) is BaseDB.SessionWrite.WRITTEN
+    assert BaseDB.addSession(base_opts, FakeSession(), retry_on_lock=True) is BaseDB.SessionWrite.WRITTEN
     assert _calls_rows(base_opts) == [(5, 1)]
 
 
@@ -204,7 +204,7 @@ def test_plot_dives_commits_after_each_plot_function(base_opts, tmp_path) -> Non
         [nc],
         generate_plots=False,
     )
-    assert probe_results == [True]
+    assert probe_results == [BaseDB.SessionWrite.WRITTEN]
     assert _calls_rows(base_opts) == [(5, 1)]
 
 
@@ -225,7 +225,7 @@ def test_plot_mission_commits_after_each_plot_function(base_opts) -> None:
         "SG686 test",
         generate_plots=False,
     )
-    assert probe_results == [True]
+    assert probe_results == [BaseDB.SessionWrite.WRITTEN]
 
 
 def test_caller_owned_connection_is_not_committed(base_opts) -> None:
@@ -293,3 +293,35 @@ def test_gliderearlygps_empty_retry_is_noop(base_opts) -> None:
     client = _client(base_opts)
     client._retry_pending_sessions(final=True)
     assert client._pending_sessions == []
+
+
+def _make_readonly(base_opts: types.SimpleNamespace) -> None:
+    """sg238, 2026-10-28..30: the mission db was read-only to the account running GliderEarlyGPS."""
+    db = Utils.mission_database_filename(base_opts)  # ty: ignore[invalid-argument-type]
+    assert db is not None
+    pathlib.Path(db).chmod(0o444)
+
+
+def test_add_session_readonly_db_fails(base_opts, caplog) -> None:
+    """A read-only db isn't a lock: FAILED (retrying won't help), logged as an ERROR even with retry_on_lock."""
+    caplog.set_level(logging.INFO)
+    _make_readonly(base_opts)
+    assert BaseDB.addSession(base_opts, FakeSession(), retry_on_lock=True) is BaseDB.SessionWrite.FAILED
+    errors = [r.getMessage() for r in caplog.records if r.levelname == "ERROR"]
+    assert len(errors) == 1 and "attempt to write a readonly database inserting comm.log session" in errors[0]
+
+
+def test_gliderearlygps_drops_readonly_session(base_opts, caplog) -> None:
+    """A non-lock failure logs one ERROR and isn't queued - sg238 logged it on every main-loop pass
+    (~340 per early-GPS run, 3,500 on 10-30)."""
+    caplog.set_level(logging.INFO)
+    _make_readonly(base_opts)
+    client = _client(base_opts)
+    client._log_session(FakeSession(dive=5, call=2))
+    assert client._pending_sessions == []
+    for _ in range(3):
+        client._retry_pending_sessions()
+    client._retry_pending_sessions(final=True)
+    problems = [(r.levelname, r.getMessage()) for r in caplog.records if r.levelname in ("ERROR", "WARNING")]
+    assert len(problems) == 1 and problems[0][0] == "ERROR"
+    assert "attempt to write a readonly database inserting comm.log session" in problems[0][1]

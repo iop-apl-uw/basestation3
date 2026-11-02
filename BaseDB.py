@@ -35,6 +35,7 @@
 
 import asyncio
 import contextlib
+import enum
 import math
 import os
 import pdb
@@ -1536,7 +1537,15 @@ def _is_locked(exc: Exception) -> bool:
     return isinstance(exc, sqlite3.OperationalError) and "locked" in str(exc)
 
 
-def addSession(base_opts, session, con=None, sms=0, retry_on_lock=False) -> bool:
+class SessionWrite(enum.Enum):
+    """Outcome of addSession."""
+
+    WRITTEN = "written"  # written, or nothing to write (no session, a call without a GPS fix)
+    LOCKED = "locked"  # the db was locked - safe to retry (the insert is INSERT OR REPLACE)
+    FAILED = "failed"  # any other failure (e.g. a read-only db) - retrying won't help
+
+
+def addSession(base_opts, session, con=None, sms=0, retry_on_lock=False) -> SessionWrite:
     """Adds (or replaces) a comm.log session in the calls table
 
     Args:
@@ -1549,33 +1558,34 @@ def addSession(base_opts, session, con=None, sms=0, retry_on_lock=False) -> bool
             "database is locked" failure at INFO rather than ERROR.
 
     Returns:
-        True if the session was written (or there was nothing to write - no
-        session, or a call without a GPS fix), False otherwise. The insert is INSERT OR REPLACE keyed on
-        (dive, cycle, call), so retrying a failed write is safe.
+        WRITTEN if the session was written (or there was nothing to write - no
+        session, or a call without a GPS fix), LOCKED if the db was locked, FAILED
+        otherwise. The insert is INSERT OR REPLACE keyed on (dive, cycle, call), so
+        retrying a LOCKED write is safe.
     """
     if session is None:
-        return True
+        return SessionWrite.WRITTEN
 
     if getattr(session, "gps_fix", None) is None:
         # A call without a GPS fix has no position: vis reads lat/lon/epoch from every
-        # calls row, so it isn't added - and it's handled (True), so it isn't retried
+        # calls row, so it isn't added - and it's handled (WRITTEN), so it isn't retried
         log_warning(
             f"Call {session.calls_made} (dive {session.dive_num}) has no GPS fix - not added to the calls table"
         )
-        return True
+        return SessionWrite.WRITTEN
 
     if con is None:
         mycon = Utils.open_mission_database(base_opts)
         if mycon is None:
             log_error("Failed to open mission db")
-            return False
+            return SessionWrite.FAILED
         log_info("addSession db opened")
     else:
         mycon = con
 
     checkSchema(None, mycon)
 
-    ok = True
+    result = SessionWrite.WRITTEN
     try:
         d = session.to_message_dict()
         d.update({ "sms": sms })
@@ -1585,20 +1595,20 @@ def addSession(base_opts, session, con=None, sms=0, retry_on_lock=False) -> bool
                      VALUES(:dive, :cycle, :call, :connected, :lat, :lon, :epoch, :RH, :intP, :temp, :volts10, :volts24, :pitch, :depth, :pitchAD, :rollAD, :vbdAD, :sms, :iridLat, :iridLon, :irid_t, :sst, :sss, :density);", d)
         cur.close()
     except Exception as e:
-        ok = False
-        if retry_on_lock and _is_locked(e):
+        result = SessionWrite.LOCKED if _is_locked(e) else SessionWrite.FAILED
+        if retry_on_lock and result is SessionWrite.LOCKED:
             log_info(f"{e} inserting comm.log session - will retry")
         else:
             log_error(f"{e} inserting comm.log session")
 
     if con is None:
-        if ok:
+        if result is SessionWrite.WRITTEN:
             try:
                 mycon.commit()
             except Exception as e:
-                ok = False
+                result = SessionWrite.LOCKED if _is_locked(e) else SessionWrite.FAILED
                 mycon.rollback()
-                if retry_on_lock and _is_locked(e):
+                if retry_on_lock and result is SessionWrite.LOCKED:
                     log_info(f"Failed commit, addSession {e} - will retry")
                 else:
                     log_error(f"Failed commit, addSession {e}", "exc", alert="DB_LOCKED")
@@ -1606,7 +1616,7 @@ def addSession(base_opts, session, con=None, sms=0, retry_on_lock=False) -> bool
         mycon.close()
         log_info("addSession db closed")
 
-    return ok
+    return result
 
 
 def main():
