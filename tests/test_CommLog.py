@@ -29,6 +29,7 @@
 
 """CommLog.process_comm_log."""
 
+import logging
 import time
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -62,3 +63,28 @@ def test_dive_num_without_call_counter() -> None:
     assert comm_log.get_last_dive_num_and_call_counter() == (42, 3)
     session.call_cycle = 5
     assert comm_log.get_last_dive_num_and_call_counter() == (42, 5)
+
+
+def test_counter_line_with_hangup_logs_no_gps_error(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A hangup appended to a counter line (sg238, 2026-10-30) is warned about once, not logged as a bad GPS line."""
+    comm_log = tmp_path / "comm.log"
+    comm_log.write_text(
+        "Connected at 2026-10-28T22:00:26Z (sg238)\nlogged in\n"
+        "3:0:1:2:0:114:-3:1549:2194:201:-60.9:-0.01:20.4:15.33:0.00:8.59:42.7:16.4:0.0:-1.1 "
+        "GPS,281026,213315,4739.311,-12219.055,2,0.8,4,15.0\n"
+        "Disconnected at 2026-10-28T22:10:00Z (normal)\n\n\n"
+        "Connected at 2026-10-30T19:40:39Z (sg238)\nlogged in\n"
+        "3:0:1:0:0:116:0:1551:2202:202:-88.5:-0.06:18.8:15.53:0.00:8.53:43.5:15.8:0.0:-1.0 "
+        "Disconnected at 2026-10-30T19:41:20Z (hangup)\n"
+    )
+    base_opts = MagicMock()
+    base_opts.mission_dir = tmp_path
+    with caplog.at_level(logging.WARNING):
+        commlog, _, _, _, _ = CommLog.process_comm_log(comm_log, base_opts)
+    assert commlog is not None
+    assert commlog.sessions[0].gps_fix is not None and commlog.sessions[0].gps_fix.isvalid
+    assert "Bad GPS line" not in caplog.text
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert len([r for r in caplog.records if "Unknown line after counter" in r.getMessage()]) == 1

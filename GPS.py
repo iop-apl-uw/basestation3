@@ -55,26 +55,22 @@ class GPS_I(IntEnum):
 
 
 def is_valid_gps_line(gps_line:str) -> bool:
-    """Determines is a line is a valid GPS line
+    """Determines if a line is a GPS line.
 
-    Valid formats:
+    Logs nothing: CommLog uses this as a check (and warns about an unknown line itself), and
+    GPSFix logs its own error for an invalid line.
+
     >>> is_valid_gps_line("GPS,260506,151750,4807.211,-12223.095,34,1.1,34,18.0")
-    1
+    True
 
-    returns 1 if the line is a valid GPS line, 0 if not
+    Args:
+        gps_line: the line, comm.log counter-line form (GPS,...) or log-file form ($GPS,...)
+
+    Returns:
+        True if the line is a GPS line
     """
     gps_fields = gps_line.split(",")
-    if (
-        gps_fields[0] == "GPS"
-        or gps_fields[0] == "$GPS"
-        or gps_fields[0] == "$GPS1"
-        or gps_fields[0] == "$GPS2"
-    ):
-        # The form in the comm log
-        return True
-
-    log_error("Bad GPS line " + gps_line)
-    return False
+    return gps_fields[0] in ("GPS", "$GPS", "$GPS1", "$GPS2")
 
 
 class GPSFix:

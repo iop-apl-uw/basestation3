@@ -180,3 +180,18 @@ def test_ctdvars_buoyancy_frequency_defaults_to_none() -> None:
 
     ctd_vars = Plotting.DiveCTD.CTDVars()
     assert ctd_vars.buoy_f_dive is None and ctd_vars.buoy_f_climb is None
+
+
+def test_nsquared_no_good_points(tmp_path, caplog) -> None:
+    """No good CT points at all (sg639 OSU_refurb dive 1, all salinity QC'd bad): one warning and None.
+
+    argmax of the empty good-point depths raised before the too-few-bins check.
+    """
+    ds = _ctd_dive_file(tmp_path, n_good=0)
+    try:
+        with caplog.at_level(logging.WARNING):
+            assert PlotUtils.Nsquared(ds) is None
+    finally:
+        ds.close()
+    assert "Dive 176: no good CT points for buoyancy frequency (0 of 200) - not computed" in caplog.text
+    assert "Traceback" not in caplog.text and "Failed to compute Nsquared" not in caplog.text

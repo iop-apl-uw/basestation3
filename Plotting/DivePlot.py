@@ -896,7 +896,8 @@ def plot_diveplot(
             }
         )
 
-    if sigma_t is not None:
+    # All NaN when every salinity point is QC'd bad (sg639 OSU_refurb dive 1) - nothing to plot
+    if sigma_t is not None and np.any(np.logical_not(np.isnan(sigma_t))):
         valid_i = np.logical_not(np.isnan(sigma_t))
         sigma_t_min = min(sigma_t[valid_i])
         sigma_t_max = max(sigma_t[valid_i])
@@ -920,7 +921,8 @@ def plot_diveplot(
             }
         )
 
-    if buoy_f is not None:
+    # All NaN when every N2 is negative
+    if buoy_f is not None and np.any(np.logical_not(np.isnan(buoy_f))):
         valid_i = np.logical_not(np.isnan(buoy_f))
 
         if max(buoy_f[valid_i]) > 40.0:

@@ -30,6 +30,8 @@
 import pathlib
 import types
 
+import netCDF4
+import numpy as np
 import pytest
 import testutils
 
@@ -292,6 +294,40 @@ def test_dive_plot_coverage(
     )
     webp_files = list(mission_dir.joinpath("plots").glob("*.webp"))
     assert webp_files, f"{plot_name} produced no .webp thumbnail"
+
+
+def test_plot_diveplot_all_salinity_bad(tmp_path, caplog):
+    """plot_diveplot still plots a dive whose salinity is all QC'd bad (sg639 OSU_refurb dive 1).
+
+    sigma_t and absolute_salinity are all NaN: Nsquared raised on an empty argmax and the
+    sigma_t trace on min() of an empty array, failing the whole plot.
+    """
+
+    def blank_salinity(mission_dir: pathlib.Path) -> None:
+        with netCDF4.Dataset(str(mission_dir / "p6860005.nc"), "a") as nc:  # str: netCDF4 wants a path string
+            for name in ("sigma_t", "absolute_salinity"):
+                nc.variables[name][:] = np.nan
+
+    mission_dir = tmp_path / "mission_dir"
+    testutils.run_mission(
+        pathlib.Path("testdata/sg686_Shilshole_28Oct25"),
+        mission_dir,
+        BasePlot.main,
+        [
+            "--verbose",
+            "--mission_dir",
+            str(mission_dir),
+            "p6860005.nc",
+            "--plot_types",
+            "dives",
+            "--dive_plots",
+            "plot_diveplot",
+        ],
+        caplog,
+        ["no good CT points for buoyancy frequency"],
+        pre_test_hook=blank_salinity,
+    )
+    assert list(mission_dir.joinpath("plots").glob("dv0005_diveplot*.webp"))
 
 
 def test_plot_wkb_schedule_partial_dive_does_not_crash(tmp_path, caplog):

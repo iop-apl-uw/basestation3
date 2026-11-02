@@ -1012,6 +1012,15 @@ def Nsquared(ds: netCDF4.Dataset) -> NDArray[np.float64] | None:
             )
         )
 
+        # No good CT points at all (e.g. sg639 OSU_refurb dive 1, a bench simulation with all
+        # salinity QC'd bad) - argmax below raised on the empty array
+        if not np.any(good_pts_b):
+            log_warning(
+                f"Dive {getattr(ds, 'dive_number', '?')}: no good CT points for buoyancy "
+                f"frequency (0 of {np.size(ctd_depth)}) - not computed"
+            )
+            return None
+
         # Notes from the API indicate that the axis argument for gsw.Nsquared is important to
         # know which way the density gradiant descends - probably doesn't matter for the 1-d case,
         # but to be sure - split the dive up and calc for the single cast
