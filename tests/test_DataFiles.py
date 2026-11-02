@@ -93,3 +93,15 @@ def test_timeout_alert_threshold(
     assert data_file.timeouts == {"sbect": timeouts}
     assert f"{timeouts} timeout(s) seen for sbect in" in caplog.text
     assert ("TIMEOUT" in log_alerts()) is alert
+
+
+def test_garbage_first_line_is_logged_printable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """sg238 dive 900 (2026-10-30) uploaded a tar as a data file: the error echoed the tar header's
+    1,812 NULs into the baselog and the Mattermost errors post (rejected, HTTP 500)."""
+    errors: list[str] = []
+    monkeypatch.setattr(DataFiles, "log_error", lambda s, *a, **kw: errors.append(str(s)))
+    dat = tmp_path / "p2380900.eng"
+    dat.write_bytes(b"sg0900.eng" + b"\x00" * 90 + b"0000644\x00ustar\x00" + b"\x00" * 1812 + b"\nversion: 67.01\n")
+    assert DataFiles.process_data_file(str(dat), "eng", {}) is None
+    assert len(errors) == 1 and errors[0].startswith("first line did not contain a version string")
+    assert errors[0].isprintable() and len(errors[0]) < 400

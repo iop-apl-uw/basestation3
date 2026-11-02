@@ -531,7 +531,8 @@ def parse_log_file(
                         log_file.version = 66.00
                 continue
             else:
-                log_error("first line did not contain an version string %s" % raw_line)
+                # The file is garbage (e.g. a tar uploaded as a log file) - a short, escaped copy of the line
+                log_error(f"first line did not contain an version string {raw_line[:80]!r}")
                 return None
 
         if raw_strs[0] == "glider" or raw_strs[0] == "%glider":

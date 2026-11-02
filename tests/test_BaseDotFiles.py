@@ -690,3 +690,39 @@ def test_process_mailer_fnmatch_matches_paths(
     assert f"Matched {eng}" in caplog.text
     assert "Could not process" not in caplog.text
     smtp.return_value.sendmail.assert_called()
+
+
+# --- control characters in notifications (sg238 2026-10-30: NULs from a tar header) ---------
+
+TAR_HEADER_BODY = "first line did not contain a version string ustar" + "\x00" * 1812 + "\nnext line"
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("plain text", "plain text"),
+        ("tab\there\nnew line\r\n", "tab\there\nnew line\r\n"),
+        ("ustar" + "\x00" * 1812 + "end", "ustar�end"),
+        ("esc\x1b[0mdel\x7f", "esc�[0mdel�"),
+        ("", ""),
+    ],
+    ids=["plain", "whitespace-kept", "nul-run", "esc-del", "empty"],
+)
+def test_printable_text(text: str, expected: str) -> None:
+    assert BaseDotFiles.printable_text(text) == expected
+
+
+def test_post_slack_strips_control_characters(mock_base_opts: MagicMock) -> None:
+    with patch("requests.post", return_value=MagicMock(status_code=200)) as post:
+        BaseDotFiles.post_slack(mock_base_opts, "238", "https://hooks.example.com/x", "Subject\x00", TAR_HEADER_BODY)
+    data = post.call_args.kwargs["data"]
+    assert "\\u0000" not in data and "\x00" not in data and "\\ufffd" in data
+
+
+def test_send_email_text_strips_control_characters(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(BaseDotFiles.sys, "platform", "linux")  # the localhost SMTP path
+    opts = MagicMock(reply_addr=None)
+    with patch.object(BaseDotFiles.smtplib, "SMTP") as smtp:
+        assert BaseDotFiles.send_email_text(opts, "sg238@x", "pilot@x", "SG238", "Subject\x00", TAR_HEADER_BODY) == 0
+    sent = smtp.return_value.sendmail.call_args.args[2]
+    assert "\x00" not in sent

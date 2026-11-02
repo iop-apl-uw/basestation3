@@ -118,6 +118,7 @@ def post_slack(
         0: Success.
         1: Failure.
     """
+    subject_line, message_body = printable_text(subject_line), printable_text(message_body)
 
     log_info(
         f"instrument_id:{instrument_id} slack_hook_url:{redact_url(slack_hook_url)} "
@@ -199,6 +200,7 @@ def send_email_text(
         0 - success
         1 - failure
     """
+    subject_line, message_body = printable_text(subject_line), printable_text(message_body)
     if html_format:
         email_msg = MIMEMultipart("alternative")
     else:
@@ -875,6 +877,27 @@ def redact_sftp_line(sftp_line: str) -> str:
     if len(fields) > 2 and fields[2]:
         fields[2] = REDACTED_PASSWORD
     return ",".join(fields)
+
+
+# Control characters other than tab/newline/CR - e.g. the NUL padding of a tar header echoed
+# from a garbage upload. Mattermost rejects a post containing NUL (HTTP 500), dropping it whole.
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]+")
+
+
+def printable_text(text: str) -> str:
+    """Replaces each run of control characters (not tab, newline or CR) with one U+FFFD.
+
+    Applied to every notification before it's sent, so file content echoed into a
+    message (sg238 2026-10-30: 1,812 NULs from a tar header) can't make the
+    receiving service reject the whole post.
+
+    Args:
+        text: A subject line or message body.
+
+    Returns:
+        text with each control-character run replaced by one U+FFFD.
+    """
+    return _CONTROL_CHARS_RE.sub("\ufffd", text)
 
 
 def redact_url(url: str) -> str:

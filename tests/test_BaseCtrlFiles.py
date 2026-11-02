@@ -90,6 +90,29 @@ def test_send_funcs_never_log_secrets(
     assert SECRET not in caplog.text
 
 
+@pytest.mark.parametrize(
+    "send_func, endpoint",
+    [
+        (BaseCtrlFiles.send_mattermost, {"hook": HOOK}),
+        (BaseCtrlFiles.send_slack, {"hook": HOOK}),
+        (BaseCtrlFiles.send_post, {"url": HOOK}),
+        (BaseCtrlFiles.send_ntfy, {"topic": f"glider-{SECRET}"}),
+    ],
+)
+def test_send_funcs_strip_control_characters(
+    caplog: pytest.LogCaptureFixture, send_func, endpoint: dict
+) -> None:
+    """sg238 2026-10-30: a tar header's NUL padding, echoed into the errors post, got it rejected
+    by Mattermost (HTTP 500 - it can't store \\u0000). No control characters reach the service or the log."""
+    body = "first line did not contain a version string ustar" + "\x00" * 1812 + "\nnext line"
+    send_dict = {"endpoint": endpoint, "user": "pilot", "type": "errors"}
+    with patch("requests.post", return_value=MagicMock(status_code=200)) as post, caplog.at_level("DEBUG"):
+        send_func(MagicMock(vis_base_url=None), 238, send_dict, "Subject\x00", body)
+    data = post.call_args.kwargs["data"]
+    assert "\x00" not in data and "\\u0000" not in data
+    assert "\x00" not in caplog.text
+
+
 def test_send_mattermost_connection_error_is_one_line(
     caplog: pytest.LogCaptureFixture,
 ) -> None:

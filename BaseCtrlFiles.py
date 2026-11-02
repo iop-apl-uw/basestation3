@@ -118,6 +118,9 @@ def send_slack(
     message_body: str,
     gps_fix:GPS.GPSFix | None  = None
 ) -> None:
+    # No control characters (e.g. NULs echoed from a binary upload) - they can get the post rejected
+    subject_line = BaseDotFiles.printable_text(subject_line)
+    message_body = BaseDotFiles.printable_text(message_body)
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
     if "hook" not in endpoint:
@@ -164,6 +167,9 @@ def send_mattermost(
     message_body: str,
     gps_fix:GPS.GPSFix | None  = None
 ) -> None:
+    # No control characters (e.g. NULs echoed from a binary upload) - they can get the post rejected
+    subject_line = BaseDotFiles.printable_text(subject_line)
+    message_body = BaseDotFiles.printable_text(message_body)
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
     if "hook" not in endpoint:
@@ -228,6 +234,9 @@ def send_ntfy(
     message_body: str,
     gps_fix:GPS.GPSFix | None  = None
 ) -> None:
+    # No control characters (e.g. NULs echoed from a binary upload) - they can get the post rejected
+    subject_line = BaseDotFiles.printable_text(subject_line)
+    message_body = BaseDotFiles.printable_text(message_body)
     default_priorities = { "critical": 5 }
     tags = {
              "gps": "globe_with_meridians",
@@ -326,6 +335,9 @@ def send_post(
     message_body: str,
     gps_fix:GPS.GPSFix | None  = None
 ) -> None:
+    # No control characters (e.g. NULs echoed from a binary upload) - they can get the post rejected
+    subject_line = BaseDotFiles.printable_text(subject_line)
+    message_body = BaseDotFiles.printable_text(message_body)
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
     if "url" not in endpoint:
@@ -368,6 +380,9 @@ def send_inreach(
     message_body: str,
     gps_fix:GPS.GPSFix | None  = None
 ) -> None:
+    # No control characters (e.g. NULs echoed from a binary upload) - they can get the post rejected
+    subject_line = BaseDotFiles.printable_text(subject_line)
+    message_body = BaseDotFiles.printable_text(message_body)
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
 

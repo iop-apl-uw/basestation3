@@ -208,3 +208,14 @@ def test_dump_writes_the_mission(tmp_path):
     out = io.StringIO()
     log_file.dump(out)
     assert "mission: 4\n" in out.getvalue() and "dive: 624\n" in out.getvalue()  # mission used to print the dive
+
+
+def test_garbage_first_line_is_logged_printable(tmp_path, monkeypatch):
+    """A tar uploaded as a log file (sg238 dive 900, 2026-10-30): the error is a short, printable copy of the line."""
+    errors = []
+    monkeypatch.setattr(LogFile, "log_error", lambda s, *a, **kw: errors.append(str(s)))
+    log = tmp_path / "p2380900.log"
+    log.write_bytes(b"sg0900.log" + b"\x00" * 90 + b"0000644\x00ustar\x00" + b"\x00" * 1812 + b"\nversion: 67.01\n")
+    assert LogFile.parse_log_file(str(log)) is None
+    assert len(errors) == 1 and errors[0].startswith("first line did not contain an version string")
+    assert errors[0].isprintable() and len(errors[0]) < 400
