@@ -137,6 +137,25 @@ def test_makeplottsprofile_ncdf_with_wl_variables(tmp_path, caplog):
     assert (plot_dir / "dv0005_reduced_wl.div").exists()
 
 
+@pytest.mark.parametrize("file_name", ["p2560081.npro_ct.dat", "p2560081.npro_wl.dat", "p2560090.ncdf"])
+def test_makeplottsprofile_appends_plot_files(tmp_path, file_name: str) -> None:
+    """The plots go onto processed_other_files as files (each plot's list was appended whole, so
+    .mailer/.ftp never matched them)."""
+    shutil.copy(pathlib.Path("testdata/sg256_AMOS_Aug24_TSPlot") / file_name, tmp_path)
+    add_to_arguments, _, _ = MakePlotTSProfile.load_additional_arguments()
+    base_opts = BaseOpts.BaseOptions(
+        "test",
+        add_to_arguments=add_to_arguments,
+        cmdline_args=["--mission_dir", str(tmp_path)],
+        calling_module="MakePlotTSProfile",
+    )
+    processed = [tmp_path / file_name]
+    assert MakePlotTSProfile.main(base_opts=base_opts, processed_other_files=processed) == 0
+    plots = processed[1:]
+    assert plots
+    assert all(isinstance(f, pathlib.Path) and f.parent == tmp_path / "plots" for f in plots)
+
+
 def test_makeplottsprofile_skips_missing_profile_files(tmp_path, caplog):
     """A profile name that was never created (production case: a bare
     .npro passed on by Base.py after x3decode_ts r7560, iopbase3 sg262

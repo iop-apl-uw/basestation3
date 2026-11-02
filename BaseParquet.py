@@ -217,6 +217,7 @@ def write_parquet_file(dive_nc_file_name, base_opts, timeseries_cfg_d):
         pq.write_table(table, out_path, compression="gzip")
         output_files.append(out_path)
 
+    dsi.close()
     return (0, output_files)
 
 
@@ -252,7 +253,7 @@ def write_parquet_files(dive_nc_file_names, base_opts):
         reduce(NetCDFUtils.merge_dict, cfg_dicts)
     except Exception:
         log_error("Error merging config templates", "exc")
-        return None
+        return (1, [])
 
     # TODO - need to harvest the names of files created and return that
     for dive_nc_file_name in dive_nc_file_names:

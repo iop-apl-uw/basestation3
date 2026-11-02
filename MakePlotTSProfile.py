@@ -208,7 +208,7 @@ def plot_wl_profile_core(depth, channels, dive_num, base_opts):
         }
     )
 
-    ret_val.append(
+    ret_val.extend(
         PlotUtilsPlotly.write_output_files(
             base_opts,
             "dv%04d_reduced_wl" % (dive_num,),
@@ -309,7 +309,7 @@ def plot_ts_profile_core(bin_width, depth, temperature, salinity, dive_num, base
         }
     )
 
-    ret_val.append(
+    ret_val.extend(
         PlotUtilsPlotly.write_output_files(
             base_opts,
             "dv%04d_reduced_ctd" % (dive_num,),
@@ -486,7 +486,7 @@ def plot_ts_profile_core(bin_width, depth, temperature, salinity, dive_num, base
         }
     )
 
-    ret_val.append(
+    ret_val.extend(
         PlotUtilsPlotly.write_output_files(
             base_opts,
             "dv%04d_reduced_ts" % (dive_num,),

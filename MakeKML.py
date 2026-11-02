@@ -736,7 +736,8 @@ def printDive(
     If any measurements are not available, return None for that position
     """
     pq_df = None
-    if isinstance(nc_file_name_or_pq_df_c, str):
+    # collect_nc_perdive_files gives Paths
+    if isinstance(nc_file_name_or_pq_df_c, (str, pathlib.Path)):
         dive_nc_file_name = nc_file_name_or_pq_df_c
 
         err_curr_dive_position = dive_gps_position(

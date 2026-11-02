@@ -28,10 +28,14 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import logging
+import pathlib
+import shutil
+import zipfile
 
 import numpy as np
 import pandas as pd
 
+import BaseOpts
 import MakeKML
 
 TRACK_VARS = ["ctd_depth", "longitude", "latitude", "ctd_time"]
@@ -96,3 +100,21 @@ def test_print_targets_skips_bad_target_line(tmp_path, caplog) -> None:
     assert "<name>ESCAPE</name>" not in kml
     assert f"Failed to convert lat= (could not convert string to float: '') (file:{targets}, lineno:2" in caplog.text
     assert "Traceback" not in caplog.text
+
+
+def test_main_without_parquet_reads_the_netcdf_files(tmp_path, caplog) -> None:
+    """With kml_use_parquet off, the dive netCDF files (Paths) are read - printDive only took a str
+    and sent each Path down the parquet branch (AttributeError)."""
+    mission_dir = tmp_path / "mission_dir"
+    shutil.copytree("testdata/sg236_NANOOS_May23_netcdfs", mission_dir)
+    shutil.copy(pathlib.Path("testdata/sg236_NANOOS_May23") / "sg_calib_constants.m", mission_dir)
+    base_opts = BaseOpts.BaseOptions(
+        "test", cmdline_args=["--mission_dir", str(mission_dir), "--no-kml_use_parquet"], calling_module="MakeKML"
+    )
+    processed: list[pathlib.Path] = []
+    with caplog.at_level(logging.ERROR):
+        assert MakeKML.main(base_opts, None, processed) == 0
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+    with zipfile.ZipFile(mission_dir / "sg236.kmz") as kmz:
+        kml = kmz.read(kmz.namelist()[0]).decode()
+    assert all(f"SG236 dive {d:03d} end" in kml for d in range(1, 6))
