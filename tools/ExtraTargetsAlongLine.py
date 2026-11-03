@@ -41,7 +41,7 @@ import BaseOpts
 from BaseLog import BaseLogger, log_error
 
 # Options
-DEBUG_PDB = True
+DEBUG_PDB = False
 
 
 def ddmm2dd(x):
@@ -149,6 +149,9 @@ def main():
     )
 
     BaseLogger(base_opts)
+
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
 
     lat0 = ddmm2dd(base_opts.lat0)
     lon0 = ddmm2dd(base_opts.lon0)

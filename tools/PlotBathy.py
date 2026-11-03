@@ -180,7 +180,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 alpha=0.5,
                 # clip=True,
             )
-            output_file = bf.with_suffix(".png")
+            # bathymap.001 -> bathymap.001.png (with_suffix gave every map the same bathymap.png)
+            output_file = bf.with_name(f"{bf.name}.png")
             bathymap_short_name = os.path.split(bf)[1]
             plt.savefig(output_file, bbox_inches="tight", transparent=True)
             bathy_data.append(bathy_t(output_file, bathymap_short_name, bd))
@@ -216,13 +217,13 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         fig = plotly.graph_objects.Figure()
         for bd in bathy_data:
             z_min = 0
-            z_max = min(1000.0, np.max(bd.data))
+            z_max = min(1000.0, np.max(bd.da.data))
             fig.add_trace(
                 {
                     "type": "contour",
-                    "x": bd.lon,
-                    "y": bd.lat,
-                    "z": np.transpose(bd.data),
+                    "x": bd.da.lon,
+                    "y": bd.da.lat,
+                    "z": np.transpose(bd.da.data),
                     # "colorscale": cmocean_to_plotly(cmocean.cm.deep, 256),
                     "colorscale": "Greys",
                     # "hovertemplate": hovertemplate,

@@ -41,7 +41,7 @@ if __name__ == "__main__":
     for required_file in ["comm.log", "sg_calib_constants.m"]:
         if not os.path.exists(required_file):
             print(f"Missing required file: {required_file}")
-            sys.exit(0)
+            sys.exit(1)
 
     report_files_moved = False
     num_files_moved = 0
@@ -65,4 +65,4 @@ if __name__ == "__main__":
     if num_files_moved:
         print("Renamed %d data files" % num_files_moved)
 
-    sys.exit(1)
+    sys.exit(0)

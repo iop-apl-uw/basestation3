@@ -50,7 +50,7 @@ from BaseLog import (
 )
 
 # Options
-DEBUG_PDB = True
+DEBUG_PDB = False
 
 
 def main():
@@ -60,6 +60,9 @@ def main():
     )
 
     BaseLogger(base_opts)
+
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
 
     (comm_log, _, _, _, _) = CommLog.process_comm_log(
         os.path.join(base_opts.mission_dir, "comm.log"),
@@ -119,8 +122,9 @@ def main():
 
 
 if __name__ == "__main__":
+    retval = 1
     try:
-        main()
+        retval = main()
     except Exception:
         if DEBUG_PDB:
             _, __, tb = sys.exc_info()
@@ -128,3 +132,4 @@ if __name__ == "__main__":
             pdb.post_mortem(tb)
         else:
             log_error("Untrapped error", "exc")
+    sys.exit(retval)

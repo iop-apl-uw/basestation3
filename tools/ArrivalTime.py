@@ -58,7 +58,7 @@ def ddmm2dd(x):
     return float(int(x / 100.0) + math.fmod(x, 100.0) / 60.0)
 
 
-def main():
+def main() -> int:
     ap = argparse.ArgumentParser(
         "Esitmate time of arrival at target based on past N days run",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -80,7 +80,7 @@ def main():
 
     if not os.path.exists(mission_dir):
         print(f"Dir {mission_dir} does not exists")
-        sys.exit(1)
+        return 1
 
     cdfs = []
     for m in glob.glob(os.path.join(f"{mission_dir}/p???????.nc")):
@@ -120,6 +120,10 @@ def main():
     # print(latest_fix)
     # print(first_fix)
 
+    if latest_fix is None or first_fix is None:
+        print(f"Need at least two dives in {mission_dir} to estimate the arrival time")
+        return 1
+
     geod = Geod(ellps="WGS84")
     line_string = LineString(
         [Point(first_fix[1], first_fix[2]), Point(latest_fix[1], latest_fix[2])]
@@ -151,15 +155,17 @@ def main():
     print(
         f"SG{sg_id} Target {tgt_name} ({tgt_lon:.4f},{tgt_lat:.4f}) dtg:{dtg/1000.0:.2f}km ttg:{ttg/3600.0:.2f} hours ({arrival_time})"
     )
+    return 0
 
 
-try:
-    main()
-except SystemExit:
-    pass
-except Exception:
-    if DEBUG_PDB:
-        extype, value, tb = sys.exc_info()
-        traceback.print_exc()
-        pdb.post_mortem(tb)
-    sys.stderr.write("Exception in main (%s)\n" % traceback.format_exc())
+if __name__ == "__main__":
+    retval = 1
+    try:
+        retval = main()
+    except Exception:
+        if DEBUG_PDB:
+            extype, value, tb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(tb)
+        sys.stderr.write("Exception in main (%s)\n" % traceback.format_exc())
+    sys.exit(retval)

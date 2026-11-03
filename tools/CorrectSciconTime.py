@@ -200,7 +200,7 @@ def main(
                             start_surface_t,
                             start_climb_t,
                             climb_end_t,
-                            start_climb_t,
+                            climb_start_t,
                         )
                     ):
                         climb_corr = (start_surface_t - start_climb_t) / (

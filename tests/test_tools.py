@@ -112,5 +112,9 @@ def test_plot_bathymap(tmp_path, caplog):
         caplog,
         [""],
     )
-    assert (mission_dir / "bathymap.kml").exists()
-    assert (mission_dir / "bathymap.png").exists()
+    # One PNG and KML overlay per bathymap (all three were written to bathymap.png)
+    kml = (mission_dir / "bathymap.kml").read_text()
+    for ii in range(1, 4):
+        assert (mission_dir / f"bathymap.00{ii}.png").exists()
+        assert f"<href>bathymap.00{ii}.png</href>" in kml
+    assert not (mission_dir / "bathymap.png").exists()
