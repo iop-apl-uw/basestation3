@@ -30,6 +30,8 @@
 """CalibConst: declared-numeric constants that don't parse are reported and left unset."""
 
 import logging
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -80,3 +82,14 @@ def test_calib_mass_ok(caplog: pytest.LogCaptureFixture, mass: object, ok: bool)
     with caplog.at_level(logging.ERROR):
         assert MakeDiveProfiles.calib_mass_ok({"mass": mass}, "dive 2") is ok
     assert ("can't process dive 2" in caplog.text) is not ok
+
+
+@pytest.mark.parametrize(("calib_text", "exit_code"), [("id_str = '272';\nmission_title = 'T';\nmass = 73.9;\n", 0), (None, 1)], ids=["calib file", "no calib file"])
+def test_script_exit_status(tmp_path: Path, calib_text: str | None, exit_code: int) -> None:
+    """Run as a script, CalibConst exits with main's status (it always exited 1)."""
+    if calib_text is not None:
+        (tmp_path / "sg_calib_constants.m").write_text(calib_text)
+    ret = subprocess.run(
+        [sys.executable, "CalibConst.py", "--mission_dir", str(tmp_path)], capture_output=True, text=True, check=False
+    )
+    assert ret.returncode == exit_code, ret.stdout + ret.stderr

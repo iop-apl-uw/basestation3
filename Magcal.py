@@ -912,24 +912,25 @@ def main():
     if not base_opts.instrument_id:
         if len(base_opts.mission_dir.name) < 5 or base_opts.mission_dir.name[:2] != "sg":
             log_error("Can't figure out the instrument id - bailing out")
-            return
+            return 1
         try:
             base_opts.instrument_id = int(base_opts.mission_dir.name[2:])
         except Exception:
             log_error("Can't figure out the instrument id - bailing out")
-            return
+            return 1
             
     dives = RegressVBD.parseRangeList(base_opts.dives)
     if not dives or len(dives) < 1:
         log_error("invalid dives list")
-        return 
+        return 1
 
     if base_opts.out and 'html' in base_opts.out:
         fmt = 'html'
     elif base_opts.out and 'png' in base_opts.out:
         fmt = 'png'
     else:
-        fmt = ""
+        log_error(f"--out {base_opts.out} must name an html or png file")
+        return 1
 
     if base_opts.split_dive_climb:
         out_path = Path(base_opts.out)
@@ -940,6 +941,9 @@ def main():
                                                   base_opts.soft,
                                                   fmt,
                                                   phase=phase)
+            if plt is None:
+                log_error(f"No {phase} magcal plot made for dives {dives}")
+                return 1
             phase_out = out_path.with_stem(f"{out_path.stem}_{phase}")
             if fmt == 'html':
                 fid = open(phase_out, 'w')
@@ -958,6 +962,9 @@ def main():
                                               base_opts.soft,
                                               fmt)
 
+        if plt is None:
+            log_error(f"No magcal plot made for dives {dives}")
+            return 1
         if fmt == 'html':
             fid = open(base_opts.out, 'w')
         elif fmt == 'png':
@@ -968,6 +975,8 @@ def main():
 
         print(f"hard = {hard}")
         print(f"soft = {soft}")
+
+    return 0
 
 if __name__ == "__main__":
     retval = 1

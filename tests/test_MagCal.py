@@ -29,6 +29,7 @@
 
 import pathlib
 import shutil
+import sys
 
 import numpy as np
 import playwright.sync_api
@@ -41,6 +42,7 @@ import BasePlot
 import Magcal
 import MakeDiveProfiles
 import Utils
+from BaseLog import BaseLogger
 
 test_cases = (
     ("tcm2mat.cal.0001.0004", ["tcm2mat.cal.0001.0004 to correct heading"], [""]),
@@ -413,3 +415,61 @@ def test_magcal_function_phase_split_produces_different_fits(tmp_path: pathlib.P
     assert html_climb
     assert hard_dive != hard_climb
     assert not np.array_equal(soft_dive, soft_climb)
+
+
+def _run_magcal_main(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> int | None:
+    """Runs Magcal.main with args as its command line.
+
+    Args:
+        monkeypatch: pytest monkeypatch fixture, to set sys.argv.
+        args: The command line, without the program name.
+
+    Returns:
+        main's return value.
+    """
+    monkeypatch.setattr(sys, "argv", ["Magcal.py", *args])
+    BaseLogger.reset()
+    try:
+        return Magcal.main()
+    finally:
+        BaseLogger.reset()
+
+
+def test_magcal_main_writes_html(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A good run writes the plot and returns 0."""
+    mission_dir = _copy_magcal_nc(tmp_path)
+    out = tmp_path / "magcal.html"
+    args = ["-m", str(mission_dir), "-i", "686", "--dives", "5", "--out", str(out)]
+    assert _run_magcal_main(monkeypatch, args) == 0
+    assert out.stat().st_size > 0
+
+
+@pytest.mark.parametrize(
+    ("extra_args", "message"),
+    [
+        (["--dives", "5", "--out", "magcal.txt"], "must name an html or png file"),
+        (["--dives", "9", "--out", "magcal.html"], "No magcal plot made for dives [9]"),
+        (["--dives", "9", "--out", "magcal.html", "--split_dive_climb"], "No dive magcal plot made for dives [9]"),
+    ],
+    ids=["not html or png", "no dive files", "no dive files, split"],
+)
+def test_magcal_main_errors_return_1(
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    extra_args: list[str],
+    message: str,
+) -> None:
+    """An --out that isn't html/png, or dives with no netCDF files, is an error, not a traceback."""
+    mission_dir = _copy_magcal_nc(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    assert _run_magcal_main(monkeypatch, ["-m", str(mission_dir), "-i", "686", *extra_args]) == 1
+    assert message in caplog.text
+    assert not list(tmp_path.glob("magcal*"))
+
+
+def test_magcal_main_unknown_instrument_returns_1(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """No -i, no comm.log and a mission dir not named sgNNN: an error exit (it exited 0)."""
+    mission_dir = _copy_magcal_nc(tmp_path)
+    args = ["-m", str(mission_dir), "--dives", "5", "--out", str(tmp_path / "magcal.html")]
+    assert _run_magcal_main(monkeypatch, args) == 1

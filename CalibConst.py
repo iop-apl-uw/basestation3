@@ -267,7 +267,7 @@ if __name__ == "__main__":
     time.tzset()
 
     try:
-        rev_val = main()
+        ret_val = main()
     except Exception:
         log_critical("Unhandled exception in main -- exiting")
 

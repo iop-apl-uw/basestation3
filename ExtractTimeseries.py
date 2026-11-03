@@ -242,6 +242,37 @@ def getVarNames(nc_filename, ext_nc_file=None, pd_df_c=None):
 
         return vars
 
+def _timeseries_message(x: dict) -> dict | None:
+    """Puts each variable on the time base of the one with the most samples.
+
+    Args:
+        x: Variable name -> {'t': sample times, 'value': samples}, or {} when it had no samples.
+
+    Returns:
+        'epoch' and 'time' (seconds from the first sample) plus each variable's values on that time
+        base, or None if no variable has samples. Variables without samples are left out.
+    """
+    have = {p: v for p, v in x.items() if len(v.get("t", []))}
+    missing = [p for p in x if p not in have]
+    if missing:
+        log_warning(f"No samples in the dive range for {', '.join(missing)} - left out")
+    if not have:
+        return None
+
+    base_p = max(have, key=lambda p: len(have[p]["t"]))
+    base_t = have[base_p]["t"]
+    message = {}
+    message['epoch'] = base_t.tolist()
+    message['time']  = (base_t - base_t[0]).tolist()
+    message[base_p] = have[base_p]["value"].tolist()
+    for p, v in have.items():
+        if p == base_p:
+            continue
+
+        message[p] = numpy.interp(base_t, v["t"], v["value"]).tolist()
+
+    return message
+
 def extractVars(nc_filename, varNames, dive1, diveN, extnci=None, pd_df_c=None):
     if pd_df_c is not None:
         pq_df = pd_df_c.find_first_col("trajectory")
@@ -254,10 +285,6 @@ def extractVars(nc_filename, varNames, dive1, diveN, extnci=None, pd_df_c=None):
         t0 = pq_df.loc[pq_df["trajectory"] == dive1]["log_gps_time"].to_numpy()[0]
         t2 = pq_df.loc[pq_df["trajectory"] == diveN]["log_gps_time"].to_numpy()[2]
 
-        base_t = None
-        base_t_len = 0
-        base_p = None
-
         x = {}
         for p in varNames:
             x[p] = {}
@@ -268,34 +295,20 @@ def extractVars(nc_filename, varNames, dive1, diveN, extnci=None, pd_df_c=None):
 
             var = pq_df[p].to_numpy()
 
-            if 'time' in varNames[-4:]:
-                var_t = var
-
             var_t = []
-            for col in pq_df.columns:
-                if col.endswith("time"):
-                    var_t = pq_df[col].to_numpy()
-                    
+            if p.endswith("time"):
+                var_t = var
+            else:
+                for col in pq_df.columns:
+                    if col.endswith("time"):
+                        var_t = pq_df[col].to_numpy()
+
             if len(var_t):
                 ixs = (var_t > t0) & (var_t < t2)
                 x[p]['t'] = var_t[ixs]
                 x[p]['value'] = var[ixs]
 
-            if len(var_t[ixs]) > base_t_len:
-                base_t = var_t[ixs]
-                base_p = p
-
-        message = {}
-        message['epoch'] = base_t.tolist()
-        message['time']  = (base_t - base_t[0]).tolist()
-        message[base_p] = x[p]['value'].tolist()
-        for p in varNames:
-            if p == base_p:
-                continue
-
-            message[p] = numpy.interp(base_t, x[p]['t'], x[p]['value']).tolist()
-            
-        return message
+        return _timeseries_message(x)
     else:
         if extnci is None:
             try:
@@ -314,19 +327,19 @@ def extractVars(nc_filename, varNames, dive1, diveN, extnci=None, pd_df_c=None):
         dN = numpy.where(nci.variables['dive_number'][:] == diveN)[0]
         t0 = nci.variables['start_time'][d1]
         t2 = nci.variables['end_time'][dN]
-        base_t = None
-        base_t_len = 0
-        base_p = None
 
         x = {}
         for p in varNames:
             x[p] = {}
 
+            if p not in nci.variables:
+                continue
+
             var = nci.variables[p][:]
             dim = nci.variables[p].dimensions[0]
 
             var_t = []
-            if 'time' in varNames[-4:]:
+            if p.endswith("time"):
                 var_t = var
             else:
                 for k in nci.variables:
@@ -339,19 +352,7 @@ def extractVars(nc_filename, varNames, dive1, diveN, extnci=None, pd_df_c=None):
                 x[p]['t'] = var_t[ixs]
                 x[p]['value'] = var[ixs]
 
-            if len(var_t[ixs]) > base_t_len:
-                base_t = var_t[ixs]
-                base_p = p
-
-        message = {}
-        message['epoch'] = base_t.tolist()
-        message['time']  = (base_t - base_t[0]).tolist()
-        message[base_p] = x[p]['value'].tolist()
-        for p in varNames:
-            if p == base_p:
-                continue
-
-            message[p] = numpy.interp(base_t, x[p]['t'], x[p]['value']).tolist()
+        message = _timeseries_message(x)
 
         if extnci is None:
             nci.close()
