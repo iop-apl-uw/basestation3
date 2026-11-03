@@ -195,3 +195,20 @@ def test_nsquared_no_good_points(tmp_path, caplog) -> None:
         ds.close()
     assert "Dive 176: no good CT points for buoyancy frequency (0 of 200) - not computed" in caplog.text
     assert "Traceback" not in caplog.text and "Failed to compute Nsquared" not in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("depth", "expected"),
+    [
+        ([np.nan, 1.0, np.nan, np.nan, np.nan], [np.nan, 1.0, np.nan, np.nan, np.nan]),
+        ([np.nan] * 5, [np.nan] * 5),
+        ([np.nan, 1.0, 2.0, np.nan, np.nan], [1.0, 1.0, 2.0, 2.0, 2.0]),
+    ],
+    ids=["one good depth", "no good depths", "two good depths"],
+)
+def test_interp_missing_depth(depth: list[float], expected: list[float], caplog) -> None:
+    """Fewer than 2 good depths are returned as they are, with a warning (one raised TypeError)."""
+    with caplog.at_level(logging.WARNING):
+        out = PlotUtils.interp_missing_depth(np.arange(5.0), np.array(depth))
+    np.testing.assert_array_equal(out, expected)
+    assert ("skipping interpolation" in caplog.text) == bool(np.count_nonzero(np.isfinite(depth)) < 2)

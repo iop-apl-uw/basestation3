@@ -114,16 +114,6 @@ def get_mission_str(dive_nc_file):
     return f"SG{'%03d' % (log_id if log_id else 0,)} {mission_title}"
 
 
-def get_mission_str_comm_log(comm_log, mission_title):
-    """Gets common information for all plot headers"""
-    log_id = None
-    for s in comm_log.sessions:
-        if s.sg_id is not None:
-            log_id = s.sg_id
-            break
-    return f"SG{'%03d' % log_id if log_id else 0} {mission_title}"
-
-
 def setup_plot_directory(base_opts: BaseOpts.BaseOptions) -> int:
     """Ensures plot_directory is set in base_opts and creates it if needed
 
@@ -974,8 +964,8 @@ def missing_variables(dive_nc_file, names: list[str]) -> list[str]:
 
 def interp_missing_depth(sg_time, sg_depth):
     sg_depth_good_b = np.logical_not(np.isnan(sg_depth))
-    if len(np.squeeze(np.nonzero(sg_depth_good_b))) < 2:
-        log_warning("No non-nan depth points - skipping interpolation")
+    if np.count_nonzero(sg_depth_good_b) < 2:
+        log_warning("Fewer than 2 non-nan depth points - skipping interpolation")
     else:
         sg_depth = Utils.interp1d(
             sg_time[sg_depth_good_b],
