@@ -35,7 +35,6 @@
 """Routines for creating dive profiles from a Seaglider's eng and log files"""
 
 import contextlib
-import copy
 import cProfile
 import io
 import math
@@ -3562,9 +3561,17 @@ def make_dive_profile(
             GPSE = log_f.data["$GPS"]
             GPSE.ok = True  # GPS end
         except KeyError:
-            log_warning("Couldn't find $GPS in %s" % log_file_name.args)
+            log_warning(
+                f"Couldn't find $GPS in {log_file_name} - using $GPS2 as the end fix (no DAC)"
+            )
             # Set a default...no worse than GPS acquisition issues...
-            GPSE = copy.copy(GPS2)  # no need to deepcopy
+            # A $GPS line made from $GPS2's date,time,lat,lon,ttff,hdop,ttfinal,magvar fields -
+            # it's stored in the netCDF (log_GPS) and the GPS table below with the other fixes
+            GPSE = GPS.GPSFix(
+                ",".join(["$GPS"] + GPS2.raw_line.split(",")[1:9]),
+                start_date_str=time.strftime("%m %d %y", log_f.start_ts),
+            )
+            log_f.data["$GPS"] = GPSE
             GPSE.ok = False
 
         # These are used to control DAC computations below
@@ -3588,7 +3595,10 @@ def make_dive_profile(
         # TODO GBS 2022/09/21 - verify that this simplificaiton works
         GPS1.ok = not directives.eval_function("bad_gps1", absent_predicate_value=None)
         GPS2.ok = not directives.eval_function("bad_gps2", absent_predicate_value=None)
-        GPSE.ok = not directives.eval_function("bad_gps3", absent_predicate_value=None)
+        # GPSE.ok is False for the $GPS2 stand-in - the directive can't make it good
+        GPSE.ok = GPSE.ok and not directives.eval_function(
+            "bad_gps3", absent_predicate_value=None
+        )
 
         # Investigations of Aug 2014 showed that GPS fixes prior to this date
         # were likely accurate to only 100m, regardless of hdop value (see Bennett & Stahr, 2014)

@@ -604,14 +604,19 @@ def parse_log_file(
     gc_line_times = []
     while True:
         line_count = line_count + 1
+        raw_bytes = raw_log_file.readline()
+        if raw_bytes == b"":
+            break  # end of file
         try:
-            raw_line = raw_log_file.readline().decode().rstrip()
+            raw_line = raw_bytes.decode().rstrip()
         except UnicodeDecodeError:
             log_error("Could not process line %d of %s" % (line_count, in_filename))
             continue
 
         if raw_line == "":
-            break  # done with the file? BUG continue?
+            # A blank line mid-log (seen in a 67.01 log after $WS_CARDS) - keep going,
+            # or everything after it ($GPS included) is lost
+            continue
 
         # The escape output appears at the end of the logfile, in the form normally seen in the comm.log
         # Convert to the canonical logfile format and fall through
@@ -626,7 +631,7 @@ def parse_log_file(
 
         raw_strs = raw_line.split(",", 1)
         if len(raw_strs) != 2:  # we expect $PARM,value[,value]+
-            log_error(
+            log_warning(
                 "Could not parse line %d %s in %s" % (line_count, raw_line, in_filename)
             )
         else:

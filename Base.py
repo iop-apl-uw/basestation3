@@ -1255,7 +1255,7 @@ def expunge_secrets(logfile_name):
             log_warning(f"Could not decode line {s} in {logfile_name} - skipping")
             continue
 
-        if s in ("", "\n"):
+        if s.strip() == "":  # includes "\r\n"
             continue
 
         if header:
@@ -1276,8 +1276,10 @@ def expunge_secrets(logfile_name):
                 try:
                     key, _ = s.split("=", 1)
                 except ValueError:
-                    log_error("trying to split data line " + s)
-                    return 1
+                    # Not a parameter line (a stray ">" seen in a 67.01 log) - keep it in the
+                    # public file; giving up here would leave the secrets in it
+                    log_warning(f"Could not split data line {s.rstrip()} in {logfile_name}")
+                    key = None
 
             if key in private:
                 private_lines = private_lines + s

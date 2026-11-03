@@ -262,3 +262,33 @@ def test_bad_calib_mass_fails_cleanly(tmp_path, caplog, mass_line: str, required
     assert "fix sg_calib_constants.m and reprocess" in caplog.text
     assert "Traceback" not in caplog.text
     assert "estimate_volmax" not in caplog.text
+
+
+def test_missing_end_gps_falls_back(tmp_path, caplog) -> None:
+    """A log without $GPS uses $GPS2 as the end fix (its warning used to raise AttributeError, sg274 2026-11-03)."""
+    mission_dir = tmp_path / "mission_dir"
+
+    def drop_end_gps(mission_dir: pathlib.Path) -> None:
+        log = mission_dir / "p2720002.log"
+        log.write_text("".join(s for s in log.read_text().splitlines(keepends=True) if not s.startswith("$GPS,")))
+
+    testutils.run_mission(
+        pathlib.Path("testdata/sg272_NANOOS_Feb26_makediveprofiles"),
+        mission_dir,
+        MakeDiveProfiles.main,
+        f"--verbose --mission_dir {mission_dir} --force".split(),
+        caplog,
+        [""],
+        pre_test_hook=drop_end_gps,
+        required_msgs=[
+            f"Couldn't find $GPS in {mission_dir / 'p2720002.log'} - using $GPS2 as the end fix (no DAC)",
+            "Bad GPS2 or GPSE; unable to compute depth-average current",
+            "Dives processed = [2]",
+        ],
+    )
+    # netCDF4 requires str paths
+    with netCDF4.Dataset(str(mission_dir / "p2720002.nc")) as nc:
+        gps2 = nc.variables["log_GPS2"][:].tobytes().decode()
+        gpse = nc.variables["log_GPS"][:].tobytes().decode()
+        assert gpse == ",".join(["$GPS"] + gps2.split(",")[1:9])
+        assert nc.variables["log_gps_time"][2] == nc.variables["log_gps_time"][1]

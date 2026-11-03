@@ -219,3 +219,18 @@ def test_garbage_first_line_is_logged_printable(tmp_path, monkeypatch):
     assert LogFile.parse_log_file(str(log)) is None
     assert len(errors) == 1 and errors[0].startswith("first line did not contain an version string")
     assert errors[0].isprintable() and len(errors[0]) < 400
+
+
+def test_blank_line_mid_log_keeps_the_rest(tmp_path, monkeypatch):
+    """A blank line and a stray ">" after $WS_CARDS (sg274 dive 1, 2026-11-03): parsing carries on to $GPS."""
+    warnings = []
+    monkeypatch.setattr(LogFile, "log_warning", lambda s, *a, **kw: warnings.append(str(s)))
+    log = tmp_path / "p2740001.log"
+    log.write_bytes(
+        _LOG_HEADER.encode()
+        + b"$WS_CARDS,\r\n\r\n>\n$TEMP,22.44\n$GPS,031126,001754,2121.899,-15757.820,1,0.8,5,9.5\n"
+    )
+    log_file = LogFile.parse_log_file(str(log))
+    assert log_file is not None
+    assert "$GPS" in log_file.data and "$TEMP" in log_file.data
+    assert any(w.startswith("Could not parse line 11 >") for w in warnings)

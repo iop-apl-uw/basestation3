@@ -441,3 +441,13 @@ def test_process_progress_unknown_section(tmp_path, caplog):
     with caplog.at_level(logging.WARNING):
         progress.process_progress("no_such_section", "start")
     assert "Unknown section name no_such_section" in caplog.text
+
+
+def test_expunge_secrets_blank_and_stray_lines(tmp_path):
+    """A "\\r\\n" blank line and a stray ">" (sg274 dive 1, 2026-11-03) don't stop the secrets being removed."""
+    log = tmp_path / "p2740001.log"
+    log.write_bytes(b"version: 67.01\ndata:\n$ID,274\n$WS_CARDS,\r\n\r\n>\n$TEL_NUM,15555550100\n$GPS,1\n")
+    assert Base.expunge_secrets(log) == 0
+    public = log.read_text()
+    assert "$TEL_NUM" not in public and ">\n" in public and "$GPS,1\n" in public
+    assert "$TEL_NUM,15555550100" in log.with_suffix(".pvt").read_text()
