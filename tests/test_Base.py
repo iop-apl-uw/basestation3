@@ -451,3 +451,30 @@ def test_expunge_secrets_blank_and_stray_lines(tmp_path):
     public = log.read_text()
     assert "$TEL_NUM" not in public and ">\n" in public and "$GPS,1\n" in public
     assert "$TEL_NUM,15555550100" in log.with_suffix(".pvt").read_text()
+
+
+def test_quit_session_without_dive_number(tmp_path, caplog, monkeypatch):
+    """The last call parsed a QUIT but has no dive number: flight model still runs (the check used to raise TypeError)."""
+    data_dir = pathlib.Path("testdata/sg272_NANOOS_Feb26_magcal")
+    mission_dir = tmp_path / "mission_dir"
+    fm_runs = []
+    monkeypatch.setattr(Base.FlightModel, "main", lambda *args, **kwargs: fm_runs.append(args))
+
+    def quit_session(mission_dir: pathlib.Path) -> None:
+        with (mission_dir / "comm.log").open("a") as fo:
+            fo.write(
+                "\nConnected at 2026-05-13T12:00:00Z (sg272)\nParsed QUIT from cmdfile\n"
+                "Disconnected at 2026-05-13T12:01:00Z (normal)\n"
+            )
+
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        Base.main,
+        f"--verbose --local --no-notify_vis --plot_types none --mission_dir {mission_dir}".split(),
+        caplog,
+        ["pressure timeout", "Substantial unmodeled flight time", "Large mis-match", "codaTODO", "Could not find a dive number"],
+        pre_test_hook=quit_session,
+    )
+    assert fm_runs
+    assert "Skipping flight model due to QUIT command" not in caplog.text

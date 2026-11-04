@@ -2292,6 +2292,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         last_session
         and last_session.cmd_directive
         and "QUIT" in last_session.cmd_directive
+        and last_session.dive_num is not None
         and last_session.dive_num > FlightModel.early_volmax_adjust
         and not base_opts.force
     ):

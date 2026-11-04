@@ -4275,13 +4275,13 @@ def create_nc_var(
 
             # NetCDF libraries to not handle empty string values and cause processing of netCDF
             # files with such strings to crash/halt.
-            size = len(value)
-            if value is None or size == 0:
+            if value is None or len(value) == 0:
                 log_error(
                     "Must supply a non-empty value for string-valued NC var (%s) -- variable not created "
                     % var_name
                 )
                 return None
+            size = len(value)
             var_dims = find_string_dim(size, nc_file)
             nc_var = nc_file.createVariable(
                 var_name,
