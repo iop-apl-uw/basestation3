@@ -31,6 +31,7 @@
 
 import gzip
 import io
+import logging
 import os
 from pathlib import Path
 
@@ -74,3 +75,17 @@ def test_compress_failures(data_file: Path, tmp_path: Path) -> None:
     assert BaseGZip.compress(tmp_path / "missing", tmp_path / "out.gz") == 1
     assert BaseGZip.compress(data_file, tmp_path / "no_such_dir" / "out.gz") == 1
     assert BaseGZip.compress(data_file, 42) == 1  # ty: ignore[invalid-argument-type]
+
+
+def test_decompress_bad_crc_logged_in_hex(
+    data_file: Path, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Both CRCs are hex (the expected one used to print as decimal digits after the 0x)."""
+    good = gzip.compress(data_file.read_bytes())
+    actual_crc = int.from_bytes(good[-8:-4], "little")
+    stored_crc = actual_crc ^ 0xFFFFFFFF
+    bad = tmp_path / "sg0001dz.x00"
+    bad.write_bytes(good[:-8] + stored_crc.to_bytes(4, "little") + good[-4:])
+    with caplog.at_level(logging.ERROR):
+        assert BaseGZip.decompress(bad, tmp_path / "out") == 1
+    assert f"expected 0x{stored_crc:x}, generated 0x{actual_crc:x}" in caplog.text

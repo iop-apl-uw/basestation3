@@ -236,7 +236,7 @@ def decompress(input_file_name, output_file_or_file_name):
     log_debug("File provided CRC = 0x%x, File provided length = 0x%x" % (crc32, isize))
     if crc32 != U32(crcval):
         log_error(
-            "CRC check failed on %s - expected 0x%s, generated 0x%x"
+            "CRC check failed on %s - expected 0x%x, generated 0x%x"
             % (input_file_name, crc32, U32(crcval))
         )
         retval |= 1
