@@ -269,3 +269,46 @@ def test_extract_file_metadata_bad_header_field(
     bad.write_text(_HEADER.replace(old, new))
     assert scicon_ext.extract_file_metadata(bad) == (None, None)
     assert message in caplog.text and "skipping file" in caplog.text
+
+
+def test_process_adcp_dat_convertor_raises(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The convertor can't be run: logged and a failure (the handler used to call fo.close() on a list)."""
+    sensors_dir = tmp_path / "Sensors"
+    sensors_dir.mkdir()
+    convertor = sensors_dir / "fake_sc2mat"
+    convertor.write_text("#!/bin/sh\nexit 0\n")
+    convertor.chmod(0o755)
+
+    class FakeBaseOpts:
+        basestation_directory = str(tmp_path)
+        sc2mat_convertor = "fake_sc2mat"
+
+    def raises(*args: object, **kwargs: object) -> None:
+        raise OSError("can't fork")
+
+    monkeypatch.setattr(scicon_ext.Utils, "run_cmd_shell", raises)
+    scicon_file = str(tmp_path / "sc0000ad.eng.raw")
+    with caplog.at_level(logging.ERROR):
+        assert scicon_ext.process_adcp_dat(FakeBaseOpts(), scicon_file, str(tmp_path / "sc0000ad.eng"), [], []) == 1
+    assert "Error running" in caplog.text
+
+
+def test_convert_dat_to_eng_error_comment_not_legato(tmp_path: pathlib.Path) -> None:
+    """An Error-NNN comment in a non-legato file is ignored (the None counter used to raise TypeError)."""
+    dat, eng, df_meta, base_opts = _cast(tmp_path, ["0 10 20", "% 100 Error-3", "1000 1 2"])
+    assert scicon_ext.ConvertDatToEng(dat, eng, df_meta, base_opts) == 0
+    assert "%errors" not in eng.read_text()
+
+
+@pytest.mark.parametrize("before_end", [True, False])
+def test_extract_file_metadata_no_instrument(
+    tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture, before_end: bool
+) -> None:
+    """No %instrument line skips the file with a warning (reading its class used to raise AttributeError)."""
+    bad = tmp_path / "ct.dat"
+    timeout = "%100 T-O {}\n" if before_end else ""
+    bad.write_text(_HEADER.replace("%instrument: 0 ct\n", "").replace("%data:\n", f"{timeout}%stop: 9 28 125 6 0 0\n%data:\n"))
+    assert scicon_ext.extract_file_metadata(bad) == (None, None)
+    assert "No %instrument line" in caplog.text

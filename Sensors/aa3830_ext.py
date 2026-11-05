@@ -296,6 +296,9 @@ def asc2eng(base_opts, module_name, datafile=None):
         aa3830_dphase = datafile.remove_col("aa3830.dphase")
 
     if aa3830_O2 is not None:
+        if aa3830_temp is None or aa3830_dphase is None:
+            log_error("aa3830 O2 column without temp and dphase - not converting")
+            return -1
         aa3830_O2 = aa3830_O2 / 100.0
         aa3830_temp = (aa3830_temp / 100.0) - 10.0
         aa3830_dphase = aa3830_dphase / 100.0
@@ -383,6 +386,9 @@ def sensor_data_processing(
             )
             return -1
         (_, aa3830_dphase_v) = eng_f.find_col(["dphase", "aa3830_dphase"])
+        if aa3830_dphase_v is None:
+            log_error("aa3830 O2 column without dphase - bailing out")
+            return -1
         # UNUSED (ignore, aa3830_tempc_v)   = eng_f.find_col(['temp','aa3830_temp']) # use CTD temp instead
         ancillary_variables = ancillary_variables + " eng_aa3830_dphase eng_aa3830_O2"
         aa3830_time_s_v = sg_epoch_time_s_v

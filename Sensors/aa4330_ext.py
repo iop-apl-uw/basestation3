@@ -438,6 +438,9 @@ def asc2eng(base_opts, module_name, datafile=None):
         aa4330_TCPhase = datafile.remove_col_regex("aa[0-9][0-9][0-9].TCPhase")
 
     if aa4330_O2 is not None:
+        if any(c is None for c in (aa4330_AirSat, aa4330_Temp, aa4330_CalPhase, aa4330_TCPhase)):
+            log_error("aa4330 O2 column without AirSat, Temp, CalPhase and TCPhase - not converting")
+            return -1
         aa4330_O2 = aa4330_O2 / 1000.0
         aa4330_AirSat = aa4330_AirSat / 1000.0
         aa4330_Temp = aa4330_Temp / 1000.0
@@ -462,6 +465,9 @@ def asc2eng(base_opts, module_name, datafile=None):
     aa4831_TCPhase = datafile.remove_col("aa4831.TCPhase")
 
     if aa4831_O2 is not None:
+        if any(c is None for c in (aa4831_AirSat, aa4831_Temp, aa4831_CalPhase, aa4831_TCPhase)):
+            log_error("aa4831 O2 column without AirSat, Temp, CalPhase and TCPhase - not converting")
+            return -1
         aa4831_O2 = aa4831_O2 / 1000.0
         aa4831_AirSat = aa4831_AirSat / 1000.0
         aa4831_Temp = aa4831_Temp / 1000.0
@@ -567,6 +573,9 @@ def sensor_data_processing(
                 return -1
             tcphase_var = eng_tcphase_var
             _, optode_tcphase_v = eng_f.find_col([tcphase_var])
+            if optode_tcphase_v is None:
+                log_error(f"{instrument} O2 column without {tcphase_var} - bailing out")
+                return -1
             optode_time_s_v = sg_epoch_time_s_v
             optode_results_dim = BaseNetCDF.nc_mdp_data_info[BaseNetCDF.nc_sg_data_info]
         else:

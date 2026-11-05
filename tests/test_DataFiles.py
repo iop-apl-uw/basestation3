@@ -31,6 +31,7 @@
 
 from collections.abc import Iterator
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -105,3 +106,48 @@ def test_garbage_first_line_is_logged_printable(tmp_path: Path, monkeypatch: pyt
     assert DataFiles.process_data_file(str(dat), "eng", {}) is None
     assert len(errors) == 1 and errors[0].startswith("first line did not contain a version string")
     assert errors[0].isprintable() and len(errors[0]) < 400
+
+
+def _asc(tmp_path: Path, columns: list[str], header: str = "start: 10 6 126 3 19 30\n") -> Path:
+    """Writes a two-row .dat with the given columns.
+
+    Args:
+        tmp_path: Directory for the file.
+        columns: The column names.
+        header: The header lines after the version.
+
+    Returns:
+        The .dat file.
+    """
+    row = " ".join(str(i + 1) for i in range(len(columns)))
+    dat = tmp_path / "p2630001.dat"
+    dat.write_text(f"version: 67.01\n{header}columns: {','.join(columns)},\ndata:\n{row}\n{row}\n")
+    return dat
+
+
+TRUCK = ["rec", "elaps_t", "depth", "heading", "pitch", "roll"]
+
+
+@pytest.mark.parametrize("gone", ["elaps_t", "depth", "heading", "pitch", "roll", "rec"])
+def test_asc_to_eng_missing_required_column(tmp_path: Path, caplog: pytest.LogCaptureFixture, gone: str) -> None:
+    """A required column missing fails the conversion (it used to raise TypeError)."""
+    data_file = DataFiles.process_data_file(_asc(tmp_path, [c for c in TRUCK if c != gone]), "asc", {})
+    assert data_file is not None
+    log_file = MagicMock()
+    assert data_file.asc_to_eng(log_file) == 1
+    assert f"Missing column(s) ['{gone}']" in caplog.text
+
+
+def test_process_data_file_no_start_line(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """No start line is rejected here (asc_to_eng, dump and MakeDiveProfiles all used to raise on it later)."""
+    assert DataFiles.process_data_file(_asc(tmp_path, TRUCK, header=""), "asc", {}) is None
+    assert "No start line in the header" in caplog.text
+
+
+def test_main_unreadable_eng_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """An eng file that can't be read returns 1 (it used to call dump() on None)."""
+    (tmp_path / "sg_calib_constants.m").write_text("id_str='263';\n")
+    eng = tmp_path / "p2630001.eng"
+    eng.write_text("not a data file\n")
+    monkeypatch.setattr(DataFiles, "process_data_file", lambda *a, **k: None)
+    assert DataFiles.main(["--mission_dir", str(tmp_path), eng.name]) == 1

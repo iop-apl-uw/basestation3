@@ -70,6 +70,9 @@ def asc2eng(base_opts, module_name, datafile=None):
     sailct_tempFreq = datafile.remove_col("sailct.TempFreq")
 
     if sailct_condFreq is not None:
+        if sailct_tempFreq is None:
+            log_error("sailct CondFreq column without TempFreq - not converting")
+            return -1
         sailct_condFreq = 4000000.0 / (sailct_condFreq / 255.0)
         sailct_tempFreq = 4000000.0 / (sailct_tempFreq / 255.0)
 

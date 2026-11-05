@@ -175,6 +175,9 @@ def asc2eng(base_opts, module_name, datafile=None):
         is_scct = True
 
     if sbect_condFreq is not None:
+        if sbect_tempFreq is None:
+            log_error("CT condFreq column without tempFreq - not converting")
+            return -1
         # Rev E (67.00 and later) - just divide by 1000.
         if datafile.version >= 67.0 or is_scct:
             sbect_condFreq = sbect_condFreq / 1000.0

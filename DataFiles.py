@@ -185,6 +185,21 @@ class DataFile:
         for c in ("volt1", "volt2", "curr1", "curr2", "GC_state"):
             optional_cols[c] = self.remove_col(c)
 
+        required = {
+            "elaps_t": elaps_t,
+            "depth": depth,
+            "heading": heading,
+            "pitch": pitchAng,
+            "roll": rollAng,
+            "rec": rec,
+        }
+        if AD_pitch is not None:
+            required |= {"AD_roll": AD_roll, "AD_vbd": AD_vbd, "GC_phase": GC_phase}
+        missing = [name for name, col in required.items() if col is None]
+        if missing:
+            log_error(f"Missing column(s) {missing} - can't convert to eng")
+            return 1
+
         num_rows = len(elaps_t)
 
         # Conversions - some instruments need conversions from the asc representation
@@ -260,6 +275,9 @@ class DataFile:
         pressure = self.remove_col("pressure")
         press_counts = self.remove_col("press_counts")
         if pressure is not None:
+            if press_counts is None:
+                log_error("pressure column with no press_counts - can't convert to eng")
+                return 1
             self.eng_cols.append("pressure")
             self.eng_dict["pressure"] = pressure / 10.0
             self.eng_cols.append("press_counts")
@@ -533,6 +551,7 @@ def process_data_file(
 
     line_count = 0
     rows = []
+    found_start = False
     # Process the header
     while True:
         raw_line_temp = raw_data_file.readline()
@@ -578,6 +597,7 @@ def process_data_file(
             data_file.selftest = int(raw_strs[1])
             continue
         elif raw_strs[0] == "start" or raw_strs[0] == "%start":
+            found_start = True
             time_parts = raw_strs[1].split()
             if int(time_parts[2]) - 100 < 0:
                 year_part = int(time_parts[2])
@@ -626,6 +646,11 @@ def process_data_file(
             continue
         elif raw_strs[0] == "data" or raw_strs[0] == "%data":
             break
+
+    # Every use of a data file needs the start time
+    if not found_start:
+        log_error(f"No start line in the header of {in_filename}")
+        return None
 
     # Process the data
     prev_len = -1
@@ -802,6 +827,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         else:
             # Assume its an eng file
             data_file = process_data_file(datafile_name, "eng", calib_consts)
+            if not data_file:
+                return 1
             data_file.dump(sys.stdout)
 
     return 0

@@ -128,16 +128,10 @@ def process_adcp_dat(
 
     cmdline = "%s %s %s" % (convertor, scicon_file, matfile)
     log_info("Running %s" % cmdline)
-    fo = []
     try:
         (sts, fo) = Utils.run_cmd_shell(cmdline, timeout=10)
     except Exception:
         log_error("Error running %s" % cmdline, "exc")
-        if fo is not None:
-            for f in fo:
-                log_error(f.decode().rstrip())
-            fo.close()
-
         return 1
 
     if fo is not None:
@@ -963,7 +957,11 @@ def extract_file_metadata(inp_file_name):
                         inp_file.close()
                         return None, None
                     time_val = stop_time
-                if container is not None and (container[-1] in ("a", "b", "c", "d")):
+                if (
+                    instrument is not None
+                    and container is not None
+                    and (container[-1] in ("a", "b", "c", "d"))
+                ):
                     instrument_name = [instrument.instr_class]
                     Sensors.process_sensor_extensions(
                         "remap_instrument_names", instrument_name
@@ -990,8 +988,10 @@ def extract_file_metadata(inp_file_name):
                         "Could not convert %s to float - skipping" % raw_strs[1].strip()
                     )
                 else:
-                    if container is not None and (
-                        container[-1] in ("a", "b", "c", "d")
+                    if (
+                        instrument is not None
+                        and container is not None
+                        and (container[-1] in ("a", "b", "c", "d"))
                     ):
                         instrument_name = [instrument.instr_class]
                         Sensors.process_sensor_extensions(
@@ -1019,8 +1019,10 @@ def extract_file_metadata(inp_file_name):
                         "Could not convert %s to int - skipping" % raw_strs[1].strip()
                     )
                 else:
-                    if container is not None and (
-                        container[-1] in ("a", "b", "c", "d")
+                    if (
+                        instrument is not None
+                        and container is not None
+                        and (container[-1] in ("a", "b", "c", "d"))
                     ):
                         instrument_name = [instrument.instr_class]
                         Sensors.process_sensor_extensions(
@@ -1041,6 +1043,11 @@ def extract_file_metadata(inp_file_name):
                         log_warning(
                             "Can't extract dive value from cotainer (%s)" % container
                         )
+
+    if instrument is None:
+        log_warning(f"No %instrument line in {inp_file_name} - skipping file")
+        inp_file.close()
+        return None, None
 
     if (
         container is not None
@@ -1335,7 +1342,8 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
             elif m2 is not None and len(m2) > 0:
                 # if legato_error_count is None:
                 #    log_info(raw_line)
-                legato_error_count += len(m2)
+                if legato_error_count is not None:
+                    legato_error_count += len(m2)
                 log_debug(f"legato_error_count {legato_error_count}")
             else:
                 raw_strs = raw_line.split(":", 1)
