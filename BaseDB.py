@@ -135,28 +135,53 @@ def addColumn(cur, col, db_type):
     return True
 
 
+def _sql_value(val: object) -> object:
+    """Convert a netCDF/numpy value into something sqlite3 can bind.
+
+    Masked and non-finite values become None (stored as NULL) and numpy
+    scalars become the matching Python type - sqlite3 can't bind numpy.int32.
+
+    Args:
+        val: The value to convert.
+
+    Returns:
+        The value to pass to sqlite3 as a bound parameter.
+    """
+    if val is numpy.ma.masked:
+        return None
+    if isinstance(val, numpy.ma.MaskedArray):
+        if numpy.ma.is_masked(val):
+            return None
+        val = val.filled()
+    if isinstance(val, numpy.generic | numpy.ndarray) and numpy.ndim(val) == 0:
+        val = val.item()
+    if isinstance(val, float) and not math.isfinite(val):
+        return None
+    return val
+
+
 # fmt: off
 def insertColumn(dive, cur, col, val, db_type):
     """Insert the specified column"""
     if not addColumn(cur, col, db_type):
         return
 
+    # Column names can't be bound - only the values
     if db_type == "TEXT":
-        cur.execute(f"UPDATE dives SET {col} = '{val}' WHERE dive={dive};")
+        val = str(val)
     else:
-        if not numpy.isfinite(val):
-            val = 'NULL'
-        cur.execute(f"UPDATE dives SET {col} = {val} WHERE dive={dive};")
+        val = _sql_value(val)
+    cur.execute(f"UPDATE dives SET {col} = ? WHERE dive = ?;", (val, _sql_value(dive)))
 
 
 def checkTableExists(cur, table):
-    cur.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'")
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,))
     return cur.fetchone() is not None
 
 def processGC(dive, cur, nci):
     # cur.execute("CREATE TABLE IF NOT EXISTS gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT,pitch_ad FLOAT,pitch_rate FLOAT,roll_ctl FLOAT,roll_secs FLOAT,roll_i FLOAT,roll_ad FLOAT,roll_rate FLOAT,vbd_ctl FLOAT,vbd_secs FLOAT,vbd_i FLOAT,vbd_ad FLOAT,vbd_rate FLOAT,vbd_eff FLOAT,vbd_pot1_ad FLOAT,vbd_pot2_ad,pitch_errors INT,roll_errors INT,vbd_errors INT,pitch_volts FLOAT,roll_volts FLOAT,vbd_volts FLOAT);")
 
-    cur.execute(f"DELETE FROM gc WHERE dive={dive};")
+    cur.execute("DELETE FROM gc WHERE dive=?;", (dive,))
     # Really netcdf files use gc_time for the gc dimension
     if "gc_event" in  nci.dimensions:
         gc_dim = "gc_event"
@@ -202,84 +227,86 @@ def processGC(dive, cur, nci):
                         vbd_eff = 1.0 # this is a flag that something is wrong, but won't cause downstream plots to be way off
 
         if "gc_flags" in nci.variables:
-            flag_val = f"{nci.variables['gc_flags'][i]},"
+            flag_val = nci.variables['gc_flags'][i]
         else:
-            flag_val = "NULL,"
+            flag_val = None
 
         if "gc_roll_ctl" in nci.variables:
-            gc_roll_ctl = f"{nci.variables['gc_roll_ctl'][i]},"
+            gc_roll_ctl = nci.variables['gc_roll_ctl'][i]
         else:
-            gc_roll_ctl = "NULL,"
+            gc_roll_ctl = None
 
-        insert_str = "INSERT INTO gc(dive," \
-            "st_secs," \
-            "depth," \
-            "ob_vertv," \
-            "end_secs," \
-            "flags," \
-            "pitch_ctl," \
-            "pitch_secs," \
-            "pitch_i," \
-            "pitch_ad," \
-            "pitch_rate," \
-            "roll_ctl," \
-            "roll_secs," \
-            "roll_i," \
-            "roll_ad," \
-            "roll_rate," \
-            "vbd_ctl," \
-            "vbd_secs," \
-            "vbd_i," \
-            "vbd_ad," \
-            "vbd_rate," \
-            "vbd_eff" 
+        # Values are bound (?), not formatted into the SQL - a NaN or masked value
+        # formatted in reads as a column name (nan) or a comment (--)
+        cols = ["dive",
+            "st_secs",
+            "depth",
+            "ob_vertv",
+            "end_secs",
+            "flags",
+            "pitch_ctl",
+            "pitch_secs",
+            "pitch_i",
+            "pitch_ad",
+            "pitch_rate",
+            "roll_ctl",
+            "roll_secs",
+            "roll_i",
+            "roll_ad",
+            "roll_rate",
+            "vbd_ctl",
+            "vbd_secs",
+            "vbd_i",
+            "vbd_ad",
+            "vbd_rate",
+            "vbd_eff"]
 
-        val_str = f"VALUES({dive}," \
-            f"{nci.variables['gc_st_secs'][i]}," \
-            f"{nci.variables['gc_depth'][i]}," \
-            f"{nci.variables['gc_ob_vertv'][i]}," \
-            f"{nci.variables['gc_end_secs'][i]}," \
-            f"{flag_val}" \
-            f"{nci.variables['gc_pitch_ctl'][i]}," \
-            f"{nci.variables['gc_pitch_secs'][i]}," \
-            f"{nci.variables['gc_pitch_i'][i]}," \
-            f"{nci.variables['gc_pitch_ad'][i]}," \
-            f"{pitch_rate}," \
-            f"{gc_roll_ctl}"\
-            f"{nci.variables['gc_roll_secs'][i]}," \
-            f"{nci.variables['gc_roll_i'][i]}," \
-            f"{nci.variables['gc_roll_ad'][i]}," \
-            f"{roll_rate}," \
-            f"{nci.variables['gc_vbd_ctl'][i]}," \
-            f"{nci.variables['gc_vbd_secs'][i]}," \
-            f"{nci.variables['gc_vbd_i'][i]}," \
-            f"{nci.variables['gc_vbd_ad'][i]}," \
-            f"{vbd_rate}," \
-            f"{vbd_eff}" 
+        vals = [dive,
+            nci.variables['gc_st_secs'][i],
+            nci.variables['gc_depth'][i],
+            nci.variables['gc_ob_vertv'][i],
+            nci.variables['gc_end_secs'][i],
+            flag_val,
+            nci.variables['gc_pitch_ctl'][i],
+            nci.variables['gc_pitch_secs'][i],
+            nci.variables['gc_pitch_i'][i],
+            nci.variables['gc_pitch_ad'][i],
+            pitch_rate,
+            gc_roll_ctl,
+            nci.variables['gc_roll_secs'][i],
+            nci.variables['gc_roll_i'][i],
+            nci.variables['gc_roll_ad'][i],
+            roll_rate,
+            nci.variables['gc_vbd_ctl'][i],
+            nci.variables['gc_vbd_secs'][i],
+            nci.variables['gc_vbd_i'][i],
+            nci.variables['gc_vbd_ad'][i],
+            vbd_rate,
+            vbd_eff]
 
         if 'gc_vbd_pot1_ad' in nci.variables:
-            val_str += f",{nci.variables['gc_vbd_pot1_ad'][i]}," \
-                f"{nci.variables['gc_vbd_pot2_ad'][i]}," \
-                f"{nci.variables['gc_pitch_errors'][i]}," \
-                f"{nci.variables['gc_roll_errors'][i]}," \
-                f"{nci.variables['gc_vbd_errors'][i]}," \
-                f"{nci.variables['gc_pitch_volts'][i]}," \
-                f"{nci.variables['gc_roll_volts'][i]}," \
-                f"{nci.variables['gc_vbd_volts'][i]});"
-            
-            insert_str += ",vbd_pot1_ad," \
-                "vbd_pot2_ad," \
-                "pitch_errors," \
-                "roll_errors," \
-                "vbd_errors," \
-                "pitch_volts," \
-                "roll_volts," \
-                "vbd_volts)" 
-        else:
-            insert_str += ")"
-            val_str += ");"
-            
-        cur.execute(insert_str + val_str)
+            vals += [nci.variables['gc_vbd_pot1_ad'][i],
+                nci.variables['gc_vbd_pot2_ad'][i],
+                nci.variables['gc_pitch_errors'][i],
+                nci.variables['gc_roll_errors'][i],
+                nci.variables['gc_vbd_errors'][i],
+                nci.variables['gc_pitch_volts'][i],
+                nci.variables['gc_roll_volts'][i],
+                nci.variables['gc_vbd_volts'][i]]
+
+            cols += ["vbd_pot1_ad",
+                "vbd_pot2_ad",
+                "pitch_errors",
+                "roll_errors",
+                "vbd_errors",
+                "pitch_volts",
+                "roll_volts",
+                "vbd_volts"]
+
+        cur.execute(
+            f"INSERT INTO gc({','.join(cols)}) VALUES({','.join('?' * len(cols))});",
+            [_sql_value(v) for v in vals],
+        )
 
 def processTC(dive, cur, nci):
     res = cur.execute("PRAGMA table_info(tc)")
@@ -289,36 +316,34 @@ def processTC(dive, cur, nci):
             log_warning(f"TC events found for dive:{dive}, but not tc table in db - database may want to be regenerated")
         return
         
-    cur.execute(f"DELETE FROM tc WHERE dive={dive};")
+    cur.execute("DELETE FROM tc WHERE dive=?;", (dive,))
 
     if "tc_event" not in  nci.dimensions:
         return
 
     # TODO - calculate:
-    #"roll_i," 
-    #"roll_ad," 
-    #"roll_rate," 
-    
+    #"roll_i,"
+    #"roll_ad,"
+    #"roll_rate,"
+
     vars_n = ("p","d","i","rollDeg","rollAD","sec","destAD","endAD","amps","maxAmps","volts","errors","start_time","end_time")
 
-    insert_str = "INSERT INTO tc(dive,"
-    for var_n in vars_n:
-        insert_str += f"{var_n},"
-    insert_str += "roll_ad,roll_rate)"
+    cols = ["dive", *vars_n, "roll_ad", "roll_rate"]
+    insert_str = f"INSERT INTO tc({','.join(cols)}) VALUES({','.join('?' * len(cols))});"
 
     for ii in range(0, nci.dimensions["tc_event"].size):
         try:
-            val_str = f"VALUES({dive}," 
+            vals = [dive]
             for var_n in vars_n:
-                val_str += str(nci.variables[f"tc_{var_n}"][ii]) + ","
+                vals.append(nci.variables[f"tc_{var_n}"][ii])
             roll_ad = nci.variables['tc_endAD'][ii] - nci.variables['tc_rollAD'][ii]
             try:
                 roll_rate = float(roll_ad) / float(nci.variables['tc_sec'][ii])
             except ZeroDivisionError:
                 roll_rate = 0.0
-            val_str += f"{numpy.abs(roll_ad)},{roll_rate});"
+            vals += [numpy.abs(roll_ad), roll_rate]
 
-            cur.execute(insert_str + val_str)
+            cur.execute(insert_str, [_sql_value(v) for v in vals])
         except Exception:
             log_error("Failed to load tc event", "exc")
 
@@ -334,8 +359,8 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
         return
 
     dive = int(nci.variables["log_DIVE"].getValue())
-    cur.execute(f"DELETE FROM dives WHERE dive={dive};")
-    cur.execute(f"INSERT INTO dives(dive) VALUES({dive});")
+    cur.execute("DELETE FROM dives WHERE dive=?;", (dive,))
+    cur.execute("INSERT INTO dives(dive) VALUES(?);", (dive,))
 
     for v in list(nci.variables.keys()):
         if not nci.variables[v].dimensions:
@@ -558,8 +583,9 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
         )
     try:
         data = pd.read_sql_query(
-                    f"SELECT dive,max_depth,GPS_north_displacement_m,GPS_east_displacement_m,log_speed_max,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,log_gps2_lat,log_gps2_lon,log_gps_lat,log_gps_lon FROM dives WHERE dive={dive} ORDER BY dive DESC LIMIT 1",
+                    "SELECT dive,max_depth,GPS_north_displacement_m,GPS_east_displacement_m,log_speed_max,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,log_gps2_lat,log_gps2_lon,log_gps_lat,log_gps_lon FROM dives WHERE dive=? ORDER BY dive DESC LIMIT 1",
                     con,
+                    params=(dive,),
                 ).loc[0,:]
 
         dog = math.sqrt(math.pow(data['GPS_north_displacement_m'], 2) +
@@ -593,7 +619,7 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
     if dive > 1:
         try:
             data = cur.execute(
-                f"SELECT batt_ah_24V,batt_ah_10V from dives WHERE dive={dive-1}"
+                "SELECT batt_ah_24V,batt_ah_10V from dives WHERE dive=?", (dive - 1,)
             ).fetchall()[0]
         except IndexError:
             log_debug(
@@ -812,11 +838,11 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
         sm_gc_roll_J = 0
 
     # calculate better per whole dive energy numbers for the motors        
-    data = pd.read_sql_query(f"SELECT vbd_i,vbd_secs,vbd_volts FROM gc WHERE dive={dive}", con)
+    data = pd.read_sql_query("SELECT vbd_i,vbd_secs,vbd_volts FROM gc WHERE dive=?", con, params=(dive,))
     VBD_J = numpy.sum(data['vbd_i'][:] * data['vbd_volts'][:] * data['vbd_secs'][:]) + sm_gc_vbd_J
-    data = pd.read_sql_query(f"SELECT pitch_i,pitch_secs,pitch_volts FROM gc WHERE dive={dive}", con)
+    data = pd.read_sql_query("SELECT pitch_i,pitch_secs,pitch_volts FROM gc WHERE dive=?", con, params=(dive,))
     pitch_J = numpy.sum(data['pitch_i'][:] * data['pitch_volts'][:] * data['pitch_secs'][:]) + sm_gc_pitch_J
-    data = pd.read_sql_query(f"SELECT roll_i,roll_secs,roll_volts FROM gc WHERE dive={dive}", con)
+    data = pd.read_sql_query("SELECT roll_i,roll_secs,roll_volts FROM gc WHERE dive=?", con, params=(dive,))
     roll_J = numpy.sum(data['roll_i'][:] * data['roll_volts'][:] * data['roll_secs'][:]) + sm_gc_roll_J
     if "tc_start_time" in nci.variables:
         if "tc_volts" in nci.variables:
@@ -852,8 +878,8 @@ def loadNetworkFileToDB(base_opts, cur, filename, con):
     if dive == 0:
         return
     
-    cur.execute(f"DELETE FROM dives WHERE dive={dive};")
-    cur.execute(f"INSERT INTO dives(dive) VALUES({dive});")
+    cur.execute("DELETE FROM dives WHERE dive=?;", (_sql_value(dive),))
+    cur.execute("INSERT INTO dives(dive) VALUES(?);", (_sql_value(dive),))
     for v in list(nci.variables.keys()):
         if not nci.variables[v].dimensions:
             insertColumn(dive, cur, v, nci.variables[v].getValue(), "FLOAT")
@@ -1361,8 +1387,10 @@ def addSlopeValToDB(base_opts, dive_num, var, con=None):
             if v in columns:
                 vexist.append(v)
         vstr = ','.join(vexist)
-        q = f"SELECT dive,{vstr} FROM dives WHERE dive <= {dive_num} ORDER BY dive DESC LIMIT {base_opts.mission_trends_dives_back}"
-        df = pd.read_sql_query(q, mycon).sort_values("dive")
+        q = f"SELECT dive,{vstr} FROM dives WHERE dive <= ? ORDER BY dive DESC LIMIT ?"
+        df = pd.read_sql_query(
+            q, mycon, params=(_sql_value(dive_num), base_opts.mission_trends_dives_back)
+        ).sort_values("dive")
     except Exception as e:
         log_error(f"{e} could not fetch {var} for slope calculation")
         return
