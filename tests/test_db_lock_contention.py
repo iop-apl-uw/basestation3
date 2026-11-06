@@ -40,6 +40,7 @@ session") and the call record was lost.
 """
 
 import logging
+import os
 import pathlib
 import shutil
 import sqlite3
@@ -295,6 +296,10 @@ def test_gliderearlygps_empty_retry_is_noop(base_opts) -> None:
     assert client._pending_sessions == []
 
 
+# Root writes a 0444 file anyway (act runs the workflow as root), so no read-only error to test.
+needs_non_root = pytest.mark.skipif(os.geteuid() == 0, reason="root writes to a read-only db")
+
+
 def _make_readonly(base_opts: types.SimpleNamespace) -> None:
     """sg238, 2026-10-28..30: the mission db was read-only to the account running GliderEarlyGPS."""
     db = Utils.mission_database_filename(base_opts)  # ty: ignore[invalid-argument-type]
@@ -302,6 +307,7 @@ def _make_readonly(base_opts: types.SimpleNamespace) -> None:
     pathlib.Path(db).chmod(0o444)
 
 
+@needs_non_root
 def test_add_session_readonly_db_fails(base_opts, caplog) -> None:
     """A read-only db isn't a lock: FAILED (retrying won't help), logged as an ERROR even with retry_on_lock."""
     caplog.set_level(logging.INFO)
@@ -311,6 +317,7 @@ def test_add_session_readonly_db_fails(base_opts, caplog) -> None:
     assert len(errors) == 1 and "attempt to write a readonly database inserting comm.log session" in errors[0]
 
 
+@needs_non_root
 def test_gliderearlygps_drops_readonly_session(base_opts, caplog) -> None:
     """A non-lock failure logs one ERROR and isn't queued - sg238 logged it on every main-loop pass
     (~340 per early-GPS run, 3,500 on 10-30)."""

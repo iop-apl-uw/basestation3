@@ -56,6 +56,10 @@ jobs:
       #run: uv python list
 
     - name: Install dependencies
+      # numcodecs 0.15.1 (copernicusmarine -> zarr 2) has no wheel here, so it builds from source,
+      # and its bundled c-blosc doesn't compile as C23 - gcc's default from ubuntu-26.04 on
+      env:
+        CFLAGS: -std=gnu17
       run: uv sync --locked --extra ci --no-progress
 
     # Chromium provisioned below is for tests/test_MagCal.py's Playwright-driven
