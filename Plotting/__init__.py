@@ -182,6 +182,7 @@ from . import (  # noqa : E402, F401, I001
     DivePitchRoll,
     DivePlot,
     DivePMAR,
+    DiveQSP2150,
     DiveSBE43,
     DiveTMICL,
     DiveTridente,

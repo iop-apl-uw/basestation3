@@ -328,27 +328,7 @@ def plot_ocr504i(
         }
     )
 
-    updatemenus = [
-        dict(
-            type="buttons",
-            direction="down",
-            buttons=list(
-                [
-                    dict(
-                        args=[{"xaxis.type": "linear", "xaxis2.type": "linear"}],
-                        label="Linear Scale",
-                        method="relayout",
-                    ),
-                    dict(
-                        args=[{"xaxis.type": "log", "xaxis2.type": "log"}],
-                        label="Log Scale",
-                        method="relayout",
-                    ),
-                ]
-            ),
-        ),
-    ]
-    fig.update_layout(updatemenus=updatemenus)
+    fig.update_layout(updatemenus=PlotUtilsPlotly.axis_scale_buttons(["xaxis", "xaxis2"]))
 
     fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_ocr504i"))
 

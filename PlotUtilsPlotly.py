@@ -319,6 +319,31 @@ def add_help_link(
     }
 
 
+def axis_scale_buttons(axes: list[str]) -> list[dict]:
+    """Builds the "Linear Scale"/"Log Scale" buttons that switch axes between linear and log.
+
+    Args:
+        axes: The layout names of the axes the buttons switch ("xaxis", "xaxis2", ...).
+
+    Returns:
+        A one-entry list, for fig.update_layout(updatemenus=...).
+    """
+    return [
+        {
+            "type": "buttons",
+            "direction": "down",
+            "buttons": [
+                {
+                    "args": [{f"{axis}.type": scale for axis in axes}],
+                    "label": label,
+                    "method": "relayout",
+                }
+                for scale, label in (("linear", "Linear Scale"), ("log", "Log Scale"))
+            ],
+        }
+    ]
+
+
 _CLIPBOARD_BUTTON_TEMPLATE = """
 (function() {
   // plotly.py replaces the literal "{plot_id}" token below with this

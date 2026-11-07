@@ -51,6 +51,7 @@ LG = {
         "xaxis2_title": "Conductivity (mS/cm)",
         "xaxis_type": "linear",
         "xaxis2_type": "linear",
+        "axis_toggle": False,
     },
     "vars": {
         "temp": {"xaxis": "x1", "color_down": "Red", "color_up": "Magenta", "units": "C", "hoverfmt": ".4f", "visible": True},
@@ -105,6 +106,7 @@ def test_samples_merge_as_before() -> None:
         ("p:\n  instrument: x\n  lay_out: {}\n", 3, "p.lay_out: Extra inputs are not permitted"),
         ("p:\n  instrument: 5\n", 2, "p.instrument: Input should be a valid string"),
         ("p: [1, 2]\n", 1, "p: Input should be a valid dictionary"),
+        ("p:\n  instrument: x\n  layout:\n    axis_toggle: 'yes'\n", 4, "p.layout.axis_toggle: Input should be a valid boolean"),
     ],
 )
 def test_file_errors(tmp_path: pathlib.Path, text: str, line: int, message: str) -> None:
@@ -257,3 +259,41 @@ def test_plot_science_bad_plot_alert(tmp_path: pathlib.Path, caplog: pytest.LogC
     assert list(mission_dir.joinpath("plots").glob("*fet*.webp")), "the good fet plot wasn't drawn"
     assert not list(mission_dir.joinpath("plots").glob("*bogus*"))
     assert "Traceback" not in caplog.text
+
+
+def test_axis_toggle_default_and_override(tmp_path: pathlib.Path) -> None:
+    """axis_toggle defaults to off; a later file can turn it on without repeating the plot."""
+    base = _write(tmp_path, "a.yml", "p:\n  instrument: x\n  vars:\n    v: {}\n")
+    on = _write(tmp_path, "b.yml", "p:\n  layout:\n    axis_toggle: true\n")
+    assert DiveScienceModel.load_merged([base]).plots["p"]["layout"]["axis_toggle"] is False
+    result = DiveScienceModel.load_merged([base, on])
+    assert result.problems == [] and result.plots["p"]["layout"]["axis_toggle"] is True
+
+
+def test_plot_science_axis_toggle(tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture) -> None:
+    """axis_toggle: true adds the Linear/Log buttons, for the x axes the plot uses."""
+    import brotli
+
+    def add_config(mission_dir: pathlib.Path) -> None:
+        (mission_dir / "divescience.yml").write_text("fet:\n  layout:\n    axis_toggle: true\n")
+
+    mission_dir = tmp_path / "mission_dir"
+    testutils.run_mission(
+        pathlib.Path("testdata/sg686_Shilshole_28Oct25"),
+        mission_dir,
+        BasePlot.main,
+        ["--verbose", "--mission_dir", str(mission_dir), "p6860005.nc", "--plot_types", "dives", "--dive_plots", "plot_science"],
+        caplog,
+        [""],
+        pre_test_hook=add_config,
+    )
+    (div,) = mission_dir.joinpath("plots").glob("*fet*.div")
+    data = div.read_bytes()
+    try:
+        text = brotli.decompress(data).decode()
+    except brotli.error:
+        text = data.decode()
+    assert "Log Scale" in text and "Linear Scale" in text
+    # fet has variables on x1 and x2, so both axes switch
+    assert '"xaxis2.type":"log"' in text.replace(" ", "")
+

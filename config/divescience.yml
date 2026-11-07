@@ -38,6 +38,8 @@
 # whole plot (e.g. "suna: null").  A plot with a problem (a misspelled key, a color plotly doesn't
 # know, ...) is not drawn, and raises the DIVESCIENCE_CONFIG alert.  Check a mission's files with
 #   DiveScienceModel.py --verbose check_merged -m <gliders mission dir>
+# In a plot's layout, xaxis_type (linear or log) sets the scale the plot starts on, and
+# axis_toggle: true adds Linear/Log buttons that switch its x axes.
 ##
 ---
 fet:

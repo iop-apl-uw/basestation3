@@ -155,6 +155,7 @@ test_dive_plot_coverage_inputs = (
     ("plot_pitch_roll", "sg686_Shilshole_28Oct25", "p6860005.nc", "", None, False),
     ("plot_diveplot", "sg686_Shilshole_28Oct25", "p6860005.nc", "", None, False),
     ("plot_PMAR", "sg178_Guam_Oct19", "p1780163.nc", "", None, True),
+    ("plot_qsp2150", "sg615_Shilshole_03Nov26_qsp", "p6150004.nc", "", None, True),
     ("plot_sbe43", "sg160_sbe43_scicon", "p1600001.nc", "", None, True),
     ("plot_TMICL", "sg171_EKAMSAT_Apr24_with_adcp", "p1710100.nc", "", "171", False),
     ("plot_tridente", "sg272_NANOOS_Feb26_base", "p2720002.nc", "", None, False),

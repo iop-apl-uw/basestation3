@@ -1,0 +1,47 @@
+ <!DOCTYPE html>
+ <html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+     <title>QSP2150 Plot Help</title>
+     <meta name="viewport" content="width=device-width"></meta>
+     <link rel="stylesheet" href="style.css?v="></link>
+   </head>
+   <body>
+     <h1>QSP2150 Plot Help</h1>
+     <p>This plot shows a Biospherical QSP2150 PAR (photosynthetically active
+     radiation) sensor on the glider's truck vs. depth, dive and climb shown
+     separately.</p>
+     <p>What the glider records depends on the sensor's calibration mode (its
+     <code>W</code> setting):</p>
+     <ul>
+       <li><code>A</code> - volts minus dark (net volts)</li>
+       <li><code>B</code> - (volts - dark) / calibration factor: calibrated in air</li>
+       <li><code>C</code> - (volts - dark) / (calibration factor &times; immersion): calibrated in water</li>
+       <li><code>D</code> - raw volts</li>
+     </ul>
+     <p>The mode and the calibration constants go in
+     <code>sg_calib_constants.m</code> (<code>qsp_mode</code>,
+     <code>qsp_cal_factor</code>, <code>qsp_immersion</code>,
+     <code>qsp_dark</code>, <code>qsp_units</code>, <code>calibcomm_qsp</code>).
+     <code>tools/GetQSPConstants.py</code> writes them from a selftest
+     capture that has the sensor's settings.</p>
+     <ul>
+       <li>With the mode and the constants it needs, the plot shows in-water PAR
+       (<code>qsp_PAR</code>) on the bottom axis; the column as recorded is on
+       the top axis - click it in the legend to show it.</li>
+       <li>With the mode only, the plot shows the column as recorded, in the
+       mode's units (volts for <code>A</code> and <code>D</code>). Mode
+       <code>C</code> is already in-water PAR.</li>
+       <li>With no mode, the plot still shows the column as recorded, with
+       the units marked unknown.</li>
+     </ul>
+     <p>The plot starts on a log scale - light falls off roughly exponentially
+     with depth. The buttons switch the axes between linear and log. A log
+     axis can't show zero or negative values, and calibrated darks scatter
+     around zero, so switch to linear to see the deep values.</p>
+     <p>The line under the plot is <code>calibcomm_qsp</code>: the sensor's
+     model, serial number and mode.</p>
+     <p>Shaded/overlay regions (when present) mark sample timeouts and the
+     commanded sampling range for the instrument - see the
+     <a href="samples.html">sampling traces help</a>.</p>
+   </body>
+ </html>

@@ -20,14 +20,14 @@ fet_ext.py,init_sensor
 riot_ext.py,init_logger,process_data_files
 suna_ext.py,init_sensor
 microriderg_logdev_ext.py,init_logger,process_data_files,eng_file_reader
+qsp2150_ext.py,init_sensor,asc2eng,sensor_data_processing,eng_decimal_pts
 # Place all cnf files at the end of this file!
 scct.cnf,init_sensor,asc2eng
 mag.cnf,init_sensor,asc2eng
-qsp2150.cnf,init_sensor,asc2eng
 #ocr504i.cnf,init_sensor
 ocr504i_scicon.cnf,add_netcdf_meta
 #ad2cp.cnf,init_logger,process_data_files
 echo.cnf,init_logger,process_data_files
-irrad.cnf,init_sensor,asc2eng
+irrad.cnf,init_sensor,asc2eng,eng_decimal_pts
 sat1000.cnf,init_sensor,asc2eng
 aa4831b.cnf,init_sensor,asc2eng

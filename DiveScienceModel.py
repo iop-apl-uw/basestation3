@@ -41,7 +41,9 @@ Plotting/DiveScience.py draws one plot per entry in divescience.yml, read from
 Each file maps a plot name to:
 
     instrument:  the instrument name as it appears in the netCDF file
-    layout:      {xaxis_title, xaxis2_title, xaxis_type, xaxis2_type}
+    layout:      {xaxis_title, xaxis2_title, xaxis_type, xaxis2_type, axis_toggle}
+                 (xaxis_type: the scale a plot starts on; axis_toggle: true adds
+                 Linear/Log buttons that switch the plot's x axes)
     vars:        variable -> {xaxis, color_down, color_up, units, hoverfmt, visible}
 
 The files go from the most general to the most specific: a later file adds to
@@ -73,6 +75,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    StrictBool,
     StrictStr,
     ValidationError,
 )
@@ -133,6 +136,7 @@ class PlotLayoutSpec(BaseModel):
     xaxis2_title: StrictStr | None = None
     xaxis_type: AxisType | None = None
     xaxis2_type: AxisType | None = None
+    axis_toggle: StrictBool | None = None
 
 
 class PlotSpec(BaseModel):
@@ -167,6 +171,7 @@ class PlotLayout(BaseModel):
     xaxis2_title: StrictStr = ""
     xaxis_type: AxisType = "linear"
     xaxis2_type: AxisType = "linear"
+    axis_toggle: StrictBool = False
 
 
 class Plot(BaseModel):

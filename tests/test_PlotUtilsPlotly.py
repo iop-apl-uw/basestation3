@@ -30,6 +30,8 @@
 import pathlib
 import types
 
+import pytest
+
 import PlotUtilsPlotly
 
 
@@ -96,3 +98,15 @@ def test_write_output_files_one_format_failure_does_not_block_others(
     assert any(
         "Failed to write out" in msg and "test_plot.png" in msg for msg in logged
     )
+
+
+@pytest.mark.parametrize("axes", (["xaxis"], ["xaxis", "xaxis2"]))
+def test_axis_scale_buttons(axes: list[str]) -> None:
+    (menu,) = PlotUtilsPlotly.axis_scale_buttons(axes)
+    assert menu["type"] == "buttons"
+    linear, log = menu["buttons"]
+    assert (linear["label"], log["label"]) == ("Linear Scale", "Log Scale")
+    assert linear["args"] == [{f"{a}.type": "linear" for a in axes}]
+    assert log["args"] == [{f"{a}.type": "log" for a in axes}]
+    assert linear["method"] == log["method"] == "relayout"
+

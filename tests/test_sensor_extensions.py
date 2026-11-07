@@ -79,3 +79,41 @@ def test_tridente_eng_decimal_pts_mismatch_doesnt_stop(
 
     monkeypatch.setattr(pdb, "set_trace", no_debugger)
     assert tridente_ext.eng_decimal_pts(None, "tridente_ext", cols, pts) == -1
+
+
+@pytest.mark.parametrize(
+    ("columns", "expected"),
+    (
+        (["PARuV(1000000,0)"], {"x.PARuV": 6}),
+        (["chan1(10000,0)", "chan2(2000,5)"], {"x.chan1": 4, "x.chan2": 4}),
+        (["a(1000,0)", "b"], {}),
+    ),
+)
+def test_conf_file_eng_decimal_pts(tmp_path: pathlib.Path, columns: list[str], expected: dict[str, int]) -> None:
+    """A .cnf column with a scale above 1000 gets ceil(log10(scale)) decimals; the rest keep the default."""
+    import Sensors
+
+    cnf = tmp_path / "x.cnf"
+    cnf.write_text("name=X\nprefix=x\n" + "".join(f"column={c}\n" for c in columns))
+    eng_cols = [f"x.{c.split('(')[0]}" for c in columns] + ["depth"]
+    pts: dict[str, int] = {}
+    ret = Sensors.conf_file_eng_decimal_pts(None, str(cnf), eng_cols, pts)
+    assert pts == expected
+    assert ret == (0 if expected else 1)
+
+
+def test_conf_file_eng_decimal_pts_version_mismatch(tmp_path: pathlib.Path) -> None:
+    import Sensors
+
+    assert Sensors.conf_file_eng_decimal_pts(None, str(tmp_path / "x.cnf"), None, {}) == -1
+    assert Sensors.conf_file_eng_decimal_pts(None, str(tmp_path / "x.cnf"), [], None) == -1
+
+
+def test_cnf_columns_bad_line() -> None:
+    import Sensors
+
+    assert Sensors.cnf_columns({"column": ["a(1,x)"]}, "x.cnf") is None
+    assert Sensors.cnf_columns({"column": ["a(1"]}, "x.cnf") is None
+    assert Sensors.cnf_columns({"column": ["a", "b(10,2)"]}, "x.cnf") == {"a": (None, None), "b": (10.0, 2.0)}
+    assert Sensors.cnf_columns({}, "x.cnf") == {}
+

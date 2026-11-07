@@ -32,6 +32,7 @@
 
 import collections
 import contextlib
+import math
 import os
 import re
 import shutil
@@ -226,6 +227,10 @@ class SensorExtensions:
                                         elif processing_func == "add_netcdf_meta":
                                             temp_dict[processing_func] = (
                                                 conf_file_add_netcdf_meta
+                                            )
+                                        elif processing_func == "eng_decimal_pts":
+                                            temp_dict[processing_func] = (
+                                                conf_file_eng_decimal_pts
                                             )
                                         else:
                                             log_error(
@@ -512,6 +517,86 @@ def process_logger_func(logger_prefix, processing_func, *args):
 
 # These routines process configuration file based serdev and logdev sensors
 # pylint: disable=unused-argument
+def cnf_columns(cnf_dict: dict, conf_file_name: str) -> dict[str, tuple[float | None, float | None]] | None:
+    """Reads a .cnf file's column= lines.
+
+    A column is "name" or "name(scale,offset)": the glider stores value * scale + offset as an
+    integer, and asc2eng divides the scale back out.
+
+    Args:
+        cnf_dict: The cnf file, from Utils2.read_cnf_file.
+        conf_file_name: The cnf file's name, for messages.
+
+    Returns:
+        Column name -> (scale, offset), (None, None) for an unscaled column; empty if the file has
+        no columns. None if a column line can't be read (logged).
+    """
+    columns: dict[str, tuple[float | None, float | None]] = {}
+    for col in cnf_dict.get("column", []):
+        if col.find("(") < 0:
+            columns[col] = (None, None)
+            continue
+        m = re.match(r"(.*?)\((.*?)\,(.*?)\)", col)
+        if not m:
+            log_error(f"Didn't understand the format of line {col} in {conf_file_name}")
+            return None
+        try:
+            columns[m.group(1)] = (float(m.group(2)), float(m.group(3)))
+        except ValueError:
+            log_error(f"Processing line {col} in {conf_file_name} - scale and offset must be floats")
+            return None
+    return columns
+
+
+def conf_file_eng_decimal_pts(
+    base_opts,
+    conf_file_name: str,
+    eng_col_names: list[str] | None = None,
+    eng_decimal_pts: dict[str, int] | None = None,
+) -> int:
+    """Gives the .eng file decimal places for a .cnf sensor's scaled columns.
+
+    The glider keeps log10(scale) decimal places of a scaled column - PARuV(1000000,0) keeps 6 -
+    but the .eng file writes 3 unless told otherwise. A column with a scale above 1000 gets
+    ceil(log10(scale)) places; the rest keep the default. Opt in by adding eng_decimal_pts to
+    the sensor's line in Sensors/.sensors.
+
+    Args:
+        base_opts: Unused (the handler signature).
+        conf_file_name: The sensor's cnf file.
+        eng_col_names: The data file's column names (prefix.column).
+        eng_decimal_pts: Column name -> decimal places, added to here.
+
+    Returns:
+        -1 error in processing, 0 decimal places given, 1 none of this sensor's columns need more.
+    """
+    if eng_col_names is None:
+        log_error("No eng_col_names list supplied for eng_decimal_pts conversion - version mismatch?")
+        return -1
+    if eng_decimal_pts is None:
+        log_error("No eng_decimal_pts dict supplied for eng_decimal_pts conversion - version mismatch?")
+        return -1
+
+    cnf_dict, _ = Utils2.read_cnf_file(conf_file_name)
+    if cnf_dict is None:
+        return -1
+    prefix = cnf_dict.get("prefix")
+    if not prefix:
+        log_error(f"Missing prefix in {conf_file_name}")
+        return -1
+    columns = cnf_columns(cnf_dict, conf_file_name)
+    if columns is None:
+        return -1
+
+    ret_val = 1
+    for col, (scale, _) in columns.items():
+        col_name = f"{prefix}.{col}"
+        if scale is not None and scale > 1000 and col_name in eng_col_names:
+            eng_decimal_pts[col_name] = math.ceil(math.log10(scale))
+            ret_val = 0
+    return ret_val
+
+
 def conf_file_asc2eng(base_opts, conf_file_name, datafile):
     """Configuration file asc2eng processor
 
@@ -531,34 +616,9 @@ def conf_file_asc2eng(base_opts, conf_file_name, datafile):
             None  # BUG isn't this bad news since we'll use None as the prefix below
         )
 
-    columns = collections.OrderedDict()
-    try:
-        for col in cnf_dict["column"]:
-            if col.find("(") >= 0:
-                m = re.match(r"(.*?)\((.*?)\,(.*?)\)", col)
-                if m:
-                    try:
-                        scale = float(m.group(2))
-                        offset = float(m.group(3))
-                    except Exception:
-                        log_error(
-                            "Processing line %s in %s - scale and offset must be floats"
-                            % (col, conf_file_name)
-                        )
-                        return -1
-                    else:
-                        columns[m.group(1)] = (scale, offset)
-                else:
-                    log_error(
-                        "Didn't understand the format of line %s in %s"
-                        % (col, conf_file_name)
-                    )
-                    ret_val = -1
-                    return ret_val
-            else:
-                columns[col] = (None, None)
-    except KeyError:
-        pass  # no columns!?
+    columns = cnf_columns(cnf_dict, conf_file_name)
+    if columns is None:
+        return -1
 
     # log_info("Column names = %s" % columns)
     ret_val = 1
@@ -760,34 +820,10 @@ def conf_file_init_sensor(conf_file_name, init_dict=None):
     except KeyError:
         name = prefix
 
-    columns = {}
     ret_val = 0  # assume the best
-    try:
-        for col in cnf_dict["column"]:
-            if col.find("(") >= 0:
-                m = re.match(r"(.*?)\((.*?)\,(.*?)\)", col)
-                if m:
-                    try:
-                        scale = float(m.group(2))
-                        offset = float(m.group(3))
-                    except Exception:
-                        log_error(
-                            "Processing line %s in %s - scale and offset must be floats"
-                            % (col, conf_file_name)
-                        )
-                        return -1
-                    else:
-                        columns[m.group(1)] = (scale, offset)
-                else:
-                    log_error(
-                        "Didn't understand the format of line %s in %s"
-                        % (col, conf_file_name)
-                    )
-                    return -1
-            else:
-                columns[col] = (None, None)
-    except KeyError:
-        pass
+    columns = cnf_columns(cnf_dict, conf_file_name)
+    if columns is None:
+        return -1
 
     # log_info("Column names = %s" % columns)
 

@@ -306,6 +306,13 @@ def plot_science(
 
             fig.update_layout(update_dict)
 
+            if meta["layout"].get("axis_toggle"):
+                # Only the axes this plot draws on - x2 exists only if a variable uses it
+                axes = ["xaxis"]
+                if any(var_meta["xaxis"] == "x2" for var_meta in meta["vars"].values()):
+                    axes.append("xaxis2")
+                fig.update_layout(updatemenus=PlotUtilsPlotly.axis_scale_buttons(axes))
+
             if f"sg_cal_calibcomm_{instrument}" in dive_nc_file.variables:
                 cal_text = (
                     dive_nc_file.variables[f"sg_cal_calibcomm_{instrument}"][:]
