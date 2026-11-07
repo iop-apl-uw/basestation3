@@ -349,7 +349,7 @@ class CommLog:
             last_session is None
             or last_session.reboot_count is None
             or previous_session is None
-            or last_session.reboot_count is None
+            or previous_session.reboot_count is None
         ):
             return None
 

@@ -37,6 +37,7 @@ from unittest.mock import MagicMock
 import pytest
 
 import CommLog
+import GPS
 
 
 def test_scan_back_prints_nothing(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -88,3 +89,17 @@ def test_counter_line_with_hangup_logs_no_gps_error(
     assert "Bad GPS line" not in caplog.text
     assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
     assert len([r for r in caplog.records if "Unknown line after counter" in r.getMessage()]) == 1
+
+
+def _session_with_fix(reboot_count):
+    session = CommLog.ConnectSession(time.gmtime(0), "UTC")
+    session.gps_fix = GPS.GPSFix("GPS,260506,151750,4807.211,-12223.095,34,1.1,34,18.0")
+    session.reboot_count = reboot_count
+    return session
+
+
+@pytest.mark.parametrize("previous_count", [None, 3])
+def test_has_glider_rebooted_previous_count_missing(previous_count):
+    """A previous session with no reboot count (a short counter line) answers 'no reboot', not TypeError."""
+    comm_log = CommLog.CommLog([_session_with_fix(previous_count), _session_with_fix(3)], [], {}, {})
+    assert comm_log.has_glider_rebooted() is None
