@@ -2310,7 +2310,8 @@ def save_flight_database(base_opts, dump_mat=False):
                 mat_d["rms_pitch_d_diff"] = dives_pitch_d_diff
             mat_filename = f"{flight_dive_data_filename}.mat"
             sio.savemat(mat_filename, {"flight_dive_data": mat_d})
-        if checkpoint_flight_dive_data and flight_dive_nums is not None:
+        # flight_dive_nums is [] until the first dive is processed - max() raises on it
+        if checkpoint_flight_dive_data and flight_dive_nums:
             global flight_directory
             # tag = time.strftime("%d%b%Y_%H%M%S", time.gmtime(time.time()))
             output_basename = os.path.join(

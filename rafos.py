@@ -74,6 +74,9 @@ async def hitsTable(path):
     print(minDive, maxDive)
     whichVars = ['latitude', 'longitude', 'depth']
     data = ExtractTimeseries.extractVars(ncfilename, whichVars, minDive, maxDive)
+    if data is None:
+        print(f"No {', '.join(whichVars)} timeseries from {ncfilename} - hits have no glider positions")
+        return hits
     del(data['time'])
 
     fla = scipy.interpolate.interp1d(data['epoch'], data['latitude'], bounds_error=False, fill_value='extrapolate')

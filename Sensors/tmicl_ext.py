@@ -1132,7 +1132,8 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                     ret_list.append(r)
 
             data = extract_file_data(filename)
-            if not data:
+            # The binary branch returns an array - "not data" raises on one
+            if data is None or len(data) == 0:
                 log_debug("%s contains no data - not using in profile" % filename)
                 continue
 
