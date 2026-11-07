@@ -331,6 +331,45 @@ def test_plot_diveplot_all_salinity_bad(tmp_path, caplog):
     assert list(mission_dir.joinpath("plots").glob("dv0005_diveplot*.webp"))
 
 
+def test_plot_diveplot_vbd_from_eng_without_gc_moves(tmp_path, caplog, monkeypatch):
+    """With no VBD in the GC table, plot_diveplot takes the VBD position from eng_vbdCC.
+
+    It tested for eng_vbdCC but read eng_vbdCtl (not a dive variable), so the fallback raised KeyError.
+    """
+    import PlotUtils
+
+    real_extract_gc_moves = PlotUtils.extract_gc_moves
+
+    def no_gc_vbd(ncf):
+        moves = list(real_extract_gc_moves(ncf))
+        # gc_vbd_time, gc_vbd_pos, then gc_vbd_pos_ad, gc_vbd_pot1_ad, gc_vbd_pot2_ad
+        for i in (5, 6, 9, 10, 11):
+            moves[i] = None
+        return tuple(moves)
+
+    monkeypatch.setattr(PlotUtils, "extract_gc_moves", no_gc_vbd)
+    mission_dir = tmp_path / "mission_dir"
+    testutils.run_mission(
+        pathlib.Path("testdata/sg686_Shilshole_28Oct25"),
+        mission_dir,
+        BasePlot.main,
+        [
+            "--verbose",
+            "--mission_dir",
+            str(mission_dir),
+            "p6860005.nc",
+            "--plot_types",
+            "dives",
+            "--dive_plots",
+            "plot_diveplot",
+        ],
+        caplog,
+        [],
+    )
+    assert list(mission_dir.joinpath("plots").glob("dv0005_diveplot*.webp"))
+    assert "eng_vbdCtl" not in caplog.text
+
+
 def test_plot_wkb_schedule_partial_dive_does_not_crash(tmp_path, caplog):
     """plot_wkb_schedule skips gracefully, rather than crashing, when the trailing window includes a partial dive.
 

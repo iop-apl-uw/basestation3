@@ -172,7 +172,7 @@ def plot_diveplot(
             eng_vbd_pos = gc_vbd_pos / 10.0
             eng_vbd_time = gc_vbd_time / 60.0
         elif "eng_vbdCC" in dive_nc_file.variables:
-            eng_vbd_pos = dive_nc_file.variables["eng_vbdCtl"][:] / 10.0
+            eng_vbd_pos = dive_nc_file.variables["eng_vbdCC"][:] / 10.0
             eng_vbd_time = eng_time
         else:
             log_error("VBD position not available")
