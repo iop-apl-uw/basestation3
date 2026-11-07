@@ -174,3 +174,30 @@ def test_unknown_variable_is_left_out(
     assert message["depth"] == _DEPTH.tolist()
     assert "nosuchvar" not in message
     assert "No samples in the dive range for nosuchvar - left out" in caplog.text
+
+
+def _profile_collection() -> Utils.PandasCollection:
+    """The parquet data with a depth for each temperature sample, as timeSeriesToProfile needs."""
+    pd_df_c = _pandas_collection()
+    pd_df_c.dataframes["ctd_data_point"]["ctd_depth"] = _TEMP_T * 2.0
+    return pd_df_c
+
+
+def test_time_series_to_profile_int_bins_unchanged() -> None:
+    """Integer bins are the edges range() gave (stop exclusive, half a bin past the bottom)."""
+    d, _ = ExtractTimeseries.timeSeriesToProfile(
+        "temperature", 4, 1, 1, 1, 0, 100, 10, None, pd_df_c=_profile_collection()
+    )
+    assert d is not None
+    assert d["depth"] == list(range(0, 105, 10))
+    assert all(isinstance(b, int) for b in d["depth"])
+
+
+def test_time_series_to_profile_float_bins() -> None:
+    """A float bin size (sections.yml allows one) bins instead of raising TypeError from range()."""
+    d, _ = ExtractTimeseries.timeSeriesToProfile(
+        "temperature", 4, 1, 1, 1, 0.0, 100.0, 2.5, None, pd_df_c=_profile_collection()
+    )
+    assert d is not None
+    assert d["depth"][:3] == [0.0, 2.5, 5.0]
+    assert d["depth"][-1] == 100.0

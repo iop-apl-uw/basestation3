@@ -81,7 +81,8 @@ def timeSeriesToProfile(var, which,
     message['which'] = []
     message['avg_time'] = []
 
-    bins = [ *range(binStart, binStop + int(binSize/2), binSize) ]
+    # sections.yml allows float top/bottom/bin, so not range(); the same stop gives the same bins for ints
+    bins = numpy.arange(binStart, binStop + int(binSize/2), binSize).tolist()
     dives = range(diveStart, diveStop + 1, diveStride)
 
     if which == Globals.WhichHalf.both:
