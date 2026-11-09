@@ -2441,6 +2441,10 @@ imestamp
 
             wind = L.tileLayer("https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid={{ weathermapAppID }}",
                                     {
+                                        maxZoom: 10,
+                                        updateWhenIdle: true,
+                                        updateWhenZooming: false,
+                                        updateInterval: 1000,
                                     });
 
             if (checkLayerState("wind", "on")) {
