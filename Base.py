@@ -911,7 +911,7 @@ def process_file_group(
             ret_val = 1
         else:
             file_list.append(uc_file_name)
-    elif fc.is_seaglider and fc.is_parm_file():
+    elif fc.is_seaglider() and fc.is_parm_file():
         # Process this here because the parm file has no uncompressed encoding
         # form in the file namespace
         parm_file_name = fc.mk_base_parm_name()

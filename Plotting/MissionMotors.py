@@ -260,7 +260,7 @@ def mission_motors(
     fig.add_annotation(PlotUtilsPlotly.add_help_link("eng_pitch_roll_motors"))
 
     figs_list.append(fig)
-    file_list.append(
+    file_list.extend(
         PlotUtilsPlotly.write_output_files(
             base_opts,
             "eng_pitch_roll_motors",
@@ -358,7 +358,7 @@ def mission_motors(
     fig.add_annotation(PlotUtilsPlotly.add_help_link("eng_vbd_motors"))
 
     figs_list.append(fig)
-    file_list.append(
+    file_list.extend(
         PlotUtilsPlotly.write_output_files(
             base_opts,
             "eng_vbd_motors",
@@ -420,7 +420,7 @@ def mission_motors(
     fig.add_annotation(PlotUtilsPlotly.add_help_link("eng_vbd_effic"))
 
     figs_list.append(fig)
-    file_list.append(
+    file_list.extend(
         PlotUtilsPlotly.write_output_files(
             base_opts,
             "eng_vbd_effic",

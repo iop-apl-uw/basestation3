@@ -2109,7 +2109,7 @@ def load_flight_database(
             "last_updated": time.time(),
             "dives": [],  # what dives have instances, in order
             "glider": int(sg_calib_constants_d["id_str"]),
-            "mission_title": sg_calib_constants_d["mission_title"],
+            "mission_title": sg_calib_constants_d.get("mission_title"),
             "history": "",  # accumulated processing history for all runs
             "hd_s_scale": 1,  # how to scale hd_b for vehicles not using s=-1/4
             "ab_grid_cache": {},  # a map from max dive -> (tared RMS grid,ia,ib,min_misfit,dive_set,pitch_diff)

@@ -285,7 +285,7 @@ def test_log_version_banner(
     "calib_consts, expected",
     [
         ({"mission_title": "2026 08/28 Drake, Test"}, "2026_08_28_Drake__Test"),
-        # getSGCalibrationConstants maps a missing required key to None
+        # None as older code (and other dict sources) may still pass; getSGCalibrationConstants leaves it out ({})
         ({"mission_title": None}, "UNKNOWN"),
         ({"mission_title": ""}, "UNKNOWN"),
         ({}, "UNKNOWN"),

@@ -1110,7 +1110,7 @@ def ensure_basename(basename: str) -> str:
 def mission_title_basename(calib_consts: dict | None) -> str:
     """Returns the mission title from calib_consts, safe for use in a filename.
 
-    getSGCalibrationConstants maps a missing mission_title to None (and logs
+    getSGCalibrationConstants leaves a missing mission_title out (and logs
     that it's missing), so this falls back to "UNKNOWN" rather than raising.
 
     Args:

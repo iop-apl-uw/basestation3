@@ -70,11 +70,11 @@ def test_non_numeric_values(tmp_path: Path, caplog: pytest.LogCaptureFixture) ->
     assert len(log_alerts()["CALIB_COMM_SYNTAX"]) == 2
 
 
-def test_non_numeric_required_mass_is_left_none(tmp_path: Path) -> None:
+def test_non_numeric_required_mass_is_left_out(tmp_path: Path) -> None:
     calib = tmp_path / "sg_calib_constants.m"
     calib.write_text("id_str = '272';\nmission_title = 'T';\nmass = 72.7 kg;\n")
     consts = CalibConst.getSGCalibrationConstants(calib, suppress_required_error=True)
-    assert consts["mass"] is None
+    assert "mass" not in consts
 
 
 @pytest.mark.parametrize(("mass", "ok"), [(73.9, True), (73, True), (None, False), ("72.7 kg", False), (0, False), (True, False)])
@@ -93,3 +93,14 @@ def test_script_exit_status(tmp_path: Path, calib_text: str | None, exit_code: i
         [sys.executable, "CalibConst.py", "--mission_dir", str(tmp_path)], capture_output=True, text=True, check=False
     )
     assert ret.returncode == exit_code, ret.stdout + ret.stderr
+
+
+def test_missing_required_keys_left_out_and_reported(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """A required key the file doesn't define is absent (not None), so `not in` checks see it - and it's logged."""
+    calib = tmp_path / "sg_calib_constants.m"
+    calib.write_text("id_str = '272';\n")
+    with caplog.at_level(logging.ERROR):
+        consts = CalibConst.getSGCalibrationConstants(calib)
+    assert "id_str" in consts
+    assert "mass" not in consts and "mission_title" not in consts
+    assert "missing from" in caplog.text and "'mission_title', 'mass'" in caplog.text

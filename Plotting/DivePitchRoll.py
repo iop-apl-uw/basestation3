@@ -642,7 +642,7 @@ def plot_pitch_roll(
         fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_pitch"))
 
         figs_list.append(fig)
-        file_list.append(
+        file_list.extend(
             PlotUtilsPlotly.write_output_files(
                 base_opts,
                 "dv%04d_pitch" % (dive_nc_file.dive_number,),
@@ -889,7 +889,7 @@ def plot_pitch_roll(
         fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_roll"))
 
         figs_list.append(fig)
-        file_list.append(
+        file_list.extend(
             PlotUtilsPlotly.write_output_files(
                 base_opts,
                 "dv%04d_roll" % (dive_nc_file.dive_number,),
@@ -1302,7 +1302,7 @@ def plot_pitch_roll(
         fig.add_annotation(PlotUtilsPlotly.add_help_link("dv_roll_rate"))
 
         figs_list.append(fig)
-        file_list.append(
+        file_list.extend(
             PlotUtilsPlotly.write_output_files(
                 base_opts,
                 "dv%04d_roll_rate" % (dive_nc_file.dive_number,),

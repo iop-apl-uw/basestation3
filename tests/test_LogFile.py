@@ -30,6 +30,7 @@
 import io
 import time
 
+import numpy as np
 import pytest
 
 import LogFile
@@ -234,3 +235,41 @@ def test_blank_line_mid_log_keeps_the_rest(tmp_path, monkeypatch):
     assert log_file is not None
     assert "$GPS" in log_file.data and "$TEMP" in log_file.data
     assert any(w.startswith("Could not parse line 11 >") for w in warnings)
+
+
+_GC_HEAD_MOTORS = (
+    "$GCHEAD,st_secs,flags,vbd_ctl,pitch_ctl,roll_ctl,vbd_ad_start,vbd_pot1_ad_start,vbd_pot2_ad_start,"
+    "pitch_ad_start,roll_ad_start,depth,ob_vertv,data_pts,end_secs,vbd_secs,pitch_secs,roll_secs,vbd_i,pitch_i,"
+    "roll_i,vbd_ad,vbd_pot1_ad,vbd_pot2_ad,pitch_ad,roll_ad,vbd_errors,pitch_errors,roll_errors,vbd_volts,"
+    "pitch_volts,roll_volts,vbd_st,pitch_st,roll_st,intP,humid\n"
+)
+_GC_MOTORS = (
+    "$GC,7.46,16386,-145.99,-1.35,0.00,490.7,331.8,649.6,235.8,2056.1,0.00,0.00,0,108.25,{vbd_secs},0.00,"
+    "0.10,0.005,0.000,0.260,2892.75,2814.88,2970.62,235.81,2000.19,0,0,0,16.03,30.00,15.99,0.0,0.0,99.0,8.44,55.70\n"
+)
+
+
+@pytest.mark.usefixtures("_fresh_baselog")
+def test_gc_motor_times(tmp_path):
+    """Each motor's start/end epoch times: st_secs + the motor's st, plus its secs; NaN when it didn't move."""
+    log = tmp_path / "p2830624.log"
+    log.write_text(_LOG_HEADER + _GC_HEAD_MOTORS + _GC_MOTORS.format(vbd_secs="99.50"))
+    log_file = LogFile.parse_log_file(str(log))
+    assert log_file is not None
+    start = log_file.gc_data["st_secs"][0]
+    assert log_file.gc_data["vbd_start_time"] == [start + 0.0]
+    assert log_file.gc_data["vbd_end_time"] == [start + 99.5]
+    assert np.isnan(log_file.gc_data["pitch_start_time"][0]) and np.isnan(log_file.gc_data["pitch_end_time"][0])
+    assert log_file.gc_data["roll_start_time"] == [start + 99.0]
+
+
+@pytest.mark.usefixtures("_fresh_baselog")
+def test_gc_garbled_motor_secs_is_nan(tmp_path):
+    """A motor secs value that doesn't parse (stored None) gives NaN times, not a TypeError."""
+    log = tmp_path / "p2830624.log"
+    log.write_text(_LOG_HEADER + _GC_HEAD_MOTORS + _GC_MOTORS.format(vbd_secs="9x.50"))
+    log_file = LogFile.parse_log_file(str(log))
+    assert log_file is not None
+    assert log_file.gc_data["vbd_secs"] == [None]
+    assert np.isnan(log_file.gc_data["vbd_start_time"][0]) and np.isnan(log_file.gc_data["vbd_end_time"][0])
+    assert not np.isnan(log_file.gc_data["roll_start_time"][0])

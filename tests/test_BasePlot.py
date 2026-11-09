@@ -545,7 +545,7 @@ def test_get_mission_str_missing_mission_title(tmp_path: pathlib.Path) -> None:
         "mass = 52.0;\n"
     )
     calib_consts = CalibConst.getSGCalibrationConstants(calib_file)
-    assert calib_consts["mission_title"] is None
+    assert "mission_title" not in calib_consts
 
     base_opts = types.SimpleNamespace(instrument_id=194)
     assert BasePlot.get_mission_str(base_opts, calib_consts) == "SG194 UNKNOWN"

@@ -106,13 +106,9 @@ def pchip(x,y,xx,expected_index=None): # pchip_m
         #  d(k) = 0 when delta(k-1) and delta(k) have opposites signs or either is zero.
 
         # DONE see above M: d = zeros(size(y));
-        k = [] # initialize in scope
-        if all(np.isreal(delta)):
-            # M: k = find(sign(delta(1:n-2)).*sign(delta(2:n-1)) > 0)
-            k = np.nonzero(np.sign(delta[0:n-2])*np.sign(delta[1:n-1]) > 0)
-        else:
-            # M: k = find(~(delta(1:n-2) == 0 & delta(2:n-1) == 0))
-            k = np.nonzero(not(delta[0:n-2] == 0 and delta[2:n-1] == 0))
+        # y is float64 (above), so delta is real - MATLAB's complex-data branch doesn't apply
+        # M: k = find(sign(delta(1:n-2)).*sign(delta(2:n-1)) > 0)
+        k = np.nonzero(np.sign(delta[0:n-2])*np.sign(delta[1:n-1]) > 0)
         k = k[0] # fetch equivalent python result; where we changed inflection
         # CONSIDER k1 = k+1
         # DONE see above M: h = diff(x)

@@ -377,12 +377,13 @@ def mission_profiles(
             )
 
             figs.append(fig)
-            out = PlotUtilsPlotly.write_output_files(
-                        base_opts,
-                        fname,
-                        fig,
-                  ),
-            outs.append(out)
+            outs.extend(
+                PlotUtilsPlotly.write_output_files(
+                    base_opts,
+                    fname,
+                    fig,
+                )
+            )
 
     log_info(f"Ending mission_profiles run_time:{time.time() - t0:.2f}sec")
 

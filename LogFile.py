@@ -903,13 +903,19 @@ def parse_log_file(
         # If there are start times for the motor moves, then add the epoch times to the list
         if "vbd_st" in gc_header_parts:
             for motor in ("vbd", "pitch", "roll"):
-                if not np.isclose(gc_data[f"{motor}_secs"][-1], 0):
-                    gc_data[f"{motor}_start_time"].append(
-                        gc_data["st_secs"][-1] + gc_data[f"{motor}_st"][-1]
-                    )
+                # A value that didn't convert is None (logged above) - no times for that move
+                line_start = gc_data["st_secs"][-1]
+                motor_st = gc_data[f"{motor}_st"][-1]
+                motor_secs = gc_data[f"{motor}_secs"][-1]
+                if (
+                    line_start is not None
+                    and motor_st is not None
+                    and motor_secs is not None
+                    and not np.isclose(motor_secs, 0)
+                ):
+                    gc_data[f"{motor}_start_time"].append(line_start + motor_st)
                     gc_data[f"{motor}_end_time"].append(
-                        gc_data[f"{motor}_start_time"][-1]
-                        + gc_data[f"{motor}_secs"][-1]
+                        line_start + motor_st + motor_secs
                     )
                 else:
                     gc_data[f"{motor}_start_time"].append(np.nan)

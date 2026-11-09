@@ -3445,7 +3445,7 @@ def make_dive_profile(
     skipped_profile = 0  # assume not skipped
     try:
         id_str = calib_consts["id_str"]
-        mission_title = calib_consts["mission_title"]
+        mission_title = calib_consts.get("mission_title")  # left out of the file: None, as before
         log_debug("id_str = %s, mission_title = %s" % (id_str, mission_title))
         log_debug(
             "Engfile start time = %s"
@@ -7747,7 +7747,7 @@ def make_dive_profile(
         mission_title,
     )  # Short version for plots
     # DEAD globals_d['title'] = globals_d['summary'] # recomputed below
-    globals_d["project"] = calib_consts["mission_title"]
+    globals_d["project"] = calib_consts.get("mission_title")
     globals_d["history"] = processing_history
     if reviewed:
         # update the issued date

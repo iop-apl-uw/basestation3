@@ -88,7 +88,7 @@ def getSGCalibrationConstants(
     Returns:
         A dictionary mapping the cleaned constant names as strings to their
         parsed values, which can be strings, floats, or integers. Required keys
-        not found in the file will map to None.
+        not found in the file (or not numbers, for mass) are left out.
 
     Raises:
         FileNotFoundError: If the specified calib_filename does not exist.
@@ -100,9 +100,9 @@ def getSGCalibrationConstants(
         "mass",
     ]
 
-    calib_consts = {}  # initialize calib_consts to include empty values for required keys
-    for i in required_keys:
-        calib_consts[i] = None
+    # Only what the file defines - a missing required key is absent (reported below), so callers'
+    # `"mass" not in calib_consts` / KeyError checks see it
+    calib_consts = {}
 
     eq = re.compile(r"^([^=]+)=(.*)")
     comment = re.compile(r"%.*")  # % and anything after it, to a newline
@@ -200,15 +200,9 @@ def getSGCalibrationConstants(
 
     # Log an error if any of the required keys is missing
 
-    missingKeys = None
+    missingKeys = [key for key in required_keys if key not in calib_consts]
 
-    for key in required_keys:
-        if calib_consts[key] is None:
-            if missingKeys is None:
-                missingKeys = []
-            missingKeys.append(key)
-
-    if missingKeys is not None and suppress_required_error is False:
+    if missingKeys and suppress_required_error is False:
         log_error(
             "The following calibration constants are missing from %s: %s"
             % (calib_filename, str(missingKeys))
