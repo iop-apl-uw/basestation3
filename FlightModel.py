@@ -2724,17 +2724,29 @@ def load_dive_data(base_opts, dive_data):
                 velo_pathname = os.path.join(
                     mission_directory, "velo_%d.mat" % dive_num
                 )
-                try:
-                    velo_data_d = sio.loadmat(velo_pathname)
-                    velo_speed = velo_data_d["velo_speed"]
-                    velo_speed = np.reshape(velo_speed, num_pts, 1)
-                    correct_aoa_velo = False  # externally measured
-                except Exception:
-                    pass
-                else:
-                    n_velo = len(
-                        np.where(np.isfinite(velo_speed))[0]
-                    )  # will be nonzero only when compare_velo and data was recorded
+                if os.path.exists(velo_pathname):
+                    try:
+                        velo_data_d = sio.loadmat(velo_pathname)
+                        # MATLAB saves a vector as 2-D (row or column) - flatten it
+                        mat_velo_speed = np.asarray(
+                            velo_data_d["velo_speed"], dtype=np.float64
+                        ).reshape(-1)
+                    except Exception:
+                        log_warning(
+                            f"Unable to read velo_speed from {velo_pathname}", "exc"
+                        )
+                    else:
+                        if len(mat_velo_speed) != num_pts:
+                            log_warning(
+                                f"{velo_pathname} has {len(mat_velo_speed)} velo_speed points, "
+                                f"dive {dive_num} has {num_pts} - not used"
+                            )
+                        else:
+                            velo_speed = mat_velo_speed
+                            correct_aoa_velo = False  # externally measured
+                            n_velo = len(
+                                np.where(np.isfinite(velo_speed))[0]
+                            )  # will be nonzero only when compare_velo and data was recorded
 
         # TODO real(density_insitu)
         # Find where data was apparently good
@@ -2807,7 +2819,8 @@ def load_dive_data(base_opts, dive_data):
         else:
             if decimation:  # DEBUG -- code to determine minimum data point density that yield good results
                 # experimentally reduce good points and see impact on results
-                good_pts_i_v = good_pts_i_v[range(0, npts, decimation)]
+                # good_pts_i_v is a list unless the salinity QC filter made it an array
+                good_pts_i_v = np.asarray(good_pts_i_v)[::decimation]
                 npts = len(good_pts_i_v)
                 log_info(
                     "Dive %d decimated %d/%d %.2fm "
