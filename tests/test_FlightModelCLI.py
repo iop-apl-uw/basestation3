@@ -28,6 +28,8 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import pathlib
+import pickle
+import re
 
 import pytest
 import testutils
@@ -181,3 +183,70 @@ def test_fmcli_after_sgx_mission_in_same_process(tmp_path, caplog, fm_plot_engin
     assert FlightModel.HD_A is not None and FlightModel.HD_A.shape == (17, len(hd_a_grid))
     for basename in ("eng_FM_vbdbias", "eng_FM_abs_compress", "eng_FM_ab_dives"):
         assert (mission_dir / "flight" / f"{basename}.webp").exists()
+
+
+def _flight_db(mission_dir):
+    with open(mission_dir / "flight" / "flight.pkl", "rb") as fi:
+        return pickle.load(fi)
+
+
+def _set_sgc_mass(mission_dir, mass):
+    sgc = mission_dir / "sg_calib_constants.m"
+    sgc.write_text(
+        re.sub(r"^(\s*mass\s*=\s*)[0-9.]+", rf"\g<1>{mass}", sgc.read_text(), flags=re.M)
+    )
+
+
+def test_fmcli_rebuilds_when_assumptions_change(tmp_path, caplog):
+    """A changed assumption (mass) in sg_calib_constants rebuilds the flight db
+    - through glider type setup, so the initial volmax has a max_density - and
+    an unchanged one, or the same mass in grams, doesn't."""
+    data_dir = pathlib.Path("testdata/sg561_provolo_lofoten_may2016_dive2on")
+    mission_dir = tmp_path / "mission_dir"
+    cmd_line = ["--verbose", "--mission_dir", str(mission_dir)]
+    testutils.run_mission(
+        data_dir, mission_dir, FlightModelCLI.main, cmd_line, caplog, allowed_msgs=[]
+    )
+    assert _flight_db(mission_dir)["mass"] == pytest.approx(53.959)
+
+    def rerun():
+        caplog.clear()
+        FlightModel.set_globals()
+        assert FlightModelCLI.main(cmd_line) == 0
+        assert not any(r.levelname in ("ERROR", "CRITICAL") for r in caplog.records)
+        return any("Assumptions changed" in r.getMessage() for r in caplog.records)
+
+    assert not rerun()
+
+    _set_sgc_mass(mission_dir, 53959)  # same mass, in grams
+    assert not rerun()
+
+    _set_sgc_mass(mission_dir, 54.5)
+    assert rerun()
+    db = _flight_db(mission_dir)
+    assert db["mass"] == pytest.approx(54.5)
+    assert any("Initial volmax estimate" in r.getMessage() for r in caplog.records)
+    assert not rerun()
+
+
+@pytest.mark.parametrize(
+    ("sgc", "changed"),
+    [
+        ({}, []),
+        ({"mass": 53.959}, []),
+        ({"mass": 53959.0}, []),
+        ({"mass": 54.5}, ["mass"]),
+        ({"mass_comp": 4000.0}, []),
+        ({"mass_comp": 3.0}, ["mass_comp"]),
+        ({"min_stall_angle": 5.0, "max_stall_speed": 80.0}, ["max_stall_speed"]),
+    ],
+)
+def test_changed_assumptions(sgc, changed):
+    db = {
+        "mass": 53.959,
+        "mass_comp": 4.0,
+        "max_stall_speed": 100.0,
+        "min_stall_speed": 1.0,
+        "min_stall_angle": 5.0,
+    }
+    assert FlightModel.changed_assumptions(db, sgc) == changed

@@ -2013,6 +2013,45 @@ def pfdd(verbose=False):
             print(f" {flight_dive_data_d[dive_num]}")
 
 
+def assumption_in_kg(variable, value):
+    """Convert a mass assumption given in grams to kg, as main does when it creates the db.
+
+    Args:
+        variable: the assumption variable's name
+        value: its value from sg_calib_constants
+
+    Returns:
+        The value as stored in the flight database
+    """
+    if (variable == "mass" and value > 100) or (
+        variable == "mass_comp" and value > 20
+    ):
+        return value / g_per_kg
+    return value
+
+
+def changed_assumptions(db_d, sg_calib_constants_d):
+    """Find the assumption variables sg_calib_constants sets differently from the flight db.
+
+    Only variables present in sg_calib_constants_d are compared - the ones it doesn't
+    set took FM's defaults when the db was created.
+
+    Args:
+        db_d: the flight database
+        sg_calib_constants_d: the mission's calibration constants
+
+    Returns:
+        The names of the changed variables
+    """
+    return [
+        variable
+        for variable in assumption_variables
+        if variable in sg_calib_constants_d
+        and db_d.get(variable)
+        != assumption_in_kg(variable, sg_calib_constants_d[variable])
+    ]
+
+
 def load_flight_database(
     base_opts, sg_calib_constants_d, verify=False, create_db=False
 ):
@@ -2064,23 +2103,11 @@ def load_flight_database(
 
     if flight_dive_data_d is not None:  # prior version exists?
         rebuild = flight_dive_data_d["fm_version"] != fm_version
-        if verify:  # have we filled sg_calib_constants_d with defaults for the assumption_variables?
-            rebuild = (
-                rebuild
-                or len(
-                    list(
-                        filter(
-                            lambda variable: (
-                                getattr(sg_calib_constants_d, variable, False)
-                                and flight_dive_data_d[variable]
-                                != sg_calib_constants_d[variable]
-                            ),
-                            assumption_variables,
-                        )
-                    )
-                )
-                > 0
-            )
+        if verify and not rebuild:
+            changed = changed_assumptions(flight_dive_data_d, sg_calib_constants_d)
+            if changed:
+                log_info(f"Changed in sg_calib_constants: {', '.join(changed)}")
+                rebuild = True
 
         if rebuild:
             # assumptions differ somehow...
@@ -4962,9 +4989,11 @@ def main(
     nc_path_format = os.path.join(
         mission_directory, "p%03d%%04d.nc" % int(sg_calib_constants_d["id_str"])
     )
+    # load the db, if any - verify here, so a db dropped because the assumptions changed
+    # goes through the glider type (and max_density) setup below like a new one
     load_flight_database(
-        base_opts, sg_calib_constants_d, verify=False, create_db=False
-    )  # load the db, if any
+        base_opts, sg_calib_constants_d, verify=True, create_db=False
+    )
 
     if generate_figures and copy_figures_to_plots:
         plots_directory = os.path.join(mission_directory, "plots")
