@@ -6810,19 +6810,25 @@ def make_dive_profile(
                 + np.abs(gc_vbd_secs[flare_gc_i])
                 + pitch_oscillation_s
             )  # epoch_secs
-            ed_flare_i = list(
-                filter(
-                    lambda t_i: (
-                        ctd_epoch_time_s_v[t_i] >= end_flare_s
-                        and speed_qc_v[t_i] == QC.QC_GOOD
-                    ),
-                    range(ctd_np),
+            speed_good_v = np.asarray(speed_qc_v) == QC.QC_GOOD
+            # first good speed after the flare has settled
+            ed_flare_i_v = np.nonzero((ctd_epoch_time_s_v >= end_flare_s) & speed_good_v)[0]
+            underwater_i_v = np.nonzero(buoy_v <= 0)[0]
+            flare_ok = len(ed_flare_i_v) > 0 and len(underwater_i_v) > 0
+            if flare_ok:
+                ed_flare_i = ed_flare_i_v[0]
+                underwater_i = underwater_i_v[0]
+                flare_i = underwater_i  # start flare here for DAC
+                sfc_drift_interval_i = range(0, underwater_i + 1)
+            else:
+                log_warning(
+                    "Unable to compute acceleration during flare (%s)"
+                    % (
+                        "no good speeds after the flare"
+                        if not len(ed_flare_i_v)
+                        else "buoyancy never negative"
+                    )
                 )
-            )
-            ed_flare_i = ed_flare_i[0]
-            underwater_i = np.where(buoy_v <= 0)[0][0]
-            flare_i = underwater_i  # start flare here for DAC
-            sfc_drift_interval_i = range(0, underwater_i + 1)
             # See how much of apogee and climb we can find
             apogee_ok = False
             if apo_gc_i is not None:
@@ -6832,22 +6838,17 @@ def make_dive_profile(
                 apo_pump_ed_time = (
                     apo_pump_st_time + gc_pitch_secs[apo_gc_i] + gc_vbd_secs[apo_gc_i]
                 )
-                st_apo_i = list(
-                    filter(
-                        lambda t_i: (
-                            ctd_epoch_time_s_v[t_i] <= apo_pump_st_time
-                            and speed_qc_v[t_i] == QC.QC_GOOD
-                        ),
-                        range(ctd_np),
-                    )
-                )
-                if len(st_apo_i):
-                    st_apo_i = st_apo_i[-1]  # last good point
-                    ed_apo_i = np.where(ctd_epoch_time_s_v >= apo_pump_ed_time)[0][0]
+                st_apo_i_v = np.nonzero(
+                    (ctd_epoch_time_s_v <= apo_pump_st_time) & speed_good_v
+                )[0]
+                ed_apo_i_v = np.nonzero(ctd_epoch_time_s_v >= apo_pump_ed_time)[0]
+                if len(st_apo_i_v) and len(ed_apo_i_v):
+                    st_apo_i = st_apo_i_v[-1]  # last good point
+                    ed_apo_i = ed_apo_i_v[0]
                     # UNUSED apogee_start_speed = hdm_speed_cm_s_v[st_apo_i]
                     apogee_ok = True
                 else:
-                    log_warning("Unable to compute acceleration during flare")
+                    log_warning("Unable to compute acceleration during the apogee pump")
 
             # Climb interval
             # climb starts with first pump after apogee pump and LOITER (which could involve pumps and bleeds)
@@ -6857,18 +6858,12 @@ def make_dive_profile(
                 # UNUSED climb_pump_st_time = gc_st_secs[climb_pump_gc_i]
                 # UNUSED st_climb_pump_i = np.where(ctd_epoch_time_s_v >= climb_pump_st_time)[0][0]
                 # ed_climb_pump_i = np.where(ctd_epoch_time_s_v >= gc_end_secs[climb_gc_i] and speed_qc_v == QC.QC_GOOD)[0][0]
-                ed_climb_pump_i = list(
-                    filter(
-                        lambda t_i: (
-                            ctd_epoch_time_s_v[t_i] >= gc_end_secs[climb_pump_gc_i]
-                            and speed_qc_v[t_i] == QC.QC_GOOD
-                        ),
-                        range(ctd_np),
-                    )
-                )
+                ed_climb_pump_i_v = np.nonzero(
+                    (ctd_epoch_time_s_v >= gc_end_secs[climb_pump_gc_i]) & speed_good_v
+                )[0]
                 # could have a bad climb sg179_Shilshole_05Aug28_base2/p1790001 where something went wrong so speed_qc is bad
-                if len(ed_climb_pump_i):
-                    ed_climb_pump_i = ed_climb_pump_i[0]
+                if len(ed_climb_pump_i_v):
+                    ed_climb_pump_i = ed_climb_pump_i_v[0]
                     # UNUSED climb_pump_end_speed = hdm_speed_cm_s_v[ed_climb_pump_i]
                     climb_pump_ok = True
                 else:
@@ -6981,18 +6976,19 @@ def make_dive_profile(
                 )
 
             # Compute flare accelerations
-            interval_i = range(0, ed_flare_i + 1)
-            fit_unsteady_flight(interval_i, "flare acceleration")
+            if flare_ok:
+                interval_i = list(range(0, ed_flare_i + 1))
+                fit_unsteady_flight(interval_i, "flare acceleration")
 
-            # We compute apogee/loiter/climb pump in one long integration
+            # We compute apogee/loiter/climb pump in one long integration, from the apogee pump's
+            # start (its starting speed) - without that there is nothing to integrate from
             ed_i = None
             if apogee_ok:
                 ed_i = ed_apo_i
-
-            if climb_pump_ok:
-                ed_i = ed_climb_pump_i
-            if ed_i:
-                interval_i = range(st_apo_i, ed_i + 1)
+                if climb_pump_ok:
+                    ed_i = ed_climb_pump_i
+            if ed_i is not None:
+                interval_i = list(range(st_apo_i, ed_i + 1))
                 fit_unsteady_flight(
                     interval_i, "apogee deceleration and climb acceleration"
                 )

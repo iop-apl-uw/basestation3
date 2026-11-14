@@ -360,3 +360,48 @@ def test_all_gps_lines_garbled_fails_cleanly(tmp_path, caplog) -> None:
     assert f"No usable GPS fix in {log}" in caplog.text
     assert "TypeError" not in caplog.text
     assert "Exception when" not in caplog.text
+
+
+# $GC vbd_secs (the 15th field) of the flare GC and the apogee pump GC in p2720002.log
+_FLARE_GC = "$GC,108.59,2597,-145.99,-1.35,-80.00,2892.0,2814.4,2969.6,235.8,2000.7,2.61,-1.48,9,131.00,0.00,"
+_APOGEE_GC = "$GC,435.04,10243,0.00,-0.33,0.00,2895.0,2814.5,2975.6,1910.7,2048.2,60.04,-13.75,67,563.92,125.00,"
+
+
+@pytest.mark.parametrize(
+    ("gc_lines", "required"),
+    [
+        ([_FLARE_GC], "Unable to compute acceleration during flare (no good speeds after the flare)"),
+        ([_APOGEE_GC], "Unable to compute acceleration during the apogee pump"),
+        ([_FLARE_GC, _APOGEE_GC], "Unable to compute acceleration during the apogee pump"),
+    ],
+    ids=["flare", "apogee", "both"],
+)
+def test_solve_flare_apogee_speed_short_intervals(
+    tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture, gc_lines: list[str], required: str
+) -> None:
+    """A flare or apogee pump that runs past the data skips that fit (was an IndexError, TypeError or NameError)."""
+    mission_dir = tmp_path / "mission_dir"
+
+    def stretch_gcs(mission_dir: pathlib.Path) -> None:
+        log = mission_dir / "p2720002.log"
+        text = log.read_text()
+        for gc_line in gc_lines:
+            assert text.count(gc_line) == 1
+            # a vbd move longer than the dive puts the interval's end past the last CTD point
+            text = text.replace(gc_line, gc_line.removesuffix(",").rsplit(",", 1)[0] + ",99999.00,")
+        log.write_text(text)
+        calib = mission_dir / "sg_calib_constants.m"
+        calib.write_text(calib.read_text() + "solve_flare_apogee_speed = 1;\n")
+
+    testutils.run_mission(
+        pathlib.Path("testdata/sg272_NANOOS_Feb26_makediveprofiles"),
+        mission_dir,
+        MakeDiveProfiles.main,
+        f"--verbose --mission_dir {mission_dir} --force".split(),
+        caplog,
+        [""],
+        pre_test_hook=stretch_gcs,
+        required_msgs=[required, "Dives processed = [2]"],
+    )
+    for err in ("IndexError", "TypeError", "NameError", "Exception when"):
+        assert err not in caplog.text
