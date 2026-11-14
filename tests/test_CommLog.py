@@ -103,3 +103,8 @@ def test_has_glider_rebooted_previous_count_missing(previous_count):
     """A previous session with no reboot count (a short counter line) answers 'no reboot', not TypeError."""
     comm_log = CommLog.CommLog([_session_with_fix(previous_count), _session_with_fix(3)], [], {}, {})
     assert comm_log.has_glider_rebooted() is None
+
+
+def test_last_surfacing_no_sessions():
+    """A comm.log with no sessions (e.g. only a Disconnect line) has no last surfacing - None, not IndexError."""
+    assert CommLog.CommLog([], [], {}, {}).last_surfacing() is None

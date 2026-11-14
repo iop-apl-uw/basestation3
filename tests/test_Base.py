@@ -478,3 +478,31 @@ def test_quit_session_without_dive_number(tmp_path, caplog, monkeypatch):
     )
     assert fm_runs
     assert "Skipping flight model due to QUIT command" not in caplog.text
+
+
+def test_comm_log_without_sessions(tmp_path, caplog):
+    """A mission's first call can leave a comm.log with only a Disconnect line (sg678, 2026-06-02).
+
+    Base.main used to raise IndexError from CommLog.last_surfacing and exit; now it runs through.
+    """
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "sg_calib_constants.m").write_bytes(
+        pathlib.Path("testdata/sg272_NANOOS_Feb26_magcal/sg_calib_constants.m").read_bytes()
+    )
+    (data_dir / "comm.log").write_text("Disconnected at 2026-06-02T11:37:50Z (hangup)\n\n")
+    mission_dir = tmp_path / "sg678"  # the glider id comes from the directory name
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        Base.main,
+        f"--verbose --local --no-notify_vis --skip_flight_model --plot_types none --mission_dir {mission_dir}".split(),
+        caplog,
+        [
+            "Found Disconnect with no previous Connected",
+            "No dives to process",
+            "Could not get instrument id",
+            "Could not find a dive number",
+        ],
+        required_msgs=["No sessions in comm.log"],
+    )

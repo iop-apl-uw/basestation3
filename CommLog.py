@@ -309,8 +309,14 @@ class CommLog:
                 return (session.dive_num, counter)
         return (None, None)
 
-    def last_surfacing(self):
-        """Returns the session for the last surfacing, regardless of completness"""
+    def last_surfacing(self) -> ConnectSession | None:
+        """Returns the session for the last surfacing, regardless of completeness.
+
+        Returns:
+            The last session, or None if comm.log has no sessions (e.g. only a Disconnect line)
+        """
+        if not self.sessions:
+            return None
         return self.sessions[-1]
 
     def last_GPS_lat_lon_and_recov(self, fmt, dive_prefix):

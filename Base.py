@@ -1635,8 +1635,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         return 1
 
     # Check for resends in the last session
-    for filename, retries in comm_log.last_surfacing().file_retries.items():
-        log_warning(f"{filename} resent {retries} times", alert="FILE_RETRY")
+    last_session = comm_log.last_surfacing()
+    if last_session is None:
+        log_info("No sessions in comm.log")
+    else:
+        for filename, retries in last_session.file_retries.items():
+            log_warning(f"{filename} resent {retries} times", alert="FILE_RETRY")
 
     # sys.stdout.write("Transfer Methods")
     # for i in comm_log.file_transfer_method.keys():
@@ -2240,7 +2244,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 # Use the actual last session
                 session = comm_log.last_surfacing()
                 if (
-                    known_files[ii] in session.file_stats
+                    session is not None
+                    and known_files[ii] in session.file_stats
                     # A session still open (no disconnect yet) isn't a completed upload
                     and session.disconnect_ts is not None
                     and time.mktime(session.disconnect_ts)
@@ -2869,7 +2874,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             if alert_msg_file:
                 # alert_msg_file.write("</p>\n")
                 alert_msg_file.write("</ul>\n")
-                if comm_log.last_surfacing().logout_seen:
+                if (
+                    last_session := comm_log.last_surfacing()
+                ) is not None and last_session.logout_seen:
                     alert_msg_file.write(
                         # "<p>INFO: Glider logout seen  - transmissions from glider complete</p>\n"
                         "<li>INFO: Glider logout seen  - transmissions from glider complete</li>\n"
@@ -2884,7 +2891,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             alert_msg_file.write("</div>\n")
 
         if pagers_convert_msg:
-            if comm_log.last_surfacing().logout_seen:
+            if (
+                last_session := comm_log.last_surfacing()
+            ) is not None and last_session.logout_seen:
                 pagers_convert_msg = (
                     pagers_convert_msg
                     + "Glider logout seen - transmissions from glider complete\n"
