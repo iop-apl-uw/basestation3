@@ -292,3 +292,71 @@ def test_missing_end_gps_falls_back(tmp_path, caplog) -> None:
         gpse = nc.variables["log_GPS"][:].tobytes().decode()
         assert gpse == ",".join(["$GPS"] + gps2.split(",")[1:9])
         assert nc.variables["log_gps_time"][2] == nc.variables["log_gps_time"][1]
+
+
+_GARBLED_GPS = {
+    # position field garbled (line noise) - time parses, lat doesn't
+    "$GPS1": ("$GPS1,030226,193327,4654.694,-12454.175,", "$GPS1,030226,193327,46#4.694,-12454.175,", "GPS2", 0),
+    "$GPS2": ("$GPS2,030226,193532,4654.710,", "$GPS2,030226,193532,4654.7Q0,", "GPS1", 1),
+    "$GPS": ("$GPS,030226,200233,4654.708,", "$GPS,030226,200233,~654.708,", "GPS2", 2),
+    # cut short - GPSFix sets no time or position at all
+    "$GPS2 short": ("$GPS2,030226,193532,4654.710,-12454.180,3,0.8,3,15.3,0.8,264.3,12,8.9", "$GPS2,030226,1935", "GPS1", 1),
+}
+
+
+@pytest.mark.parametrize("case", list(_GARBLED_GPS))
+def test_garbled_gps_line_marks_fix_bad(tmp_path, caplog, case: str) -> None:
+    """A garbled $GPS1/$GPS2/$GPS line marks that fix bad; the dive processes from the others (was a TypeError)."""
+    old, new, stand_in, gps_i = _GARBLED_GPS[case]
+    mission_dir = tmp_path / "mission_dir"
+
+    def garble(mission_dir: pathlib.Path) -> None:
+        log = mission_dir / "p2720002.log"
+        text = log.read_text()
+        assert text.count(old) == 1
+        log.write_text(text.replace(old, new))
+
+    testutils.run_mission(
+        pathlib.Path("testdata/sg272_NANOOS_Feb26_makediveprofiles"),
+        mission_dir,
+        MakeDiveProfiles.main,
+        f"--verbose --mission_dir {mission_dir} --force".split(),
+        caplog,
+        [""],
+        pre_test_hook=garble,
+        required_msgs=[
+            f"fix marked bad, using {stand_in}'s time and position",
+            "Dives processed = [2]",
+        ],
+    )
+    # GPSFix logs its own "Invalid GPS line" with the ValueError; nothing else may raise
+    assert "TypeError" not in caplog.text
+    # netCDF4 requires str paths
+    with netCDF4.Dataset(str(mission_dir / "p2720002.nc")) as nc:
+        assert nc.variables["log_gps_qc"][gps_i].tobytes() == b"0"  # stored as chars
+        assert np.isnan(nc.variables["log_gps_lat"][gps_i])
+        name = new.split(",")[0].lstrip("$")
+        assert nc.variables[f"log_{name}"][:].tobytes().decode().startswith(new)
+
+
+def test_all_gps_lines_garbled_fails_cleanly(tmp_path, caplog) -> None:
+    """With no usable fix at all the dive fails with an error naming the log, not a traceback."""
+    mission_dir = tmp_path / "mission_dir"
+    shutil.copytree("testdata/sg272_NANOOS_Feb26_makediveprofiles", mission_dir)
+    log = mission_dir / "p2720002.log"
+    text = log.read_text()
+    for old, new, _, _ in list(_GARBLED_GPS.values())[:3]:
+        text = text.replace(old, new)
+    log.write_text(text)
+
+    # Fresh module state, as testutils.run_mission does (it requires a 0 exit, so isn't used)
+    Sensors.set_globals()
+    BaseNetCDF.set_globals()
+    FlightModel.set_globals()
+    Base.set_globals()
+    BaseLog.BaseLogger.reset()
+    with caplog.at_level(logging.INFO):
+        MakeDiveProfiles.main(f"--verbose --mission_dir {mission_dir} --force".split())
+    assert f"No usable GPS fix in {log}" in caplog.text
+    assert "TypeError" not in caplog.text
+    assert "Exception when" not in caplog.text

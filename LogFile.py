@@ -710,9 +710,12 @@ def parse_log_file(
                 parse_value(parm_name, value, log_file)
 
     # If GPS2 is earlier the GPS1, midnight happend between these times - correct GPS1
+    # (a garbled line can leave a fix with no time - MakeDiveProfiles marks that fix bad)
     if (
         "$GPS1" in log_file.data
         and "$GPS2" in log_file.data
+        and log_file.data["$GPS1"].datetime is not None
+        and log_file.data["$GPS2"].datetime is not None
         and time.mktime(log_file.data["$GPS2"].datetime)
         < time.mktime(log_file.data["$GPS1"].datetime)
     ):
@@ -742,6 +745,8 @@ def parse_log_file(
     if (
         "$GPS" in log_file.data
         and "$GPS1" in log_file.data
+        and log_file.data["$GPS"].datetime is not None
+        and log_file.data["$GPS1"].datetime is not None
         and time.mktime(log_file.data["$GPS"].datetime)
         < time.mktime(log_file.data["$GPS1"].datetime)
     ):
@@ -769,6 +774,8 @@ def parse_log_file(
     if (
         "$GPS" in log_file.data
         and "$GPS2" in log_file.data
+        and log_file.data["$GPS"].datetime is not None
+        and log_file.data["$GPS2"].datetime is not None
         and time.mktime(log_file.data["$GPS"].datetime)
         < time.mktime(log_file.data["$GPS2"].datetime)
     ):

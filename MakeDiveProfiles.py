@@ -35,6 +35,7 @@
 """Routines for creating dive profiles from a Seaglider's eng and log files"""
 
 import contextlib
+import copy
 import cProfile
 import io
 import math
@@ -2741,6 +2742,22 @@ def avg_longitude(lon1, lon2):
         return (lon1 + lon2) / 2.0
 
 
+def gps_fix_usable(fix: GPS.GPSFix) -> bool:
+    """Whether a log file GPS fix has the time, position and hdop make_dive_profile computes with.
+
+    A garbled $GPS1/$GPS2/$GPS line leaves some of them unset (a short line sets none of them).
+
+    Args:
+        fix: the fix from the log file
+
+    Returns:
+        True if the fix has a datetime, lat, lon and hdop
+    """
+    return all(
+        getattr(fix, attr, None) is not None for attr in ("datetime", "lat", "lon", "hdop")
+    )
+
+
 def gps_surface_drift(GPS1, GPS2) -> dict[str, float]:
     """Surface current from the glider's drift between GPS1 and GPS2.
 
@@ -3231,7 +3248,11 @@ def make_dive_profile(
                     (auxPress_counts_v * aux_pressure_slope) + aux_pressure_offset
                 ) * dbar_per_psi
             except Exception:
-                log_error("Could not create auxB_pressure", "exc")
+                log_error(
+                    "Could not create auxB_pressure - not using auxCompass or auxPressure data",
+                    "exc",
+                )
+                use_auxpressure = use_auxcompass = False
         else:
             # Look for pressure field in auxCompass header
             # The assumption here is that if the pressure field is present, it must be used as the $PRESSURE_YINT
@@ -3250,6 +3271,8 @@ def make_dive_profile(
                         alert="AUXCOMPASS",
                     )
                     use_auxpressure = use_auxcompass = False
+                    # A half-converted pair (split worked, float didn't) would still be used below
+                    aux_pressure_slope = aux_pressure_offset = None
 
             # Convert pressure counts to pressure
             if aux_pressure_slope is not None and aux_pressure_offset is not None:
@@ -3600,6 +3623,38 @@ def make_dive_profile(
             "bad_gps3", absent_predicate_value=None
         )
 
+        # A garbled fix is marked bad, and its time and position (used only where the fix is
+        # bad - no drift/DAC across it) come from the nearest usable fix, so the dive still
+        # processes from the others.  The raw line is still what goes in the netCDF file.
+        gps_fixes = {"GPS1": GPS1, "GPS2": GPS2, "GPSE": GPSE}
+        gps_stand_in_order = {
+            "GPS1": ("GPS2", "GPSE"),
+            "GPS2": ("GPS1", "GPSE"),
+            "GPSE": ("GPS2", "GPS1"),
+        }
+        gps_garbled = [
+            name for name, fix in gps_fixes.items() if not gps_fix_usable(fix)
+        ]
+        for name in gps_garbled:
+            gps_fixes[name].ok = False
+        for name in gps_garbled:
+            stand_in_name = next(
+                (n for n in gps_stand_in_order[name] if n not in gps_garbled), None
+            )
+            if stand_in_name is None:
+                log_error(
+                    f"No usable GPS fix in {log_file_name} ($GPS1/$GPS2/$GPS garbled) - bailing out"
+                )
+                raise RuntimeError(True)
+            log_warning(
+                f"Garbled {gps_fixes[name].raw_line.split(',')[0]} line in {log_file_name} "
+                f"({gps_fixes[name].raw_line}) - fix marked bad, using {stand_in_name}'s time and position"
+            )
+            stand_in = copy.copy(gps_fixes[stand_in_name])
+            stand_in.ok = False
+            gps_fixes[name] = stand_in
+        GPS1, GPS2, GPSE = gps_fixes["GPS1"], gps_fixes["GPS2"], gps_fixes["GPSE"]
+
         # Investigations of Aug 2014 showed that GPS fixes prior to this date
         # were likely accurate to only 100m, regardless of hdop value (see Bennett & Stahr, 2014)
         std_gps_error = calib_consts["GPS_position_error"]
@@ -3731,7 +3786,7 @@ def make_dive_profile(
             }
         )
 
-        if auxpressure_present:
+        if auxpressure_present and auxCompass_pressure_v is not None:
             # auxCompass_depth_v = sewater.dpth(auxCompass_pressure_v, latitude)
             if not base_opts.use_gsw:
                 auxCompass_depth_v = seawater.dpth(auxCompass_pressure_v, latitude)
@@ -5773,7 +5828,7 @@ def make_dive_profile(
                     # If there is a large thermocline, we can't tell if heating is occuring, so skip
                     if slope < thermocline_temp_diff:
                         # BUG this should be only for sbect_unpumped!! since we think it is caused by an interaction between the CT and the mainboard/motors
-                        interpolate_GC_temp_i.append(gc_i_v.tolist())
+                        interpolate_GC_temp_i.extend(gc_i_v)
 
                 QC.assert_qc(
                     QC.QC_INTERPOLATED,
@@ -6840,11 +6895,11 @@ def make_dive_profile(
                 et = np.arange(etime[0], etime[-1] + 1, dt)
                 n_pts = len(et)  # length of new grid
 
-                valid_i_v = filter(lambda i: not np.isnan(buoy_v[i]), interval_i)
+                valid_i_v = interval_i_v[~np.isnan(buoy_v[interval_i_v])]
                 # Assume that pitch and buoyancy motion is linear between data points
                 bu = Utils.interp1d(buoy_time_v[valid_i_v], buoy_v[valid_i_v], et)
                 phd = Utils.interp1d(
-                    pitch_time_v[interval_i], vehicle_pitch_degrees_v[interval_i_v], et
+                    pitch_time_v[interval_i_v], ctd_vehicle_pitch_degrees_v[interval_i_v], et
                 )
                 # if False:  # DEBUG
                 #     log_debug("%s time: %s" % (acceleration_type, et))
@@ -7972,17 +8027,27 @@ def make_dive_profile(
 
         for gps_name in ["$GPS1", "$GPS2", "$GPS"]:
             gps_fix = log_f.data[gps_name]
-            gps_time.append(time.mktime(gps_fix.datetime))
-            gps_lat.append(Utils.ddmm2dd(gps_fix.lat))
-            gps_lon.append(Utils.ddmm2dd(gps_fix.lon))
-            gps_first_fix_time.append(gps_fix.first_fix_time)
-            gps_final_fix_time.append(gps_fix.final_fix_time)
-            gps_hdop.append(gps_fix.hdop)
-            gps_magvar.append(gps_fix.magvar)
-            gps_driftspeed.append(gps_fix.drift_speed)
-            gps_driftheading.append(gps_fix.drift_heading)
-            gps_n_satellites.append(gps_fix.n_satellites)
-            gps_hpe.append(gps_fix.HPE)
+            # A garbled line leaves fields unset (a short line sets none) - NaN in the table
+            gps_datetime = getattr(gps_fix, "datetime", None)
+            gps_fix_lat = getattr(gps_fix, "lat", None)
+            gps_fix_lon = getattr(gps_fix, "lon", None)
+            gps_time.append(
+                time.mktime(gps_datetime) if gps_datetime is not None else np.nan
+            )
+            gps_lat.append(
+                Utils.ddmm2dd(gps_fix_lat) if gps_fix_lat is not None else np.nan
+            )
+            gps_lon.append(
+                Utils.ddmm2dd(gps_fix_lon) if gps_fix_lon is not None else np.nan
+            )
+            gps_first_fix_time.append(getattr(gps_fix, "first_fix_time", np.nan))
+            gps_final_fix_time.append(getattr(gps_fix, "final_fix_time", np.nan))
+            gps_hdop.append(getattr(gps_fix, "hdop", np.nan))
+            gps_magvar.append(getattr(gps_fix, "magvar", np.nan))
+            gps_driftspeed.append(getattr(gps_fix, "drift_speed", -1))
+            gps_driftheading.append(getattr(gps_fix, "drift_heading", -1))
+            gps_n_satellites.append(getattr(gps_fix, "n_satellites", -1))
+            gps_hpe.append(getattr(gps_fix, "HPE", -1))
 
         log_gps_qc_v = np.array((GPS1.ok, GPS2.ok, GPSE.ok), int)
 
