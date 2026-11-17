@@ -36,6 +36,7 @@ import os
 import pathlib
 import sys
 import time
+from collections.abc import Iterator
 
 import pytest
 
@@ -43,8 +44,26 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "ssh"))
 import MakeKMLSSHMissions  # noqa: E402  # ty: ignore[unresolved-import]
 
 import SiteConfig
+from BaseLog import BaseLogger
 
 Mission = MakeKMLSSHMissions.Mission
+
+
+@pytest.fixture(autouse=True)
+def _reset_base_logger() -> Iterator[None]:
+    """Starts and ends each test with a fresh BaseLogger.
+
+    run_sites() flushes BaseLogger.log's handlers before each fork. A capsys test
+    that ran earlier in the same process (xdist worker) can leave a BaseLogger
+    handler on its stderr, which pytest has since closed - the flush then raises
+    "I/O operation on closed file".
+
+    Yields:
+        None, once the logger is reset.
+    """
+    BaseLogger.reset()
+    yield
+    BaseLogger.reset()
 
 
 def _site(
