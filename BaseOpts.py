@@ -2275,66 +2275,58 @@ class BaseOptions:
                     if k == "config_file_name":
                         continue
                     if v.group is None or calling_module in v.group:
+                        section_name = v.kwargs.get("section", "base")
+                        # Only "not in the file" is skipped - a value that won't convert is an error, as
+                        # for the other types below (it used to be dropped silently, keeping the default)
                         try:
-                            section_name = v.kwargs.get("section", "base")
-                            # if "section" in v.kwargs:
-                            #    section_name = v.kwargs["section"]
-                            # else:
-                            #    section_name = "base"
-                            if v.var_type == bool:  # noqa: E721 This is a class, not instance compare
-                                try:
-                                    value = cp.getboolean(section_name, k)
-                                except ValueError as exc:
-                                    raise ValueError(
-                                        f"Could not convert {k} from {self._opts.config_file_name} to boolean"
-                                    ) from exc
-                            else:
-                                value = cp.get(section_name, k)
-                                if isinstance(v.default_val, list):
-                                    try:
-                                        value = [
-                                            x.rstrip().lstrip()
-                                            for x in value.split(",")
-                                        ]
-                                    except Exception as exc:
-                                        raise Exception(
-                                            f"Could not convert {k} from {self._opts.config_file_name} to a list"
-                                        ) from exc
-                                elif v.var_type is FullPathlib:
-                                    value = FullPathlib(value)
-                            #                                elif v.var_type is FullPathTrailingSlash:
-                            #                                    value = FullPathTrailingSlash(value)
-                            # if value == v.default_val:
-                            if value is None:
-                                continue
-                        except Exception:
-                            pass
+                            value = cp.get(section_name, k)
+                        except (configparser.NoSectionError, configparser.NoOptionError):
+                            continue
+                        if value is None:  # not in the file - cp_default gives every option None
+                            continue
+                        if v.var_type == bool:  # noqa: E721 This is a class, not instance compare
+                            try:
+                                value = cp.getboolean(section_name, k)
+                            except ValueError as exc:
+                                raise ValueError(
+                                    f"Could not convert {k} from {self._opts.config_file_name} to boolean"
+                                ) from exc
+                        elif isinstance(v.default_val, list):
+                            value = [x.strip() for x in value.split(",")]
+                        elif v.var_type is FullPathlib:
+                            try:
+                                value = FullPathlib(value)
+                            except (RuntimeError, OSError) as exc:  # e.g. ~nosuchuser
+                                raise ValueError(
+                                    f"Could not convert {k} from {self._opts.config_file_name} to a path"
+                                ) from exc
+                        if value is None:
+                            continue
+                        if isinstance(v.default_val, list):
+                            # Code above has converted list types into an appropriate list
+                            setattr(self, k, value)
                         else:
-                            if isinstance(v.default_val, list):
-                                # Code above has converted list types into an appropriate list
-                                setattr(self, k, value)
+                            try:
+                                val = v.var_type(value)
+                            except ValueError as exc:
+                                # raise f"Could not convert {k} from {self._opts.config_file_name} to requested type" from exc
+                                raise ValueError(
+                                    f"Could not convert {k} from {self._opts.config_file_name} to requested type"
+                                ) from exc
                             else:
-                                try:
-                                    val = v.var_type(value)
-                                except ValueError as exc:
-                                    # raise f"Could not convert {k} from {self._opts.config_file_name} to requested type" from exc
-                                    raise ValueError(
-                                        f"Could not convert {k} from {self._opts.config_file_name} to requested type"
-                                    ) from exc
-                                else:
-                                    if (
-                                        "range" in v.kwargs
-                                        and isinstance(v.kwargs["range"], list)
-                                        and len(v.kwargs["range"]) == 2
-                                    ):
-                                        min_val = v.kwargs["range"][0]
-                                        max_val = v.kwargs["range"][1]
-                                        if not min_val <= val <= max_val:
-                                            raise IndexError(
-                                                f"{val} outside of range {min_val} {max_val}"
-                                            )
+                                if (
+                                    "range" in v.kwargs
+                                    and isinstance(v.kwargs["range"], list)
+                                    and len(v.kwargs["range"]) == 2
+                                ):
+                                    min_val = v.kwargs["range"][0]
+                                    max_val = v.kwargs["range"][1]
+                                    if not min_val <= val <= max_val:
+                                        raise IndexError(
+                                            f"{val} outside of range {min_val} {max_val}"
+                                        )
 
-                                    setattr(self, k, val)
+                                setattr(self, k, val)
 
         # Check for deprecated options set in config
         for k, v in options_dict.items():
