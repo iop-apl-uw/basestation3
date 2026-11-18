@@ -28,6 +28,7 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import logging
+import math
 import os
 import subprocess
 import types
@@ -339,3 +340,31 @@ def test_unique_is_sorted() -> None:
     assert Utils.unique([3, 1, 2, 3, 1]) == [1, 2, 3]
     assert Utils.unique([Path("b"), Path("a"), Path("b")]) == [Path("a"), Path("b")]
     assert Utils.unique([]) == []
+
+
+HAVERSINE_R = 6378137.0  # Utils.haversine's sphere
+
+
+@pytest.mark.parametrize(
+    ("lat0", "lon0", "lat1", "lon1", "expected"),
+    [
+        (47.6, -122.3, 47.6, -122.3, 0.0),  # same position
+        (0.0, 0.0, 1.0, 0.0, HAVERSINE_R * math.pi / 180),  # one degree of latitude
+        (0.0, 0.0, 0.0, 180.0, HAVERSINE_R * math.pi),  # antipodal on the equator - was 0
+        (90.0, 0.0, -90.0, 0.0, HAVERSINE_R * math.pi),  # pole to pole - was 0
+        (10.0, 20.0, -10.0, -160.0, HAVERSINE_R * math.pi),  # antipodal, off the equator
+    ],
+)
+def test_haversine(lat0, lon0, lat1, lon1, expected):
+    """haversine gives the great-circle distance, including half the circumference for antipodal points."""
+    distance = Utils.haversine(lat0, lon0, lat1, lon1)
+    assert isinstance(distance, float)
+    # 1 m: asin is ill-conditioned near 1, so near-antipodal points lose ~0.2 m to rounding (the formula's, not the clamp's)
+    assert distance == pytest.approx(expected, abs=1.0)
+
+
+def test_haversine_clamps_rounding_past_one(monkeypatch):
+    """An a a hair over 1 (rounding) clamps to half the circumference rather than raising from asin."""
+    real_sin = math.sin
+    monkeypatch.setattr(Utils.math, "sin", lambda x: real_sin(x) * (1 + 1e-12))
+    assert Utils.haversine(0.0, 0.0, 0.0, 180.0) == pytest.approx(HAVERSINE_R * math.pi)

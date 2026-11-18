@@ -268,7 +268,17 @@ def rangeBearing(
 
 
 def haversine(lat0: float, lon0: float, lat1: float, lon1: float) -> float:
-    """Distance between to positions, using the haversine method"""
+    """Distance between two positions, using the haversine method.
+
+    Args:
+        lat0: First latitude, decimal degrees.
+        lon0: First longitude, decimal degrees.
+        lat1: Second latitude, decimal degrees.
+        lon1: Second longitude, decimal degrees.
+
+    Returns:
+        The great-circle distance in meters, on a sphere of the WGS84 equatorial radius.
+    """
     R = 6378137.0
     lat0 = lat0 * math.pi / 180
     lat1 = lat1 * math.pi / 180
@@ -279,8 +289,7 @@ def haversine(lat0: float, lon0: float, lat1: float, lon1: float) -> float:
     sdlon_2 = math.sin(0.5 * (lon0 - lon1))
 
     a = sdlat_2 * sdlat_2 + math.cos(lat0) * math.cos(lat1) * sdlon_2 * sdlon_2
-    if a >= 1 or a <= 0:
-        return 0
+    a = min(max(a, 0.0), 1.0)  # rounding can step just outside asin's domain (antipodal points give 1)
 
     return 2.0 * R * math.asin(math.sqrt(a))
 
@@ -534,23 +543,6 @@ def which(program: str) -> str | None:
                 return exe_file
 
     return None
-
-
-def check_call(cmd: str, use_shell: bool = False) -> int:
-    """Wrapper for check_call in subproccess"""
-    if not use_shell:
-        cmd_split = cmd.split()
-        # cmd_split[0] = which(cmd_split[0])
-        cmd_location = which(cmd_split[0])
-        if cmd_location is None:
-            return 1
-    try:
-        subprocess.check_call(cmd_split, shell=use_shell)
-    except subprocess.CalledProcessError as grepexc:
-        #  print "error code", grepexc.returncode, grepexc.output
-        return grepexc.returncode
-    else:
-        return 0
 
 
 def read_from_process(p: subprocess.Popen[bytes]) -> io.BytesIO:
