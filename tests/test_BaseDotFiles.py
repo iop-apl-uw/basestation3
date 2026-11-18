@@ -524,6 +524,30 @@ def test_process_ftp_line_login_refused_closes(
     mock_ftp.close.assert_called_once()
 
 
+@pytest.mark.parametrize(
+    ("error", "logged"),
+    [
+        (TimeoutError("timed out"), "[TimeoutError('timed out')]"),
+        (ftplib.error_perm("500 OOPS: invalid pasv_address"), "[error_perm('500 OOPS: invalid pasv_address')]"),
+        # ftplib raises a bare EOFError when the server has closed the connection
+        # (aoml sg649 2026-11-17, after the 500 OOPS) - logged as "[()]" before
+        (EOFError(), "[EOFError()]"),
+    ],
+)
+def test_process_ftp_line_send_error_names_the_exception(
+    caplog: LogCaptureFixture, ftp_base_opts: MagicMock, error: Exception, logged: str
+) -> None:
+    """A failed STOR logs the exception's type as well as its message, then carries on."""
+    mock_ftp = MagicMock()
+    mock_ftp.storbinary.side_effect = error
+    with patch("BaseDotFiles.FTP", return_value=mock_ftp), caplog.at_level("ERROR"):
+        result = BaseDotFiles.process_ftp_line(ftp_base_opts, [], None, None, FTP_LINE, [])
+    assert result == 1
+    assert f"test.eng {logged}- skipping" in caplog.text
+    assert "Traceback" not in caplog.text
+    mock_ftp.quit.assert_called_once()
+
+
 def test_process_ftp_line_quit_error_is_a_warning(
     caplog: LogCaptureFixture, ftp_base_opts: MagicMock
 ) -> None:
