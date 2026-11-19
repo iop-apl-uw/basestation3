@@ -339,6 +339,68 @@ def test_garbled_gps_line_marks_fix_bad(tmp_path, caplog, case: str) -> None:
         assert nc.variables[f"log_{name}"][:].tobytes().decode().startswith(new)
 
 
+# The magvar (9th) field of p2720002.log's fixes - all 15.3
+_GPS1_MAGVAR = "$GPS1,030226,193327,4654.694,-12454.175,1,0.8,2,15.3,"
+_GPS2_MAGVAR = "$GPS2,030226,193532,4654.710,-12454.180,3,0.8,3,15.3,"
+_GPSE_MAGVAR = "$GPS,030226,200233,4654.708,-12454.235,1,0.9,3,15.3"
+
+
+@pytest.mark.parametrize(
+    ("replacements", "magvar", "required"),
+    [
+        # GPS1's set apart (15.4), to show it's the one used
+        (
+            {_GPS2_MAGVAR: _GPS2_MAGVAR.replace("15.3", "1#.3"), _GPS1_MAGVAR: _GPS1_MAGVAR.replace("15.3", "15.4")},
+            15.4,
+            ["$GPS2 has no magnetic variation", "using GPS1's (15.4 degrees)"],
+        ),
+        (
+            {line: line.replace("15.3", "1#.3") for line in (_GPS1_MAGVAR, _GPS2_MAGVAR, _GPSE_MAGVAR)},
+            0.0,
+            [
+                "no other fix has one - headings uncorrected (0.0 degrees), $GPS2 marked bad",
+                "Bad GPS2 or GPSE; unable to compute depth-average current",
+            ],
+        ),
+    ],
+    ids=["from_gps1", "none_usable"],
+)
+def test_gps2_without_magvar(
+    tmp_path: pathlib.Path,
+    caplog: pytest.LogCaptureFixture,
+    replacements: dict[str, str],
+    magvar: float,
+    required: list[str],
+) -> None:
+    """A $GPS2 garbled in its magvar field takes another fix's, else 0.0 with GPS2 bad (was a TypeError)."""
+    mission_dir = tmp_path / "mission_dir"
+
+    def garble(mission_dir: pathlib.Path) -> None:
+        log = mission_dir / "p2720002.log"
+        text = log.read_text()
+        for old, new in replacements.items():
+            assert text.count(old) == 1
+            text = text.replace(old, new)
+        log.write_text(text)
+
+    testutils.run_mission(
+        pathlib.Path("testdata/sg272_NANOOS_Feb26_makediveprofiles"),
+        mission_dir,
+        MakeDiveProfiles.main,
+        f"--verbose --mission_dir {mission_dir} --force".split(),
+        caplog,
+        [""],
+        pre_test_hook=garble,
+        required_msgs=[*required, "Dives processed = [2]"],
+    )
+    assert "TypeError" not in caplog.text
+    # netCDF4 requires str paths
+    with netCDF4.Dataset(str(mission_dir / "p2720002.nc")) as nc:
+        assert nc.variables["magnetic_variation"].getValue() == pytest.approx(magvar)
+        assert np.isnan(nc.variables["log_gps_magvar"][1])  # the raw $GPS2 value, not the one used
+        assert nc.variables["log_gps_qc"][1].tobytes() == b"0"  # GPS2 bad (stored as chars)
+
+
 def test_all_gps_lines_garbled_fails_cleanly(tmp_path, caplog) -> None:
     """With no usable fix at all the dive fails with an error naming the log, not a traceback."""
     mission_dir = tmp_path / "mission_dir"

@@ -2852,6 +2852,7 @@ def compute_GSM_simple(
     calib_consts,
     nc_info_d,
     results_d,
+    mag_var_deg,
 ):
     """In the event the CTD data fails to load/initial process, this routine calculates
     the GSM displacements and estimated lat/lons, along with a number of additional
@@ -2867,7 +2868,7 @@ def compute_GSM_simple(
     """
     dive_mean_lat_factor = math.cos(math.radians((GPS2.lat_dd + GPSE.lat_dd) / 2.0))
 
-    head_true_deg_v = vehicle_heading_mag_degrees_v + GPS2.magvar
+    head_true_deg_v = vehicle_heading_mag_degrees_v + mag_var_deg
     head_true_deg_v = 90.0 - head_true_deg_v
     bad_deg_i_v = np.nonzero(head_true_deg_v >= 360.0)
     head_true_deg_v[bad_deg_i_v] = head_true_deg_v[bad_deg_i_v] - 360.0
@@ -3655,6 +3656,29 @@ def make_dive_profile(
             gps_fixes[name] = stand_in
         GPS1, GPS2, GPSE = gps_fixes["GPS1"], gps_fixes["GPS2"], gps_fixes["GPSE"]
 
+        # The headings in the eng file are magnetic.  A $GPS2 garbled in its final-fix-time or
+        # magvar field keeps its position (so it's usable) but has no magvar: take another fix's
+        # (same surfacing, then the end of the dive), else none - and then $GPS2 is marked bad, so
+        # nothing that turns on the headings and GPS2 (DAC, the lat/lon track) uses the uncorrected
+        # headings.  The fix itself keeps None (log_gps_magvar records the raw values).
+        mag_var_deg = GPS2.magvar
+        if mag_var_deg is None:
+            other = next(
+                (n for n in ("GPS1", "GPSE") if gps_fixes[n].magvar is not None), None
+            )
+            if other is not None:
+                mag_var_deg = gps_fixes[other].magvar
+                log_warning(
+                    f"$GPS2 has no magnetic variation ({GPS2.raw_line}) - using {other}'s ({mag_var_deg:.1f} degrees)"
+                )
+            else:
+                mag_var_deg = 0.0
+                GPS2.ok = False
+                log_warning(
+                    f"$GPS2 has no magnetic variation ({GPS2.raw_line}) and no other fix has one"
+                    " - headings uncorrected (0.0 degrees), $GPS2 marked bad"
+                )
+
         # Investigations of Aug 2014 showed that GPS fixes prior to this date
         # were likely accurate to only 100m, regardless of hdop value (see Bennett & Stahr, 2014)
         std_gps_error = calib_consts["GPS_position_error"]
@@ -3764,8 +3788,7 @@ def make_dive_profile(
                     % latitude
                 )
 
-        # the headings in the 'head' column of the *.eng file are magnetic.
-        mag_var_deg = GPS2.magvar
+        # the headings in the 'head' column of the *.eng file are magnetic (mag_var_deg set above)
         if not GPS2.ok:
             # even if GPS unit is busted we latch the last magvar, which is better than nothing (or zero)
             log_warning(
@@ -5300,6 +5323,7 @@ def make_dive_profile(
                     calib_consts,
                     nc_info_d,
                     results_d,
+                    mag_var_deg,
                 )
             except Exception:
                 DEBUG_PDB_F()
