@@ -36,6 +36,15 @@
 #include <ctype.h>
 #include "md5.h"
 
+/* Seconds of silence on stdin before a header or file read gives up (E0, or
+ * "did not receive 52 header bytes").  Was 20.  On 2026-11-19 the Iridium RUDICS
+ * gateway dropped traffic for ~30 s every minute; the glider's data was delayed,
+ * not lost, so a 20 s timeout cut files short and the late bytes were then read
+ * as the next header (junk file names and sizes).  Keep this above such stalls
+ * but below the glider's own 45 s raw read/write timeout, so a call that really
+ * fails is still declared here before the glider gives up. */
+#define READ_TIMEOUT_SECS 40
+
 extern void rsyslog(int prio, const char *format, ...);
 
 char *
@@ -107,7 +116,7 @@ batch(int argc, char *argv[])
 
         nread = 0;
         while(nread < 52) {
-            timeout.tv_sec = 20;
+            timeout.tv_sec = READ_TIMEOUT_SECS;
             timeout.tv_usec = 0;
             FD_ZERO(&fds);
             FD_SET(0, &fds);
@@ -160,7 +169,7 @@ batch(int argc, char *argv[])
        
         nread = 0;
         while(nread < size) {
-            timeout.tv_sec = 20;
+            timeout.tv_sec = READ_TIMEOUT_SECS;
             timeout.tv_usec = 0;
             FD_ZERO(&fds);
             FD_SET(0, &fds);
@@ -273,7 +282,7 @@ main(int argc, char *argv[])
 
     nread = 0;
     while(nread < 4) {
-        timeout.tv_sec = 20;
+        timeout.tv_sec = READ_TIMEOUT_SECS;
         timeout.tv_usec = 0;
         FD_ZERO(&fds);
         FD_SET(0, &fds);
@@ -309,7 +318,7 @@ main(int argc, char *argv[])
    
     nread = 0;
     while(nread < size) {
-        timeout.tv_sec = 20;
+        timeout.tv_sec = READ_TIMEOUT_SECS;
         timeout.tv_usec = 0;
         FD_ZERO(&fds);
         FD_SET(0, &fds);
