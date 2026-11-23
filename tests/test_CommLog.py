@@ -91,6 +91,33 @@ def test_counter_line_with_hangup_logs_no_gps_error(
     assert len([r for r in caplog.records if "Unknown line after counter" in r.getMessage()]) == 1
 
 
+def test_malformed_gps_timestamp_gives_no_fix(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """A counter-line GPS fix with a malformed date/time (sg262, 2026-11-21) leaves the call with no fix.
+
+    It used to parse as 21 Nov 2000, raise a TypeError in fix_gps_rollover, and leave a fix with no
+    time that GPS_lat_lon_and_recov and MakeKML then crashed on.
+    """
+    comm_log = tmp_path / "comm.log"
+    comm_log.write_text(
+        "Connected at 2026-11-21T01:44:30Z (sg262)\nlogged in\n"
+        "255:0:1:0:0:3:0:1549:2194:201:-60.9:-0.01:20.4:15.33:0.00:8.59:42.7:16.4:0.0:-1.1 "
+        "GPS,2111,0016,7152.144,-6758.859,0,69535.0,0,-30.8\n"
+        "Disconnected at 2026-11-21T01:50:00Z (normal)\n"
+    )
+    base_opts = MagicMock()
+    base_opts.mission_dir = tmp_path
+    with caplog.at_level(logging.INFO):
+        commlog, _, _, _, _ = CommLog.process_comm_log(comm_log, base_opts)
+    assert commlog is not None
+    session = commlog.sessions[0]
+    assert session.gps_fix is None
+    assert "Malformed date/time (2111,0016)" in caplog.text
+    assert "TypeError" not in caplog.text
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+    # The callers that crashed on the fix with no time
+    assert CommLog.GPS_lat_lon_and_recov(None, False, session)[0] == "No GPS fix available for this call"
+
+
 def _session_with_fix(reboot_count):
     session = CommLog.ConnectSession(time.gmtime(0), "UTC")
     session.gps_fix = GPS.GPSFix("GPS,260506,151750,4807.211,-12223.095,34,1.1,34,18.0")

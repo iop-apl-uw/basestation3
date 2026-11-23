@@ -41,6 +41,7 @@
 from __future__ import annotations
 
 import bz2
+import calendar
 import collections
 import contextlib
 import errno
@@ -1676,12 +1677,15 @@ def find_recent_basestation_file(
 def fix_gps_rollover(struct_time: time.struct_time) -> time.struct_time:
     """Fixes time stamps set from GPS units with the epoch rollover bug"""
     if struct_time.tm_year >= 1999 and struct_time.tm_year <= 2001:
+        # A struct_time is a tuple, so it can't be the lone % argument (TypeError until 2026-11)
         log_warning(
-            "GPS Rollover found (%s)" % struct_time, alert="GPSROLLOVER", max_count=5
+            f"GPS Rollover found ({time.strftime('%Y-%m-%d %H:%M:%S', struct_time)})",
+            alert="GPSROLLOVER",
+            max_count=5,
         )
-        tmp = time.mktime(struct_time) + 619315200  # 1024*7*86400
-        struct_time = time.gmtime(tmp)
-        del tmp
+        # timegm, not mktime: the stamp is UTC and gmtime converts back as UTC (mktime only
+        # matched under TZ=UTC)
+        struct_time = time.gmtime(calendar.timegm(struct_time) + 619315200)  # 1024*7*86400
     return struct_time
 
 

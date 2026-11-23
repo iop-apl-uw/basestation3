@@ -32,13 +32,14 @@
 """
 
 import io
+import re
 import sys
 import time
 import typing
 from enum import IntEnum
 
 import Utils
-from BaseLog import log_debug, log_error, log_info
+from BaseLog import log_debug, log_error, log_info, log_warning
 
 
 class GPS_I(IntEnum):
@@ -73,6 +74,35 @@ def is_valid_gps_line(gps_line:str) -> bool:
     return gps_fields[0] in ("GPS", "$GPS", "$GPS1", "$GPS2")
 
 
+_GPS_DATE_RE = re.compile(r"\d{6}")  # DDMMYY
+_GPS_TIME_RE = re.compile(r"\d{6}")  # HHMMSS
+_GPS_SMS_TIME_RE = re.compile(r"\d{4}")  # HHMM - the truncated SMS form
+
+
+def gps_timestamp_well_formed(date_field: str, time_field: str, sms_line: bool) -> bool:
+    """Whether a GPS line's date and time fields have the expected shape.
+
+    Only the shape is checked (digit counts); strptime checks the values.  Every date/time
+    GPS line on the mirrors (2026-11) is DDMMYY,HHMMSS except sg262's under-ice nav fixes,
+    which drop the year and seconds (DDMM,HHMM).
+
+    >>> gps_timestamp_well_formed("260506", "151750", False)
+    True
+    >>> gps_timestamp_well_formed("0611", "2016", False)
+    False
+
+    Args:
+        date_field: the DDMMYY field
+        time_field: the HHMMSS field (HHMM on an SMS line)
+        sms_line: True for the 7 field SMS form, which reports HHMM
+
+    Returns:
+        True if both fields are well formed
+    """
+    time_re = _GPS_SMS_TIME_RE if sms_line else _GPS_TIME_RE
+    return bool(_GPS_DATE_RE.fullmatch(date_field) and time_re.fullmatch(time_field))
+
+
 class GPSFix:
     """A wrapper for a single GPS fix"""
 
@@ -90,6 +120,8 @@ class GPSFix:
         self.datetime : time.struct_time | tuple[int, int, int, int, int, int, int, int, int] | None = None
 
         self.raw_line = gps_line
+        # Set when the date/time fields fail gps_timestamp_well_formed (lat/lon/hdop are still parsed)
+        self.timestamp_malformed = False
 
         if is_valid_gps_line(gps_line):
             gps_fields = gps_line.split(",")
@@ -115,30 +147,45 @@ class GPSFix:
                 and len(gps_fields) >= 9
             ):
                 if gps_fields[1] != "" and gps_fields[2] != "":
-                    try:
-                        # handle the truncated SMS time stamp
-                        if len(gps_fields[2]) == 4:
-                            self.datetime = Utils.fix_gps_rollover(
-                                time.strptime(
-                                    gps_fields[1] + gps_fields[2], "%d%m%y%H%M"
-                                )
-                            )
-                        else:
-                            self.datetime = Utils.fix_gps_rollover(
-                                time.strptime(
-                                    gps_fields[1] + gps_fields[2][:6], "%d%m%y%H%M%S"
-                                )
-                            )
-                        log_debug(
-                            "GPS = %f (%s)"
-                            % (time.mktime(self.datetime), self.datetime)
+                    # The truncated SMS time stamp (a 7 field line) has no seconds
+                    sms_line = len(gps_fields) == 7
+                    if not gps_timestamp_well_formed(
+                        gps_fields[1], gps_fields[2], sms_line
+                    ):
+                        # e.g. sg262's under-ice nav fixes, DDMM,HHMM (2026-11) - not guessed at
+                        self.isvalid = False
+                        self.timestamp_malformed = True
+                        log_warning(
+                            f"Malformed date/time ({gps_fields[1]},{gps_fields[2]}) in GPS line"
+                            f" ({gps_line}) - fix marked invalid"
                         )
-                    except Exception:
-                        self.datetime = None
-                        log_error(
-                            "Could not process %s" % gps_fields[1] + gps_fields[2],
-                            "exc",
-                        )
+                    else:
+                        try:
+                            if sms_line:
+                                self.datetime = Utils.fix_gps_rollover(
+                                    time.strptime(
+                                        gps_fields[1] + gps_fields[2], "%d%m%y%H%M"
+                                    )
+                                )
+                            else:
+                                self.datetime = Utils.fix_gps_rollover(
+                                    time.strptime(
+                                        gps_fields[1] + gps_fields[2], "%d%m%y%H%M%S"
+                                    )
+                                )
+                            log_debug(
+                                "GPS = %f (%s)"
+                                % (time.mktime(self.datetime), self.datetime)
+                            )
+                        except ValueError:
+                            # Six digits each, but not a date and time (month 13, hour 25...)
+                            self.datetime = None
+                            self.isvalid = False
+                            self.timestamp_malformed = True
+                            log_warning(
+                                f"Malformed date/time ({gps_fields[1]},{gps_fields[2]}) in GPS line"
+                                f" ({gps_line}) - fix marked invalid"
+                            )
                 else:
                     # This happens with old tank dives when we can't get a good GPS fix
                     # Make up something plausible

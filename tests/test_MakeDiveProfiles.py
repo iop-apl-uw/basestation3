@@ -42,6 +42,7 @@ import Base
 import BaseLog
 import BaseNetCDF
 import FlightModel
+import GPS
 import MakeDiveProfiles
 import Sensors
 
@@ -420,6 +421,129 @@ def test_all_gps_lines_garbled_fails_cleanly(tmp_path, caplog) -> None:
     with caplog.at_level(logging.INFO):
         MakeDiveProfiles.main(f"--verbose --mission_dir {mission_dir} --force".split())
     assert f"No usable GPS fix in {log}" in caplog.text
+    assert "TypeError" not in caplog.text
+    assert "Exception when" not in caplog.text
+
+
+_MALFORMED_FIX = GPS.GPSFix("$GPS,0611,2016,7151.293,-6759.892,0,69535.0,0,-30.8")
+
+
+@pytest.mark.parametrize(
+    ("rafos_fix", "expected"),
+    [
+        # sg262 p2620237.log (newer form)
+        ("la=7151.293457,lo=-6759.892090,ts=20261106201608,nhit=3,meanC=65535,spd=0.02,e=133", "2026-11-06 20:16:08"),
+        # sg235 AMOS_Aug23 (older form)
+        ("7604.032227,-14206.836914,130823,141404,9,255,0.02", "2023-08-13 14:14:04"),
+        # no-fix placeholders
+        ("la=0.000000,lo=0.000000,da=010170,000000,nhit=0,meanC=0,spd=0.00", None),
+        ("0.000000,0.000000,010170,000000,0,0,0.00", None),
+        ("garbage", None),
+    ],
+)
+def test_rafos_fix_stand_in(rafos_fix: str, expected: str | None) -> None:
+    """The stand-in takes the $RAFOS_FIX time and keeps the fix's own position."""
+    stand_in = MakeDiveProfiles.rafos_fix_stand_in(_MALFORMED_FIX, rafos_fix)
+    if expected is None:
+        assert stand_in is None
+        return
+    assert stand_in is not None and stand_in.datetime is not None
+    assert time.strftime("%Y-%m-%d %H:%M:%S", stand_in.datetime) == expected
+    assert (stand_in.lat, stand_in.lon) == (_MALFORMED_FIX.lat, _MALFORMED_FIX.lon)
+    assert _MALFORMED_FIX.datetime is None  # a copy - the parsed fix is unchanged
+
+
+# p2720002.log's fixes with sg262's malformed DDMM,HHMM date/time (BBOS_Sep26, 2026-11)
+_MALFORMED_GPS = {
+    "$GPS1": ("$GPS1,030226,193327,", "$GPS1,0302,1933,"),
+    "$GPS2": ("$GPS2,030226,193532,", "$GPS2,0302,1935,"),
+    "$GPS": ("$GPS,030226,200233,", "$GPS,0302,2002,"),
+}
+_RAFOS_FIX_LINE = "$RAFOS_FIX,la=4654.708,lo=-12454.235,ts=20260203200233,nhit=3,meanC=65535,spd=0.02,e=133\n"
+# The no-fix placeholder a glider logs before its first nav fix
+_RAFOS_FIX_PLACEHOLDER = "$RAFOS_FIX,la=0.000000,lo=0.000000,da=010170,000000,nhit=0,meanC=0,spd=0.00\n"
+
+
+def _malform(mission_dir: pathlib.Path, names: list[str], rafos_fix: str | None) -> None:
+    """Gives p2720002.log's named fixes a malformed date/time, and the given $RAFOS_FIX line, if any."""
+    log = mission_dir / "p2720002.log"
+    text = log.read_text()
+    for name in names:
+        old, new = _MALFORMED_GPS[name]
+        assert text.count(old) == 1
+        text = text.replace(old, new)
+    if rafos_fix is not None:
+        text = text.replace("$GPS,", rafos_fix + "$GPS,", 1)
+    log.write_text(text)
+
+
+@pytest.mark.parametrize(
+    "names",
+    [["$GPS"], ["$GPS1", "$GPS2", "$GPS"]],
+    ids=["end_fix", "all_fixes"],
+)
+def test_malformed_gps_timestamp_uses_rafos_fix(tmp_path, caplog, names: list[str]) -> None:
+    """A fix with a malformed date/time is marked bad and timed by the log's $RAFOS_FIX (sg262 BBOS_Sep26).
+
+    With every fix malformed the dive used to process with 2012-2020 GPS times marked good; with the
+    date/time check and no stand-in it would bail.
+    """
+    mission_dir = tmp_path / "mission_dir"
+    testutils.run_mission(
+        pathlib.Path("testdata/sg272_NANOOS_Feb26_makediveprofiles"),
+        mission_dir,
+        MakeDiveProfiles.main,
+        f"--verbose --mission_dir {mission_dir} --force".split(),
+        caplog,
+        [""],
+        pre_test_hook=lambda mission_dir: _malform(mission_dir, names, rafos_fix=_RAFOS_FIX_LINE),
+        required_msgs=["fix marked bad, using $RAFOS_FIX's time", "Dives processed = [2]"],
+    )
+    assert "TypeError" not in caplog.text
+    assert "No usable GPS fix" not in caplog.text
+    # netCDF4 requires str paths
+    with netCDF4.Dataset(str(mission_dir / "p2720002.nc")) as nc:
+        for name in names:
+            gps_i = list(_MALFORMED_GPS).index(name)
+            assert nc.variables["log_gps_qc"][gps_i].tobytes() == b"0"  # stored as chars
+            assert np.isnan(nc.variables["log_gps_time"][gps_i])  # the raw line's time - not guessed at
+            assert not np.isnan(nc.variables["log_gps_lat"][gps_i])  # its position is fine
+            var = f"log_{name.lstrip('$')}"
+            assert nc.variables[var][:].tobytes().decode().startswith(_MALFORMED_GPS[name][1])
+
+
+@pytest.mark.parametrize("rafos_fix", [None, _RAFOS_FIX_PLACEHOLDER], ids=["none", "placeholder"])
+def test_malformed_gps_timestamp_without_rafos_fix(tmp_path, caplog, rafos_fix: str | None) -> None:
+    """Without a usable $RAFOS_FIX a malformed fix falls back to another fix's time and position, as a garbled one does."""
+    mission_dir = tmp_path / "mission_dir"
+    testutils.run_mission(
+        pathlib.Path("testdata/sg272_NANOOS_Feb26_makediveprofiles"),
+        mission_dir,
+        MakeDiveProfiles.main,
+        f"--verbose --mission_dir {mission_dir} --force".split(),
+        caplog,
+        [""],
+        pre_test_hook=lambda mission_dir: _malform(mission_dir, ["$GPS"], rafos_fix=rafos_fix),
+        required_msgs=["fix marked bad, using GPS2's time and position", "Dives processed = [2]"],
+    )
+    assert "$RAFOS_FIX's time" not in caplog.text
+
+
+def test_all_gps_timestamps_malformed_without_rafos_fix_fails_cleanly(tmp_path, caplog) -> None:
+    """Every fix malformed and no $RAFOS_FIX: the dive fails with an error naming the log, not a traceback."""
+    mission_dir = tmp_path / "mission_dir"
+    shutil.copytree("testdata/sg272_NANOOS_Feb26_makediveprofiles", mission_dir)
+    _malform(mission_dir, list(_MALFORMED_GPS), rafos_fix=None)
+
+    # Fresh module state, as testutils.run_mission does (it requires a 0 exit, so isn't used)
+    Sensors.set_globals()
+    BaseNetCDF.set_globals()
+    FlightModel.set_globals()
+    Base.set_globals()
+    BaseLog.BaseLogger.reset()
+    with caplog.at_level(logging.INFO):
+        MakeDiveProfiles.main(f"--verbose --mission_dir {mission_dir} --force".split())
+    assert f"No usable GPS fix in {mission_dir / 'p2720002.log'}" in caplog.text
     assert "TypeError" not in caplog.text
     assert "Exception when" not in caplog.text
 

@@ -1191,7 +1191,14 @@ def crack_counter_line(
                         start_time = time.strftime("%m %d %y", session.reconnect_ts)
                     else:
                         start_time = time.strftime("%m %d %y", session.connect_ts)
-                    session.gps_fix = GPS.GPSFix(raw_strs[1], start_date_str=start_time)
+                    gps_fix = GPS.GPSFix(raw_strs[1], start_date_str=start_time)
+                    if gps_fix.isvalid and gps_fix.datetime is not None:
+                        session.gps_fix = gps_fix
+                    else:
+                        # GPSFix has logged why - consumers treat the call as having no fix
+                        log_info(
+                            f"No GPS fix for this call: file {comm_log_file_name}, lineno {line_count}"
+                        )
                 else:
                     log_warning(
                         "Unknown line after counter: file %s, lineno %d, line %s"

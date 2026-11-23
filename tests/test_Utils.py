@@ -31,6 +31,7 @@ import logging
 import math
 import os
 import subprocess
+import time
 import types
 import warnings
 from pathlib import Path
@@ -368,3 +369,17 @@ def test_haversine_clamps_rounding_past_one(monkeypatch):
     real_sin = math.sin
     monkeypatch.setattr(Utils.math, "sin", lambda x: real_sin(x) * (1 + 1e-12))
     assert Utils.haversine(0.0, 0.0, 0.0, 180.0) == pytest.approx(HAVERSINE_R * math.pi)
+
+
+def test_fix_gps_rollover_moves_1024_weeks(caplog):
+    """A 1999-2001 date moves forward 1024 weeks with a warning (the warning was a TypeError until 2026-11)."""
+    with caplog.at_level(logging.WARNING):
+        fixed = Utils.fix_gps_rollover(time.strptime("2000-11-21 00:16:00", "%Y-%m-%d %H:%M:%S"))
+    assert time.strftime("%Y-%m-%d %H:%M:%S", fixed) == "2020-07-07 00:16:00"
+    assert "GPS Rollover found (2000-11-21 00:16:00)" in caplog.text
+
+
+def test_fix_gps_rollover_leaves_other_years():
+    """Dates outside 1999-2001 are returned as they are."""
+    stamp = time.strptime("2026-11-21 00:16:00", "%Y-%m-%d %H:%M:%S")
+    assert Utils.fix_gps_rollover(stamp) == stamp

@@ -2758,6 +2758,49 @@ def gps_fix_usable(fix: GPS.GPSFix) -> bool:
     )
 
 
+def rafos_fix_stand_in(fix: GPS.GPSFix, rafos_fix: str) -> GPS.GPSFix | None:
+    """A stand-in for a fix with a malformed date/time, timed by the log file's $RAFOS_FIX.
+
+    Under ice the glider reports its nav fix in $GPS1/$GPS2/$GPS lines, and some firmware
+    truncates their date/time (sg262: DDMM,HHMM).  The $RAFOS_FIX line in the same log has the
+    full time stamp.  Only the current log's $RAFOS_FIX is used - fixing up under-ice positions
+    across dives is a post-processing job.  The fix keeps its own position (only its date/time
+    is malformed); for $GPS1/$GPS2 the $RAFOS_FIX is a later fix, so its time is only a
+    stand-in - the caller marks the fix bad, so nothing computes across it.
+
+    Two forms: lat,lon,DDMMYY,HHMMSS,nhit,corr,spd (older) and
+    la=,lo=,ts=YYYYMMDDHHMMSS,nhit=,meanC=,spd=[,e=] (newer).  The no-fix placeholder (zero
+    position, a 1970 date or no ts=) gives no stand-in.
+
+    Args:
+        fix: the fix with the malformed date/time
+        rafos_fix: the value of the log file's $RAFOS_FIX line
+
+    Returns:
+        A copy of fix with the $RAFOS_FIX time, or None if $RAFOS_FIX has no usable fix
+    """
+    try:
+        if "=" in rafos_fix:
+            fields = dict(kv.split("=", 1) for kv in rafos_fix.split(",") if "=" in kv)
+            if "ts" not in fields:
+                return None
+            lat = float(fields["la"])
+            lon = float(fields["lo"])
+            fix_time = time.strptime(fields["ts"], "%Y%m%d%H%M%S")
+        else:
+            fields_v = rafos_fix.split(",")
+            lat = float(fields_v[0])
+            lon = float(fields_v[1])
+            fix_time = time.strptime(fields_v[2] + fields_v[3], "%d%m%y%H%M%S")
+    except (KeyError, IndexError, ValueError):
+        return None
+    if (lat == 0.0 and lon == 0.0) or fix_time.tm_year <= 1970:
+        return None
+    stand_in = copy.copy(fix)
+    stand_in.datetime = fix_time
+    return stand_in
+
+
 def gps_surface_drift(GPS1, GPS2) -> dict[str, float]:
     """Surface current from the glider's drift between GPS1 and GPS2.
 
@@ -3638,6 +3681,23 @@ def make_dive_profile(
         ]
         for name in gps_garbled:
             gps_fixes[name].ok = False
+        # A fix whose only problem is a malformed date/time (sg262's under-ice nav fixes) keeps its
+        # position and takes the time of this log's $RAFOS_FIX - not other dives' logs, fixing up
+        # under-ice fixes is post-processing
+        rafos_fix = log_f.data.get("$RAFOS_FIX")
+        for name in list(gps_garbled):
+            if not gps_fixes[name].timestamp_malformed or not isinstance(rafos_fix, str):
+                continue
+            stand_in = rafos_fix_stand_in(gps_fixes[name], rafos_fix)
+            if stand_in is None:
+                continue
+            log_warning(
+                f"Malformed date/time in {gps_fixes[name].raw_line.split(',')[0]} line in {log_file_name} "
+                f"({gps_fixes[name].raw_line}) - fix marked bad, using $RAFOS_FIX's time ({rafos_fix})"
+            )
+            gps_fixes[name] = stand_in
+            gps_fixes[name].ok = False
+            gps_garbled.remove(name)
         for name in gps_garbled:
             stand_in_name = next(
                 (n for n in gps_stand_in_order[name] if n not in gps_garbled), None
