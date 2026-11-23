@@ -229,6 +229,50 @@ def test_fmcli_rebuilds_when_assumptions_change(tmp_path, caplog):
     assert not rerun()
 
 
+def test_fmcli_dive_before_every_known_dive(tmp_path, caplog):
+    """A dive earlier than every dive in the flight db starts from the defaults and the later
+    dives are recomputed (sg175 TasmanX 2026-11: dive 1 arrived after dive 2).
+
+    It used to log "No known dive before" and bail out of the main loop, so that dive stayed new
+    and no later dive ever got FM.
+    """
+    data_dir = pathlib.Path("testdata/sg561_provolo_lofoten_may2016_dive2on")
+    mission_dir = tmp_path / "mission_dir"
+    held_dir = tmp_path / "held"
+    cmd_line = ["--verbose", "--mission_dir", str(mission_dir)]
+
+    def hold_back_dive_2(mission_dir: pathlib.Path) -> None:
+        held_dir.mkdir()
+        for f in mission_dir.glob("p5610002.*"):
+            f.rename(held_dir / f.name)
+
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        FlightModelCLI.main,
+        cmd_line,
+        caplog,
+        allowed_msgs=[],
+        pre_test_hook=hold_back_dive_2,
+    )
+    assert 2 not in _flight_db(mission_dir)
+
+    # Dive 2 arrives late; dives 3 and on are already in the flight db
+    for f in held_dir.iterdir():
+        f.rename(mission_dir / f.name)
+    caplog.clear()
+    FlightModel.set_globals()
+    assert FlightModelCLI.main(cmd_line) == 0
+    messages = [r.getMessage() for r in caplog.records]
+    assert any(
+        "Dive 2 is earlier than every dive in the flight database (first 3)" in m for m in messages
+    )
+    assert not any("No known dive before" in m or "bailing out" in m for m in messages)
+    assert not any(r.levelname in ("ERROR", "CRITICAL") for r in caplog.records)
+    db = _flight_db(mission_dir)
+    assert {d for d in db if isinstance(d, int)} == set(range(2, 10))
+
+
 @pytest.mark.parametrize(
     ("sgc", "changed"),
     [

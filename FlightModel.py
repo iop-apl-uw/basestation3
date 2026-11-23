@@ -3823,39 +3823,42 @@ def process_dive(
         abs_compress = flight_dive_data_d[
             "abs_compress"
         ]  # assume prevailing (default or mean) value
-        if len(flight_dive_nums):
-            # Need to find the dive just before new_dive_num in case of out of order dives
-            d_n_i = np.where(aflight_dive_nums < new_dive_num)[0]
-            if len(d_n_i):
-                restart_from_dive_num = flight_dive_nums[d_n_i[-1]]
-                # restore predicted ab and trust from restart_from_dive_num
-                log_debug(restart_cache_d.keys())
-                if restart_from_dive_num in restart_cache_d:
-                    (
-                        mr_dives_pitches,
-                        mr_index,
-                        mr_n_inserted,
-                        last_W_misfit_RMS_dive_num,
-                        last_ab_committed_dive_num,
-                        predicted_hd_a,
-                        predicted_hd_b,
-                        predicted_hd_ab_trusted,
-                    ) = restart_cache_d[restart_from_dive_num]
-                else:
-                    log_error(
-                        "Internal error - dive %d not in restart_cache_d - skipping FM"
-                        % restart_from_dive_num
-                    )
-                    return 1
+        # Need to find the dive just before new_dive_num in case of out of order dives
+        d_n_i = np.where(aflight_dive_nums < new_dive_num)[0]
+        if len(d_n_i):
+            restart_from_dive_num = flight_dive_nums[d_n_i[-1]]
+            # restore predicted ab and trust from restart_from_dive_num
+            log_debug(restart_cache_d.keys())
+            if restart_from_dive_num in restart_cache_d:
+                (
+                    mr_dives_pitches,
+                    mr_index,
+                    mr_n_inserted,
+                    last_W_misfit_RMS_dive_num,
+                    last_ab_committed_dive_num,
+                    predicted_hd_a,
+                    predicted_hd_b,
+                    predicted_hd_ab_trusted,
+                ) = restart_cache_d[restart_from_dive_num]
             else:
                 log_error(
-                    f"No known dive before {new_dive_num} in the flight "
-                    "database (out-of-order dive, or a stale/mismatched "
-                    "flight database checkpoint) - skipping FM for this dive"
+                    "Internal error - dive %d not in restart_cache_d - skipping FM"
+                    % restart_from_dive_num
                 )
                 return 1
         else:
-            # No dives yet so start with the defaults on this initial dive
+            if len(flight_dive_nums):
+                # Earlier than every dive in the database (sg175 TasmanX, 2026-11: dive 1 arrived
+                # after dive 2).  Start it from the defaults, as a first dive; the update loop below
+                # then has no dive before it and recomputes every later dive from scratch - the same
+                # as a fresh flight database.  Returning 1 here stopped the main loop, so the dive
+                # stayed "new" and no later dive ever got FM.
+                log_warning(
+                    f"Dive {new_dive_num} is earlier than every dive in the flight database "
+                    f"(first {int(aflight_dive_nums[0])}) - starting it from the defaults and "
+                    "recomputing the later dives"
+                )
+            # else no dives yet - start with the defaults on this initial dive
             restart_from_dive_num = 0  # for debug below
             predicted_hd_a = flight_dive_data_d["hd_a"]
             predicted_hd_b = flight_dive_data_d["hd_b"]
