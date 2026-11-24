@@ -49,7 +49,8 @@ anchors used elsewhere in the file - e.g.
 
 Usage:
     MissionsModel.py check FILE [--no-follow] [--path_map FROM=TO ...]
-        check FILE and (unless --no-follow) every domains:/includes: file it names;
+        check FILE and (unless --no-follow) every domains:/includes: file it names,
+        and each domain's users file (UsersModel.py);
         --path_map maps a server path prefix to a local one (e.g. on a mirror:
         --path_map /home/jails=/Volumes/WorkFast/seaglider)
     MissionsModel.py dump FILE      the file as loaded (anchors resolved)
@@ -67,6 +68,7 @@ import yaml
 
 import BaseOpts
 import BaseOptsType
+import UsersModel
 import YamlValidation
 from BaseLog import BaseLogger, log_error, log_info, log_warning
 
@@ -313,7 +315,7 @@ def check_file(
     follow: bool = True,
     _visited: set[pathlib.Path] | None = None,
 ) -> tuple[dict | None, list[str], list[str]]:
-    """Checks a missions.yml (and, if follow, the domains:/includes: files it names).
+    """Checks a missions.yml (and, if follow, the domains:/includes: files and domain users files it names).
 
     Args:
         path: The file.
@@ -357,6 +359,16 @@ def check_file(
         for name, entry in checker.mapping_of_entries(top, data[top], DOMAIN_KEYS, "domain").items():
             if name == "root" or not isinstance(entry, dict):
                 continue
+            if follow and top == "domains" and "users" in entry:
+                users = apply_path_map(str(entry["users"]), path_map)
+                if not users.is_absolute():
+                    users = path.parent / users
+                if not users.is_file():
+                    checker.warn((top, name, "users"), f"{users} not found - not checked (vis: no users for {name})")
+                else:
+                    _, sub_warnings, sub_problems = UsersModel.check_file(users)
+                    checker.warnings += sub_warnings
+                    problems += sub_problems
             if "missions" not in entry:
                 checker.warn((top, name), "no missions file - skipped")
                 continue

@@ -3015,6 +3015,16 @@ async def buildUserTable(app, config=None):
         sanic.log.logger.info(f'{config.USERS_FILE} does not exist')
         x = {}
 
+    # Not turned on (2026-11-24), as for missions.yml: UsersModel.py only reports - it never
+    # changes x - so turning it on would just log each problem it finds (file:line), e.g.:
+    #
+    #     import UsersModel
+    #     _, warnings, problems = UsersModel.check_file(pathlib.Path(config.USERS_FILE))
+    #     for msg in warnings + problems:
+    #         sanic.log.logger.warning(msg)
+    #
+    # When a new user key is read here or in authHandler, add it to USER_KEYS in UsersModel.py.
+    # Check a file by hand with: UsersModel.py check users.yml
     userDictKeys = [ "groups" ] # password is optional - if not spec'd user is in auth.db
 
     dflts = None
