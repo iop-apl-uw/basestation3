@@ -126,6 +126,10 @@ loop_count = 41  # TestData/sg144_ps_022613/p144* dives have a few points that t
 loop_count = (
     61  # TestData/SG236_Shilshole_2022_11_18 dives took around 45-50 to converge
 )
+# hydro_model only (glide_slope keeps loop_count): sg263 NANOOS_Aug26 dive 40 at hd_a 0.001, hd_b 0.030 (the top
+# of the SGX b grid) needed 83 and 95 iterations at the two vbdbias points nearest the solution, so with 61 every
+# vbdbias point failed to converge and FM couldn't solve dives 40-88.  Converging points break out early.
+hydro_loop_count = 100
 
 
 def glide_slope(w_cm_s_v, vehicle_pitch_rad_v, calib_consts):
@@ -366,7 +370,7 @@ def hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts):
     # We iterate a fixed number of times but break early if our max % difference is less that residual_test
     converged = False  # assume the worst
     residual_test = 0.001  # loop completion test value
-    for j in range(loop_count):
+    for j in range(hydro_loop_count):
         q_prev = np.array(q)  # copy q
 
         # discriminant_inv is the reciprocal of the term subtracted
