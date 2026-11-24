@@ -103,7 +103,9 @@ def test_duplicates(tmp_path: pathlib.Path) -> None:
     )
     _, warnings, _ = MissionsModel.check_file(path)
     assert warnings == [
-        f"{path}:3: missions.1: sg001 already has an active mission (entry 0) - vis uses that one",
+        f"{path}:3: missions.1: sg001 already has an active mission (entry 0) - vis uses that one."
+        " Setting status: on this entry to one of complete, aborted, archived, paused will silence this warning"
+        " (e.g. status: complete)",
         f"{path}:5: missions.3: sg002 c is listed twice (entry 2) - vis skips this one",
     ]
 

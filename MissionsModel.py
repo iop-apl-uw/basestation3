@@ -273,7 +273,12 @@ class _Checker:
                 self.warn((*loc, "status"), f"{status!r} isn't one of {', '.join(STATUSES)}")
             if status == "active":
                 if glider in actives:
-                    self.warn(loc, f"sg{glider:03d} already has an active mission (entry {actives[glider]}) - vis uses that one")
+                    self.warn(
+                        loc,
+                        f"sg{glider:03d} already has an active mission (entry {actives[glider]}) - vis uses that one."
+                        f" Setting status: on this entry to one of {', '.join(s for s in STATUSES if s != 'active')}"
+                        " will silence this warning (e.g. status: complete)",
+                    )
                 else:
                     actives[glider] = i
             ident = (glider, mission.get("mission"))
