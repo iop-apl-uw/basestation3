@@ -33,7 +33,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from passlib.hash import sha256_crypt  # ty: ignore[import-not-found] - passlib.hash builds its members lazily
+from passlib.hash import sha256_crypt  # ty: ignore[import-not-found] - lazy members
 
 import Base  # noqa: F401 - normal import order
 import BaseLog

@@ -54,7 +54,7 @@ import sys
 from pathlib import Path
 
 import yaml
-from passlib.hash import sha256_crypt  # ty: ignore[import-not-found] - passlib.hash builds its members lazily
+from passlib.hash import sha256_crypt  # ty: ignore[import-not-found] - lazy members
 
 import BaseOpts
 import BaseOptsType
