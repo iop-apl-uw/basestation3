@@ -78,7 +78,6 @@ import pyarrow.parquet as pq
 import scipy
 import scipy.signal
 import seawater
-import yaml
 import zmq
 import zmq.asyncio
 from numpy.typing import NDArray
@@ -91,7 +90,14 @@ import LogFile
 if typing.TYPE_CHECKING:
     import BaseOpts
 
-from BaseLog import log_critical, log_debug, log_error, log_info, log_warning
+from BaseLog import (
+    log_alerts,
+    log_critical,
+    log_debug,
+    log_error,
+    log_info,
+    log_warning,
+)
 from BaseType import DT, KT, VT
 
 netcdf4_datatypes_nonchar = (
@@ -2260,50 +2266,23 @@ def whole_mission_cfg(
     if cfg_file is None:
         return ({}, {})
 
-    try:
-        with open(cfg_file, "r") as fi:
-            cfg_dict = yaml.safe_load(fi.read())
-    except Exception:
-        log_error(f"Could not procss {cfg_file} - ignoring contents", "exc")
+    # Imported here: WholeMissionModel imports Utils
+    import WholeMissionModel
+
+    settings, warnings, problems = WholeMissionModel.check_file(cfg_file, meta_data_d)
+    # The file is read once per whole-mission product (profile, timeseries, parquet):
+    # each message is logged every time, but alerted only once
+    alerted = log_alerts().get(WholeMissionModel.ALERT, [])
+    for warning in warnings:
+        alert = None if f"WARNING: {warning}" in alerted else WholeMissionModel.ALERT
+        log_warning(warning, alert=alert)
+    for problem in problems:
+        message = f"{problem} - ignoring contents"
+        alert = None if f"ERROR: {message}" in alerted else WholeMissionModel.ALERT
+        log_error(message, alert=alert)
+    if settings is None:
         return ({}, {})
-
-    ret_dicts = {}
-    for section in whole_mission_cfg_sections:
-        ret_dicts[section] = {}
-
-        if section in cfg_dict:
-            if not isinstance(cfg_dict[section], dict):
-                log_warning(
-                    f"Section {section} of {cfg_file} is not a dictionary - skipping"
-                )
-                continue
-            for k, v in cfg_dict[section].items():
-                try:
-                    if not isinstance(k, str):
-                        log_warning(
-                            f"Variable {k} in section {section} of {cfg_file} is not a str ({type(k)}) - skipping"
-                        )
-                        continue
-                    if k not in meta_data_d:
-                        log_warning(
-                            f"Variable {k} in section {section} of {cfg_file} not known - skipping"
-                        )
-                        continue
-                    if not (
-                        isinstance(v, bool)
-                        or ((isinstance(v, str)) and v in netcdf4_datatypes_nonchar)
-                    ):
-                        log_warning(
-                            f"Value {v} of variable {k} in section {section} of {cfg_file} is of unsupported type ({type(v)}) - skipping"
-                        )
-                        continue
-                    ret_dicts[section][k] = v
-                except Exception:
-                    log_error(
-                        f"Problems processing {k} in section {section} of {cfg_file}"
-                    )
-
-    return tuple(v for _, v in ret_dicts.items())
+    return (settings["profile"], settings["timeseries"])
 
 
 def dump_mission_cfg(stream: typing.TextIO, meta_data_d: dict[str, Any]) -> None:

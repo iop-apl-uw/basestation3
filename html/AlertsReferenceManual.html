@@ -136,6 +136,16 @@ is used; the plots are still made.  A file that isn't valid YAML, or has no <cod
 <code>sections</code>, makes no section plots.  Check it with <code>SectionsModel.py check sections.yml</code>.
 </p>
 
+<p><a name="WHOLE_MISSION_CONFIG">WHOLE_MISSION_CONFIG<br>
+The <code>--whole_mission_config</code> file (which variables, and of which netCDF type, go into the
+whole-mission profile and timeseries files - see <code>docs/whole_mission.yml</code>) has a problem; each
+message gives the file and line.  A section other than <code>profile</code> or <code>timeseries</code>, a
+variable the basestation doesn't know (often a misspelling), or a value other than <code>True</code>,
+<code>False</code> or a non-character netCDF type is ignored; the rest of the file still applies and the
+whole-mission files are still made.  A file that isn't valid YAML, or isn't a mapping, is ignored entirely.
+Check it with <code>WholeMissionModel.py check &lt;file&gt; --mission_dir &lt;mission_dir&gt;</code>.
+</p>
+
 <p><a name="NODC_CONFIG">NODC_CONFIG<br>
 A <code>NODC.yml</code> (in the basestation <code>etc</code> directory, the <code>--group_etc</code> directory
 or the mission directory), which sets

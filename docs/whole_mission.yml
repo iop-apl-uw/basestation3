@@ -12,8 +12,7 @@
 #    type - include the variable, using the specified type string as the type to write to the
 #           netcdf file (possibly changing the default type for the variable).
 #
-# Accepted types are:
-# S1 or c (NC_CHAR)
+# Accepted types are (character types - S1, c - are not):
 # i1 or b or B (NC_BYTE)
 # u1 (NC_UBYTE)
 # i2 or h or s (NC_SHORT)
@@ -34,6 +33,10 @@
 #
 # Note: The names are as they appear in netCDF files, and may not correspond to variable names
 # as they appear in the source files.
+#
+# Check a file (names, values, file:line for each problem) against a mission's variables with:
+#   python WholeMissionModel.py check FILE --mission_dir MISSION_DIR
+# A bad entry is left out with a warning; the rest of the file is still used.
 #
 # Below is some example settings.
 timeseries:
