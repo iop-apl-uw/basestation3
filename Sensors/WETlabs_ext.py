@@ -269,6 +269,9 @@ def init_sensor(module_name, init_dict=None):
         for synonym in instrument_synonyms:
             asc_remap_d["%s.time" % synonym] = data_time_var
             eng_remap_d["%s_time" % synonym] = data_time_var
+            # The bare name is a timeout class from the .dat file (sg175's wlbb2f) - the timeout
+            # count and times go out under the canonical instrument (Utils2.add_scicon_stats)
+            eng_remap_d[synonym] = canonical_instrument
 
         # create results info
         results_time_var = "%s_results_time" % canonical_instrument

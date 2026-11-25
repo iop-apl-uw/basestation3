@@ -28,7 +28,7 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-"""Sensor extension fixes: legato's remap, pmar's binary eng files, tridente's error paths."""
+"""Sensor extension fixes: legato's remap, pmar's binary eng files, tridente's error paths, timeout class names."""
 
 import array
 import pathlib
@@ -37,6 +37,11 @@ import sys
 
 import numpy as np
 import pytest
+
+import BaseLog
+import BaseNetCDF
+import BaseOpts
+import Sensors
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "Sensors"))
 import legato_ext  # noqa: E402  # ty: ignore[unresolved-import]
@@ -116,4 +121,44 @@ def test_cnf_columns_bad_line() -> None:
     assert Sensors.cnf_columns({"column": ["a(1"]}, "x.cnf") is None
     assert Sensors.cnf_columns({"column": ["a", "b(10,2)"]}, "x.cnf") == {"a": (None, None), "b": (10.0, 2.0)}
     assert Sensors.cnf_columns({}, "x.cnf") == {}
+
+
+
+@pytest.fixture(scope="module")
+def sensors_initialized(tmp_path_factory: pytest.TempPathFactory):
+    """Every installed sensor extension initialized, as at the start of a Base.py run."""
+    Sensors.set_globals()
+    BaseNetCDF.set_globals()
+    BaseLog.BaseLogger.reset()
+    mission_dir = tmp_path_factory.mktemp("mission_dir")
+    base_opts = BaseOpts.BaseOptions("t", cmdline_args=["--mission_dir", str(mission_dir)], calling_module="Base")
+    init_dict, init_ret_val = Sensors.init_extensions(base_opts)
+    assert init_ret_val == 0
+    BaseNetCDF.init_tables(init_dict)
+    yield
+    Sensors.set_globals()
+    BaseNetCDF.set_globals()
+
+
+@pytest.mark.parametrize(
+    ("dat_class", "nc_instrument"),
+    [
+        ("wlbb2f", "wlbb2fl"),  # sg175 TasmanX, 2026-11-24
+        ("qsp", "qsp"),  # sg675 WHIRLS_CRUISE, 2026-07
+        ("rbr", "legato"),
+        ("tb700c470f365", "tridentebb700chla470fdom365"),  # sg554 Shilshole_30Sep26 (fixed by e5f442e)
+        ("aa4330", "aa4330"),
+    ],
+)
+def test_truck_timeout_class_has_netcdf_metadata(sensors_initialized: None, dat_class: str, nc_instrument: str) -> None:
+    """A .dat timeout class (the glider's column prefix) remaps to an instrument with timeout metadata.
+
+    Otherwise MakeDiveProfiles drops <class>_timeouts_truck/_timeouts_times_truck with an
+    "Unknown results variable" error and the timeouts never reach the netCDF file.
+    """
+    names = [dat_class]
+    Sensors.process_sensor_extensions("remap_engfile_columns_netcdf", {}, names)
+    assert names == [nc_instrument]
+    for var in ("timeouts", "timeouts_times"):
+        assert f"{nc_instrument}_{var}_truck" in BaseNetCDF.nc_var_metadata
 

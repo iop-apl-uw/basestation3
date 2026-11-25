@@ -61,6 +61,7 @@ from typing import Any
 import numpy as np
 
 import BaseNetCDF
+import Utils2
 from BaseLog import log_debug, log_error, log_info, log_warning
 
 PREFIX = "qsp"
@@ -212,6 +213,8 @@ def init_sensor(module_name: str, init_dict: dict | None = None) -> int:
     }
     for var, nc_type in CALIB_VARS.items():
         meta_data_adds[f"{BaseNetCDF.nc_sg_cal_prefix}{var}"] = [False, nc_type, {}, BaseNetCDF.nc_scalar]
+    # Timeout count/times etc. - the .dat file's timeout class is the column prefix (sg675's qsp_timeouts_truck)
+    meta_data_adds |= Utils2.add_scicon_stats(PREFIX)
 
     init_dict[module_name] = {"netcdf_metadata_adds": meta_data_adds}
     return 0
