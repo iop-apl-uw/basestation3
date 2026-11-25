@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## [3.0.9] - Unreleased
+## [3.0.9] - 2026-11-25
 
 ### Breaking / Upgrade Notes
 - **Python 3.14 is now required** (`requires-python = ">=3.14,<3.15"`), along with major dependency updates: numpy 2.5, scipy 1.18, plotly 6.8, kaleido 1.3, xarray 2026.7, pydantic 2.13 (`ead188c`, `31a415e`)
